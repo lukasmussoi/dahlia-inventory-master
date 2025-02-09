@@ -2,11 +2,11 @@
 import { supabase } from "@/integrations/supabase/client";
 import { User } from "@supabase/supabase-js";
 
-// Interface para perfil de usuário
+// Interface para perfil de usuário com status atualizado
 export interface UserProfile {
   id: string;
   full_name: string;
-  status: 'active' | 'inactive';
+  status: 'active' | 'inactive' | 'suspended';
   created_at?: string;
   updated_at?: string;
 }

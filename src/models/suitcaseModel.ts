@@ -1,13 +1,14 @@
 
 import { supabase } from "@/integrations/supabase/client";
 
-// Interface para maleta
+// Interface para maleta com status atualizado
 export interface Suitcase {
   id: string;
   seller_id: string;
-  status: 'in_use' | 'returned' | 'lost';
+  status: 'in_use' | 'returned' | 'lost' | 'in_audit';
   created_at?: string;
   updated_at?: string;
+  sent_at?: string;
 }
 
 export class SuitcaseModel {
