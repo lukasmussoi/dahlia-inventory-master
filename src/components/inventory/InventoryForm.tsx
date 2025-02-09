@@ -21,7 +21,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { InventoryItem, InventoryModel } from "@/models/inventoryModel";
 
-// Schema de validação do formulário
+// Schema de validação do formulário - todos os campos são obrigatórios
 const formSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
   category: z.string().min(1, "Categoria é obrigatória"),
@@ -30,7 +30,12 @@ const formSchema = z.object({
 });
 
 // Tipo para os valores do formulário
-type FormValues = z.infer<typeof formSchema>;
+type FormValues = {
+  name: string;
+  category: string;
+  quantity: number;
+  price: number;
+};
 
 interface InventoryFormProps {
   item?: InventoryItem | null;
