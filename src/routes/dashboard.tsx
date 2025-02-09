@@ -34,7 +34,7 @@ const Dashboard = () => {
 
   return (
     <SidebarProvider defaultOpen={!isMobile}>
-      {({ open, setOpen }) => (
+      {({ open, setOpen }: { open: boolean; setOpen: (open: boolean) => void }) => (
         <div className="min-h-screen flex w-full bg-pearl">
           <div className="fixed left-0 top-0 h-full z-50">
             <DashboardSidebar isAdmin={userProfile?.isAdmin} />
