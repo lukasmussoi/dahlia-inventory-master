@@ -27,7 +27,6 @@ interface DashboardSidebarProps {
 export function DashboardSidebar({ isAdmin }: DashboardSidebarProps) {
   const isMobile = useIsMobile();
 
-  // Função para fazer logout
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
@@ -38,7 +37,6 @@ export function DashboardSidebar({ isAdmin }: DashboardSidebarProps) {
     }
   };
 
-  // Menu items baseados nas permissões do usuário
   const menuItems = [
     {
       title: "Dashboard",
@@ -47,7 +45,7 @@ export function DashboardSidebar({ isAdmin }: DashboardSidebarProps) {
     },
     ...(isAdmin ? [
       {
-        title: "Usuários",
+        title: "Usuárias",
         icon: Users,
         url: "/dashboard/users",
       }
@@ -72,7 +70,7 @@ export function DashboardSidebar({ isAdmin }: DashboardSidebarProps) {
   ];
 
   return (
-    <Sidebar>
+    <Sidebar className="bg-white/80 backdrop-blur-lg border-r border-gray-200">
       <SidebarContent>
         <div className="p-4">
           <h1 className={`text-xl md:text-2xl font-semibold text-gold transition-all ${isMobile ? 'text-center' : ''}`}>

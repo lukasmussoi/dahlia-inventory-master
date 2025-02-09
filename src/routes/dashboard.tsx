@@ -10,33 +10,33 @@ import { useIsMobile } from "@/hooks/use-mobile";
 const Dashboard = () => {
   const isMobile = useIsMobile();
 
-  // Verificar autenticação ao carregar a página
   useEffect(() => {
     AuthController.checkAuth();
   }, []);
 
-  // Buscar perfil e permissões do usuário
   const { data: userProfile, isLoading: isLoadingProfile } = useQuery({
     queryKey: ['user-profile'],
     queryFn: () => AuthController.getUserProfileWithRoles(),
   });
 
-  // Se estiver carregando, mostrar loading
   if (isLoadingProfile) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-gold"></div>
+      <div className="min-h-screen flex items-center justify-center bg-pearl">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gold"></div>
+          <p className="text-gray-600">Carregando...</p>
+        </div>
       </div>
     );
   }
 
   return (
     <SidebarProvider defaultOpen={!isMobile}>
-      <div className="min-h-screen flex w-full bg-pearl">
+      <div className="min-h-screen flex w-full bg-gradient-to-br from-pearl to-pearl-dark">
         <div className="fixed left-0 top-0 h-full z-50">
           <DashboardSidebar isAdmin={userProfile?.isAdmin} />
         </div>
-        <div className="flex-1 md:ml-64">
+        <div className="flex-1 md:ml-64 transition-all duration-300 ease-in-out">
           <DashboardContent />
         </div>
       </div>
