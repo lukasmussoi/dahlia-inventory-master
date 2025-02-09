@@ -34,7 +34,7 @@ const Dashboard = () => {
 
   return (
     <SidebarProvider defaultOpen={!isMobile}>
-      {({ open, setOpen }) => (
+      {(props: { open: boolean; setOpen: (value: boolean) => void }) => (
         <div className="min-h-screen flex w-full bg-pearl">
           <div className="fixed left-0 top-0 h-full z-50">
             <DashboardSidebar isAdmin={userProfile?.isAdmin} />
@@ -44,7 +44,7 @@ const Dashboard = () => {
               <Button
                 variant="outline"
                 size="icon"
-                onClick={() => setOpen(!open)}
+                onClick={() => props.setOpen(!props.open)}
                 className="mb-4"
               >
                 <Menu className="h-4 w-4" />
