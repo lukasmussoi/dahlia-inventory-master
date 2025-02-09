@@ -49,7 +49,7 @@ export class InventoryModel {
       .from('inventory')
       .select(`
         *,
-        inventory_categories!inner (
+        inventory_categories (
           name
         )
       `);

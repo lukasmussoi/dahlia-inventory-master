@@ -11,7 +11,7 @@ export type Database = {
     Tables: {
       inventory: {
         Row: {
-          category: string
+          category_id: string
           created_at: string
           id: string
           name: string
@@ -20,7 +20,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          category: string
+          category_id: string
           created_at?: string
           id?: string
           name: string
@@ -29,12 +29,41 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          category?: string
+          category_id?: string
           created_at?: string
           id?: string
           name?: string
           price?: number
           quantity?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_categories: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
           updated_at?: string
         }
         Relationships: []
