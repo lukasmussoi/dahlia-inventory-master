@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { InventoryItem, InventoryModel, InventoryFilters, InventoryCategory } from "@/models/inventoryModel";
@@ -28,6 +27,7 @@ export function InventoryContent({ isAdmin }: InventoryContentProps) {
     queryFn: () => InventoryModel.getAllItems(filters),
   });
 
+  // Atualizar a definição do estado das categorias para um array vazio como valor inicial
   const { data: categories = [], refetch: refetchCategories } = useQuery({
     queryKey: ['inventory-categories'],
     queryFn: InventoryModel.getAllCategories,

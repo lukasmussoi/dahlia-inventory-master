@@ -114,7 +114,7 @@ export class InventoryModel {
       } else if (filters.status === 'available') {
         query = query.gt('quantity', 0);
       } else if (filters.status === 'low_stock') {
-        query = query.lt('quantity', query.ref('min_stock'));
+        query = query.lt('quantity', query.select('min_stock'));
       }
     }
 
@@ -128,6 +128,17 @@ export class InventoryModel {
       category_name: item.inventory_categories?.name,
       supplier_name: item.suppliers?.name
     }));
+  }
+
+  // Buscar todas as categorias
+  static async getAllCategories(): Promise<InventoryCategory[]> {
+    const { data, error } = await supabase
+      .from('inventory_categories')
+      .select('*')
+      .order('name');
+    
+    if (error) throw error;
+    return data || [];
   }
 
   // Buscar fornecedores
@@ -162,7 +173,10 @@ export class InventoryModel {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data || [];
+    return (data || []).map(movement => ({
+      ...movement,
+      movement_type: movement.movement_type as 'entrada' | 'saida'
+    }));
   }
 
   // Criar nova categoria
