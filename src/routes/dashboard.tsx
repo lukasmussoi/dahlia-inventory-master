@@ -5,8 +5,11 @@ import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { DashboardContent } from "@/components/dashboard/DashboardContent";
 import { AuthController } from "@/controllers/authController";
 import { useQuery } from "@tanstack/react-query";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const Dashboard = () => {
+  const isMobile = useIsMobile();
+
   // Verificar autenticação ao carregar a página
   useEffect(() => {
     AuthController.checkAuth();
@@ -28,8 +31,8 @@ const Dashboard = () => {
   }
 
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-pearl">
+    <SidebarProvider defaultCollapsed={isMobile}>
+      <div className="min-h-screen flex w-full flex-col md:flex-row bg-pearl">
         <DashboardSidebar isAdmin={userProfile?.isAdmin} />
         <DashboardContent />
       </div>
