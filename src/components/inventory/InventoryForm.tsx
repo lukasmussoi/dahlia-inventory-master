@@ -29,6 +29,9 @@ const formSchema = z.object({
   price: z.number().min(0, "Preço não pode ser negativo"),
 });
 
+// Tipo para os valores do formulário
+type FormValues = z.infer<typeof formSchema>;
+
 interface InventoryFormProps {
   item?: InventoryItem | null;
   isOpen: boolean;
@@ -36,7 +39,7 @@ interface InventoryFormProps {
 }
 
 export function InventoryForm({ item, isOpen, onClose }: InventoryFormProps) {
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: item?.name || "",
@@ -46,7 +49,7 @@ export function InventoryForm({ item, isOpen, onClose }: InventoryFormProps) {
     },
   });
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const onSubmit = async (values: FormValues) => {
     try {
       if (item) {
         await InventoryModel.updateItem(item.id, values);
