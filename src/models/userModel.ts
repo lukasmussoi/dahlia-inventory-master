@@ -15,9 +15,9 @@ export class UserModel {
   static async getUserProfile(userId: string): Promise<UserProfile | null> {
     const { data, error } = await supabase
       .from('profiles')
-      .select('*')
+      .select('id, full_name, status, created_at, updated_at')
       .eq('id', userId)
-      .single();
+      .maybeSingle();
     
     if (error) throw error;
     return data;
