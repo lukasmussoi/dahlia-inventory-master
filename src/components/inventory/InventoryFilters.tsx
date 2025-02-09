@@ -10,10 +10,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { InventoryFilters as Filters } from "@/models/inventoryModel";
+import { InventoryFilters as Filters, InventoryCategory } from "@/models/inventoryModel";
 
 interface InventoryFiltersProps {
-  categories: string[];
+  categories: InventoryCategory[];
   onFilter: (filters: Filters) => void;
 }
 
@@ -74,8 +74,8 @@ export function InventoryFilters({ categories, onFilter }: InventoryFiltersProps
             <SelectContent>
               <SelectItem value="all">Todas as categorias</SelectItem>
               {categories.map((category) => (
-                <SelectItem key={category} value={category}>
-                  {category}
+                <SelectItem key={category.id} value={category.id}>
+                  {category.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -137,3 +137,4 @@ export function InventoryFilters({ categories, onFilter }: InventoryFiltersProps
     </div>
   );
 }
+
