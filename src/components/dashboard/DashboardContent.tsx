@@ -2,52 +2,19 @@
 import { Card } from "@/components/ui/card";
 import { Users, Package, Briefcase } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { DashboardController } from "@/controllers/dashboardController";
 
 export function DashboardContent() {
-  // Buscar dados do inventário
-  const { data: inventoryData } = useQuery({
-    queryKey: ['inventory-summary'],
-    queryFn: async () => {
-      const { data: inventory, error } = await supabase
-        .from('inventory')
-        .select('quantity');
-      
-      if (error) throw error;
-      
-      return inventory.reduce((sum, item) => sum + item.quantity, 0);
-    }
+  // Buscar dados do dashboard usando o controller
+  const { data: dashboardData, isLoading, error } = useQuery({
+    queryKey: ['dashboard-data'],
+    queryFn: () => DashboardController.getDashboardData(),
   });
 
-  // Buscar dados de usuários ativos
-  const { data: usersCount } = useQuery({
-    queryKey: ['active-users'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('status', 'active');
-      
-      if (error) throw error;
-      
-      return data.length;
-    }
-  });
-
-  // Buscar dados de maletas ativas
-  const { data: activeSuitcases } = useQuery({
-    queryKey: ['active-suitcases'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('suitcases')
-        .select('id')
-        .eq('status', 'in_use');
-      
-      if (error) throw error;
-      
-      return data.length;
-    }
-  });
+  // Se houver erro, podemos mostrar uma mensagem amigável
+  if (error) {
+    console.error('Erro ao carregar dados do dashboard:', error);
+  }
 
   return (
     <main className="flex-1 p-8">
@@ -62,7 +29,9 @@ export function DashboardContent() {
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-600">Usuários Ativos</p>
-                <p className="text-2xl font-semibold text-gray-900">{usersCount ?? 0}</p>
+                <p className="text-2xl font-semibold text-gray-900">
+                  {isLoading ? '...' : (dashboardData?.activeUsersCount ?? 0)}
+                </p>
               </div>
             </div>
           </Card>
@@ -74,7 +43,9 @@ export function DashboardContent() {
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-600">Peças em Estoque</p>
-                <p className="text-2xl font-semibold text-gray-900">{inventoryData ?? 0}</p>
+                <p className="text-2xl font-semibold text-gray-900">
+                  {isLoading ? '...' : (dashboardData?.totalInventory ?? 0)}
+                </p>
               </div>
             </div>
           </Card>
@@ -86,7 +57,9 @@ export function DashboardContent() {
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-600">Maletas Ativas</p>
-                <p className="text-2xl font-semibold text-gray-900">{activeSuitcases ?? 0}</p>
+                <p className="text-2xl font-semibold text-gray-900">
+                  {isLoading ? '...' : (dashboardData?.activeSuitcasesCount ?? 0)}
+                </p>
               </div>
             </div>
           </Card>
