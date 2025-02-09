@@ -34,4 +34,39 @@ export class InventoryModel {
     if (error) throw error;
     return data || [];
   }
+
+  // Criar novo item
+  static async createItem(item: Omit<InventoryItem, 'id' | 'created_at' | 'updated_at'>): Promise<InventoryItem> {
+    const { data, error } = await supabase
+      .from('inventory')
+      .insert(item)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  // Atualizar item existente
+  static async updateItem(id: string, updates: Partial<InventoryItem>): Promise<InventoryItem> {
+    const { data, error } = await supabase
+      .from('inventory')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  // Deletar item
+  static async deleteItem(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('inventory')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+  }
 }
