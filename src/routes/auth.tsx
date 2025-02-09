@@ -47,9 +47,17 @@ const AuthPage = () => {
       }
     } catch (error: any) {
       console.error('Erro de autenticação:', error);
-      toast.error(error.message === 'Invalid login credentials'
-        ? 'Credenciais inválidas'
-        : 'Erro ao realizar ' + (isLogin ? 'login' : 'cadastro'));
+      
+      // Mensagens de erro mais amigáveis
+      let errorMessage = 'Erro ao realizar ' + (isLogin ? 'login' : 'cadastro');
+      
+      if (error.message === 'Invalid login credentials') {
+        errorMessage = 'Credenciais inválidas';
+      } else if (error.message === 'Email not confirmed') {
+        errorMessage = 'Por favor, confirme seu email antes de fazer login. Verifique sua caixa de entrada.';
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
