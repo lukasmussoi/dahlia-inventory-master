@@ -24,12 +24,12 @@ export class AuthModel {
       .single();
     if (profileError) throw profileError;
 
-    // Verificar se o usuário é admin - Note a especificação da tabela user_roles
+    // Verificar se o usuário é admin - Note que agora selecionamos apenas 'role'
     const { data: roles, error: rolesError } = await supabase
       .from('user_roles')
-      .select('user_roles.role')
+      .select('role')
       .eq('user_id', user.id)
-      .eq('user_roles.role', 'admin');
+      .eq('role', 'admin');
     if (rolesError) throw rolesError;
 
     return {
