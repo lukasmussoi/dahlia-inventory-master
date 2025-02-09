@@ -22,7 +22,7 @@ export function DimensionsFields({ form }: DimensionsFieldsProps) {
         name="weight"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Peso (kg)</FormLabel>
+            <FormLabel>Peso (kg) - opcional</FormLabel>
             <FormControl>
               <Input
                 type="number"
@@ -42,7 +42,7 @@ export function DimensionsFields({ form }: DimensionsFieldsProps) {
         name="width"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Largura (cm)</FormLabel>
+            <FormLabel>Largura (cm) - opcional</FormLabel>
             <FormControl>
               <Input
                 type="number"
@@ -62,7 +62,7 @@ export function DimensionsFields({ form }: DimensionsFieldsProps) {
         name="height"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Altura (cm)</FormLabel>
+            <FormLabel>Altura (cm) - opcional</FormLabel>
             <FormControl>
               <Input
                 type="number"
@@ -82,7 +82,7 @@ export function DimensionsFields({ form }: DimensionsFieldsProps) {
         name="depth"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Profundidade (cm)</FormLabel>
+            <FormLabel>Profundidade (cm) - opcional</FormLabel>
             <FormControl>
               <Input
                 type="number"
