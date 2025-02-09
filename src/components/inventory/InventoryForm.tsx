@@ -1,4 +1,5 @@
 
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -16,34 +17,50 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { InventoryItem, InventoryModel } from "@/models/inventoryModel";
+import { InventoryItem, InventoryCategory, InventoryModel } from "@/models/inventoryModel";
+import { useQuery } from "@tanstack/react-query";
 
-// Schema de validação do formulário - todos os campos são obrigatórios
+// Schema de validação do formulário
 const formSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
-  category: z.string().min(1, "Categoria é obrigatória"),
+  category_id: z.string().min(1, "Categoria é obrigatória"),
   quantity: z.number().min(0, "Quantidade não pode ser negativa"),
   price: z.number().min(0, "Preço não pode ser negativo"),
 });
 
-// Tipo para os valores do formulário
 type FormValues = z.infer<typeof formSchema>;
 
 interface InventoryFormProps {
   item?: InventoryItem | null;
   isOpen: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
-export function InventoryForm({ item, isOpen, onClose }: InventoryFormProps) {
+export function InventoryForm({ item, isOpen, onClose, onSuccess }: InventoryFormProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Buscar categorias disponíveis
+  const { data: categories = [] } = useQuery<InventoryCategory[]>({
+    queryKey: ['inventory-categories'],
+    queryFn: InventoryModel.getAllCategories,
+  });
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: item?.name || "",
-      category: item?.category || "",
+      category_id: item?.category_id || "",
       quantity: item?.quantity || 0,
       price: item?.price || 0,
     },
@@ -51,25 +68,21 @@ export function InventoryForm({ item, isOpen, onClose }: InventoryFormProps) {
 
   const onSubmit = async (values: FormValues) => {
     try {
-      // Garantimos que todos os campos estão presentes conforme exigido pela interface InventoryItem
-      const itemData = {
-        name: values.name,
-        category: values.category,
-        quantity: values.quantity,
-        price: values.price,
-      };
-
+      setIsSubmitting(true);
       if (item) {
-        await InventoryModel.updateItem(item.id, itemData);
+        await InventoryModel.updateItem(item.id, values);
         toast.success("Item atualizado com sucesso!");
       } else {
-        await InventoryModel.createItem(itemData);
+        await InventoryModel.createItem(values);
         toast.success("Item criado com sucesso!");
       }
+      onSuccess?.();
       onClose();
     } catch (error) {
       console.error('Erro ao salvar item:', error);
       toast.error("Erro ao salvar item. Verifique os dados e tente novamente.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -98,13 +111,27 @@ export function InventoryForm({ item, isOpen, onClose }: InventoryFormProps) {
             />
             <FormField
               control={form.control}
-              name="category"
+              name="category_id"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Categoria</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione uma categoria" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {categories.map((category) => (
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
@@ -148,8 +175,12 @@ export function InventoryForm({ item, isOpen, onClose }: InventoryFormProps) {
               <Button type="button" variant="outline" onClick={onClose}>
                 Cancelar
               </Button>
-              <Button type="submit" className="bg-gold hover:bg-gold/90">
-                Salvar
+              <Button 
+                type="submit" 
+                className="bg-gold hover:bg-gold/90"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Salvando..." : "Salvar"}
               </Button>
             </div>
           </form>

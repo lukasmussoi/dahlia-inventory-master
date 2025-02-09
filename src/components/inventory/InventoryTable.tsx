@@ -52,7 +52,7 @@ export function InventoryTable({ items, isLoading, onEdit, onDelete }: Inventory
           {items.map((item) => (
             <TableRow key={item.id}>
               <TableCell>{item.name}</TableCell>
-              <TableCell>{item.category}</TableCell>
+              <TableCell>{item.category_name}</TableCell>
               <TableCell className="text-right">{item.quantity}</TableCell>
               <TableCell className="text-right">
                 {new Intl.NumberFormat('pt-BR', {

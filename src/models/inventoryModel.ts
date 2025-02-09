@@ -1,15 +1,25 @@
 
 import { supabase } from "@/integrations/supabase/client";
 
+// Interface para categoria do inventário
+export interface InventoryCategory {
+  id: string;
+  name: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 // Interface para item do inventário
 export interface InventoryItem {
   id: string;
   name: string;
-  category: string;
+  category_id: string;
   quantity: number;
   price: number;
   created_at?: string;
   updated_at?: string;
+  // Propriedade virtual para exibição
+  category_name?: string;
 }
 
 // Interface para filtros de busca
@@ -37,15 +47,20 @@ export class InventoryModel {
   static async getAllItems(filters?: InventoryFilters): Promise<InventoryItem[]> {
     let query = supabase
       .from('inventory')
-      .select('*');
+      .select(`
+        *,
+        inventory_categories (
+          name
+        )
+      `);
 
     // Aplicar filtros se existirem
     if (filters) {
       if (filters.searchTerm) {
-        query = query.or(`name.ilike.%${filters.searchTerm}%,category.ilike.%${filters.searchTerm}%`);
+        query = query.or(`name.ilike.%${filters.searchTerm}%`);
       }
       if (filters.category) {
-        query = query.eq('category', filters.category);
+        query = query.eq('category_id', filters.category);
       }
       if (filters.minQuantity !== undefined) {
         query = query.gte('quantity', filters.minQuantity);
@@ -60,23 +75,72 @@ export class InventoryModel {
       }
     }
 
-    const { data, error } = await query.order('category', { ascending: true });
+    const { data, error } = await query;
+    
+    if (error) throw error;
+
+    // Mapear os resultados para incluir o nome da categoria
+    return (data || []).map(item => ({
+      ...item,
+      category_name: item.inventory_categories?.name
+    }));
+  }
+
+  // Buscar categorias
+  static async getAllCategories(): Promise<InventoryCategory[]> {
+    const { data, error } = await supabase
+      .from('inventory_categories')
+      .select('*')
+      .order('name');
     
     if (error) throw error;
     return data || [];
   }
 
-  // Buscar categorias únicas
-  static async getUniqueCategories(): Promise<string[]> {
+  // Criar nova categoria
+  static async createCategory(name: string): Promise<InventoryCategory> {
     const { data, error } = await supabase
-      .from('inventory')
-      .select('category')
-      .order('category');
-    
+      .from('inventory_categories')
+      .insert({ name })
+      .select()
+      .single();
+
     if (error) throw error;
-    
-    // Remover duplicatas
-    return [...new Set(data.map(item => item.category))];
+    return data;
+  }
+
+  // Atualizar categoria
+  static async updateCategory(id: string, name: string): Promise<InventoryCategory> {
+    const { data, error } = await supabase
+      .from('inventory_categories')
+      .update({ name })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  // Deletar categoria
+  static async deleteCategory(id: string): Promise<void> {
+    // Verificar se existem itens usando esta categoria
+    const { data: items } = await supabase
+      .from('inventory')
+      .select('id')
+      .eq('category_id', id)
+      .limit(1);
+
+    if (items && items.length > 0) {
+      throw new Error("Não é possível excluir uma categoria que possui itens vinculados");
+    }
+
+    const { error } = await supabase
+      .from('inventory_categories')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
   }
 
   // Criar novo item
