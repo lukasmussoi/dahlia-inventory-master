@@ -1,5 +1,5 @@
 
-import { useEffect } from "react";
+import { useEffect, ReactNode } from "react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { DashboardContent } from "@/components/dashboard/DashboardContent";
@@ -12,6 +12,11 @@ import { Menu } from "lucide-react";
 interface SidebarRenderProps {
   open: boolean;
   setOpen: (value: boolean) => void;
+}
+
+interface SidebarProviderProps {
+  defaultOpen?: boolean;
+  children: (props: SidebarRenderProps) => ReactNode;
 }
 
 const Dashboard = () => {
