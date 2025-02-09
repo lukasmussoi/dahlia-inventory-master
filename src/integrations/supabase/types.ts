@@ -9,16 +9,178 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      inventory: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          name: string
+          price: number
+          quantity: number
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          id?: string
+          name: string
+          price: number
+          quantity?: number
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          name?: string
+          price?: number
+          quantity?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          full_name: string
+          id: string
+          status: Database["public"]["Enums"]["user_status"] | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          full_name: string
+          id: string
+          status?: Database["public"]["Enums"]["user_status"] | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          full_name?: string
+          id?: string
+          status?: Database["public"]["Enums"]["user_status"] | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      suitcase_items: {
+        Row: {
+          created_at: string
+          id: string
+          inventory_id: string
+          quantity: number
+          status: Database["public"]["Enums"]["suitcase_item_status"] | null
+          suitcase_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          inventory_id: string
+          quantity?: number
+          status?: Database["public"]["Enums"]["suitcase_item_status"] | null
+          suitcase_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          inventory_id?: string
+          quantity?: number
+          status?: Database["public"]["Enums"]["suitcase_item_status"] | null
+          suitcase_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "suitcase_items_inventory_id_fkey"
+            columns: ["inventory_id"]
+            isOneToOne: false
+            referencedRelation: "inventory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "suitcase_items_suitcase_id_fkey"
+            columns: ["suitcase_id"]
+            isOneToOne: false
+            referencedRelation: "suitcases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      suitcases: {
+        Row: {
+          created_at: string
+          id: string
+          seller_id: string
+          sent_at: string
+          status: Database["public"]["Enums"]["suitcase_status"] | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          seller_id: string
+          sent_at?: string
+          status?: Database["public"]["Enums"]["suitcase_status"] | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          seller_id?: string
+          sent_at?: string
+          status?: Database["public"]["Enums"]["suitcase_status"] | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "suitcases_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["user_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["user_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          role: Database["public"]["Enums"]["user_role"]
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      suitcase_item_status: "in_possession" | "sold" | "returned" | "lost"
+      suitcase_status: "in_use" | "returned" | "in_audit" | "lost"
+      user_role: "admin" | "promoter" | "seller"
+      user_status: "active" | "inactive" | "suspended"
     }
     CompositeTypes: {
       [_ in never]: never
