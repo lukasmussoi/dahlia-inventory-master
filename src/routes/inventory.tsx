@@ -7,9 +7,11 @@ import { InventoryContent } from "@/components/inventory/InventoryContent";
 import { AuthController } from "@/controllers/authController";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const Inventory = () => {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   // Verificar autenticação ao carregar a página
   useEffect(() => {
@@ -50,10 +52,14 @@ const Inventory = () => {
   }
 
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={!isMobile}>
       <div className="min-h-screen flex w-full bg-pearl">
-        <DashboardSidebar isAdmin={userProfile?.isAdmin} />
-        <InventoryContent isAdmin={userProfile?.isAdmin} />
+        <div className="fixed left-0 top-0 h-full z-50">
+          <DashboardSidebar isAdmin={userProfile?.isAdmin} />
+        </div>
+        <div className="flex-1 md:ml-64">
+          <InventoryContent isAdmin={userProfile?.isAdmin} />
+        </div>
       </div>
     </SidebarProvider>
   );
