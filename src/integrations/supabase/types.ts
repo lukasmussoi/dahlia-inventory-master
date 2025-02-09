@@ -152,6 +152,41 @@ export type Database = {
           },
         ]
       }
+      inventory_photos: {
+        Row: {
+          created_at: string
+          id: string
+          inventory_id: string
+          is_primary: boolean | null
+          photo_url: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          inventory_id: string
+          is_primary?: boolean | null
+          photo_url: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          inventory_id?: string
+          is_primary?: boolean | null
+          photo_url?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_photos_inventory_id_fkey"
+            columns: ["inventory_id"]
+            isOneToOne: false
+            referencedRelation: "inventory"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
