@@ -1,6 +1,15 @@
 
 import { supabase } from "@/integrations/supabase/client";
 
+// Interface para fornecedor
+export interface Supplier {
+  id: string;
+  name: string;
+  contact_info?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 // Interface para categoria do inventário
 export interface InventoryCategory {
   id: string;
@@ -16,19 +25,45 @@ export interface InventoryItem {
   category_id: string;
   quantity: number;
   price: number;
+  sku?: string;
+  barcode?: string;
+  unit_cost: number;
+  suggested_price: number;
+  weight?: number;
+  width?: number;
+  height?: number;
+  depth?: number;
+  min_stock: number;
+  supplier_id?: string;
+  popularity: number;
   created_at?: string;
   updated_at?: string;
-  // Propriedade virtual para exibição
+  // Propriedades virtuais para exibição
   category_name?: string;
+  supplier_name?: string;
+}
+
+// Interface para movimentação de estoque
+export interface InventoryMovement {
+  id: string;
+  inventory_id: string;
+  user_id: string;
+  quantity: number;
+  movement_type: 'entrada' | 'saida';
+  reason: string;
+  unit_cost: number;
+  notes?: string;
+  created_at: string;
 }
 
 // Interface para filtros de busca
 export interface InventoryFilters {
   searchTerm?: string;
   category?: string;
+  supplier?: string;
   minQuantity?: number;
   maxQuantity?: number;
-  status?: 'available' | 'out_of_stock';
+  status?: 'available' | 'out_of_stock' | 'low_stock';
 }
 
 export class InventoryModel {
@@ -51,16 +86,22 @@ export class InventoryModel {
         *,
         inventory_categories (
           name
+        ),
+        suppliers (
+          name
         )
       `);
 
     // Aplicar filtros se existirem
     if (filters) {
       if (filters.searchTerm) {
-        query = query.or(`name.ilike.%${filters.searchTerm}%`);
+        query = query.or(`name.ilike.%${filters.searchTerm}%,sku.ilike.%${filters.searchTerm}%,barcode.ilike.%${filters.searchTerm}%`);
       }
       if (filters.category) {
         query = query.eq('category_id', filters.category);
+      }
+      if (filters.supplier) {
+        query = query.eq('supplier_id', filters.supplier);
       }
       if (filters.minQuantity !== undefined) {
         query = query.gte('quantity', filters.minQuantity);
@@ -72,6 +113,8 @@ export class InventoryModel {
         query = query.eq('quantity', 0);
       } else if (filters.status === 'available') {
         query = query.gt('quantity', 0);
+      } else if (filters.status === 'low_stock') {
+        query = query.lt('quantity', query.ref('min_stock'));
       }
     }
 
@@ -79,20 +122,45 @@ export class InventoryModel {
     
     if (error) throw error;
 
-    // Mapear os resultados para incluir o nome da categoria
+    // Mapear os resultados para incluir o nome da categoria e fornecedor
     return (data || []).map(item => ({
       ...item,
-      category_name: item.inventory_categories?.name
+      category_name: item.inventory_categories?.name,
+      supplier_name: item.suppliers?.name
     }));
   }
 
-  // Buscar categorias
-  static async getAllCategories(): Promise<InventoryCategory[]> {
+  // Buscar fornecedores
+  static async getAllSuppliers(): Promise<Supplier[]> {
     const { data, error } = await supabase
-      .from('inventory_categories')
+      .from('suppliers')
       .select('*')
       .order('name');
     
+    if (error) throw error;
+    return data || [];
+  }
+
+  // Criar novo fornecedor
+  static async createSupplier(supplier: Omit<Supplier, 'id' | 'created_at' | 'updated_at'>): Promise<Supplier> {
+    const { data, error } = await supabase
+      .from('suppliers')
+      .insert(supplier)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  // Buscar movimentações de estoque de um item
+  static async getItemMovements(inventoryId: string): Promise<InventoryMovement[]> {
+    const { data, error } = await supabase
+      .from('inventory_movements')
+      .select('*')
+      .eq('inventory_id', inventoryId)
+      .order('created_at', { ascending: false });
+
     if (error) throw error;
     return data || [];
   }
@@ -144,10 +212,13 @@ export class InventoryModel {
   }
 
   // Criar novo item
-  static async createItem(item: Omit<InventoryItem, 'id' | 'created_at' | 'updated_at'>): Promise<InventoryItem> {
+  static async createItem(item: Omit<InventoryItem, 'id' | 'created_at' | 'updated_at' | 'sku' | 'barcode' | 'popularity'>): Promise<InventoryItem> {
     const { data, error } = await supabase
       .from('inventory')
-      .insert(item)
+      .insert({
+        ...item,
+        popularity: 0
+      })
       .select()
       .single();
 

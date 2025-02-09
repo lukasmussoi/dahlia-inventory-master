@@ -8,8 +8,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2 } from "lucide-react";
+import { Edit, Trash2, AlertTriangle } from "lucide-react";
 import { InventoryItem } from "@/models/inventoryModel";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface InventoryTableProps {
   items: InventoryItem[];
@@ -35,14 +36,23 @@ export function InventoryTable({ items, isLoading, onEdit, onDelete }: Inventory
     );
   }
 
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
+  };
+
   return (
-    <div className="border rounded-lg">
+    <div className="border rounded-lg overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Nome</TableHead>
+            <TableHead>SKU/Nome</TableHead>
             <TableHead>Categoria</TableHead>
+            <TableHead>Fornecedor</TableHead>
             <TableHead className="text-right">Quantidade</TableHead>
+            <TableHead className="text-right">Custo</TableHead>
             <TableHead className="text-right">Preço</TableHead>
             <TableHead>Status</TableHead>
             {(onEdit || onDelete) && <TableHead className="text-right">Ações</TableHead>}
@@ -51,20 +61,57 @@ export function InventoryTable({ items, isLoading, onEdit, onDelete }: Inventory
         <TableBody>
           {items.map((item) => (
             <TableRow key={item.id}>
-              <TableCell>{item.name}</TableCell>
+              <TableCell>
+                <div className="space-y-1">
+                  <div className="font-medium">{item.name}</div>
+                  <div className="text-sm text-gray-500">{item.sku}</div>
+                </div>
+              </TableCell>
               <TableCell>{item.category_name}</TableCell>
-              <TableCell className="text-right">{item.quantity}</TableCell>
+              <TableCell>{item.supplier_name || '-'}</TableCell>
               <TableCell className="text-right">
-                {new Intl.NumberFormat('pt-BR', {
-                  style: 'currency',
-                  currency: 'BRL'
-                }).format(item.price)}
+                <div className="space-y-1">
+                  <div>{item.quantity}</div>
+                  {item.quantity <= item.min_stock && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <AlertTriangle className="h-4 w-4 text-amber-500 inline-block" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Estoque abaixo do mínimo ({item.min_stock})</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </div>
+              </TableCell>
+              <TableCell className="text-right">
+                {formatCurrency(item.unit_cost)}
+              </TableCell>
+              <TableCell className="text-right">
+                <div className="space-y-1">
+                  <div>{formatCurrency(item.price)}</div>
+                  {item.suggested_price > 0 && item.suggested_price !== item.price && (
+                    <div className="text-sm text-gray-500">
+                      Sugerido: {formatCurrency(item.suggested_price)}
+                    </div>
+                  )}
+                </div>
               </TableCell>
               <TableCell>
                 <span className={`px-2 py-1 rounded-full text-sm ${
-                  item.quantity > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                  item.quantity === 0 
+                    ? 'bg-red-100 text-red-800' 
+                    : item.quantity <= item.min_stock
+                    ? 'bg-amber-100 text-amber-800'
+                    : 'bg-green-100 text-green-800'
                 }`}>
-                  {item.quantity > 0 ? 'Disponível' : 'Em falta'}
+                  {item.quantity === 0 
+                    ? 'Em falta' 
+                    : item.quantity <= item.min_stock
+                    ? 'Estoque baixo'
+                    : 'Disponível'}
                 </span>
               </TableCell>
               {(onEdit || onDelete) && (

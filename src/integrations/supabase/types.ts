@@ -11,31 +11,64 @@ export type Database = {
     Tables: {
       inventory: {
         Row: {
+          barcode: string | null
           category_id: string
           created_at: string
+          depth: number | null
+          height: number | null
           id: string
+          min_stock: number
           name: string
+          popularity: number
           price: number
           quantity: number
+          sku: string | null
+          suggested_price: number
+          supplier_id: string | null
+          unit_cost: number
           updated_at: string
+          weight: number | null
+          width: number | null
         }
         Insert: {
+          barcode?: string | null
           category_id: string
           created_at?: string
+          depth?: number | null
+          height?: number | null
           id?: string
+          min_stock?: number
           name: string
+          popularity?: number
           price: number
           quantity?: number
+          sku?: string | null
+          suggested_price?: number
+          supplier_id?: string | null
+          unit_cost?: number
           updated_at?: string
+          weight?: number | null
+          width?: number | null
         }
         Update: {
+          barcode?: string | null
           category_id?: string
           created_at?: string
+          depth?: number | null
+          height?: number | null
           id?: string
+          min_stock?: number
           name?: string
+          popularity?: number
           price?: number
           quantity?: number
+          sku?: string | null
+          suggested_price?: number
+          supplier_id?: string | null
+          unit_cost?: number
           updated_at?: string
+          weight?: number | null
+          width?: number | null
         }
         Relationships: [
           {
@@ -43,6 +76,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "inventory_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
         ]
@@ -67,6 +107,50 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      inventory_movements: {
+        Row: {
+          created_at: string
+          id: string
+          inventory_id: string
+          movement_type: string
+          notes: string | null
+          quantity: number
+          reason: string
+          unit_cost: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          inventory_id: string
+          movement_type: string
+          notes?: string | null
+          quantity: number
+          reason: string
+          unit_cost: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          inventory_id?: string
+          movement_type?: string
+          notes?: string | null
+          quantity?: number
+          reason?: string
+          unit_cost?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_movements_inventory_id_fkey"
+            columns: ["inventory_id"]
+            isOneToOne: false
+            referencedRelation: "inventory"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -171,6 +255,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      suppliers: {
+        Row: {
+          contact_info: string | null
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          contact_info?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          contact_info?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
