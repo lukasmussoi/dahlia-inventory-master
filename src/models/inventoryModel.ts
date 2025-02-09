@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 // Interface para fornecedor
@@ -274,5 +273,57 @@ export class InventoryModel {
 
     if (error) throw error;
     return data.length > 0;
+  }
+
+  // Método para fazer upload de fotos
+  static async updateItemPhotos(inventoryId: string, photos: File[], primaryIndex: number | null): Promise<void> {
+    try {
+      // Primeiro, vamos fazer o upload das fotos para o storage
+      const uploadPromises = photos.map(async (photo, index) => {
+        const fileExt = photo.name.split('.').pop();
+        const fileName = `${inventoryId}/${crypto.randomUUID()}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('inventory_photos')
+          .upload(fileName, photo);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('inventory_photos')
+          .getPublicUrl(fileName);
+
+        // Inserir referência na tabela inventory_photos
+        const { error: dbError } = await supabase
+          .from('inventory_photos')
+          .insert({
+            inventory_id: inventoryId,
+            photo_url: publicUrl,
+            is_primary: index === primaryIndex
+          });
+
+        if (dbError) throw dbError;
+      });
+
+      await Promise.all(uploadPromises);
+    } catch (error) {
+      console.error('Erro ao fazer upload das fotos:', error);
+      throw error;
+    }
+  }
+
+  // Método para buscar fotos de um item
+  static async getItemPhotos(inventoryId: string): Promise<{ url: string; isPrimary: boolean }[]> {
+    const { data, error } = await supabase
+      .from('inventory_photos')
+      .select('photo_url, is_primary')
+      .eq('inventory_id', inventoryId)
+      .order('is_primary', { ascending: false });
+
+    if (error) throw error;
+    return (data || []).map(photo => ({
+      url: photo.photo_url,
+      isPrimary: photo.is_primary || false
+    }));
   }
 }

@@ -14,10 +14,10 @@ const formSchema = z.object({
   price: z.number().min(0, "Preço não pode ser negativo"),
   unit_cost: z.number().min(0, "Custo unitário não pode ser negativo"),
   suggested_price: z.number().min(0, "Preço sugerido não pode ser negativo"),
-  weight: z.number().min(0, "Peso não pode ser negativo").optional(),
-  width: z.number().min(0, "Largura não pode ser negativa").optional(),
-  height: z.number().min(0, "Altura não pode ser negativa").optional(),
-  depth: z.number().min(0, "Profundidade não pode ser negativa").optional(),
+  weight: z.number().min(0, "Peso não pode ser negativo").nullable(),
+  width: z.number().min(0, "Largura não pode ser negativa").nullable(),
+  height: z.number().min(0, "Altura não pode ser negativa").nullable(),
+  depth: z.number().min(0, "Profundidade não pode ser negativa").nullable(),
   min_stock: z.number().min(0, "Estoque mínimo não pode ser negativo"),
   supplier_id: z.string().optional(),
 });
@@ -32,6 +32,8 @@ interface UseInventoryFormProps {
 
 export const useInventoryForm = ({ item, onSuccess, onClose }: UseInventoryFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [photos, setPhotos] = useState<File[]>([]);
+  const [primaryPhotoIndex, setPrimaryPhotoIndex] = useState<number | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -42,10 +44,10 @@ export const useInventoryForm = ({ item, onSuccess, onClose }: UseInventoryFormP
       price: item?.price || 0,
       unit_cost: item?.unit_cost || 0,
       suggested_price: item?.suggested_price || 0,
-      weight: item?.weight,
-      width: item?.width,
-      height: item?.height,
-      depth: item?.depth,
+      weight: item?.weight || null,
+      width: item?.width || null,
+      height: item?.height || null,
+      depth: item?.depth || null,
       min_stock: item?.min_stock || 0,
       supplier_id: item?.supplier_id || undefined,
     },
@@ -54,11 +56,19 @@ export const useInventoryForm = ({ item, onSuccess, onClose }: UseInventoryFormP
   const onSubmit = async (values: FormValues) => {
     try {
       setIsSubmitting(true);
+
+      if (photos.length > 5) {
+        toast.error("Máximo de 5 fotos permitido");
+        return;
+      }
+
       if (item) {
         await InventoryModel.updateItem(item.id, values);
+        if (photos.length > 0) {
+          await InventoryModel.updateItemPhotos(item.id, photos, primaryPhotoIndex);
+        }
         toast.success("Item atualizado com sucesso!");
       } else {
-        // Garantir que os campos obrigatórios estejam presentes
         const newItem = {
           name: values.name,
           category_id: values.category_id,
@@ -67,14 +77,16 @@ export const useInventoryForm = ({ item, onSuccess, onClose }: UseInventoryFormP
           unit_cost: values.unit_cost,
           suggested_price: values.suggested_price,
           min_stock: values.min_stock,
-          // Campos opcionais
           supplier_id: values.supplier_id,
           weight: values.weight,
           width: values.width,
           height: values.height,
           depth: values.depth,
         };
-        await InventoryModel.createItem(newItem);
+        const createdItem = await InventoryModel.createItem(newItem);
+        if (photos.length > 0) {
+          await InventoryModel.updateItemPhotos(createdItem.id, photos, primaryPhotoIndex);
+        }
         toast.success("Item criado com sucesso!");
       }
       onSuccess?.();
@@ -91,5 +103,9 @@ export const useInventoryForm = ({ item, onSuccess, onClose }: UseInventoryFormP
     form,
     isSubmitting,
     onSubmit: form.handleSubmit(onSubmit),
+    photos,
+    setPhotos,
+    primaryPhotoIndex,
+    setPrimaryPhotoIndex,
   };
 };

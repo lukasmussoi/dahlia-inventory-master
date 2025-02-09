@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { InventoryItem, InventoryCategory, Supplier, InventoryModel } from "@/models/inventoryModel";
 import { MainFields } from "./form/MainFields";
 import { DimensionsFields } from "./form/DimensionsFields";
+import { PhotoFields } from "./form/PhotoFields";
 import { useInventoryForm } from "@/hooks/useInventoryForm";
 
 interface InventoryFormProps {
@@ -24,7 +25,15 @@ interface InventoryFormProps {
 
 export function InventoryForm({ item, categories, isOpen, onClose, onSuccess }: InventoryFormProps) {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const { form, isSubmitting, onSubmit } = useInventoryForm({ item, onSuccess, onClose });
+  const { 
+    form, 
+    isSubmitting, 
+    onSubmit,
+    photos,
+    setPhotos,
+    primaryPhotoIndex,
+    setPrimaryPhotoIndex 
+  } = useInventoryForm({ item, onSuccess, onClose });
 
   // Carregar fornecedores
   useEffect(() => {
@@ -57,6 +66,12 @@ export function InventoryForm({ item, categories, isOpen, onClose, onSuccess }: 
               suppliers={suppliers}
             />
             <DimensionsFields form={form} />
+            <PhotoFields
+              photos={photos}
+              setPhotos={setPhotos}
+              primaryPhotoIndex={primaryPhotoIndex}
+              setPrimaryPhotoIndex={setPrimaryPhotoIndex}
+            />
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={onClose}>
                 Cancelar

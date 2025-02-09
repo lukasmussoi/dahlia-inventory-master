@@ -28,7 +28,8 @@ export function DimensionsFields({ form }: DimensionsFieldsProps) {
                 type="number"
                 step="0.01"
                 {...field}
-                onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                value={field.value || ''}
+                onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
               />
             </FormControl>
             <FormMessage />
@@ -47,7 +48,8 @@ export function DimensionsFields({ form }: DimensionsFieldsProps) {
                 type="number"
                 step="0.1"
                 {...field}
-                onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                value={field.value || ''}
+                onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
               />
             </FormControl>
             <FormMessage />
@@ -66,7 +68,8 @@ export function DimensionsFields({ form }: DimensionsFieldsProps) {
                 type="number"
                 step="0.1"
                 {...field}
-                onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                value={field.value || ''}
+                onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
               />
             </FormControl>
             <FormMessage />
@@ -85,7 +88,8 @@ export function DimensionsFields({ form }: DimensionsFieldsProps) {
                 type="number"
                 step="0.1"
                 {...field}
-                onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                value={field.value || ''}
+                onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
               />
             </FormControl>
             <FormMessage />
