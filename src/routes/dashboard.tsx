@@ -31,7 +31,7 @@ const Dashboard = () => {
   }
 
   return (
-    <SidebarProvider defaultCollapsed={isMobile}>
+    <SidebarProvider defaultOpen={!isMobile}>
       <div className="min-h-screen flex w-full flex-col md:flex-row bg-pearl">
         <DashboardSidebar isAdmin={userProfile?.isAdmin} />
         <DashboardContent />
