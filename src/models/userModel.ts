@@ -1,6 +1,5 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { User } from "@supabase/supabase-js";
 
 // Interface para perfil de usuário com status atualizado
 export interface UserProfile {
@@ -28,7 +27,7 @@ export class UserModel {
   static async getActiveUsers(): Promise<UserProfile[]> {
     const { data, error } = await supabase
       .from('profiles')
-      .select('*')
+      .select('id, full_name, status, created_at, updated_at')
       .eq('status', 'active');
     
     if (error) throw error;
