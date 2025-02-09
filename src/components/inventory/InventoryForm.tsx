@@ -51,11 +51,19 @@ export function InventoryForm({ item, isOpen, onClose }: InventoryFormProps) {
 
   const onSubmit = async (values: FormValues) => {
     try {
+      // Garantimos que todos os campos estão presentes conforme exigido pela interface InventoryItem
+      const itemData = {
+        name: values.name,
+        category: values.category,
+        quantity: values.quantity,
+        price: values.price,
+      };
+
       if (item) {
-        await InventoryModel.updateItem(item.id, values);
+        await InventoryModel.updateItem(item.id, itemData);
         toast.success("Item atualizado com sucesso!");
       } else {
-        await InventoryModel.createItem(values);
+        await InventoryModel.createItem(itemData);
         toast.success("Item criado com sucesso!");
       }
       onClose();
