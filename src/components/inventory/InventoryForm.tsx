@@ -5,6 +5,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Form } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
@@ -57,6 +58,9 @@ export function InventoryForm({ item, categories, isOpen, onClose, onSuccess }: 
           <DialogTitle>
             {item ? "Editar Item" : "Novo Item"}
           </DialogTitle>
+          <DialogDescription>
+            Preencha os dados do item do estoque. Os campos de dimensões são opcionais.
+          </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={onSubmit} className="space-y-4">
