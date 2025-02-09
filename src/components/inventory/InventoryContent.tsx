@@ -147,6 +147,7 @@ export function InventoryContent({ isAdmin }: InventoryContentProps) {
         {/* Modal de Item */}
         {isItemModalOpen && (
           <InventoryForm
+            categories={categories}
             item={selectedItem}
             isOpen={isItemModalOpen}
             onClose={handleCloseModals}

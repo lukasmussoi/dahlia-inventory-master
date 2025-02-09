@@ -28,7 +28,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { InventoryItem, InventoryCategory, InventoryModel } from "@/models/inventoryModel";
-import { useQuery } from "@tanstack/react-query";
 
 // Schema de validação do formulário
 const formSchema = z.object({
@@ -42,19 +41,14 @@ type FormValues = z.infer<typeof formSchema>;
 
 interface InventoryFormProps {
   item?: InventoryItem | null;
+  categories: InventoryCategory[];
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
 }
 
-export function InventoryForm({ item, isOpen, onClose, onSuccess }: InventoryFormProps) {
+export function InventoryForm({ item, categories, isOpen, onClose, onSuccess }: InventoryFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Buscar categorias disponíveis
-  const { data: categories = [] } = useQuery<InventoryCategory[]>({
-    queryKey: ['inventory-categories'],
-    queryFn: InventoryModel.getAllCategories,
-  });
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -73,7 +67,12 @@ export function InventoryForm({ item, isOpen, onClose, onSuccess }: InventoryFor
         await InventoryModel.updateItem(item.id, values);
         toast.success("Item atualizado com sucesso!");
       } else {
-        await InventoryModel.createItem(values);
+        await InventoryModel.createItem({
+          name: values.name,
+          category_id: values.category_id,
+          quantity: values.quantity,
+          price: values.price,
+        });
         toast.success("Item criado com sucesso!");
       }
       onSuccess?.();
