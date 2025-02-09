@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -98,7 +99,23 @@ export function InventoryForm({ item, categories, isOpen, onClose, onSuccess }: 
         await InventoryModel.updateItem(item.id, values);
         toast.success("Item atualizado com sucesso!");
       } else {
-        await InventoryModel.createItem(values);
+        // Garantir que os campos obrigatórios estejam presentes
+        const newItem = {
+          name: values.name,
+          category_id: values.category_id,
+          quantity: values.quantity,
+          price: values.price,
+          unit_cost: values.unit_cost,
+          suggested_price: values.suggested_price,
+          min_stock: values.min_stock,
+          // Campos opcionais
+          supplier_id: values.supplier_id,
+          weight: values.weight,
+          width: values.width,
+          height: values.height,
+          depth: values.depth,
+        };
+        await InventoryModel.createItem(newItem);
         toast.success("Item criado com sucesso!");
       }
       onSuccess?.();
