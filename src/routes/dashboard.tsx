@@ -1,5 +1,5 @@
 
-import { useEffect, ReactNode } from "react";
+import { useEffect } from "react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { DashboardContent } from "@/components/dashboard/DashboardContent";
@@ -8,16 +8,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Menu } from "lucide-react";
-
-interface SidebarRenderProps {
-  open: boolean;
-  setOpen: (value: boolean) => void;
-}
-
-interface SidebarProviderProps {
-  defaultOpen?: boolean;
-  children: (props: SidebarRenderProps) => ReactNode;
-}
 
 const Dashboard = () => {
   const isMobile = useIsMobile();
@@ -44,7 +34,7 @@ const Dashboard = () => {
 
   return (
     <SidebarProvider defaultOpen={!isMobile}>
-      {({ open, setOpen }: SidebarRenderProps) => (
+      {({ open, setOpen }) => (
         <div className="min-h-screen flex w-full bg-pearl">
           <div className="fixed left-0 top-0 h-full z-50">
             <DashboardSidebar isAdmin={userProfile?.isAdmin} />
