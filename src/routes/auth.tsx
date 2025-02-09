@@ -5,17 +5,54 @@ import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e: SyntheticEvent) => {
     e.preventDefault();
-    // Implementação futura: Integração com backend
-    toast.success("Login realizado com sucesso!");
-    navigate("/dashboard");
+    setLoading(true);
+
+    try {
+      if (isLogin) {
+        // Login
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (error) throw error;
+
+        toast.success("Login realizado com sucesso!");
+        navigate("/dashboard");
+      } else {
+        // Signup
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: window.location.origin + '/dashboard',
+          },
+        });
+
+        if (error) throw error;
+
+        toast.success("Cadastro realizado com sucesso! Verifique seu email.");
+      }
+    } catch (error: any) {
+      console.error('Erro de autenticação:', error);
+      toast.error(error.message === 'Invalid login credentials'
+        ? 'Credenciais inválidas'
+        : 'Erro ao realizar ' + (isLogin ? 'login' : 'cadastro'));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -41,6 +78,8 @@ const AuthPage = () => {
               <Input
                 id="email"
                 type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 placeholder="seu@email.com"
                 required
                 className="w-full"
@@ -55,6 +94,8 @@ const AuthPage = () => {
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
                   className="w-full pr-10"
@@ -69,8 +110,12 @@ const AuthPage = () => {
               </div>
             </div>
 
-            <Button type="submit" className="w-full bg-gold hover:bg-gold-dark text-white">
-              {isLogin ? "Entrar" : "Criar conta"}
+            <Button 
+              type="submit" 
+              className="w-full bg-gold hover:bg-gold-dark text-white"
+              disabled={loading}
+            >
+              {loading ? "Carregando..." : (isLogin ? "Entrar" : "Criar conta")}
             </Button>
           </form>
 
