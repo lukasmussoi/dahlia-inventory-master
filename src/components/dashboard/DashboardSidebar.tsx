@@ -16,36 +16,58 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
-const menuItems = [
-  {
-    title: "Dashboard",
-    icon: LayoutDashboard,
-    url: "/dashboard",
-  },
-  {
-    title: "Usuários",
-    icon: Users,
-    url: "/dashboard/users",
-  },
-  {
-    title: "Estoque",
-    icon: Package,
-    url: "/dashboard/inventory",
-  },
-  {
-    title: "Maletas",
-    icon: Briefcase,
-    url: "/dashboard/suitcases",
-  },
-  {
-    title: "Configurações",
-    icon: Settings,
-    url: "/dashboard/settings",
-  },
-];
+interface DashboardSidebarProps {
+  isAdmin?: boolean;
+}
 
-export function DashboardSidebar() {
+export function DashboardSidebar({ isAdmin }: DashboardSidebarProps) {
+  // Função para fazer logout
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+      toast.error('Erro ao fazer logout');
+    }
+  };
+
+  // Menu items baseados nas permissões do usuário
+  const menuItems = [
+    {
+      title: "Dashboard",
+      icon: LayoutDashboard,
+      url: "/dashboard",
+    },
+    ...(isAdmin ? [
+      {
+        title: "Usuários",
+        icon: Users,
+        url: "/dashboard/users",
+      }
+    ] : []),
+    {
+      title: "Estoque",
+      icon: Package,
+      url: "/dashboard/inventory",
+    },
+    {
+      title: "Maletas",
+      icon: Briefcase,
+      url: "/dashboard/suitcases",
+    },
+    ...(isAdmin ? [
+      {
+        title: "Configurações",
+        icon: Settings,
+        url: "/dashboard/settings",
+      }
+    ] : []),
+  ];
+
   return (
     <Sidebar>
       <SidebarContent>
@@ -68,6 +90,14 @@ export function DashboardSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+              <SidebarMenuItem>
+                <SidebarMenuButton onClick={handleLogout}>
+                  <div className="flex items-center gap-3 px-3 py-2 text-red-600 hover:bg-red-50 rounded-md transition-colors cursor-pointer">
+                    <LogOut className="h-5 w-5" />
+                    <span>Sair</span>
+                  </div>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
