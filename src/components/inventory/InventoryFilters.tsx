@@ -72,7 +72,7 @@ export function InventoryFilters({ categories, onFilter }: InventoryFiltersProps
               <SelectValue placeholder="Todas as categorias" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todas as categorias</SelectItem>
+              <SelectItem value="all">Todas as categorias</SelectItem>
               {categories.map((category) => (
                 <SelectItem key={category} value={category}>
                   {category}
@@ -116,7 +116,7 @@ export function InventoryFilters({ categories, onFilter }: InventoryFiltersProps
               <SelectValue placeholder="Todos os status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todos os status</SelectItem>
+              <SelectItem value="all">Todos os status</SelectItem>
               <SelectItem value="available">Disponível</SelectItem>
               <SelectItem value="out_of_stock">Em falta</SelectItem>
             </SelectContent>
