@@ -32,9 +32,13 @@ const Dashboard = () => {
 
   return (
     <SidebarProvider defaultOpen={!isMobile}>
-      <div className="min-h-screen flex w-full flex-col md:flex-row bg-pearl">
-        <DashboardSidebar isAdmin={userProfile?.isAdmin} />
-        <DashboardContent />
+      <div className="min-h-screen flex w-full bg-pearl">
+        <div className="fixed left-0 top-0 h-full z-50">
+          <DashboardSidebar isAdmin={userProfile?.isAdmin} />
+        </div>
+        <div className="flex-1 md:ml-64">
+          <DashboardContent />
+        </div>
       </div>
     </SidebarProvider>
   );

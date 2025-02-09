@@ -17,7 +17,7 @@ export function DashboardContent() {
   }
 
   return (
-    <main className="flex-1 p-4 md:p-8 overflow-auto">
+    <main className="flex-1 p-4 md:p-8 overflow-x-hidden">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-2xl md:text-3xl font-semibold text-gray-900 mb-6 md:mb-8">Visão Geral</h1>
         
