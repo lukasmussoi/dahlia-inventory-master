@@ -53,30 +53,32 @@ const Inventory = () => {
     );
   }
 
+  const RenderContent = ({ open, setOpen }: { open: boolean; setOpen: (value: boolean) => void }) => {
+    return (
+      <div className="min-h-screen flex w-full bg-pearl">
+        <div className="fixed left-0 top-0 h-full z-50">
+          <DashboardSidebar isAdmin={userProfile?.isAdmin} />
+        </div>
+        <div className="flex-1 md:ml-64">
+          <div className="p-4">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setOpen(!open)}
+              className="mb-4"
+            >
+              <Menu className="h-4 w-4" />
+            </Button>
+          </div>
+          <InventoryContent isAdmin={userProfile?.isAdmin} />
+        </div>
+      </div>
+    );
+  };
+
   return (
     <SidebarProvider defaultOpen={!isMobile}>
-      {function RenderContent({ open, setOpen }) {
-        return (
-          <div className="min-h-screen flex w-full bg-pearl">
-            <div className="fixed left-0 top-0 h-full z-50">
-              <DashboardSidebar isAdmin={userProfile?.isAdmin} />
-            </div>
-            <div className="flex-1 md:ml-64">
-              <div className="p-4">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setOpen(!open)}
-                  className="mb-4"
-                >
-                  <Menu className="h-4 w-4" />
-                </Button>
-              </div>
-              <InventoryContent isAdmin={userProfile?.isAdmin} />
-            </div>
-          </div>
-        );
-      }}
+      {RenderContent}
     </SidebarProvider>
   );
 };
