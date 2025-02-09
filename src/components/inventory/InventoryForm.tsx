@@ -30,12 +30,7 @@ const formSchema = z.object({
 });
 
 // Tipo para os valores do formulário
-type FormValues = {
-  name: string;
-  category: string;
-  quantity: number;
-  price: number;
-};
+type FormValues = z.infer<typeof formSchema>;
 
 interface InventoryFormProps {
   item?: InventoryItem | null;
@@ -66,7 +61,7 @@ export function InventoryForm({ item, isOpen, onClose }: InventoryFormProps) {
       onClose();
     } catch (error) {
       console.error('Erro ao salvar item:', error);
-      toast.error("Erro ao salvar item");
+      toast.error("Erro ao salvar item. Verifique os dados e tente novamente.");
     }
   };
 

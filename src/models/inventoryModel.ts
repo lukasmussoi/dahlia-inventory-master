@@ -12,6 +12,15 @@ export interface InventoryItem {
   updated_at?: string;
 }
 
+// Interface para filtros de busca
+export interface InventoryFilters {
+  searchTerm?: string;
+  category?: string;
+  minQuantity?: number;
+  maxQuantity?: number;
+  status?: 'available' | 'out_of_stock';
+}
+
 export class InventoryModel {
   // Buscar total de itens em estoque
   static async getTotalInventory(): Promise<number> {
@@ -24,15 +33,50 @@ export class InventoryModel {
     return data.reduce((sum, item) => sum + item.quantity, 0);
   }
 
-  // Buscar todos os itens do inventário
-  static async getAllItems(): Promise<InventoryItem[]> {
-    const { data, error } = await supabase
+  // Buscar todos os itens do inventário com filtros
+  static async getAllItems(filters?: InventoryFilters): Promise<InventoryItem[]> {
+    let query = supabase
       .from('inventory')
-      .select('*')
-      .order('category', { ascending: true });
+      .select('*');
+
+    // Aplicar filtros se existirem
+    if (filters) {
+      if (filters.searchTerm) {
+        query = query.or(`name.ilike.%${filters.searchTerm}%,category.ilike.%${filters.searchTerm}%`);
+      }
+      if (filters.category) {
+        query = query.eq('category', filters.category);
+      }
+      if (filters.minQuantity !== undefined) {
+        query = query.gte('quantity', filters.minQuantity);
+      }
+      if (filters.maxQuantity !== undefined) {
+        query = query.lte('quantity', filters.maxQuantity);
+      }
+      if (filters.status === 'out_of_stock') {
+        query = query.eq('quantity', 0);
+      } else if (filters.status === 'available') {
+        query = query.gt('quantity', 0);
+      }
+    }
+
+    const { data, error } = await query.order('category', { ascending: true });
     
     if (error) throw error;
     return data || [];
+  }
+
+  // Buscar categorias únicas
+  static async getUniqueCategories(): Promise<string[]> {
+    const { data, error } = await supabase
+      .from('inventory')
+      .select('category')
+      .order('category');
+    
+    if (error) throw error;
+    
+    // Remover duplicatas
+    return [...new Set(data.map(item => item.category))];
   }
 
   // Criar novo item
@@ -68,5 +112,18 @@ export class InventoryModel {
       .eq('id', id);
 
     if (error) throw error;
+  }
+
+  // Verificar se item está vinculado a uma maleta
+  static async checkItemInSuitcase(id: string): Promise<boolean> {
+    const { data, error } = await supabase
+      .from('suitcase_items')
+      .select('id')
+      .eq('inventory_id', id)
+      .eq('status', 'in_possession')
+      .limit(1);
+
+    if (error) throw error;
+    return data.length > 0;
   }
 }

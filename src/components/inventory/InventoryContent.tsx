@@ -1,12 +1,12 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { InventoryItem, InventoryModel } from "@/models/inventoryModel";
-import { Input } from "@/components/ui/input";
+import { InventoryItem, InventoryModel, InventoryFilters } from "@/models/inventoryModel";
 import { Button } from "@/components/ui/button";
-import { Plus, Search } from "lucide-react";
+import { Plus } from "lucide-react";
 import { InventoryTable } from "./InventoryTable";
 import { InventoryForm } from "./InventoryForm";
+import { InventoryFilters as Filters } from "./InventoryFilters";
 import { toast } from "sonner";
 
 interface InventoryContentProps {
@@ -16,50 +16,75 @@ interface InventoryContentProps {
 export function InventoryContent({ isAdmin }: InventoryContentProps) {
   // Estados para controle do modal e filtros
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [filters, setFilters] = useState<InventoryFilters>({});
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
 
-  // Buscar dados do inventário
-  const { data: items = [], isLoading, refetch } = useQuery({
-    queryKey: ['inventory-items'],
-    queryFn: InventoryModel.getAllItems,
+  // Buscar dados do inventário e categorias
+  const { data: items = [], isLoading: isLoadingItems, refetch: refetchItems } = useQuery({
+    queryKey: ['inventory-items', filters],
+    queryFn: () => InventoryModel.getAllItems(filters),
   });
 
-  // Filtrar itens com base na busca
-  const filteredItems = items.filter(item =>
-    item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.category.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const { data: categories = [] } = useQuery({
+    queryKey: ['inventory-categories'],
+    queryFn: InventoryModel.getUniqueCategories,
+  });
 
   // Função para abrir o modal de edição
-  const handleEdit = (item: InventoryItem) => {
-    setSelectedItem(item);
-    setIsModalOpen(true);
+  const handleEdit = async (item: InventoryItem) => {
+    try {
+      // Verificar se o item está em uma maleta antes de permitir edição
+      const isInSuitcase = await InventoryModel.checkItemInSuitcase(item.id);
+      if (isInSuitcase) {
+        toast.error("Este item está vinculado a uma maleta ativa e não pode ser editado.");
+        return;
+      }
+      setSelectedItem(item);
+      setIsModalOpen(true);
+    } catch (error) {
+      console.error('Erro ao verificar item:', error);
+      toast.error("Erro ao verificar disponibilidade do item");
+    }
   };
 
   // Função para fechar o modal
   const handleCloseModal = () => {
     setSelectedItem(null);
     setIsModalOpen(false);
-    refetch();
+    refetchItems();
   };
 
   // Função para deletar um item
   const handleDelete = async (id: string) => {
     try {
-      await InventoryModel.deleteItem(id);
-      toast.success("Item removido com sucesso!");
-      refetch();
+      // Verificar se o item está em uma maleta antes de permitir exclusão
+      const isInSuitcase = await InventoryModel.checkItemInSuitcase(id);
+      if (isInSuitcase) {
+        toast.error("Este item está vinculado a uma maleta ativa e não pode ser removido.");
+        return;
+      }
+
+      // Confirmação antes de deletar
+      if (window.confirm("Tem certeza que deseja excluir este item?")) {
+        await InventoryModel.deleteItem(id);
+        toast.success("Item removido com sucesso!");
+        refetchItems();
+      }
     } catch (error) {
       console.error('Erro ao deletar item:', error);
       toast.error("Erro ao remover item");
     }
   };
 
+  // Função para atualizar filtros
+  const handleFilter = (newFilters: InventoryFilters) => {
+    setFilters(newFilters);
+  };
+
   return (
     <main className="flex-1 p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
+      <div className="max-w-7xl mx-auto space-y-6">
+        <div className="flex justify-between items-center">
           <h1 className="text-3xl font-semibold text-gray-900">Gestão de Estoque</h1>
           {isAdmin && (
             <Button onClick={() => setIsModalOpen(true)} className="bg-gold hover:bg-gold/90">
@@ -69,26 +94,21 @@ export function InventoryContent({ isAdmin }: InventoryContentProps) {
           )}
         </div>
 
-        <div className="mb-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-            <Input
-              type="text"
-              placeholder="Buscar por nome ou categoria..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-        </div>
+        {/* Componente de Filtros */}
+        <Filters
+          categories={categories}
+          onFilter={handleFilter}
+        />
 
+        {/* Tabela de Itens */}
         <InventoryTable
-          items={filteredItems}
-          isLoading={isLoading}
+          items={items}
+          isLoading={isLoadingItems}
           onEdit={isAdmin ? handleEdit : undefined}
           onDelete={isAdmin ? handleDelete : undefined}
         />
 
+        {/* Modal de Formulário */}
         {isModalOpen && (
           <InventoryForm
             item={selectedItem}

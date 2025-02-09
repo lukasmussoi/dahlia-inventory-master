@@ -27,6 +27,14 @@ export function InventoryTable({ items, isLoading, onEdit, onDelete }: Inventory
     );
   }
 
+  if (items.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-gray-500">Nenhum item encontrado.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="border rounded-lg">
       <Table>
@@ -36,6 +44,7 @@ export function InventoryTable({ items, isLoading, onEdit, onDelete }: Inventory
             <TableHead>Categoria</TableHead>
             <TableHead className="text-right">Quantidade</TableHead>
             <TableHead className="text-right">Preço</TableHead>
+            <TableHead>Status</TableHead>
             {(onEdit || onDelete) && <TableHead className="text-right">Ações</TableHead>}
           </TableRow>
         </TableHeader>
@@ -50,6 +59,13 @@ export function InventoryTable({ items, isLoading, onEdit, onDelete }: Inventory
                   style: 'currency',
                   currency: 'BRL'
                 }).format(item.price)}
+              </TableCell>
+              <TableCell>
+                <span className={`px-2 py-1 rounded-full text-sm ${
+                  item.quantity > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                }`}>
+                  {item.quantity > 0 ? 'Disponível' : 'Em falta'}
+                </span>
               </TableCell>
               {(onEdit || onDelete) && (
                 <TableCell className="text-right">
