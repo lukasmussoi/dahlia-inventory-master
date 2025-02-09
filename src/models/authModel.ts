@@ -19,17 +19,17 @@ export class AuthModel {
     // Buscar perfil do usuário
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('*')
+      .select('id, full_name, status, created_at, updated_at')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
     if (profileError) throw profileError;
 
-    // Verificar se o usuário é admin - Note que agora selecionamos apenas 'role'
+    // Verificar se o usuário é admin - Agora usando user_role ao invés de role
     const { data: roles, error: rolesError } = await supabase
       .from('user_roles')
-      .select('role')
+      .select('user_role')
       .eq('user_id', user.id)
-      .eq('role', 'admin');
+      .eq('user_role', 'admin');
     if (rolesError) throw rolesError;
 
     return {
