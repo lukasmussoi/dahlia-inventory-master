@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -12,6 +13,7 @@ const AuthPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -38,6 +40,9 @@ const AuthPage = () => {
           password,
           options: {
             emailRedirectTo: window.location.origin + '/dashboard',
+            data: {
+              is_admin: isAdmin // Adiciona a informação de admin nos metadados
+            }
           },
         });
 
@@ -115,6 +120,22 @@ const AuthPage = () => {
                 </button>
               </div>
             </div>
+
+            {!isLogin && (
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="isAdmin"
+                  checked={isAdmin}
+                  onCheckedChange={(checked) => setIsAdmin(checked as boolean)}
+                />
+                <label
+                  htmlFor="isAdmin"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Criar como administrador
+                </label>
+              </div>
+            )}
 
             <Button 
               type="submit" 
