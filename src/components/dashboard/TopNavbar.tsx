@@ -1,4 +1,3 @@
-
 import {
   Users,
   Package,
@@ -18,7 +17,6 @@ import {
   NavigationMenu,
   NavigationMenuContent,
   NavigationMenuItem,
-  NavigationMenuLink,
   NavigationMenuList,
   NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu";
@@ -46,13 +44,6 @@ export function TopNavbar({ isAdmin }: TopNavbarProps) {
       icon: LayoutDashboard,
       url: "/dashboard",
     },
-    ...(isAdmin ? [
-      {
-        title: "Usuárias",
-        icon: Users,
-        url: "/dashboard/users",
-      }
-    ] : []),
     {
       title: "Estoque",
       icon: Package,
@@ -87,6 +78,13 @@ export function TopNavbar({ isAdmin }: TopNavbarProps) {
         title: "Configurações",
         icon: Settings,
         url: "/dashboard/settings",
+        subItems: [
+          {
+            title: "Usuários",
+            url: "/dashboard/settings/users",
+            icon: Users,
+          },
+        ],
       }
     ] : []),
   ];

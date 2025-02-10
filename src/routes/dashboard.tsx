@@ -9,6 +9,7 @@ import Inventory from "./inventory";
 import Suitcases from "./suitcases";
 import Suppliers from "./suppliers";
 import Categories from "./categories";
+import Users from "./users";
 
 const Dashboard = () => {
   useEffect(() => {
@@ -43,6 +44,9 @@ const Dashboard = () => {
             <Route path="categories" element={<Categories />} />
           </Route>
           <Route path="suitcases" element={<Suitcases />} />
+          <Route path="settings">
+            <Route path="users" element={<Users />} />
+          </Route>
         </Routes>
       </div>
     </div>
