@@ -110,8 +110,8 @@ export function InventoryContent({ isAdmin }: InventoryContentProps) {
   };
 
   return (
-    <div className="flex-1">
-      <div className="px-8 py-6 space-y-6">
+    <div className="w-full">
+      <div className="p-6 space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-semibold text-gray-900">Gestão de Estoque</h1>
           {isAdmin && (
