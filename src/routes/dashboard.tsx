@@ -36,9 +36,11 @@ const Dashboard = () => {
       <div className="pt-16">
         <Routes>
           <Route index element={<DashboardContent />} />
-          <Route path="inventory" element={<Inventory />} />
+          <Route path="inventory">
+            <Route index element={<Inventory />} />
+            <Route path="suppliers" element={<Suppliers />} />
+          </Route>
           <Route path="suitcases" element={<Suitcases />} />
-          <Route path="suppliers" element={<Suppliers />} />
         </Routes>
       </div>
     </div>
