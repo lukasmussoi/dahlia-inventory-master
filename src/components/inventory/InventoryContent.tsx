@@ -28,7 +28,6 @@ export function InventoryContent({ isAdmin }: InventoryContentProps) {
     queryFn: () => InventoryModel.getAllItems(filters),
   });
 
-  // Atualizar a definição do estado das categorias para um array vazio como valor inicial
   const { data: categories = [], refetch: refetchCategories } = useQuery({
     queryKey: ['inventory-categories'],
     queryFn: InventoryModel.getAllCategories,
@@ -110,64 +109,67 @@ export function InventoryContent({ isAdmin }: InventoryContentProps) {
   };
 
   return (
-    <div className="flex-1 w-full">
-      <div className="p-4">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-semibold text-gray-900">Gestão de Estoque</h1>
-          {isAdmin && (
-            <div className="flex gap-2">
-              <Button 
-                onClick={() => setIsCategoryModalOpen(true)} 
-                className="bg-gold/80 hover:bg-gold/70"
-              >
-                <FolderPlus className="h-5 w-5 mr-2" />
-                Nova Categoria
-              </Button>
-              <Button onClick={() => setIsItemModalOpen(true)} className="bg-gold hover:bg-gold/90">
-                <Plus className="h-5 w-5 mr-2" />
-                Novo Item
-              </Button>
-            </div>
-          )}
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Gestão de Estoque</h1>
+          <p className="text-muted-foreground">
+            Gerencie todos os itens do seu estoque de forma eficiente
+          </p>
         </div>
-
-        {/* Componente de Filtros */}
-        <Filters
-          categories={categories}
-          onFilter={handleFilter}
-        />
-
-        {/* Tabela de Itens */}
-        <div className="mt-6">
-          <InventoryTable
-            items={items}
-            isLoading={isLoadingItems}
-            onEdit={isAdmin ? handleEditItem : undefined}
-            onDelete={isAdmin ? handleDeleteItem : undefined}
-          />
-        </div>
-
-        {/* Modal de Item */}
-        {isItemModalOpen && (
-          <InventoryForm
-            categories={categories}
-            item={selectedItem}
-            isOpen={isItemModalOpen}
-            onClose={handleCloseModals}
-            onSuccess={refetchItems}
-          />
-        )}
-
-        {/* Modal de Categoria */}
-        {isCategoryModalOpen && (
-          <CategoryForm
-            category={selectedCategory}
-            isOpen={isCategoryModalOpen}
-            onClose={handleCloseModals}
-            onSuccess={refetchCategories}
-          />
+        {isAdmin && (
+          <div className="flex gap-2">
+            <Button 
+              onClick={() => setIsCategoryModalOpen(true)} 
+              className="bg-gold/80 hover:bg-gold/70"
+            >
+              <FolderPlus className="h-5 w-5 mr-2" />
+              Nova Categoria
+            </Button>
+            <Button onClick={() => setIsItemModalOpen(true)} className="bg-gold hover:bg-gold/90">
+              <Plus className="h-5 w-5 mr-2" />
+              Novo Item
+            </Button>
+          </div>
         )}
       </div>
+
+      {/* Componente de Filtros */}
+      <Filters
+        categories={categories}
+        onFilter={handleFilter}
+      />
+
+      {/* Tabela de Itens */}
+      <div className="bg-white rounded-lg border">
+        <InventoryTable
+          items={items}
+          isLoading={isLoadingItems}
+          onEdit={isAdmin ? handleEditItem : undefined}
+          onDelete={isAdmin ? handleDeleteItem : undefined}
+        />
+      </div>
+
+      {/* Modal de Item */}
+      {isItemModalOpen && (
+        <InventoryForm
+          categories={categories}
+          item={selectedItem}
+          isOpen={isItemModalOpen}
+          onClose={handleCloseModals}
+          onSuccess={refetchItems}
+        />
+      )}
+
+      {/* Modal de Categoria */}
+      {isCategoryModalOpen && (
+        <CategoryForm
+          category={selectedCategory}
+          isOpen={isCategoryModalOpen}
+          onClose={handleCloseModals}
+          onSuccess={refetchCategories}
+        />
+      )}
     </div>
   );
 }

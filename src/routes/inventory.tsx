@@ -49,8 +49,15 @@ const Inventory = () => {
   }
 
   return (
-    <div className="flex-1 md:ml-64 transition-all duration-300 ease-in-out">
-      <InventoryContent isAdmin={userProfile?.isAdmin} />
+    <div className="h-full min-h-screen bg-background">
+      <div className="flex h-full min-h-screen">
+        <DashboardSidebar isAdmin={userProfile?.isAdmin} />
+        <main className="flex-1">
+          <div className="flex-1 space-y-4 p-4 pt-6">
+            <InventoryContent isAdmin={userProfile?.isAdmin} />
+          </div>
+        </main>
+      </div>
     </div>
   );
 };
