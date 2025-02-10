@@ -84,10 +84,9 @@
 }
 
 .hover-scale {
-  @apply transition-transform duration-200 hover:scale-102;
+  @apply transition-transform duration-200 hover:scale-105;
 }
 
 .link-hover {
   @apply transition-colors duration-200 hover:text-accent;
 }
-
