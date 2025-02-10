@@ -64,7 +64,7 @@ export function InventoryForm({ item, categories, isOpen, onClose, onSuccess }: 
         
         <div className="flex-1 overflow-y-auto px-1 pb-4">
           <Form {...form}>
-            <form onSubmit={onSubmit} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <MainFields 
                 form={form}
                 categories={categories}
@@ -86,7 +86,8 @@ export function InventoryForm({ item, categories, isOpen, onClose, onSuccess }: 
             Cancelar
           </Button>
           <Button 
-            onClick={form.handleSubmit(onSubmit)}
+            type="submit"
+            form="inventory-form"
             className="bg-gold hover:bg-gold/90"
             disabled={isSubmitting}
           >
