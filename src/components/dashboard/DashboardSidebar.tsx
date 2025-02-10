@@ -77,21 +77,21 @@ export function DashboardSidebar({ isAdmin }: DashboardSidebarProps) {
 
   return (
     <Sidebar className="bg-white/80 backdrop-blur-lg border-r border-gray-200">
-      <SidebarContent>
-        <div className="p-4">
-          <h1 className={`text-xl md:text-2xl font-semibold text-gold transition-all ${isMobile ? 'text-center' : ''}`}>
+      <SidebarContent className="flex flex-col items-center">
+        <div className="p-4 w-full text-center">
+          <h1 className={`text-xl md:text-2xl font-semibold text-gold transition-all`}>
             {isMobile ? "DM" : "Dália Manager"}
           </h1>
         </div>
-        <SidebarGroup>
+        <SidebarGroup className="w-full">
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
+                <SidebarMenuItem key={item.title} className="w-full">
                   <SidebarMenuButton asChild>
                     <a
                       href={item.url}
-                      className="flex items-center gap-3 px-3 py-2 text-gray-700 hover:bg-gold/10 rounded-md transition-colors"
+                      className="flex items-center justify-center md:justify-start gap-3 px-3 py-2 text-gray-700 hover:bg-gold/10 rounded-md transition-colors w-full"
                     >
                       <item.icon className="h-5 w-5 flex-shrink-0" />
                       <span className="whitespace-nowrap overflow-hidden text-ellipsis">
@@ -101,9 +101,9 @@ export function DashboardSidebar({ isAdmin }: DashboardSidebarProps) {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
-              <SidebarMenuItem>
+              <SidebarMenuItem className="w-full">
                 <SidebarMenuButton onClick={handleLogout}>
-                  <div className="flex items-center gap-3 px-3 py-2 text-red-600 hover:bg-red-50 rounded-md transition-colors cursor-pointer">
+                  <div className="flex items-center justify-center md:justify-start gap-3 px-3 py-2 text-red-600 hover:bg-red-50 rounded-md transition-colors cursor-pointer w-full">
                     <LogOut className="h-5 w-5 flex-shrink-0" />
                     <span className="whitespace-nowrap overflow-hidden text-ellipsis">Sair</span>
                   </div>
