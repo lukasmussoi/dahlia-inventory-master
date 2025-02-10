@@ -1,6 +1,6 @@
 
 import { useEffect } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { DashboardContent } from "@/components/dashboard/DashboardContent";
@@ -32,6 +32,10 @@ const Dashboard = () => {
         </div>
       </div>
     );
+  }
+
+  if (!userProfile) {
+    return <Navigate to="/" replace />;
   }
 
   return (
