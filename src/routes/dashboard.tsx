@@ -8,6 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import Inventory from "./inventory";
 import Suitcases from "./suitcases";
 import Suppliers from "./suppliers";
+import Categories from "./categories";
 
 const Dashboard = () => {
   useEffect(() => {
@@ -39,6 +40,7 @@ const Dashboard = () => {
           <Route path="inventory">
             <Route index element={<Inventory />} />
             <Route path="suppliers" element={<Suppliers />} />
+            <Route path="categories" element={<Categories />} />
           </Route>
           <Route path="suitcases" element={<Suitcases />} />
         </Routes>

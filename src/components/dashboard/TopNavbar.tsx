@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   Menu,
   Building2,
+  FolderTree,
 } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
@@ -67,6 +68,11 @@ export function TopNavbar({ isAdmin }: TopNavbarProps) {
             title: "Fornecedores",
             url: "/dashboard/inventory/suppliers",
             icon: Building2,
+          },
+          {
+            title: "Categorias",
+            url: "/dashboard/inventory/categories",
+            icon: FolderTree,
           }
         ] : []),
       ],
