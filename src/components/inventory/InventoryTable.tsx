@@ -8,9 +8,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2, AlertTriangle } from "lucide-react";
+import { Edit, Trash2, AlertTriangle, Image as ImageIcon } from "lucide-react";
 import { InventoryItem } from "@/models/inventoryModel";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useQuery } from "@tanstack/react-query";
+import { InventoryModel } from "@/models/inventoryModel";
 
 interface InventoryTableProps {
   items: InventoryItem[];
@@ -43,11 +45,118 @@ export function InventoryTable({ items, isLoading, onEdit, onDelete }: Inventory
     }).format(value);
   };
 
+  const TableRowWithPhotos = ({ item }: { item: InventoryItem }) => {
+    const { data: photos } = useQuery({
+      queryKey: ['item-photos', item.id],
+      queryFn: () => InventoryModel.getItemPhotos(item.id),
+    });
+
+    const primaryPhoto = photos?.find(photo => photo.isPrimary) || photos?.[0];
+
+    return (
+      <TableRow>
+        <TableCell>
+          <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
+            {primaryPhoto ? (
+              <img 
+                src={primaryPhoto.url} 
+                alt={item.name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <ImageIcon className="w-6 h-6 text-gray-400" />
+            )}
+          </div>
+        </TableCell>
+        <TableCell>
+          <div className="space-y-1">
+            <div className="font-medium">{item.name}</div>
+            <div className="text-sm text-gray-500">{item.sku}</div>
+          </div>
+        </TableCell>
+        <TableCell>{item.category_name}</TableCell>
+        <TableCell>{item.supplier_name || '-'}</TableCell>
+        <TableCell className="text-right">
+          <div className="space-y-1">
+            <div>{item.quantity}</div>
+            {item.quantity <= item.min_stock && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <AlertTriangle className="h-4 w-4 text-amber-500 inline-block" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Estoque abaixo do mínimo ({item.min_stock})</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </div>
+        </TableCell>
+        <TableCell className="text-right">
+          {formatCurrency(item.unit_cost)}
+        </TableCell>
+        <TableCell className="text-right">
+          <div className="space-y-1">
+            <div>{formatCurrency(item.price)}</div>
+            {item.suggested_price > 0 && item.suggested_price !== item.price && (
+              <div className="text-sm text-gray-500">
+                Sugerido: {formatCurrency(item.suggested_price)}
+              </div>
+            )}
+          </div>
+        </TableCell>
+        <TableCell>
+          <span className={`px-2 py-1 rounded-full text-sm ${
+            item.quantity === 0 
+              ? 'bg-red-100 text-red-800' 
+              : item.quantity <= item.min_stock
+              ? 'bg-amber-100 text-amber-800'
+              : 'bg-green-100 text-green-800'
+          }`}>
+            {item.quantity === 0 
+              ? 'Em falta' 
+              : item.quantity <= item.min_stock
+              ? 'Estoque baixo'
+              : 'Disponível'}
+          </span>
+        </TableCell>
+        {(onEdit || onDelete) && (
+          <TableCell className="text-right">
+            <div className="flex justify-end gap-2">
+              {onEdit && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onEdit(item)}
+                  className="hover:bg-gray-100"
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+              )}
+              {onDelete && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onDelete(item.id)}
+                  className="hover:bg-red-100 hover:text-red-600"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          </TableCell>
+        )}
+      </TableRow>
+    );
+  };
+
   return (
     <div className="border rounded-lg overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead>Foto</TableHead>
             <TableHead>SKU/Nome</TableHead>
             <TableHead>Categoria</TableHead>
             <TableHead>Fornecedor</TableHead>
@@ -60,87 +169,7 @@ export function InventoryTable({ items, isLoading, onEdit, onDelete }: Inventory
         </TableHeader>
         <TableBody>
           {items.map((item) => (
-            <TableRow key={item.id}>
-              <TableCell>
-                <div className="space-y-1">
-                  <div className="font-medium">{item.name}</div>
-                  <div className="text-sm text-gray-500">{item.sku}</div>
-                </div>
-              </TableCell>
-              <TableCell>{item.category_name}</TableCell>
-              <TableCell>{item.supplier_name || '-'}</TableCell>
-              <TableCell className="text-right">
-                <div className="space-y-1">
-                  <div>{item.quantity}</div>
-                  {item.quantity <= item.min_stock && (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger>
-                          <AlertTriangle className="h-4 w-4 text-amber-500 inline-block" />
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Estoque abaixo do mínimo ({item.min_stock})</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  )}
-                </div>
-              </TableCell>
-              <TableCell className="text-right">
-                {formatCurrency(item.unit_cost)}
-              </TableCell>
-              <TableCell className="text-right">
-                <div className="space-y-1">
-                  <div>{formatCurrency(item.price)}</div>
-                  {item.suggested_price > 0 && item.suggested_price !== item.price && (
-                    <div className="text-sm text-gray-500">
-                      Sugerido: {formatCurrency(item.suggested_price)}
-                    </div>
-                  )}
-                </div>
-              </TableCell>
-              <TableCell>
-                <span className={`px-2 py-1 rounded-full text-sm ${
-                  item.quantity === 0 
-                    ? 'bg-red-100 text-red-800' 
-                    : item.quantity <= item.min_stock
-                    ? 'bg-amber-100 text-amber-800'
-                    : 'bg-green-100 text-green-800'
-                }`}>
-                  {item.quantity === 0 
-                    ? 'Em falta' 
-                    : item.quantity <= item.min_stock
-                    ? 'Estoque baixo'
-                    : 'Disponível'}
-                </span>
-              </TableCell>
-              {(onEdit || onDelete) && (
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
-                    {onEdit && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => onEdit(item)}
-                        className="hover:bg-gray-100"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                    )}
-                    {onDelete && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => onDelete(item.id)}
-                        className="hover:bg-red-100 hover:text-red-600"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                </TableCell>
-              )}
-            </TableRow>
+            <TableRowWithPhotos key={item.id} item={item} />
           ))}
         </TableBody>
       </Table>
