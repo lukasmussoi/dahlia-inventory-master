@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { InventoryItem, InventoryModel, InventoryFilters, InventoryCategory } from "@/models/inventoryModel";
@@ -109,8 +110,8 @@ export function InventoryContent({ isAdmin }: InventoryContentProps) {
   };
 
   return (
-    <main className="flex-1 p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="flex-1">
+      <div className="px-8 py-6 space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-semibold text-gray-900">Gestão de Estoque</h1>
           {isAdmin && (
@@ -165,6 +166,6 @@ export function InventoryContent({ isAdmin }: InventoryContentProps) {
           />
         )}
       </div>
-    </main>
+    </div>
   );
 }
