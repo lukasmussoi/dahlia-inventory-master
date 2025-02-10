@@ -54,19 +54,37 @@
   * {
     @apply border-border;
   }
+  
+  html {
+    @apply antialiased scroll-smooth;
+  }
+  
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply bg-background text-foreground antialiased min-h-screen;
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Melhorar acessibilidade para foco */
+  :focus-visible {
+    @apply outline-none ring-2 ring-gold ring-offset-2 ring-offset-white transition-shadow;
+  }
+
+  /* Melhorar seleção de texto */
+  ::selection {
+    @apply bg-gold/20 text-gray-900;
   }
 }
 
-.scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
+/* Animações suaves */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes slideIn {
@@ -80,6 +98,56 @@
   }
 }
 
+@keyframes scaleIn {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Classes de utilidade para animações */
+.animate-fadeIn {
+  animation: fadeIn 0.5s ease-out;
+}
+
 .animate-slideIn {
   animation: slideIn 0.3s ease-out;
+}
+
+.animate-scaleIn {
+  animation: scaleIn 0.3s ease-out;
+}
+
+/* Esconder scrollbars mantendo funcionalidade */
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Efeitos de vidro */
+.glass-morphism {
+  @apply backdrop-blur-xl bg-white/80 border border-white/20 shadow-lg;
+}
+
+/* Classes de Transição */
+.transition-default {
+  @apply transition-all duration-300 ease-in-out;
+}
+
+/* Melhorias de Hover */
+.hover-scale {
+  @apply transition-transform duration-200 hover:scale-105;
+}
+
+/* Gradientes de texto */
+.text-gradient {
+  @apply bg-gradient-to-br from-gold via-gold/90 to-gold/70 bg-clip-text text-transparent;
 }
