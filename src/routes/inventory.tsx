@@ -52,16 +52,12 @@ const Inventory = () => {
   }
 
   return (
-    <SidebarProvider defaultOpen={!isMobile}>
-      <div className="min-h-screen flex w-full bg-pearl">
-        <div className="fixed left-0 top-0 h-full z-50">
-          <DashboardSidebar isAdmin={userProfile?.isAdmin} />
-        </div>
-        <div className="flex-1 md:ml-64">
-          <InventoryContent isAdmin={userProfile?.isAdmin} />
-        </div>
+    <div className="min-h-screen flex bg-pearl">
+      <DashboardSidebar isAdmin={userProfile?.isAdmin} />
+      <div className="flex-1">
+        <InventoryContent isAdmin={userProfile?.isAdmin} />
       </div>
-    </SidebarProvider>
+    </div>
   );
 };
 
