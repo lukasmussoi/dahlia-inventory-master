@@ -37,10 +37,10 @@ const Dashboard = () => {
   return (
     <SidebarProvider defaultOpen={!isMobile}>
       <div className="min-h-screen flex w-full bg-gradient-to-br from-pearl to-pearl-dark">
-        <div className="fixed left-0 top-0 h-full z-50 w-[220px]">
+        <div className="fixed left-0 top-0 h-full z-50 w-[5px]">
           <DashboardSidebar isAdmin={userProfile?.isAdmin} />
         </div>
-        <div className="flex-1 ml-[220px] transition-all duration-300 ease-in-out">
+        <div className="flex-1 ml-[5px] transition-all duration-300 ease-in-out">
           <Routes>
             <Route index element={<DashboardContent />} />
             <Route path="inventory" element={<Inventory />} />
