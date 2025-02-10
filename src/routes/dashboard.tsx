@@ -1,19 +1,15 @@
 
 import { useEffect } from "react";
 import { Routes, Route } from "react-router-dom";
-import { SidebarProvider } from "@/components/ui/sidebar";
-import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
+import { TopNavbar } from "@/components/dashboard/TopNavbar";
 import { DashboardContent } from "@/components/dashboard/DashboardContent";
 import { AuthController } from "@/controllers/authController";
 import { useQuery } from "@tanstack/react-query";
-import { useIsMobile } from "@/hooks/use-mobile";
 import Inventory from "./inventory";
 import Suitcases from "./suitcases";
 import Suppliers from "./suppliers";
 
 const Dashboard = () => {
-  const isMobile = useIsMobile();
-
   useEffect(() => {
     AuthController.checkAuth();
   }, []);
@@ -35,19 +31,17 @@ const Dashboard = () => {
   }
 
   return (
-    <SidebarProvider defaultOpen={!isMobile}>
-      <div className="min-h-screen flex w-full bg-gradient-to-br from-pearl to-pearl-dark">
-        <DashboardSidebar isAdmin={userProfile?.isAdmin} />
-        <div className="flex-1 transition-all duration-300 ease-in-out">
-          <Routes>
-            <Route index element={<DashboardContent />} />
-            <Route path="inventory" element={<Inventory />} />
-            <Route path="suitcases" element={<Suitcases />} />
-            <Route path="suppliers" element={<Suppliers />} />
-          </Routes>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-pearl to-pearl-dark">
+      <TopNavbar isAdmin={userProfile?.isAdmin} />
+      <div className="pt-16">
+        <Routes>
+          <Route index element={<DashboardContent />} />
+          <Route path="inventory" element={<Inventory />} />
+          <Route path="suitcases" element={<Suitcases />} />
+          <Route path="suppliers" element={<Suppliers />} />
+        </Routes>
       </div>
-    </SidebarProvider>
+    </div>
   );
 };
 
