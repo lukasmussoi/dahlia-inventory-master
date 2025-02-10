@@ -54,7 +54,7 @@ export function DashboardSidebar({ isAdmin }: DashboardSidebarProps) {
     {
       title: "Estoque",
       icon: Package,
-      url: "/dashboard/inventory",
+      url: "/inventory",
     },
     {
       title: "Maletas",
