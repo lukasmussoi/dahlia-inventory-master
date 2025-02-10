@@ -77,8 +77,12 @@ export function DashboardSidebar({ isAdmin }: DashboardSidebarProps) {
 
   return (
     <TooltipProvider>
-      <Sidebar className="bg-card/80 backdrop-blur-lg border-r border-border/50 shadow-sm transition-all duration-300">
-        <SidebarContent className="flex flex-col">
+      <Sidebar 
+        className={`h-screen flex-shrink-0 transition-all duration-300 ${
+          isCollapsed ? 'w-[70px]' : 'w-[250px]'
+        } fixed lg:relative bg-card/80 backdrop-blur-lg border-r border-border/50 shadow-sm z-50`}
+      >
+        <SidebarContent className="flex flex-col h-full">
           <div className="p-4 flex items-center justify-between border-b border-border/50">
             <h1 className={`text-xl font-bold bg-gradient-to-r from-accent via-accent/90 to-accent/80 bg-clip-text text-transparent transition-all duration-300 ${isCollapsed ? 'hidden' : 'block'}`}>
               Dália Manager
@@ -97,7 +101,7 @@ export function DashboardSidebar({ isAdmin }: DashboardSidebarProps) {
             </Button>
           </div>
 
-          <SidebarGroup className="flex-1">
+          <SidebarGroup className="flex-1 overflow-y-auto">
             <SidebarGroupContent>
               <SidebarMenu>
                 {menuItems.map((item) => (

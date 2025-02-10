@@ -37,9 +37,9 @@ const Dashboard = () => {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-gradient-to-br from-background to-background/80">
+      <div className="min-h-screen flex bg-gradient-to-br from-background to-background/80">
         <DashboardSidebar isAdmin={userProfile?.isAdmin} />
-        <div className="flex-1 transition-all duration-300 ease-in-out">
+        <div className="flex-1 lg:ml-[250px] ml-[70px] transition-all duration-300 ease-in-out p-4">
           <Routes>
             <Route index element={<DashboardContent />} />
             <Route path="inventory" element={<Inventory />} />
