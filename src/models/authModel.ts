@@ -24,15 +24,17 @@ export class AuthModel {
       .maybeSingle();
     if (profileError) throw profileError;
 
-    // Verificar se o usuário é admin usando a função has_role
-    const { data: isAdmin, error: roleError } = await supabase
-      .rpc('has_role', { role: 'admin' });
-    if (roleError) throw roleError;
+    // Verificar se o usuário é admin - Agora usando user_role ao invés de role
+    const { data: roles, error: rolesError } = await supabase
+      .from('user_roles')
+      .select('user_role')
+      .eq('user_id', user.id)
+      .eq('user_role', 'admin');
+    if (rolesError) throw rolesError;
 
     return {
       profile,
-      isAdmin: isAdmin || false
+      isAdmin: roles && roles.length > 0
     };
   }
 }
-

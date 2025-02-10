@@ -1,16 +1,19 @@
 
 import { useEffect } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { DashboardContent } from "@/components/dashboard/DashboardContent";
 import { AuthController } from "@/controllers/authController";
 import { useQuery } from "@tanstack/react-query";
+import { useIsMobile } from "@/hooks/use-mobile";
 import Inventory from "./inventory";
 import Suitcases from "./suitcases";
 import Suppliers from "./suppliers";
 
 const Dashboard = () => {
+  const isMobile = useIsMobile();
+
   useEffect(() => {
     AuthController.checkAuth();
   }, []);
@@ -22,24 +25,22 @@ const Dashboard = () => {
 
   if (isLoadingProfile) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex items-center justify-center bg-pearl">
         <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gold"></div>
           <p className="text-gray-600">Carregando...</p>
         </div>
       </div>
     );
   }
 
-  if (!userProfile) {
-    return <Navigate to="/" replace />;
-  }
-
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex bg-gradient-to-br from-background to-background/80">
-        <DashboardSidebar isAdmin={userProfile?.isAdmin} />
-        <div className="flex-1 lg:ml-[250px] ml-[70px] transition-all duration-300 ease-in-out p-4">
+    <SidebarProvider defaultOpen={!isMobile}>
+      <div className="min-h-screen flex w-full bg-gradient-to-br from-pearl to-pearl-dark">
+        <div className="fixed left-0 top-0 h-full z-50">
+          <DashboardSidebar isAdmin={userProfile?.isAdmin} />
+        </div>
+        <div className="flex-1 md:ml-64 transition-all duration-300 ease-in-out">
           <Routes>
             <Route index element={<DashboardContent />} />
             <Route path="inventory" element={<Inventory />} />
@@ -50,6 +51,6 @@ const Dashboard = () => {
       </div>
     </SidebarProvider>
   );
-}
+};
 
 export default Dashboard;

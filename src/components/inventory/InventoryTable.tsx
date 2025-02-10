@@ -55,8 +55,8 @@ export function InventoryTable({ items, isLoading, onEdit, onDelete }: Inventory
 
     return (
       <TableRow>
-        <TableCell className="w-16">
-          <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
+        <TableCell>
+          <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
             {primaryPhoto ? (
               <img 
                 src={primaryPhoto.url} 
@@ -68,19 +68,15 @@ export function InventoryTable({ items, isLoading, onEdit, onDelete }: Inventory
             )}
           </div>
         </TableCell>
-        <TableCell className="max-w-[200px]">
-          <div className="space-y-1 truncate">
-            <div className="font-medium truncate">{item.name}</div>
-            <div className="text-sm text-gray-500 truncate">{item.sku}</div>
+        <TableCell>
+          <div className="space-y-1">
+            <div className="font-medium">{item.name}</div>
+            <div className="text-sm text-gray-500">{item.sku}</div>
           </div>
         </TableCell>
-        <TableCell className="max-w-[150px]">
-          <div className="truncate">{item.category_name}</div>
-        </TableCell>
-        <TableCell className="max-w-[150px]">
-          <div className="truncate">{item.supplier_name || '-'}</div>
-        </TableCell>
-        <TableCell className="text-right whitespace-nowrap">
+        <TableCell>{item.category_name}</TableCell>
+        <TableCell>{item.supplier_name || '-'}</TableCell>
+        <TableCell className="text-right">
           <div className="space-y-1">
             <div>{item.quantity}</div>
             {item.quantity <= item.min_stock && (
@@ -97,10 +93,10 @@ export function InventoryTable({ items, isLoading, onEdit, onDelete }: Inventory
             )}
           </div>
         </TableCell>
-        <TableCell className="text-right whitespace-nowrap">
+        <TableCell className="text-right">
           {formatCurrency(item.unit_cost)}
         </TableCell>
-        <TableCell className="text-right whitespace-nowrap">
+        <TableCell className="text-right">
           <div className="space-y-1">
             <div>{formatCurrency(item.price)}</div>
             {item.suggested_price > 0 && item.suggested_price !== item.price && (
@@ -110,7 +106,7 @@ export function InventoryTable({ items, isLoading, onEdit, onDelete }: Inventory
             )}
           </div>
         </TableCell>
-        <TableCell className="whitespace-nowrap">
+        <TableCell>
           <span className={`px-2 py-1 rounded-full text-sm ${
             item.quantity === 0 
               ? 'bg-red-100 text-red-800' 
@@ -126,7 +122,7 @@ export function InventoryTable({ items, isLoading, onEdit, onDelete }: Inventory
           </span>
         </TableCell>
         {(onEdit || onDelete) && (
-          <TableCell className="text-right whitespace-nowrap">
+          <TableCell className="text-right">
             <div className="flex justify-end gap-2">
               {onEdit && (
                 <Button
@@ -156,29 +152,27 @@ export function InventoryTable({ items, isLoading, onEdit, onDelete }: Inventory
   };
 
   return (
-    <div className="border rounded-lg overflow-hidden">
-      <div className="max-w-[calc(100vw-2rem)] overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-16">Foto</TableHead>
-              <TableHead className="max-w-[200px]">SKU/Nome</TableHead>
-              <TableHead className="max-w-[150px]">Categoria</TableHead>
-              <TableHead className="max-w-[150px]">Fornecedor</TableHead>
-              <TableHead className="text-right whitespace-nowrap">Quantidade</TableHead>
-              <TableHead className="text-right whitespace-nowrap">Custo</TableHead>
-              <TableHead className="text-right whitespace-nowrap">Preço</TableHead>
-              <TableHead className="whitespace-nowrap">Status</TableHead>
-              {(onEdit || onDelete) && <TableHead className="text-right whitespace-nowrap">Ações</TableHead>}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {items.map((item) => (
-              <TableRowWithPhotos key={item.id} item={item} />
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+    <div className="border rounded-lg overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Foto</TableHead>
+            <TableHead>SKU/Nome</TableHead>
+            <TableHead>Categoria</TableHead>
+            <TableHead>Fornecedor</TableHead>
+            <TableHead className="text-right">Quantidade</TableHead>
+            <TableHead className="text-right">Custo</TableHead>
+            <TableHead className="text-right">Preço</TableHead>
+            <TableHead>Status</TableHead>
+            {(onEdit || onDelete) && <TableHead className="text-right">Ações</TableHead>}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {items.map((item) => (
+            <TableRowWithPhotos key={item.id} item={item} />
+          ))}
+        </TableBody>
+      </Table>
     </div>
   );
 }
