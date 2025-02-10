@@ -8,6 +8,7 @@ import AuthPage from "./routes/auth";
 import Dashboard from "./routes/dashboard";
 import Inventory from "./routes/inventory";
 import Suitcases from "./routes/suitcases";
+import Suppliers from "./routes/suppliers";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -20,9 +21,10 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<AuthPage />} />
-          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/dashboard/*" element={<Dashboard />} />
           <Route path="/dashboard/inventory" element={<Inventory />} />
           <Route path="/dashboard/suitcases" element={<Suitcases />} />
+          <Route path="/dashboard/suppliers" element={<Suppliers />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
