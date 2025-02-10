@@ -53,7 +53,7 @@ export const useInventoryForm = ({ item, onSuccess, onClose }: UseInventoryFormP
     },
   });
 
-  const onSubmit = async (values: FormValues) => {
+  const handleSubmit = async (values: FormValues) => {
     try {
       setIsSubmitting(true);
 
@@ -102,7 +102,7 @@ export const useInventoryForm = ({ item, onSuccess, onClose }: UseInventoryFormP
   return {
     form,
     isSubmitting,
-    onSubmit: form.handleSubmit(onSubmit),
+    onSubmit: form.handleSubmit(handleSubmit),
     photos,
     setPhotos,
     primaryPhotoIndex,
