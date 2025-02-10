@@ -1,17 +1,14 @@
 
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { SidebarProvider } from "@/components/ui/sidebar";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { InventoryContent } from "@/components/inventory/InventoryContent";
 import { AuthController } from "@/controllers/authController";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 const Inventory = () => {
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
 
   // Verificar autenticação ao carregar a página
   useEffect(() => {
@@ -52,11 +49,8 @@ const Inventory = () => {
   }
 
   return (
-    <div className="min-h-screen flex bg-pearl">
-      <DashboardSidebar isAdmin={userProfile?.isAdmin} />
-      <div className="flex-1">
-        <InventoryContent isAdmin={userProfile?.isAdmin} />
-      </div>
+    <div className="flex-1 md:ml-64 transition-all duration-300 ease-in-out">
+      <InventoryContent isAdmin={userProfile?.isAdmin} />
     </div>
   );
 };
