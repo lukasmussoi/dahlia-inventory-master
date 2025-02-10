@@ -110,9 +110,9 @@ export function InventoryContent({ isAdmin }: InventoryContentProps) {
   };
 
   return (
-    <div className="w-full">
-      <div className="p-6 space-y-6">
-        <div className="flex justify-between items-center">
+    <div className="flex-1 w-full">
+      <div className="p-4">
+        <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-semibold text-gray-900">Gestão de Estoque</h1>
           {isAdmin && (
             <div className="flex gap-2">
@@ -138,12 +138,14 @@ export function InventoryContent({ isAdmin }: InventoryContentProps) {
         />
 
         {/* Tabela de Itens */}
-        <InventoryTable
-          items={items}
-          isLoading={isLoadingItems}
-          onEdit={isAdmin ? handleEditItem : undefined}
-          onDelete={isAdmin ? handleDeleteItem : undefined}
-        />
+        <div className="mt-6">
+          <InventoryTable
+            items={items}
+            isLoading={isLoadingItems}
+            onEdit={isAdmin ? handleEditItem : undefined}
+            onDelete={isAdmin ? handleDeleteItem : undefined}
+          />
+        </div>
 
         {/* Modal de Item */}
         {isItemModalOpen && (
