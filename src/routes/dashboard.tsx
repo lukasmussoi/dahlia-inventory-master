@@ -35,17 +35,19 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen flex w-full bg-gradient-to-br from-pearl to-pearl-dark">
-      <DashboardSidebar isAdmin={userProfile?.isAdmin} />
-      <div className="flex-1 md:ml-64 transition-all duration-300 ease-in-out">
-        <Routes>
-          <Route index element={<DashboardContent />} />
-          <Route path="inventory" element={<Inventory />} />
-          <Route path="suitcases" element={<Suitcases />} />
-          <Route path="suppliers" element={<Suppliers />} />
-        </Routes>
+    <SidebarProvider defaultOpen={!isMobile}>
+      <div className="min-h-screen flex w-full bg-gradient-to-br from-pearl to-pearl-dark">
+        <DashboardSidebar isAdmin={userProfile?.isAdmin} />
+        <div className="flex-1 md:ml-64 transition-all duration-300 ease-in-out">
+          <Routes>
+            <Route index element={<DashboardContent />} />
+            <Route path="inventory" element={<Inventory />} />
+            <Route path="suitcases" element={<Suitcases />} />
+            <Route path="suppliers" element={<Suppliers />} />
+          </Routes>
+        </div>
       </div>
-    </div>
+    </SidebarProvider>
   );
 };
 
