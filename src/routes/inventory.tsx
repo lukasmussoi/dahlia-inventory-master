@@ -1,7 +1,6 @@
 
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { InventoryContent } from "@/components/inventory/InventoryContent";
 import { AuthController } from "@/controllers/authController";
 import { useQuery } from "@tanstack/react-query";
@@ -50,14 +49,9 @@ const Inventory = () => {
 
   return (
     <div className="h-full min-h-screen bg-background">
-      <div className="flex h-full min-h-screen">
-        <DashboardSidebar isAdmin={userProfile?.isAdmin} />
-        <main className="flex-1">
-          <div className="flex-1 space-y-4 p-4 pt-6">
-            <InventoryContent isAdmin={userProfile?.isAdmin} />
-          </div>
-        </main>
-      </div>
+      <main className="flex-1 space-y-4 p-4 pt-20">
+        <InventoryContent isAdmin={userProfile?.isAdmin} />
+      </main>
     </div>
   );
 };

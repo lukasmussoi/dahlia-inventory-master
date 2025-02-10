@@ -1,7 +1,5 @@
 
 import { useEffect } from "react";
-import { SidebarProvider } from "@/components/ui/sidebar";
-import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { SuitcasesContent } from "@/components/suitcases/SuitcasesContent";
 import { AuthController } from "@/controllers/authController";
 import { useQuery } from "@tanstack/react-query";
@@ -28,12 +26,9 @@ const Suitcases = () => {
   }
 
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-pearl">
-        <DashboardSidebar isAdmin={userProfile?.isAdmin} />
-        <SuitcasesContent isAdmin={userProfile?.isAdmin} userProfile={userProfile?.profile} />
-      </div>
-    </SidebarProvider>
+    <div className="min-h-screen w-full bg-pearl pt-20">
+      <SuitcasesContent isAdmin={userProfile?.isAdmin} userProfile={userProfile?.profile} />
+    </div>
   );
 };
 
