@@ -37,6 +37,15 @@ export class UserRoleModel {
     return usersWithRoles;
   }
 
+  // Verificar se o usuário é admin
+  static async isUserAdmin(userId: string): Promise<boolean> {
+    const { data, error } = await supabase
+      .rpc('is_admin', { user_id: userId });
+
+    if (error) throw error;
+    return data || false;
+  }
+
   // Atualizar funções do usuário
   static async updateUserRoles(userId: string, roles: UserRole[]): Promise<void> {
     // Primeiro, remove todas as funções existentes

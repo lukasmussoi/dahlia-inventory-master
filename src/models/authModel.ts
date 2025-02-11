@@ -1,6 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { UserProfile } from "./userModel";
+import { UserRoleModel } from "./userRoleModel";
 
 export class AuthModel {
   // Função para verificar se o usuário está autenticado
@@ -24,17 +25,12 @@ export class AuthModel {
       .maybeSingle();
     if (profileError) throw profileError;
 
-    // Verificar se o usuário é admin - Agora usando user_role ao invés de role
-    const { data: roles, error: rolesError } = await supabase
-      .from('user_roles')
-      .select('user_role')
-      .eq('user_id', user.id)
-      .eq('user_role', 'admin');
-    if (rolesError) throw rolesError;
+    // Verificar se o usuário é admin usando a nova função RPC
+    const isAdmin = await UserRoleModel.isUserAdmin(user.id);
 
     return {
       profile,
-      isAdmin: roles && roles.length > 0
+      isAdmin
     };
   }
 }
