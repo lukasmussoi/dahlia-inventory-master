@@ -23,7 +23,7 @@ import { toast } from "sonner";
 
 const Users = () => {
   const queryClient = useQueryClient();
-  const [selectedStatus, setSelectedStatus] = useState<string>("");
+  const [selectedStatus, setSelectedStatus] = useState<string>("all");
 
   const { data: users, isLoading } = useQuery({
     queryKey: ['users'],
@@ -70,9 +70,9 @@ const Users = () => {
     updateRolesMutation.mutate({ userId: user.id, roles: newRoles });
   };
 
-  const filteredUsers = selectedStatus
-    ? users?.filter(user => user.status === selectedStatus)
-    : users;
+  const filteredUsers = selectedStatus === "all"
+    ? users
+    : users?.filter(user => user.status === selectedStatus);
 
   if (isLoading) {
     return (
@@ -94,7 +94,7 @@ const Users = () => {
             <SelectValue placeholder="Filtrar por status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Todos</SelectItem>
+            <SelectItem value="all">Todos</SelectItem>
             <SelectItem value="active">Ativos</SelectItem>
             <SelectItem value="inactive">Inativos</SelectItem>
             <SelectItem value="suspended">Suspensos</SelectItem>
