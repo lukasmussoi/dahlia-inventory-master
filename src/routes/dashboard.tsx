@@ -1,10 +1,11 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useNavigate } from "react-router-dom";
 import { TopNavbar } from "@/components/dashboard/TopNavbar";
 import { DashboardContent } from "@/components/dashboard/DashboardContent";
 import { AuthController } from "@/controllers/authController";
 import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
 import Inventory from "./inventory";
 import Suitcases from "./suitcases";
 import Suppliers from "./suppliers";
@@ -15,6 +16,25 @@ import Users from "./users";
 const queryClient = new QueryClient();
 
 const Dashboard = () => {
+  const navigate = useNavigate();
+
+  // Verificar autenticação ao montar o componente
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const user = await AuthController.checkAuth();
+        if (!user) {
+          navigate('/');
+        }
+      } catch (error) {
+        console.error('Erro ao verificar autenticação:', error);
+        navigate('/');
+      }
+    };
+    
+    checkAuth();
+  }, [navigate]);
+
   const { data: userProfile, isLoading: isLoadingProfile } = useQuery({
     queryKey: ['user-profile'],
     queryFn: () => AuthController.getUserProfileWithRoles(),
