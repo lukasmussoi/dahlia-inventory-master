@@ -1,5 +1,5 @@
 
-import { useEffect } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Routes, Route } from "react-router-dom";
 import { TopNavbar } from "@/components/dashboard/TopNavbar";
 import { DashboardContent } from "@/components/dashboard/DashboardContent";
@@ -11,11 +11,10 @@ import Suppliers from "./suppliers";
 import Categories from "./categories";
 import Users from "./users";
 
-const Dashboard = () => {
-  useEffect(() => {
-    AuthController.checkAuth();
-  }, []);
+// Criar uma instância do QueryClient para o dashboard
+const queryClient = new QueryClient();
 
+const Dashboard = () => {
   const { data: userProfile, isLoading: isLoadingProfile } = useQuery({
     queryKey: ['user-profile'],
     queryFn: () => AuthController.getUserProfileWithRoles(),
@@ -33,23 +32,25 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pearl to-pearl-dark">
-      <TopNavbar isAdmin={userProfile?.isAdmin} />
-      <div className="pt-16">
-        <Routes>
-          <Route index element={<DashboardContent />} />
-          <Route path="inventory">
-            <Route index element={<Inventory />} />
-            <Route path="suppliers" element={<Suppliers />} />
-            <Route path="categories" element={<Categories />} />
-          </Route>
-          <Route path="suitcases" element={<Suitcases />} />
-          <Route path="settings">
-            <Route path="users" element={<Users />} />
-          </Route>
-        </Routes>
+    <QueryClientProvider client={queryClient}>
+      <div className="min-h-screen bg-gradient-to-br from-pearl to-pearl-dark">
+        <TopNavbar isAdmin={userProfile?.isAdmin} />
+        <div className="pt-16">
+          <Routes>
+            <Route index element={<DashboardContent />} />
+            <Route path="inventory">
+              <Route index element={<Inventory />} />
+              <Route path="suppliers" element={<Suppliers />} />
+              <Route path="categories" element={<Categories />} />
+            </Route>
+            <Route path="suitcases" element={<Suitcases />} />
+            <Route path="settings">
+              <Route path="users" element={<Users />} />
+            </Route>
+          </Routes>
+        </div>
       </div>
-    </div>
+    </QueryClientProvider>
   );
 };
 
