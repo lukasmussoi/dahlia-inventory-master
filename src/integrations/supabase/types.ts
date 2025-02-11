@@ -341,6 +341,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_update_user_password: {
+        Args: {
+          user_id: string
+          new_password: string
+        }
+        Returns: undefined
+      }
       check_is_admin: {
         Args: {
           user_id: string

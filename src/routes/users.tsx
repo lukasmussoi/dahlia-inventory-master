@@ -1,7 +1,6 @@
-
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { UserRoleModel, UserWithRoles, UserRole } from "@/models/userRoleModel";
+import { UserRoleModel, UserWithRoles, UserRole, CreateUserData } from "@/models/userRoleModel";
 import {
   Table,
   TableBody,
@@ -24,18 +23,40 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { Trash2, UserPlus, Key } from "lucide-react";
 
 const Users = () => {
   const queryClient = useQueryClient();
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [editingUser, setEditingUser] = useState<UserWithRoles | null>(null);
   const [editName, setEditName] = useState("");
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<UserWithRoles | null>(null);
+  const [newUserData, setNewUserData] = useState<Partial<CreateUserData>>({
+    email: "",
+    password: "",
+    fullName: "",
+    roles: []
+  });
+  const [newPassword, setNewPassword] = useState("");
 
   const { data: users, isLoading } = useQuery({
     queryKey: ['users'],
@@ -85,6 +106,47 @@ const Users = () => {
     },
   });
 
+  const createUserMutation = useMutation({
+    mutationFn: (userData: CreateUserData) => UserRoleModel.createUser(userData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      setShowCreateDialog(false);
+      setNewUserData({});
+      toast.success('Usuário criado com sucesso!');
+    },
+    onError: (error) => {
+      console.error('Erro ao criar usuário:', error);
+      toast.error('Erro ao criar usuário');
+    },
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: (userId: string) => UserRoleModel.deleteUser(userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      setUserToDelete(null);
+      toast.success('Usuário excluído com sucesso!');
+    },
+    onError: (error) => {
+      console.error('Erro ao excluir usuário:', error);
+      toast.error('Erro ao excluir usuário');
+    },
+  });
+
+  const updatePasswordMutation = useMutation({
+    mutationFn: ({ userId, password }: { userId: string; password: string }) => 
+      UserRoleModel.updateUserPassword(userId, password),
+    onSuccess: () => {
+      setShowPasswordDialog(false);
+      setNewPassword("");
+      toast.success('Senha atualizada com sucesso!');
+    },
+    onError: (error) => {
+      console.error('Erro ao atualizar senha:', error);
+      toast.error('Erro ao atualizar senha');
+    },
+  });
+
   const handleStatusChange = async (userId: string, newStatus: 'active' | 'inactive' | 'suspended') => {
     updateStatusMutation.mutate({ userId, status: newStatus });
   };
@@ -111,6 +173,19 @@ const Users = () => {
     }
   };
 
+  const handleCreateUser = () => {
+    if (!newUserData.email || !newUserData.password || !newUserData.fullName) {
+      toast.error('Preencha todos os campos obrigatórios');
+      return;
+    }
+    createUserMutation.mutate(newUserData as CreateUserData);
+  };
+
+  const handleUpdatePassword = () => {
+    if (!editingUser || !newPassword) return;
+    updatePasswordMutation.mutate({ userId: editingUser.id, password: newPassword });
+  };
+
   const filteredUsers = selectedStatus === "all"
     ? users
     : users?.filter(user => user.status === selectedStatus);
@@ -127,20 +202,98 @@ const Users = () => {
     <div className="container mx-auto py-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Gerenciar Usuários</h1>
-        <Select
-          value={selectedStatus}
-          onValueChange={setSelectedStatus}
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Filtrar por status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
-            <SelectItem value="active">Ativos</SelectItem>
-            <SelectItem value="inactive">Inativos</SelectItem>
-            <SelectItem value="suspended">Suspensos</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex gap-2">
+          <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+            <DialogTrigger asChild>
+              <Button>
+                <UserPlus className="mr-2" />
+                Novo Usuário
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Criar Novo Usuário</DialogTitle>
+                <DialogDescription>
+                  Preencha os dados do novo usuário
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={newUserData.email || ''}
+                    onChange={(e) => setNewUserData({ ...newUserData, email: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="password">Senha</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={newUserData.password || ''}
+                    onChange={(e) => setNewUserData({ ...newUserData, password: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="fullName">Nome Completo</Label>
+                  <Input
+                    id="fullName"
+                    value={newUserData.fullName || ''}
+                    onChange={(e) => setNewUserData({ ...newUserData, fullName: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Funções</Label>
+                  <div className="flex gap-2">
+                    {(['admin', 'promoter', 'seller'] as UserRole[]).map((role) => (
+                      <Badge
+                        key={role}
+                        variant={newUserData.roles?.includes(role) ? 'default' : 'outline'}
+                        className="cursor-pointer"
+                        onClick={() => {
+                          const currentRoles = newUserData.roles || [];
+                          const newRoles = currentRoles.includes(role)
+                            ? currentRoles.filter(r => r !== role)
+                            : [...currentRoles, role];
+                          setNewUserData({ ...newUserData, roles: newRoles });
+                        }}
+                      >
+                        {role === 'admin' ? 'Admin' :
+                         role === 'promoter' ? 'Promotor' :
+                         'Vendedor'}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleCreateUser}>
+                  Criar Usuário
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <Select
+            value={selectedStatus}
+            onValueChange={setSelectedStatus}
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Filtrar por status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="active">Ativos</SelectItem>
+              <SelectItem value="inactive">Inativos</SelectItem>
+              <SelectItem value="suspended">Suspensos</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -196,21 +349,40 @@ const Users = () => {
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Select
-                    value={user.status}
-                    onValueChange={(value: 'active' | 'inactive' | 'suspended') => 
-                      handleStatusChange(user.id, value)
-                    }
-                  >
-                    <SelectTrigger className="w-[120px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">Ativar</SelectItem>
-                      <SelectItem value="inactive">Inativar</SelectItem>
-                      <SelectItem value="suspended">Suspender</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="flex items-center gap-2">
+                    <Select
+                      value={user.status}
+                      onValueChange={(value: 'active' | 'inactive' | 'suspended') => 
+                        handleStatusChange(user.id, value)
+                      }
+                    >
+                      <SelectTrigger className="w-[120px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="active">Ativar</SelectItem>
+                        <SelectItem value="inactive">Inativar</SelectItem>
+                        <SelectItem value="suspended">Suspender</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => {
+                        setEditingUser(user);
+                        setShowPasswordDialog(true);
+                      }}
+                    >
+                      <Key className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      onClick={() => setUserToDelete(user)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
@@ -250,6 +422,63 @@ const Users = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Alterar Senha</DialogTitle>
+            <DialogDescription>
+              Digite a nova senha para o usuário.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="new-password">Nova Senha</Label>
+              <Input
+                id="new-password"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Digite a nova senha"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowPasswordDialog(false);
+                setNewPassword("");
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button onClick={handleUpdatePassword}>
+              Atualizar Senha
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!userToDelete} onOpenChange={() => setUserToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir o usuário {userToDelete?.full_name}? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setUserToDelete(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => userToDelete && deleteUserMutation.mutate(userToDelete.id)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

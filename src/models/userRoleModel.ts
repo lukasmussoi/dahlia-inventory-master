@@ -7,6 +7,13 @@ export interface UserWithRoles extends UserProfile {
   roles: UserRole[];
 }
 
+export interface CreateUserData {
+  email: string;
+  password: string;
+  fullName: string;
+  roles: UserRole[];
+}
+
 export class UserRoleModel {
   // Buscar todos os usuários com suas funções
   static async getAllUsersWithRoles(): Promise<UserWithRoles[]> {
@@ -85,6 +92,40 @@ export class UserRoleModel {
       .update(updates)
       .eq('id', userId);
 
+    if (error) throw error;
+  }
+
+  // Criar novo usuário
+  static async createUser(userData: CreateUserData): Promise<void> {
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email: userData.email,
+      password: userData.password,
+      email_confirm: true,
+      user_metadata: {
+        full_name: userData.fullName
+      }
+    });
+
+    if (authError) throw authError;
+
+    // Atualizar roles do usuário
+    if (authData.user) {
+      await this.updateUserRoles(authData.user.id, userData.roles);
+    }
+  }
+
+  // Excluir usuário
+  static async deleteUser(userId: string): Promise<void> {
+    const { error } = await supabase.auth.admin.deleteUser(userId);
+    if (error) throw error;
+  }
+
+  // Atualizar senha do usuário
+  static async updateUserPassword(userId: string, newPassword: string): Promise<void> {
+    const { error } = await supabase.rpc('admin_update_user_password', {
+      user_id: userId,
+      new_password: newPassword
+    });
     if (error) throw error;
   }
 }
