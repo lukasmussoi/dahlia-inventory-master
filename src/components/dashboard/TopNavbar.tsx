@@ -1,3 +1,4 @@
+
 import {
   Users,
   Package,
@@ -19,6 +20,7 @@ import {
   NavigationMenuItem,
   NavigationMenuList,
   NavigationMenuTrigger,
+  NavigationMenuLink,
 } from "@/components/ui/navigation-menu";
 
 interface TopNavbarProps {
@@ -114,15 +116,13 @@ export function TopNavbar({ isAdmin }: TopNavbarProps) {
                         <ul className="grid w-[400px] gap-3 p-4">
                           {item.subItems.map((subItem) => (
                             <li key={subItem.title}>
-                              <NavigationMenuLink asChild>
-                                <Link
-                                  to={subItem.url}
-                                  className="flex items-center gap-2 p-2 hover:bg-gold/10 rounded-md transition-colors"
-                                >
-                                  <subItem.icon className="h-5 w-5" />
-                                  <span>{subItem.title}</span>
-                                </Link>
-                              </NavigationMenuLink>
+                              <Link
+                                to={subItem.url}
+                                className="flex items-center gap-2 p-2 hover:bg-gold/10 rounded-md transition-colors"
+                              >
+                                <subItem.icon className="h-5 w-5" />
+                                <span>{subItem.title}</span>
+                              </Link>
                             </li>
                           ))}
                         </ul>
