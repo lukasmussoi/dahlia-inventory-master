@@ -1,5 +1,15 @@
 import { supabase } from "@/integrations/supabase/client";
 
+// Interface para tipo de banho
+export interface PlatingType {
+  id: string;
+  name: string;
+  type: 'ouro' | 'prata' | 'rose' | 'rhodium' | 'sem_banho';
+  description?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 // Interface para fornecedor
 export interface Supplier {
   id: string;
@@ -37,9 +47,17 @@ export interface InventoryItem {
   popularity: number;
   created_at?: string;
   updated_at?: string;
+  // Novos campos para joias
+  plating_type_id?: string;
+  material_weight?: number;
+  packaging_cost?: number;
+  gram_value?: number;
+  profit_margin?: number;
+  reseller_commission?: number;
   // Propriedades virtuais para exibição
   category_name?: string;
   supplier_name?: string;
+  plating_type_name?: string;
 }
 
 // Interface para movimentação de estoque
@@ -325,5 +343,28 @@ export class InventoryModel {
       url: photo.photo_url,
       isPrimary: photo.is_primary || false
     }));
+  }
+
+  // Buscar todos os tipos de banho
+  static async getAllPlatingTypes(): Promise<PlatingType[]> {
+    const { data, error } = await supabase
+      .from('plating_types')
+      .select('*')
+      .order('name');
+    
+    if (error) throw error;
+    return data || [];
+  }
+
+  // Criar novo tipo de banho
+  static async createPlatingType(platingType: Omit<PlatingType, 'id' | 'created_at' | 'updated_at'>): Promise<PlatingType> {
+    const { data, error } = await supabase
+      .from('plating_types')
+      .insert(platingType)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
   }
 }

@@ -15,13 +15,19 @@ export type Database = {
           category_id: string
           created_at: string
           depth: number | null
+          gram_value: number | null
           height: number | null
           id: string
+          material_weight: number | null
           min_stock: number
           name: string
+          packaging_cost: number | null
+          plating_type_id: string | null
           popularity: number
           price: number
+          profit_margin: number | null
           quantity: number
+          reseller_commission: number | null
           sku: string | null
           suggested_price: number
           supplier_id: string | null
@@ -35,13 +41,19 @@ export type Database = {
           category_id: string
           created_at?: string
           depth?: number | null
+          gram_value?: number | null
           height?: number | null
           id?: string
+          material_weight?: number | null
           min_stock?: number
           name: string
+          packaging_cost?: number | null
+          plating_type_id?: string | null
           popularity?: number
           price: number
+          profit_margin?: number | null
           quantity?: number
+          reseller_commission?: number | null
           sku?: string | null
           suggested_price?: number
           supplier_id?: string | null
@@ -55,13 +67,19 @@ export type Database = {
           category_id?: string
           created_at?: string
           depth?: number | null
+          gram_value?: number | null
           height?: number | null
           id?: string
+          material_weight?: number | null
           min_stock?: number
           name?: string
+          packaging_cost?: number | null
+          plating_type_id?: string | null
           popularity?: number
           price?: number
+          profit_margin?: number | null
           quantity?: number
+          reseller_commission?: number | null
           sku?: string | null
           suggested_price?: number
           supplier_id?: string | null
@@ -76,6 +94,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "inventory_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_plating_type_id_fkey"
+            columns: ["plating_type_id"]
+            isOneToOne: false
+            referencedRelation: "plating_types"
             referencedColumns: ["id"]
           },
           {
@@ -186,6 +211,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      plating_types: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          type: Database["public"]["Enums"]["plating_type"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          type: Database["public"]["Enums"]["plating_type"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          type?: Database["public"]["Enums"]["plating_type"]
+          updated_at?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -368,6 +420,7 @@ export type Database = {
       }
     }
     Enums: {
+      plating_type: "ouro" | "prata" | "rose" | "rhodium" | "sem_banho"
       suitcase_item_status: "in_possession" | "sold" | "returned" | "lost"
       suitcase_status: "in_use" | "returned" | "in_audit" | "lost"
       user_role: "admin" | "promoter" | "seller"
