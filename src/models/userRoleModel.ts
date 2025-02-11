@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { UserProfile } from "./userModel";
 
@@ -74,6 +73,16 @@ export class UserRoleModel {
     const { error } = await supabase
       .from('profiles')
       .update({ status })
+      .eq('id', userId);
+
+    if (error) throw error;
+  }
+
+  // Atualizar perfil do usuário
+  static async updateUserProfile(userId: string, updates: Partial<UserProfile>): Promise<void> {
+    const { error } = await supabase
+      .from('profiles')
+      .update(updates)
       .eq('id', userId);
 
     if (error) throw error;

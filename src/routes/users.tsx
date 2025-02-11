@@ -17,13 +17,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
 const Users = () => {
   const queryClient = useQueryClient();
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
+  const [editingUser, setEditingUser] = useState<UserWithRoles | null>(null);
+  const [editName, setEditName] = useState("");
 
   const { data: users, isLoading } = useQuery({
     queryKey: ['users'],
@@ -58,6 +70,21 @@ const Users = () => {
     },
   });
 
+  const updateProfileMutation = useMutation({
+    mutationFn: async ({ userId, fullName }: { userId: string, fullName: string }) => {
+      await UserRoleModel.updateUserProfile(userId, { full_name: fullName });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      setEditingUser(null);
+      toast.success('Perfil do usuário atualizado com sucesso!');
+    },
+    onError: (error) => {
+      console.error('Erro ao atualizar perfil:', error);
+      toast.error('Erro ao atualizar perfil do usuário');
+    },
+  });
+
   const handleStatusChange = async (userId: string, newStatus: 'active' | 'inactive' | 'suspended') => {
     updateStatusMutation.mutate({ userId, status: newStatus });
   };
@@ -68,6 +95,20 @@ const Users = () => {
       : [...user.roles, role];
     
     updateRolesMutation.mutate({ userId: user.id, roles: newRoles });
+  };
+
+  const handleEditUser = (user: UserWithRoles) => {
+    setEditingUser(user);
+    setEditName(user.full_name);
+  };
+
+  const handleSaveEdit = () => {
+    if (editingUser && editName.trim()) {
+      updateProfileMutation.mutate({
+        userId: editingUser.id,
+        fullName: editName.trim()
+      });
+    }
   };
 
   const filteredUsers = selectedStatus === "all"
@@ -115,7 +156,16 @@ const Users = () => {
           <TableBody>
             {filteredUsers?.map((user) => (
               <TableRow key={user.id}>
-                <TableCell>{user.full_name}</TableCell>
+                <TableCell className="flex items-center gap-2">
+                  {user.full_name}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleEditUser(user)}
+                  >
+                    Editar
+                  </Button>
+                </TableCell>
                 <TableCell>
                   <Badge
                     variant={
@@ -167,6 +217,39 @@ const Users = () => {
           </TableBody>
         </Table>
       </div>
+
+      <Dialog open={!!editingUser} onOpenChange={() => setEditingUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Usuário</DialogTitle>
+            <DialogDescription>
+              Atualize as informações do usuário aqui.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name">Nome completo</Label>
+              <Input
+                id="name"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder="Digite o nome completo"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setEditingUser(null)}
+            >
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveEdit}>
+              Salvar alterações
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
