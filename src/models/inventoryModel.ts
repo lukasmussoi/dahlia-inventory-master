@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 export interface PlatingType {
   id: string;
   name: string;
-  type: 'ouro' | 'prata' | 'rose' | 'rhodium' | 'sem_banho';
+  gram_value: number;
   description?: string;
   created_at?: string;
   updated_at?: string;
@@ -51,7 +51,6 @@ export interface InventoryItem {
   plating_type_id?: string;
   material_weight?: number;
   packaging_cost?: number;
-  gram_value?: number;
   profit_margin?: number;
   reseller_commission?: number;
   // Propriedades virtuais para exibição

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -31,6 +30,7 @@ const formSchema = z.object({
   total_cost: z.number().optional(),
   total_cost_with_packaging: z.number().optional(),
   quantity: z.number().int().min(0, "Quantidade não pode ser negativa"),
+  min_stock: z.number().int().min(0, "Estoque mínimo não pode ser negativo"),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -57,6 +57,7 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
       material_weight: item?.material_weight || 0,
       packaging_cost: item?.packaging_cost || 0,
       quantity: item?.quantity || 0,
+      min_stock: item?.min_stock || 0,
     },
   });
 
@@ -119,8 +120,9 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
         material_weight: data.material_weight,
         packaging_cost: data.packaging_cost,
         unit_cost: data.total_cost_with_packaging || 0,
-        price: data.total_cost_with_packaging || 0, // Preço inicial igual ao custo
+        price: data.total_cost_with_packaging || 0,
         quantity: data.quantity,
+        min_stock: data.min_stock,
         category_id: item?.category_id || '00000000-0000-0000-0000-000000000000',
         suggested_price: data.total_cost_with_packaging || 0,
       };
@@ -320,6 +322,16 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                       type="number"
                       placeholder="0"
                       {...form.register('quantity', { valueAsNumber: true })}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="min_stock">Estoque Mínimo *</Label>
+                    <Input
+                      id="min_stock"
+                      type="number"
+                      placeholder="0"
+                      {...form.register('min_stock', { valueAsNumber: true })}
                     />
                   </div>
                 </div>
