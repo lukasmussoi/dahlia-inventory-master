@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -33,6 +33,11 @@ interface FormValues {
   gram_value: number;
   profit_margin: number;
   quantity: number;
+  raw_cost?: number; // Preço do Bruto
+  total_cost?: number; // Custo Total
+  final_price?: number; // Preço Final
+  reseller_commission?: number; // Comissão
+  final_profit?: number; // Lucro Final
 }
 
 export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormProps) {
@@ -49,8 +54,51 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
       gram_value: item?.gram_value || 0,
       profit_margin: item?.profit_margin || 0.3,
       quantity: item?.quantity || 0,
+      reseller_commission: item?.reseller_commission || 0.3,
     },
   });
+
+  // Calcular valores automaticamente quando os campos dependentes mudarem
+  useEffect(() => {
+    const subscription = form.watch((value, { name }) => {
+      const formValues = form.getValues();
+      
+      // Calcular apenas se os campos necessários estiverem preenchidos
+      if (formValues.material_weight && formValues.gram_value) {
+        // Preço do Bruto
+        const rawCost = formValues.material_weight * formValues.gram_value;
+        if (!name || name !== 'raw_cost') {
+          form.setValue('raw_cost', rawCost);
+        }
+
+        // Custo Total
+        const totalCost = rawCost + (formValues.packaging_cost || 0);
+        if (!name || name !== 'total_cost') {
+          form.setValue('total_cost', totalCost);
+        }
+
+        // Preço Final
+        const finalPrice = totalCost * (1 + (formValues.profit_margin || 0.3));
+        if (!name || name !== 'final_price') {
+          form.setValue('final_price', finalPrice);
+        }
+
+        // Comissão da Revendedora (30% do Preço Final)
+        const commission = finalPrice * 0.3;
+        if (!name || name !== 'reseller_commission') {
+          form.setValue('reseller_commission', commission);
+        }
+
+        // Lucro Final
+        const finalProfit = finalPrice - commission - totalCost;
+        if (!name || name !== 'final_profit') {
+          form.setValue('final_profit', finalProfit);
+        }
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [form]);
 
   // Buscar tipos de banho
   const { data: platingTypes = [] } = useQuery({
@@ -64,16 +112,58 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
     queryFn: () => InventoryModel.getAllSuppliers(),
   });
 
+  const recalculateValues = () => {
+    const formValues = form.getValues();
+    const rawCost = formValues.material_weight * formValues.gram_value;
+    const totalCost = rawCost + (formValues.packaging_cost || 0);
+    const finalPrice = totalCost * (1 + (formValues.profit_margin || 0.3));
+    const commission = finalPrice * 0.3;
+    const finalProfit = finalPrice - commission - totalCost;
+
+    form.setValue('raw_cost', rawCost);
+    form.setValue('total_cost', totalCost);
+    form.setValue('final_price', finalPrice);
+    form.setValue('reseller_commission', commission);
+    form.setValue('final_profit', finalProfit);
+
+    toast.success('Valores recalculados com sucesso!');
+  };
+
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
     try {
-      // Lógica de salvamento será implementada na próxima etapa
-      toast.success('Peça cadastrada com sucesso!');
+      const itemData: Partial<InventoryItem> = {
+        name: data.name,
+        plating_type_id: data.plating_type_id,
+        supplier_id: data.supplier_id,
+        material_weight: data.material_weight,
+        packaging_cost: data.packaging_cost,
+        gram_value: data.gram_value,
+        profit_margin: data.profit_margin,
+        quantity: data.quantity,
+        unit_cost: data.total_cost || 0,
+        price: data.final_price || 0,
+        reseller_commission: 0.3,
+      };
+
+      if (item) {
+        await InventoryModel.updateItem(item.id, itemData);
+        if (selectedFile) {
+          await InventoryModel.updateItemPhotos(item.id, [selectedFile], 0);
+        }
+      } else {
+        const newItem = await InventoryModel.createItem(itemData);
+        if (selectedFile) {
+          await InventoryModel.updateItemPhotos(newItem.id, [selectedFile], 0);
+        }
+      }
+
+      toast.success(item ? 'Peça atualizada com sucesso!' : 'Peça cadastrada com sucesso!');
       onSuccess?.();
       onClose();
     } catch (error) {
       console.error('Erro ao salvar peça:', error);
-      toast.error('Erro ao cadastrar peça');
+      toast.error('Erro ao salvar peça');
     } finally {
       setIsSubmitting(false);
     }
@@ -192,6 +282,17 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                   </div>
 
                   <div className="space-y-2">
+                    <Label htmlFor="raw_cost">Preço do Bruto (R$)</Label>
+                    <Input
+                      id="raw_cost"
+                      type="number"
+                      step="0.01"
+                      placeholder="0,00"
+                      {...form.register('raw_cost')}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
                     <Label htmlFor="packaging_cost">Custo da Embalagem (R$)</Label>
                     <Input
                       id="packaging_cost"
@@ -199,6 +300,17 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                       step="0.01"
                       placeholder="0,00"
                       {...form.register('packaging_cost')}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="total_cost">Custo Total (R$)</Label>
+                    <Input
+                      id="total_cost"
+                      type="number"
+                      step="0.01"
+                      placeholder="0,00"
+                      {...form.register('total_cost')}
                     />
                   </div>
 
@@ -228,24 +340,66 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                       {...form.register('profit_margin')}
                     />
                   </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="final_price">Preço Final (R$)</Label>
+                    <Input
+                      id="final_price"
+                      type="number"
+                      step="0.01"
+                      placeholder="0,00"
+                      {...form.register('final_price')}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="reseller_commission">Comissão da Revendedora (R$)</Label>
+                    <Input
+                      id="reseller_commission"
+                      type="number"
+                      step="0.01"
+                      placeholder="0,00"
+                      {...form.register('reseller_commission')}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="final_profit">Lucro Final (R$)</Label>
+                    <Input
+                      id="final_profit"
+                      type="number"
+                      step="0.01"
+                      placeholder="0,00"
+                      {...form.register('final_profit')}
+                    />
+                  </div>
                 </div>
               </div>
             </form>
           </Form>
         </div>
 
-        <div className="flex justify-end gap-2 pt-4 border-t">
-          <Button variant="outline" onClick={onClose}>
-            Cancelar
-          </Button>
+        <div className="flex justify-between gap-2 pt-4 border-t">
           <Button 
-            type="submit"
-            form="jewelry-form"
-            className="bg-gold hover:bg-gold/90"
-            disabled={isSubmitting}
+            type="button"
+            variant="secondary"
+            onClick={recalculateValues}
           >
-            {isSubmitting ? "Salvando..." : "Salvar"}
+            Recalcular Valores
           </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={onClose}>
+              Cancelar
+            </Button>
+            <Button 
+              type="submit"
+              form="jewelry-form"
+              className="bg-gold hover:bg-gold/90"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Salvando..." : "Salvar"}
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
