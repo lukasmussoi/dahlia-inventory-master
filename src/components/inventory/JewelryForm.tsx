@@ -84,8 +84,8 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
   // Calcular valores automaticamente quando os campos dependentes mudarem
   useEffect(() => {
     const subscription = form.watch((value, { name, type }) => {
-      // Não recalcular se a mudança vier de uma atualização programática
-      if (type === "programmatic") return;
+      // Só recalcular se a mudança vier de uma interação do usuário
+      if (type !== "change") return;
       
       const formValues = form.getValues();
       const updates: Partial<FormValues> = {};
