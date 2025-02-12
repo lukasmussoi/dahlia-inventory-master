@@ -1,4 +1,3 @@
-
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Routes, Route, useNavigate } from "react-router-dom";
 import { TopNavbar } from "@/components/dashboard/TopNavbar";
@@ -11,14 +10,13 @@ import Suitcases from "./suitcases";
 import Suppliers from "./suppliers";
 import Categories from "./categories";
 import Users from "./users";
+import PlatingTypes from "./plating-types";
 
-// Criar uma instância do QueryClient para o dashboard
 const queryClient = new QueryClient();
 
 const Dashboard = () => {
   const navigate = useNavigate();
 
-  // Verificar autenticação ao montar o componente
   useEffect(() => {
     const checkAuth = async () => {
       try {
@@ -64,6 +62,7 @@ const Dashboard = () => {
               <Route path="categories" element={<Categories />} />
             </Route>
             <Route path="suitcases" element={<Suitcases />} />
+            <Route path="plating-types" element={<PlatingTypes />} />
             <Route path="settings">
               <Route path="users" element={<Users />} />
             </Route>

@@ -7,6 +7,7 @@ import {
   LogOut,
   LayoutDashboard,
   Building2,
+  Droplet,
 } from "lucide-react";
 import {
   Sidebar,
@@ -62,6 +63,11 @@ export function DashboardSidebar({ isAdmin }: DashboardSidebarProps) {
       url: "/dashboard/suitcases",
     },
     ...(isAdmin ? [
+      {
+        title: "Tipos de Banho",
+        icon: Droplet,
+        url: "/dashboard/plating-types",
+      },
       {
         title: "Fornecedores",
         icon: Building2,

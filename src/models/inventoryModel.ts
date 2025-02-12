@@ -366,4 +366,25 @@ export class InventoryModel {
     if (error) throw error;
     return data;
   }
+
+  // Deletar tipo de banho
+  static async deletePlatingType(id: string): Promise<void> {
+    // Verificar se existem itens usando este tipo de banho
+    const { data: items } = await supabase
+      .from('inventory')
+      .select('id')
+      .eq('plating_type_id', id)
+      .limit(1);
+
+    if (items && items.length > 0) {
+      throw new Error("Não é possível excluir um tipo de banho que possui itens vinculados");
+    }
+
+    const { error } = await supabase
+      .from('plating_types')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+  }
 }
