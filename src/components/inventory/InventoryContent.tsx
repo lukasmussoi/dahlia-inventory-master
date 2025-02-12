@@ -5,7 +5,7 @@ import { InventoryItem, InventoryModel, InventoryFilters, InventoryCategory } fr
 import { Button } from "@/components/ui/button";
 import { Plus, FolderPlus } from "lucide-react";
 import { InventoryTable } from "./InventoryTable";
-import { InventoryForm } from "./InventoryForm";
+import { JewelryForm } from "./JewelryForm";
 import { CategoryForm } from "./CategoryForm";
 import { InventoryFilters as Filters } from "./InventoryFilters";
 import { toast } from "sonner";
@@ -128,7 +128,7 @@ export function InventoryContent({ isAdmin }: InventoryContentProps) {
             </Button>
             <Button onClick={() => setIsItemModalOpen(true)} className="bg-gold hover:bg-gold/90">
               <Plus className="h-5 w-5 mr-2" />
-              Novo Item
+              Nova Peça
             </Button>
           </div>
         )}
@@ -152,8 +152,7 @@ export function InventoryContent({ isAdmin }: InventoryContentProps) {
 
       {/* Modal de Item */}
       {isItemModalOpen && (
-        <InventoryForm
-          categories={categories}
+        <JewelryForm
           item={selectedItem}
           isOpen={isItemModalOpen}
           onClose={handleCloseModals}
