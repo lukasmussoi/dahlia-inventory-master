@@ -15,7 +15,29 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useQuery } from "@tanstack/react-query";
 import { InventoryModel, PlatingType, Supplier, InventoryItem } from "@/models/inventoryModel";
 import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
+import { z } from "zod";
+import { PriceSummary } from "./form/PriceSummary";
+
+// Schema de validação do formulário
+const formSchema = z.object({
+  name: z.string().min(3, "Nome deve ter pelo menos 3 caracteres"),
+  plating_type_id: z.string().min(1, "Tipo de banho é obrigatório"),
+  supplier_id: z.string().optional(),
+  material_weight: z.number().min(0.01, "Peso deve ser maior que 0"),
+  packaging_cost: z.number().min(0, "Custo não pode ser negativo"),
+  gram_value: z.number().min(0.01, "Valor da grama deve ser maior que 0"),
+  profit_margin: z.number().min(0, "Margem não pode ser negativa"),
+  quantity: z.number().int().min(0, "Quantidade não pode ser negativa"),
+  raw_cost: z.number().optional(),
+  total_cost: z.number().optional(),
+  final_price: z.number().optional(),
+  reseller_commission: z.number().optional(),
+  final_profit: z.number().optional(),
+});
+
+type FormValues = z.infer<typeof formSchema>;
 
 interface JewelryFormProps {
   item?: InventoryItem | null;
@@ -24,27 +46,18 @@ interface JewelryFormProps {
   onSuccess?: () => void;
 }
 
-interface FormValues {
-  name: string;
-  plating_type_id: string;
-  supplier_id: string;
-  material_weight: number;
-  packaging_cost: number;
-  gram_value: number;
-  profit_margin: number;
-  quantity: number;
-  raw_cost?: number; // Preço do Bruto
-  total_cost?: number; // Custo Total
-  final_price?: number; // Preço Final
-  reseller_commission?: number; // Comissão
-  final_profit?: number; // Lucro Final
-}
-
+/**
+ * Formulário de cadastro e edição de peças de joalheria
+ * com cálculos automáticos e validações
+ */
 export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [suggestedPrice, setSuggestedPrice] = useState<number | undefined>(undefined);
 
+  // Inicializar formulário com validação
   const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
       name: item?.name || '',
       plating_type_id: item?.plating_type_id || '',
@@ -54,8 +67,19 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
       gram_value: item?.gram_value || 0,
       profit_margin: item?.profit_margin || 0.3,
       quantity: item?.quantity || 0,
-      reseller_commission: item?.reseller_commission || 0.3,
     },
+  });
+
+  // Buscar tipos de banho
+  const { data: platingTypes = [] } = useQuery({
+    queryKey: ['plating-types'],
+    queryFn: () => InventoryModel.getAllPlatingTypes(),
+  });
+
+  // Buscar fornecedores
+  const { data: suppliers = [] } = useQuery({
+    queryKey: ['suppliers'],
+    queryFn: () => InventoryModel.getAllSuppliers(),
   });
 
   // Calcular valores automaticamente quando os campos dependentes mudarem
@@ -100,18 +124,10 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
     return () => subscription.unsubscribe();
   }, [form]);
 
-  // Buscar tipos de banho
-  const { data: platingTypes = [] } = useQuery({
-    queryKey: ['plating-types'],
-    queryFn: () => InventoryModel.getAllPlatingTypes(),
-  });
-
-  // Buscar fornecedores
-  const { data: suppliers = [] } = useQuery({
-    queryKey: ['suppliers'],
-    queryFn: () => InventoryModel.getAllSuppliers(),
-  });
-
+  /**
+   * Recalcula todos os valores do formulário
+   * Útil quando o usuário quer reverter alterações manuais
+   */
   const recalculateValues = () => {
     const formValues = form.getValues();
     const rawCost = formValues.material_weight * formValues.gram_value;
@@ -129,6 +145,10 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
     toast.success('Valores recalculados com sucesso!');
   };
 
+  /**
+   * Salva a peça no banco de dados
+   * Inclui validações e upload de foto
+   */
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
     try {
@@ -156,14 +176,15 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
         if (selectedFile) {
           await InventoryModel.updateItemPhotos(item.id, [selectedFile], 0);
         }
+        toast.success('Peça atualizada com sucesso!');
       } else {
         const newItem = await InventoryModel.createItem(itemData);
         if (selectedFile) {
           await InventoryModel.updateItemPhotos(newItem.id, [selectedFile], 0);
         }
+        toast.success('Peça cadastrada com sucesso!');
       }
-
-      toast.success(item ? 'Peça atualizada com sucesso!' : 'Peça cadastrada com sucesso!');
+      
       onSuccess?.();
       onClose();
     } catch (error) {
@@ -177,7 +198,20 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      // Validar tamanho do arquivo (máximo 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('O arquivo deve ter no máximo 5MB');
+        return;
+      }
+      
+      // Validar tipo do arquivo
+      if (!file.type.startsWith('image/')) {
+        toast.error('O arquivo deve ser uma imagem');
+        return;
+      }
+      
       setSelectedFile(file);
+      toast.success('Foto selecionada com sucesso!');
     }
   };
 
@@ -192,6 +226,14 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
             Preencha os dados da peça. Os campos com * são obrigatórios.
           </DialogDescription>
         </DialogHeader>
+        
+        {/* Resumo Visual */}
+        <PriceSummary
+          totalCost={form.watch('total_cost') || 0}
+          finalPrice={form.watch('final_price') || 0}
+          finalProfit={form.watch('final_profit') || 0}
+          suggestedPrice={suggestedPrice}
+        />
         
         <div className="flex-1 overflow-y-auto px-1 pb-4">
           <Form {...form}>
