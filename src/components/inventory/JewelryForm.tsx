@@ -132,17 +132,22 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
     try {
-      const itemData: Partial<InventoryItem> = {
+      // Garantir que todos os campos obrigatórios estão presentes
+      const itemData = {
         name: data.name,
+        category_id: item?.category_id || '00000000-0000-0000-0000-000000000000', // Categoria padrão
+        quantity: data.quantity,
+        price: data.final_price || 0,
+        unit_cost: data.total_cost || 0,
+        suggested_price: data.final_price || 0,
+        min_stock: 1,
+        // Campos opcionais
         plating_type_id: data.plating_type_id,
         supplier_id: data.supplier_id,
         material_weight: data.material_weight,
         packaging_cost: data.packaging_cost,
         gram_value: data.gram_value,
         profit_margin: data.profit_margin,
-        quantity: data.quantity,
-        unit_cost: data.total_cost || 0,
-        price: data.final_price || 0,
         reseller_commission: 0.3,
       };
 
