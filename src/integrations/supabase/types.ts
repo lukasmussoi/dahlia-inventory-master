@@ -216,25 +216,25 @@ export type Database = {
         Row: {
           created_at: string
           description: string | null
+          gram_value: number
           id: string
           name: string
-          type: Database["public"]["Enums"]["plating_type"]
           updated_at: string
         }
         Insert: {
           created_at?: string
           description?: string | null
+          gram_value?: number
           id?: string
           name: string
-          type: Database["public"]["Enums"]["plating_type"]
           updated_at?: string
         }
         Update: {
           created_at?: string
           description?: string | null
+          gram_value?: number
           id?: string
           name?: string
-          type?: Database["public"]["Enums"]["plating_type"]
           updated_at?: string
         }
         Relationships: []

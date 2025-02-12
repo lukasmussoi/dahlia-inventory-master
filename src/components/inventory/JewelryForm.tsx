@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -24,16 +25,12 @@ const formSchema = z.object({
   name: z.string().min(3, "Nome deve ter pelo menos 3 caracteres"),
   plating_type_id: z.string().min(1, "Tipo de banho é obrigatório"),
   supplier_id: z.string().optional(),
+  raw_cost: z.number().min(0, "Custo não pode ser negativo"),
   material_weight: z.number().min(0.01, "Peso deve ser maior que 0"),
   packaging_cost: z.number().min(0, "Custo não pode ser negativo"),
-  gram_value: z.number().min(0.01, "Valor da grama deve ser maior que 0"),
-  profit_margin: z.number().min(0, "Margem não pode ser negativa"),
-  quantity: z.number().int().min(0, "Quantidade não pode ser negativa"),
-  raw_cost: z.number().optional(),
   total_cost: z.number().optional(),
-  final_price: z.number().optional(),
-  reseller_commission: z.number().optional(),
-  final_profit: z.number().optional(),
+  total_cost_with_packaging: z.number().optional(),
+  quantity: z.number().int().min(0, "Quantidade não pode ser negativa"),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -45,14 +42,9 @@ interface JewelryFormProps {
   onSuccess?: () => void;
 }
 
-/**
- * Formulário de cadastro e edição de peças de joalheria
- * com cálculos automáticos e validações
- */
 export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [suggestedPrice, setSuggestedPrice] = useState<number | undefined>(undefined);
 
   // Inicializar formulário com validação
   const form = useForm<FormValues>({
@@ -61,10 +53,9 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
       name: item?.name || '',
       plating_type_id: item?.plating_type_id || '',
       supplier_id: item?.supplier_id || '',
+      raw_cost: item?.unit_cost || 0,
       material_weight: item?.material_weight || 0,
       packaging_cost: item?.packaging_cost || 0,
-      gram_value: item?.gram_value || 0,
-      profit_margin: item?.profit_margin || 0.3,
       quantity: item?.quantity || 0,
     },
   });
@@ -90,37 +81,19 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
       const formValues = form.getValues();
       const updates: Partial<FormValues> = {};
       
-      // Calcular apenas se os campos necessários estiverem preenchidos
-      if (formValues.material_weight && formValues.gram_value) {
-        // Preço do Bruto
-        const rawCost = formValues.material_weight * formValues.gram_value;
-        if (!name || name !== 'raw_cost') {
-          updates.raw_cost = rawCost;
-        }
+      // Buscar o valor da grama do tipo de banho selecionado
+      const selectedPlatingType = platingTypes.find(
+        pt => pt.id === formValues.plating_type_id
+      );
+      
+      if (selectedPlatingType && formValues.material_weight && formValues.raw_cost) {
+        // Custo total = (gramas * valor da grama do banho) + preço do bruto
+        const totalCost = (formValues.material_weight * selectedPlatingType.gram_value) + formValues.raw_cost;
+        updates.total_cost = totalCost;
 
-        // Custo Total
-        const totalCost = rawCost + (formValues.packaging_cost || 0);
-        if (!name || name !== 'total_cost') {
-          updates.total_cost = totalCost;
-        }
-
-        // Preço Final
-        const finalPrice = totalCost * (1 + (formValues.profit_margin || 0.3));
-        if (!name || name !== 'final_price') {
-          updates.final_price = finalPrice;
-        }
-
-        // Comissão da Revendedora (30% do Preço Final)
-        const commission = finalPrice * 0.3;
-        if (!name || name !== 'reseller_commission') {
-          updates.reseller_commission = commission;
-        }
-
-        // Lucro Final
-        const finalProfit = finalPrice - commission - totalCost;
-        if (!name || name !== 'final_profit') {
-          updates.final_profit = finalProfit;
-        }
+        // Custo total com embalagem
+        const totalCostWithPackaging = totalCost + (formValues.packaging_cost || 0);
+        updates.total_cost_with_packaging = totalCostWithPackaging;
 
         // Atualizar todos os valores de uma vez
         Object.entries(updates).forEach(([field, value]) => {
@@ -134,53 +107,22 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
     });
 
     return () => subscription.unsubscribe();
-  }, [form]);
+  }, [form, platingTypes]);
 
-  /**
-   * Recalcula todos os valores do formulário
-   * Útil quando o usuário quer reverter alterações manuais
-   */
-  const recalculateValues = () => {
-    const formValues = form.getValues();
-    const rawCost = formValues.material_weight * formValues.gram_value;
-    const totalCost = rawCost + (formValues.packaging_cost || 0);
-    const finalPrice = totalCost * (1 + (formValues.profit_margin || 0.3));
-    const commission = finalPrice * 0.3;
-    const finalProfit = finalPrice - commission - totalCost;
-
-    form.setValue('raw_cost', rawCost);
-    form.setValue('total_cost', totalCost);
-    form.setValue('final_price', finalPrice);
-    form.setValue('reseller_commission', commission);
-    form.setValue('final_profit', finalProfit);
-
-    toast.success('Valores recalculados com sucesso!');
-  };
-
-  /**
-   * Salva a peça no banco de dados
-   * Inclui validações e upload de foto
-   */
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
     try {
-      // Garantir que todos os campos obrigatórios estão presentes
       const itemData = {
         name: data.name,
-        category_id: item?.category_id || '00000000-0000-0000-0000-000000000000', // Categoria padrão
-        quantity: data.quantity,
-        price: data.final_price || 0,
-        unit_cost: data.total_cost || 0,
-        suggested_price: data.final_price || 0,
-        min_stock: 1,
-        // Campos opcionais
         plating_type_id: data.plating_type_id,
         supplier_id: data.supplier_id,
         material_weight: data.material_weight,
         packaging_cost: data.packaging_cost,
-        gram_value: data.gram_value,
-        profit_margin: data.profit_margin,
-        reseller_commission: 0.3,
+        unit_cost: data.total_cost_with_packaging || 0,
+        price: data.total_cost_with_packaging || 0, // Preço inicial igual ao custo
+        quantity: data.quantity,
+        category_id: item?.category_id || '00000000-0000-0000-0000-000000000000',
+        suggested_price: data.total_cost_with_packaging || 0,
       };
 
       if (item) {
@@ -210,13 +152,11 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // Validar tamanho do arquivo (máximo 5MB)
       if (file.size > 5 * 1024 * 1024) {
         toast.error('O arquivo deve ter no máximo 5MB');
         return;
       }
       
-      // Validar tipo do arquivo
       if (!file.type.startsWith('image/')) {
         toast.error('O arquivo deve ser uma imagem');
         return;
@@ -239,12 +179,10 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
           </DialogDescription>
         </DialogHeader>
         
-        {/* Resumo Visual */}
         <PriceSummary
           totalCost={form.watch('total_cost') || 0}
-          finalPrice={form.watch('final_price') || 0}
-          finalProfit={form.watch('final_profit') || 0}
-          suggestedPrice={suggestedPrice}
+          finalPrice={form.watch('total_cost_with_packaging') || 0}
+          finalProfit={0}
         />
         
         <div className="flex-1 overflow-y-auto px-1 pb-4">
@@ -275,7 +213,7 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                       <SelectContent>
                         {platingTypes.map((type) => (
                           <SelectItem key={type.id} value={type.id}>
-                            {type.name}
+                            {type.name} - R$ {type.gram_value.toFixed(2)}/g
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -314,18 +252,18 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                 </div>
               </div>
 
-              {/* Seção 2: Cálculo de Custos */}
+              {/* Seção 2: Custos */}
               <div className="space-y-4">
-                <h3 className="text-lg font-medium">Cálculo de Custos</h3>
+                <h3 className="text-lg font-medium">Custos e Pesos</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="gram_value">Valor da Grama (R$) *</Label>
+                    <Label htmlFor="raw_cost">Preço do Bruto (R$) *</Label>
                     <Input
-                      id="gram_value"
+                      id="raw_cost"
                       type="number"
                       step="0.01"
                       placeholder="0,00"
-                      {...form.register('gram_value')}
+                      {...form.register('raw_cost', { valueAsNumber: true })}
                     />
                   </div>
 
@@ -336,18 +274,7 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                       type="number"
                       step="0.01"
                       placeholder="0,00"
-                      {...form.register('material_weight')}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="raw_cost">Preço do Bruto (R$)</Label>
-                    <Input
-                      id="raw_cost"
-                      type="number"
-                      step="0.01"
-                      placeholder="0,00"
-                      {...form.register('raw_cost')}
+                      {...form.register('material_weight', { valueAsNumber: true })}
                     />
                   </div>
 
@@ -358,7 +285,7 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                       type="number"
                       step="0.01"
                       placeholder="0,00"
-                      {...form.register('packaging_cost')}
+                      {...form.register('packaging_cost', { valueAsNumber: true })}
                     />
                   </div>
 
@@ -369,7 +296,20 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                       type="number"
                       step="0.01"
                       placeholder="0,00"
-                      {...form.register('total_cost')}
+                      readOnly
+                      value={form.watch('total_cost') || 0}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="total_cost_with_packaging">Custo Total com Embalagem (R$)</Label>
+                    <Input
+                      id="total_cost_with_packaging"
+                      type="number"
+                      step="0.01"
+                      placeholder="0,00"
+                      readOnly
+                      value={form.watch('total_cost_with_packaging') || 0}
                     />
                   </div>
 
@@ -379,57 +319,7 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                       id="quantity"
                       type="number"
                       placeholder="0"
-                      {...form.register('quantity')}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Seção 3: Precificação */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium">Precificação</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="profit_margin">Margem de Lucro (%)</Label>
-                    <Input
-                      id="profit_margin"
-                      type="number"
-                      step="0.01"
-                      placeholder="30"
-                      {...form.register('profit_margin')}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="final_price">Preço Final (R$)</Label>
-                    <Input
-                      id="final_price"
-                      type="number"
-                      step="0.01"
-                      placeholder="0,00"
-                      {...form.register('final_price')}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="reseller_commission">Comissão da Revendedora (R$)</Label>
-                    <Input
-                      id="reseller_commission"
-                      type="number"
-                      step="0.01"
-                      placeholder="0,00"
-                      {...form.register('reseller_commission')}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="final_profit">Lucro Final (R$)</Label>
-                    <Input
-                      id="final_profit"
-                      type="number"
-                      step="0.01"
-                      placeholder="0,00"
-                      {...form.register('final_profit')}
+                      {...form.register('quantity', { valueAsNumber: true })}
                     />
                   </div>
                 </div>
@@ -438,27 +328,18 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
           </Form>
         </div>
 
-        <div className="flex justify-between gap-2 pt-4 border-t">
-          <Button 
-            type="button"
-            variant="secondary"
-            onClick={recalculateValues}
-          >
-            Recalcular Valores
+        <div className="flex justify-end gap-2 pt-4 border-t">
+          <Button variant="outline" onClick={onClose}>
+            Cancelar
           </Button>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={onClose}>
-              Cancelar
-            </Button>
-            <Button 
-              type="submit"
-              form="jewelry-form"
-              className="bg-gold hover:bg-gold/90"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? "Salvando..." : "Salvar"}
-            </Button>
-          </div>
+          <Button 
+            type="submit"
+            form="jewelry-form"
+            className="bg-gold hover:bg-gold/90"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "Salvando..." : "Salvar"}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
