@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -84,40 +83,53 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
 
   // Calcular valores automaticamente quando os campos dependentes mudarem
   useEffect(() => {
-    const subscription = form.watch((value, { name }) => {
+    const subscription = form.watch((value, { name, type }) => {
+      // Não recalcular se a mudança vier de uma atualização programática
+      if (type === "programmatic") return;
+      
       const formValues = form.getValues();
+      const updates: Partial<FormValues> = {};
       
       // Calcular apenas se os campos necessários estiverem preenchidos
       if (formValues.material_weight && formValues.gram_value) {
         // Preço do Bruto
         const rawCost = formValues.material_weight * formValues.gram_value;
         if (!name || name !== 'raw_cost') {
-          form.setValue('raw_cost', rawCost);
+          updates.raw_cost = rawCost;
         }
 
         // Custo Total
         const totalCost = rawCost + (formValues.packaging_cost || 0);
         if (!name || name !== 'total_cost') {
-          form.setValue('total_cost', totalCost);
+          updates.total_cost = totalCost;
         }
 
         // Preço Final
         const finalPrice = totalCost * (1 + (formValues.profit_margin || 0.3));
         if (!name || name !== 'final_price') {
-          form.setValue('final_price', finalPrice);
+          updates.final_price = finalPrice;
         }
 
         // Comissão da Revendedora (30% do Preço Final)
         const commission = finalPrice * 0.3;
         if (!name || name !== 'reseller_commission') {
-          form.setValue('reseller_commission', commission);
+          updates.reseller_commission = commission;
         }
 
         // Lucro Final
         const finalProfit = finalPrice - commission - totalCost;
         if (!name || name !== 'final_profit') {
-          form.setValue('final_profit', finalProfit);
+          updates.final_profit = finalProfit;
         }
+
+        // Atualizar todos os valores de uma vez
+        Object.entries(updates).forEach(([field, value]) => {
+          form.setValue(field as keyof FormValues, value, {
+            shouldValidate: false,
+            shouldDirty: true,
+            shouldTouch: false,
+          });
+        });
       }
     });
 
