@@ -174,7 +174,7 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] h-[90vh] flex flex-col">
+      <DialogContent className="sm:max-w-[1000px] h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="text-2xl">
             {item ? "Editar Peça" : "Nova Peça"}
@@ -183,201 +183,205 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
             Preencha os dados da peça. Os campos marcados com * são obrigatórios.
           </DialogDescription>
         </DialogHeader>
-        
-        <PriceSummary
-          totalCost={form.watch('total_cost') || 0}
-          finalPrice={form.watch('total_cost_with_packaging') || 0}
-          finalProfit={0}
-        />
-        
-        <div className="flex-1 overflow-y-auto px-1 pb-4">
-          <Form {...form}>
-            <form id="jewelry-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-              {/* Seção 1: Informações Básicas */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium border-b pb-2">Informações Básicas</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Nome da Peça *</Label>
-                    <Input 
-                      id="name"
-                      placeholder="Ex: Anel Solitário"
-                      {...form.register('name')}
-                      className="h-12 text-lg"
-                    />
-                    {form.formState.errors.name && (
-                      <p className="text-red-500 text-sm">{form.formState.errors.name.message}</p>
-                    )}
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="plating_type">Tipo de Banho *</Label>
-                    <Select 
-                      onValueChange={(value) => form.setValue('plating_type_id', value)}
-                      value={form.watch('plating_type_id')}
-                    >
-                      <SelectTrigger className="h-12">
-                        <SelectValue placeholder="Selecione o tipo de banho" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {platingTypes.map((type) => (
-                          <SelectItem key={type.id} value={type.id}>
-                            {type.name} - R$ {type.gram_value.toFixed(2)}/g
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {form.formState.errors.plating_type_id && (
-                      <p className="text-red-500 text-sm">{form.formState.errors.plating_type_id.message}</p>
-                    )}
-                  </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="supplier">Fornecedor</Label>
-                    <Select
-                      onValueChange={(value) => form.setValue('supplier_id', value)}
-                      value={form.watch('supplier_id')}
-                    >
-                      <SelectTrigger className="h-12">
-                        <SelectValue placeholder="Selecione o fornecedor" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <div className="p-2">
-                          <Input
-                            placeholder="Buscar fornecedor..."
-                            className="mb-2"
-                            onChange={(e) => {
-                              const filtered = suppliers.filter(s => 
-                                s.name.toLowerCase().includes(e.target.value.toLowerCase())
-                              );
-                              // Atualizar lista de fornecedores filtrados
-                            }}
-                          />
-                        </div>
-                        {suppliers.map((supplier) => (
-                          <SelectItem key={supplier.id} value={supplier.id}>
-                            {supplier.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+        <div className="flex flex-col md:flex-row gap-6 flex-1">
+          <div className="md:w-[350px] space-y-6">
+            <div className="space-y-2">
+              <Label>Fotos da Peça</Label>
+              <PhotoFields
+                photos={photos}
+                setPhotos={setPhotos}
+                primaryPhotoIndex={primaryPhotoIndex}
+                setPrimaryPhotoIndex={setPrimaryPhotoIndex}
+              />
+            </div>
 
-                  <div className="space-y-2">
-                    <Label>Fotos da Peça</Label>
-                    <PhotoFields
-                      photos={photos}
-                      setPhotos={setPhotos}
-                      primaryPhotoIndex={primaryPhotoIndex}
-                      setPrimaryPhotoIndex={setPrimaryPhotoIndex}
-                    />
+            <PriceSummary
+              totalCost={form.watch('total_cost') || 0}
+              finalPrice={form.watch('total_cost_with_packaging') || 0}
+              finalProfit={0}
+            />
+          </div>
+
+          <div className="flex-1 overflow-y-auto">
+            <Form {...form}>
+              <form id="jewelry-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium border-b pb-2">Informações Básicas</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Nome da Peça *</Label>
+                      <Input 
+                        id="name"
+                        placeholder="Ex: Anel Solitário"
+                        {...form.register('name')}
+                        className="h-12"
+                      />
+                      {form.formState.errors.name && (
+                        <p className="text-red-500 text-sm">{form.formState.errors.name.message}</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="plating_type">Tipo de Banho *</Label>
+                      <Select 
+                        onValueChange={(value) => form.setValue('plating_type_id', value)}
+                        value={form.watch('plating_type_id')}
+                      >
+                        <SelectTrigger className="h-12">
+                          <SelectValue placeholder="Selecione o tipo de banho" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {platingTypes.map((type) => (
+                            <SelectItem key={type.id} value={type.id}>
+                              {type.name} - R$ {type.gram_value.toFixed(2)}/g
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {form.formState.errors.plating_type_id && (
+                        <p className="text-red-500 text-sm">{form.formState.errors.plating_type_id.message}</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="supplier">Fornecedor</Label>
+                      <Select
+                        onValueChange={(value) => form.setValue('supplier_id', value)}
+                        value={form.watch('supplier_id')}
+                      >
+                        <SelectTrigger className="h-12">
+                          <SelectValue placeholder="Selecione o fornecedor" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <div className="p-2">
+                            <Input
+                              placeholder="Buscar fornecedor..."
+                              className="mb-2"
+                              onChange={(e) => {
+                                const filtered = suppliers.filter(s => 
+                                  s.name.toLowerCase().includes(e.target.value.toLowerCase())
+                                );
+                                // Atualizar lista de fornecedores filtrados
+                              }}
+                            />
+                          </div>
+                          {suppliers.map((supplier) => (
+                            <SelectItem key={supplier.id} value={supplier.id}>
+                              {supplier.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Seção 2: Custos */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium border-b pb-2">Custos e Pesos</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="raw_cost">Preço do Bruto (R$) *</Label>
-                    <Input
-                      id="raw_cost"
-                      type="number"
-                      step="0.01"
-                      placeholder="0,00"
-                      className="h-12 text-lg"
-                      {...form.register('raw_cost', { valueAsNumber: true })}
-                    />
-                    {form.formState.errors.raw_cost && (
-                      <p className="text-red-500 text-sm">{form.formState.errors.raw_cost.message}</p>
-                    )}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium border-b pb-2">Custos e Pesos</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="raw_cost">Preço do Bruto (R$) *</Label>
+                      <Input
+                        id="raw_cost"
+                        type="number"
+                        step="0.01"
+                        placeholder="0,00"
+                        className="h-12"
+                        {...form.register('raw_cost', { valueAsNumber: true })}
+                      />
+                      {form.formState.errors.raw_cost && (
+                        <p className="text-red-500 text-sm">{form.formState.errors.raw_cost.message}</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="material_weight">Peso (g) *</Label>
+                      <Input
+                        id="material_weight"
+                        type="number"
+                        step="0.01"
+                        placeholder="0,00"
+                        className="h-12"
+                        {...form.register('material_weight', { valueAsNumber: true })}
+                      />
+                      {form.formState.errors.material_weight && (
+                        <p className="text-red-500 text-sm">{form.formState.errors.material_weight.message}</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="packaging_cost">Custo da Embalagem (R$)</Label>
+                      <Input
+                        id="packaging_cost"
+                        type="number"
+                        step="0.01"
+                        placeholder="0,00"
+                        className="h-12"
+                        {...form.register('packaging_cost', { valueAsNumber: true })}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="quantity">Quantidade em Estoque *</Label>
+                      <Input
+                        id="quantity"
+                        type="number"
+                        placeholder="0"
+                        className="h-12"
+                        {...form.register('quantity', { valueAsNumber: true })}
+                      />
+                      {form.formState.errors.quantity && (
+                        <p className="text-red-500 text-sm">{form.formState.errors.quantity.message}</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="min_stock">Estoque Mínimo *</Label>
+                      <Input
+                        id="min_stock"
+                        type="number"
+                        placeholder="0"
+                        className="h-12"
+                        {...form.register('min_stock', { valueAsNumber: true })}
+                      />
+                      {form.formState.errors.min_stock && (
+                        <p className="text-red-500 text-sm">{form.formState.errors.min_stock.message}</p>
+                      )}
+                    </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="material_weight">Peso (g) *</Label>
-                    <Input
-                      id="material_weight"
-                      type="number"
-                      step="0.01"
-                      placeholder="0,00"
-                      className="h-12 text-lg"
-                      {...form.register('material_weight', { valueAsNumber: true })}
-                    />
-                    {form.formState.errors.material_weight && (
-                      <p className="text-red-500 text-sm">{form.formState.errors.material_weight.message}</p>
-                    )}
-                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="total_cost">Custo Total (R$)</Label>
+                      <Input
+                        id="total_cost"
+                        type="number"
+                        step="0.01"
+                        placeholder="0,00"
+                        readOnly
+                        className="h-12 bg-gray-50"
+                        value={form.watch('total_cost') || 0}
+                      />
+                    </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="packaging_cost">Custo da Embalagem (R$)</Label>
-                    <Input
-                      id="packaging_cost"
-                      type="number"
-                      step="0.01"
-                      placeholder="0,00"
-                      className="h-12 text-lg"
-                      {...form.register('packaging_cost', { valueAsNumber: true })}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="total_cost">Custo Total (R$)</Label>
-                    <Input
-                      id="total_cost"
-                      type="number"
-                      step="0.01"
-                      placeholder="0,00"
-                      readOnly
-                      className="h-12 text-lg bg-gray-50"
-                      value={form.watch('total_cost') || 0}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="total_cost_with_packaging">Custo Total com Embalagem (R$)</Label>
-                    <Input
-                      id="total_cost_with_packaging"
-                      type="number"
-                      step="0.01"
-                      placeholder="0,00"
-                      readOnly
-                      className="h-12 text-lg bg-gray-50"
-                      value={form.watch('total_cost_with_packaging') || 0}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="quantity">Quantidade em Estoque *</Label>
-                    <Input
-                      id="quantity"
-                      type="number"
-                      placeholder="0"
-                      className="h-12 text-lg"
-                      {...form.register('quantity', { valueAsNumber: true })}
-                    />
-                    {form.formState.errors.quantity && (
-                      <p className="text-red-500 text-sm">{form.formState.errors.quantity.message}</p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="min_stock">Estoque Mínimo *</Label>
-                    <Input
-                      id="min_stock"
-                      type="number"
-                      placeholder="0"
-                      className="h-12 text-lg"
-                      {...form.register('min_stock', { valueAsNumber: true })}
-                    />
-                    {form.formState.errors.min_stock && (
-                      <p className="text-red-500 text-sm">{form.formState.errors.min_stock.message}</p>
-                    )}
+                    <div className="space-y-2">
+                      <Label htmlFor="total_cost_with_packaging">Custo Total com Embalagem (R$)</Label>
+                      <Input
+                        id="total_cost_with_packaging"
+                        type="number"
+                        step="0.01"
+                        placeholder="0,00"
+                        readOnly
+                        className="h-12 bg-gray-50"
+                        value={form.watch('total_cost_with_packaging') || 0}
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
-            </form>
-          </Form>
+              </form>
+            </Form>
+          </div>
         </div>
 
         <div className="flex justify-end gap-4 pt-4 border-t">
