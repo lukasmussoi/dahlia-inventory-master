@@ -35,6 +35,7 @@ const formSchema = z.object({
   markup_percentage: z.number().min(0, "Markup não pode ser negativo").default(30),
   price: z.number().min(0, "Preço não pode ser negativo").default(0),
   category_id: z.string().min(1, "Categoria é obrigatória"),
+  suggested_price: z.number().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -50,6 +51,11 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [photos, setPhotos] = useState<File[]>([]);
   const [primaryPhotoIndex, setPrimaryPhotoIndex] = useState<number | null>(null);
+  const [calculatedValues, setCalculatedValues] = useState({
+    totalCost: 0,
+    suggestedPrice: 0,
+    profit: 0
+  });
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -65,6 +71,7 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
       markup_percentage: item?.markup_percentage || 30,
       price: item?.price || 0,
       category_id: item?.category_id || "",
+      suggested_price: item?.suggested_price || 0,
     },
   });
 
@@ -78,20 +85,32 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
     queryFn: () => InventoryModel.getAllSuppliers(),
   });
 
-  // Usar useEffect para calcular valores em tempo real
+  // Calcular valores quando os campos relevantes mudarem
   useEffect(() => {
-    const subscription = form.watch((values) => {
+    const subscription = form.watch((formData, { name }) => {
+      // Evitar recálculos desnecessários
+      if (!name || ['name', 'supplier_id', 'quantity', 'min_stock'].includes(name)) {
+        return;
+      }
+
       const rawCost = form.getValues('raw_cost') || 0;
       const packagingCost = form.getValues('packaging_cost') || 0;
       const materialWeight = form.getValues('material_weight') || 0;
+      const markup = form.getValues('markup_percentage') || 30;
+      const price = form.getValues('price') || 0;
+      
       const selectedPlatingType = platingTypes.find(pt => pt.id === form.getValues('plating_type_id'));
-      
       const platingCost = selectedPlatingType ? materialWeight * selectedPlatingType.gram_value : 0;
-      const totalCost = rawCost + platingCost;
-      const totalCostWithPackaging = totalCost + packagingCost;
       
-      form.setValue('total_cost', totalCost);
-      form.setValue('total_cost_with_packaging', totalCostWithPackaging);
+      const totalCost = rawCost + platingCost + packagingCost;
+      const suggestedPrice = totalCost * (1 + markup / 100);
+      const profit = price - totalCost;
+
+      setCalculatedValues({
+        totalCost,
+        suggestedPrice,
+        profit
+      });
     });
 
     return () => subscription.unsubscribe();
@@ -112,12 +131,13 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
         supplier_id: values.supplier_id,
         material_weight: values.material_weight,
         packaging_cost: values.packaging_cost,
-        unit_cost: values.total_cost_with_packaging || 0,
+        unit_cost: calculatedValues.totalCost,
         price: values.price,
         quantity: values.quantity,
         min_stock: values.min_stock,
         category_id: values.category_id,
         markup_percentage: values.markup_percentage,
+        suggested_price: calculatedValues.suggestedPrice,
       };
 
       if (item) {
@@ -142,13 +162,6 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
       setIsSubmitting(false);
     }
   };
-
-  // Calcular valores para exibição
-  const totalCost = form.watch('total_cost_with_packaging') || 0;
-  const price = form.watch('price') || 0;
-  const markup = form.watch('markup_percentage') || 30;
-  const suggestedPrice = totalCost * (1 + markup / 100);
-  const profit = price - totalCost;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -175,10 +188,10 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
             </div>
 
             <PriceSummary
-              totalCost={totalCost}
-              finalPrice={price}
-              finalProfit={profit}
-              suggestedPrice={suggestedPrice}
+              totalCost={calculatedValues.totalCost}
+              finalPrice={form.watch('price') || 0}
+              finalProfit={calculatedValues.profit}
+              suggestedPrice={calculatedValues.suggestedPrice}
             />
           </div>
 
