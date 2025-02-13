@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -28,14 +27,11 @@ const formSchema = z.object({
   raw_cost: z.number().min(0, "Custo não pode ser negativo"),
   material_weight: z.number().min(0.01, "Peso deve ser maior que 0"),
   packaging_cost: z.number().min(0, "Custo não pode ser negativo"),
-  total_cost: z.number().optional(),
-  total_cost_with_packaging: z.number().optional(),
   quantity: z.number().int().min(0, "Quantidade não pode ser negativa"),
   min_stock: z.number().int().min(0, "Estoque mínimo não pode ser negativa"),
   markup_percentage: z.number().min(0, "Markup não pode ser negativo").default(30),
   price: z.number().min(0, "Preço não pode ser negativo").default(0),
   category_id: z.string().min(1, "Categoria é obrigatória"),
-  suggested_price: z.number().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -51,11 +47,6 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [photos, setPhotos] = useState<File[]>([]);
   const [primaryPhotoIndex, setPrimaryPhotoIndex] = useState<number | null>(null);
-  const [calculatedValues, setCalculatedValues] = useState({
-    totalCost: 0,
-    suggestedPrice: 0,
-    profit: 0
-  });
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -71,7 +62,6 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
       markup_percentage: item?.markup_percentage || 30,
       price: item?.price || 0,
       category_id: item?.category_id || "",
-      suggested_price: item?.suggested_price || 0,
     },
   });
 
@@ -85,36 +75,27 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
     queryFn: () => InventoryModel.getAllSuppliers(),
   });
 
-  // Calcular valores quando os campos relevantes mudarem
-  useEffect(() => {
-    const subscription = form.watch((formData, { name }) => {
-      // Evitar recálculos desnecessários
-      if (!name || ['name', 'supplier_id', 'quantity', 'min_stock'].includes(name)) {
-        return;
-      }
+  const calculatedValues = useMemo(() => {
+    const rawCost = form.watch('raw_cost') || 0;
+    const packagingCost = form.watch('packaging_cost') || 0;
+    const materialWeight = form.watch('material_weight') || 0;
+    const markup = form.watch('markup_percentage') || 30;
+    const price = form.watch('price') || 0;
+    
+    const selectedPlatingType = platingTypes.find(pt => pt.id === form.watch('plating_type_id'));
+    const platingCost = selectedPlatingType ? materialWeight * selectedPlatingType.gram_value : 0;
+    
+    const totalCost = rawCost + platingCost + packagingCost;
+    const suggestedPrice = totalCost * (1 + markup / 100);
+    const profit = price - totalCost;
 
-      const rawCost = form.getValues('raw_cost') || 0;
-      const packagingCost = form.getValues('packaging_cost') || 0;
-      const materialWeight = form.getValues('material_weight') || 0;
-      const markup = form.getValues('markup_percentage') || 30;
-      const price = form.getValues('price') || 0;
-      
-      const selectedPlatingType = platingTypes.find(pt => pt.id === form.getValues('plating_type_id'));
-      const platingCost = selectedPlatingType ? materialWeight * selectedPlatingType.gram_value : 0;
-      
-      const totalCost = rawCost + platingCost + packagingCost;
-      const suggestedPrice = totalCost * (1 + markup / 100);
-      const profit = price - totalCost;
-
-      setCalculatedValues({
-        totalCost,
-        suggestedPrice,
-        profit
-      });
-    });
-
-    return () => subscription.unsubscribe();
-  }, [form, platingTypes]);
+    return {
+      totalCost,
+      suggestedPrice,
+      profit,
+    };
+  }, [form.watch('raw_cost'), form.watch('packaging_cost'), form.watch('material_weight'), 
+      form.watch('markup_percentage'), form.watch('price'), form.watch('plating_type_id'), platingTypes]);
 
   const handleSubmit = async (values: FormValues) => {
     try {
@@ -127,6 +108,7 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
 
       const itemData = {
         name: values.name,
+        category_id: values.category_id,
         plating_type_id: values.plating_type_id,
         supplier_id: values.supplier_id,
         material_weight: values.material_weight,
@@ -135,7 +117,6 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
         price: values.price,
         quantity: values.quantity,
         min_stock: values.min_stock,
-        category_id: values.category_id,
         markup_percentage: values.markup_percentage,
         suggested_price: calculatedValues.suggestedPrice,
       };
