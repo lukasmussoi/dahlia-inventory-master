@@ -1,8 +1,7 @@
 
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { useEffect, useState } from "react";
-import { ImageIcon, StarIcon } from "lucide-react";
+import { useDropzone } from "react-dropzone";
+import { ImageIcon, StarIcon, UploadCloud } from "lucide-react";
 import { toast } from "sonner";
 
 interface PhotoFieldsProps {
@@ -13,36 +12,22 @@ interface PhotoFieldsProps {
 }
 
 export function PhotoFields({ photos, setPhotos, primaryPhotoIndex, setPrimaryPhotoIndex }: PhotoFieldsProps) {
-  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
-
-  useEffect(() => {
-    // Limpar URLs antigas
-    previewUrls.forEach(url => URL.revokeObjectURL(url));
-    
-    // Criar novas URLs de preview
-    const urls = photos.map(photo => URL.createObjectURL(photo));
-    setPreviewUrls(urls);
-
-    // Cleanup
-    return () => urls.forEach(url => URL.revokeObjectURL(url));
-  }, [photos]);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    
-    if (files.length + photos.length > 5) {
-      toast.error("Máximo de 5 fotos permitido");
-      return;
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    accept: {
+      'image/*': ['.jpeg', '.jpg', '.png', '.gif', '.webp']
+    },
+    maxFiles: 5,
+    onDrop: (acceptedFiles) => {
+      if (acceptedFiles.length + photos.length > 5) {
+        toast.error("Máximo de 5 fotos permitido");
+        return;
+      }
+      setPhotos([...photos, ...acceptedFiles]);
+    },
+    onDropRejected: () => {
+      toast.error("Arquivo inválido. Envie apenas imagens.");
     }
-
-    const invalidFiles = files.filter(file => !file.type.startsWith('image/'));
-    if (invalidFiles.length > 0) {
-      toast.error("Apenas arquivos de imagem são permitidos");
-      return;
-    }
-
-    setPhotos([...photos, ...files]);
-  };
+  });
 
   const removePhoto = (index: number) => {
     const newPhotos = [...photos];
@@ -56,43 +41,39 @@ export function PhotoFields({ photos, setPhotos, primaryPhotoIndex, setPrimaryPh
     }
   };
 
-  const setPrimaryPhoto = (index: number) => {
-    setPrimaryPhotoIndex(index);
-  };
-
   return (
     <div className="space-y-4">
-      <div>
-        <Label>Fotos (máximo 5)</Label>
-        <div className="mt-2">
-          <input
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={handleFileChange}
-            className="hidden"
-            id="photo-input"
-          />
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => document.getElementById('photo-input')?.click()}
-            disabled={photos.length >= 5}
-          >
-            <ImageIcon className="w-4 h-4 mr-2" />
-            Adicionar Fotos
-          </Button>
-        </div>
+      <div
+        {...getRootProps()}
+        className={`
+          border-2 border-dashed rounded-lg p-6 cursor-pointer
+          transition-colors duration-200 text-center
+          ${isDragActive ? 'border-gold bg-gold/10' : 'border-gray-300 hover:border-gold'}
+        `}
+      >
+        <input {...getInputProps()} />
+        <UploadCloud className="mx-auto h-12 w-12 text-gray-400 mb-2" />
+        <p className="text-sm text-gray-600">
+          {isDragActive ? (
+            "Solte as imagens aqui..."
+          ) : (
+            <>
+              Arraste e solte as fotos aqui, ou <span className="text-gold">clique para selecionar</span>
+              <br />
+              <span className="text-xs text-gray-500">(Máximo 5 fotos)</span>
+            </>
+          )}
+        </p>
       </div>
 
-      {previewUrls.length > 0 && (
-        <div className="grid grid-cols-5 gap-4">
-          {previewUrls.map((url, index) => (
-            <div key={url} className="relative group">
+      {photos.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+          {photos.map((photo, index) => (
+            <div key={URL.createObjectURL(photo)} className="relative group aspect-square">
               <img
-                src={url}
+                src={URL.createObjectURL(photo)}
                 alt={`Preview ${index + 1}`}
-                className="w-full h-24 object-cover rounded-lg"
+                className="w-full h-full object-cover rounded-lg"
               />
               <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all rounded-lg flex items-center justify-center gap-2">
                 <Button
@@ -100,10 +81,10 @@ export function PhotoFields({ photos, setPhotos, primaryPhotoIndex, setPrimaryPh
                   size="icon"
                   variant="ghost"
                   className="opacity-0 group-hover:opacity-100"
-                  onClick={() => setPrimaryPhoto(index)}
+                  onClick={() => setPrimaryPhotoIndex(index)}
                 >
                   <StarIcon 
-                    className={`w-4 h-4 ${primaryPhotoIndex === index ? 'text-yellow-400 fill-yellow-400' : 'text-white'}`}
+                    className={`w-6 h-6 ${primaryPhotoIndex === index ? 'text-yellow-400 fill-yellow-400' : 'text-white'}`}
                   />
                 </Button>
                 <Button
@@ -117,7 +98,7 @@ export function PhotoFields({ photos, setPhotos, primaryPhotoIndex, setPrimaryPh
                 </Button>
               </div>
               {primaryPhotoIndex === index && (
-                <div className="absolute top-0 right-0 bg-yellow-400 text-xs px-1 rounded-bl-lg rounded-tr-lg">
+                <div className="absolute top-0 right-0 bg-yellow-400 text-xs px-2 py-1 rounded-bl-lg rounded-tr-lg">
                   Principal
                 </div>
               )}

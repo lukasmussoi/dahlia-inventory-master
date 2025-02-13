@@ -18,6 +18,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { z } from "zod";
 import { PriceSummary } from "./form/PriceSummary";
+import { PhotoFields } from "./form/PhotoFields";
 
 // Schema de validação do formulário
 const formSchema = z.object({
@@ -30,7 +31,7 @@ const formSchema = z.object({
   total_cost: z.number().optional(),
   total_cost_with_packaging: z.number().optional(),
   quantity: z.number().int().min(0, "Quantidade não pode ser negativa"),
-  min_stock: z.number().int().min(0, "Estoque mínimo não pode ser negativo"),
+  min_stock: z.number().int().min(0, "Estoque mínimo não pode ser negativa"),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -45,6 +46,8 @@ interface JewelryFormProps {
 export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [photos, setPhotos] = useState<File[]>([]);
+  const [primaryPhotoIndex, setPrimaryPhotoIndex] = useState<number | null>(null);
 
   // Inicializar formulário com validação
   const form = useForm<FormValues>({
@@ -173,11 +176,11 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[600px] h-[90vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>
+          <DialogTitle className="text-2xl">
             {item ? "Editar Peça" : "Nova Peça"}
           </DialogTitle>
-          <DialogDescription>
-            Preencha os dados da peça. Os campos com * são obrigatórios.
+          <DialogDescription className="text-base">
+            Preencha os dados da peça. Os campos marcados com * são obrigatórios.
           </DialogDescription>
         </DialogHeader>
         
@@ -189,18 +192,22 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
         
         <div className="flex-1 overflow-y-auto px-1 pb-4">
           <Form {...form}>
-            <form id="jewelry-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <form id="jewelry-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
               {/* Seção 1: Informações Básicas */}
               <div className="space-y-4">
-                <h3 className="text-lg font-medium">Informações Básicas</h3>
-                <div className="grid grid-cols-2 gap-4">
+                <h3 className="text-lg font-medium border-b pb-2">Informações Básicas</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="name">Nome da Peça *</Label>
                     <Input 
                       id="name"
                       placeholder="Ex: Anel Solitário"
                       {...form.register('name')}
+                      className="h-12 text-lg"
                     />
+                    {form.formState.errors.name && (
+                      <p className="text-red-500 text-sm">{form.formState.errors.name.message}</p>
+                    )}
                   </div>
                   
                   <div className="space-y-2">
@@ -209,7 +216,7 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                       onValueChange={(value) => form.setValue('plating_type_id', value)}
                       value={form.watch('plating_type_id')}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="h-12">
                         <SelectValue placeholder="Selecione o tipo de banho" />
                       </SelectTrigger>
                       <SelectContent>
@@ -220,6 +227,9 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                         ))}
                       </SelectContent>
                     </Select>
+                    {form.formState.errors.plating_type_id && (
+                      <p className="text-red-500 text-sm">{form.formState.errors.plating_type_id.message}</p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -228,10 +238,22 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                       onValueChange={(value) => form.setValue('supplier_id', value)}
                       value={form.watch('supplier_id')}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="h-12">
                         <SelectValue placeholder="Selecione o fornecedor" />
                       </SelectTrigger>
                       <SelectContent>
+                        <div className="p-2">
+                          <Input
+                            placeholder="Buscar fornecedor..."
+                            className="mb-2"
+                            onChange={(e) => {
+                              const filtered = suppliers.filter(s => 
+                                s.name.toLowerCase().includes(e.target.value.toLowerCase())
+                              );
+                              // Atualizar lista de fornecedores filtrados
+                            }}
+                          />
+                        </div>
                         {suppliers.map((supplier) => (
                           <SelectItem key={supplier.id} value={supplier.id}>
                             {supplier.name}
@@ -242,13 +264,12 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="photo">Foto da Peça</Label>
-                    <Input
-                      id="photo"
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFileChange}
-                      className="cursor-pointer"
+                    <Label>Fotos da Peça</Label>
+                    <PhotoFields
+                      photos={photos}
+                      setPhotos={setPhotos}
+                      primaryPhotoIndex={primaryPhotoIndex}
+                      setPrimaryPhotoIndex={setPrimaryPhotoIndex}
                     />
                   </div>
                 </div>
@@ -256,8 +277,8 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
 
               {/* Seção 2: Custos */}
               <div className="space-y-4">
-                <h3 className="text-lg font-medium">Custos e Pesos</h3>
-                <div className="grid grid-cols-2 gap-4">
+                <h3 className="text-lg font-medium border-b pb-2">Custos e Pesos</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="raw_cost">Preço do Bruto (R$) *</Label>
                     <Input
@@ -265,8 +286,12 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                       type="number"
                       step="0.01"
                       placeholder="0,00"
+                      className="h-12 text-lg"
                       {...form.register('raw_cost', { valueAsNumber: true })}
                     />
+                    {form.formState.errors.raw_cost && (
+                      <p className="text-red-500 text-sm">{form.formState.errors.raw_cost.message}</p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -276,8 +301,12 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                       type="number"
                       step="0.01"
                       placeholder="0,00"
+                      className="h-12 text-lg"
                       {...form.register('material_weight', { valueAsNumber: true })}
                     />
+                    {form.formState.errors.material_weight && (
+                      <p className="text-red-500 text-sm">{form.formState.errors.material_weight.message}</p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -287,6 +316,7 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                       type="number"
                       step="0.01"
                       placeholder="0,00"
+                      className="h-12 text-lg"
                       {...form.register('packaging_cost', { valueAsNumber: true })}
                     />
                   </div>
@@ -299,6 +329,7 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                       step="0.01"
                       placeholder="0,00"
                       readOnly
+                      className="h-12 text-lg bg-gray-50"
                       value={form.watch('total_cost') || 0}
                     />
                   </div>
@@ -311,6 +342,7 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                       step="0.01"
                       placeholder="0,00"
                       readOnly
+                      className="h-12 text-lg bg-gray-50"
                       value={form.watch('total_cost_with_packaging') || 0}
                     />
                   </div>
@@ -321,8 +353,12 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                       id="quantity"
                       type="number"
                       placeholder="0"
+                      className="h-12 text-lg"
                       {...form.register('quantity', { valueAsNumber: true })}
                     />
+                    {form.formState.errors.quantity && (
+                      <p className="text-red-500 text-sm">{form.formState.errors.quantity.message}</p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -331,8 +367,12 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                       id="min_stock"
                       type="number"
                       placeholder="0"
+                      className="h-12 text-lg"
                       {...form.register('min_stock', { valueAsNumber: true })}
                     />
+                    {form.formState.errors.min_stock && (
+                      <p className="text-red-500 text-sm">{form.formState.errors.min_stock.message}</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -340,14 +380,14 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
           </Form>
         </div>
 
-        <div className="flex justify-end gap-2 pt-4 border-t">
-          <Button variant="outline" onClick={onClose}>
+        <div className="flex justify-end gap-4 pt-4 border-t">
+          <Button variant="outline" onClick={onClose} className="h-12 px-6 text-base">
             Cancelar
           </Button>
           <Button 
             type="submit"
             form="jewelry-form"
-            className="bg-gold hover:bg-gold/90"
+            className="bg-[#F97316] hover:bg-[#F97316]/90 h-12 px-8 text-base font-semibold"
             disabled={isSubmitting}
           >
             {isSubmitting ? "Salvando..." : "Salvar"}
