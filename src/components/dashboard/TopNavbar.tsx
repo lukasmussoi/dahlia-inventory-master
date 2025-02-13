@@ -9,6 +9,7 @@ import {
   Menu,
   Building2,
   FolderTree,
+  Droplet,
 } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
@@ -58,13 +59,18 @@ export function TopNavbar({ isAdmin }: TopNavbarProps) {
         },
         ...(isAdmin ? [
           {
+            title: "Tipos de Banho",
+            url: "/dashboard/plating-types",
+            icon: Droplet,
+          },
+          {
             title: "Fornecedores",
-            url: "/dashboard/inventory/suppliers",
+            url: "/dashboard/suppliers",
             icon: Building2,
           },
           {
             title: "Categorias",
-            url: "/dashboard/inventory/categories",
+            url: "/dashboard/categories",
             icon: FolderTree,
           }
         ] : []),
