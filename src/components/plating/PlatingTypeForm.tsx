@@ -44,9 +44,16 @@ export function PlatingTypeForm({ platingType, isOpen, onClose, onSuccess }: Pla
   });
 
   const onSubmit = async (data: FormValues) => {
+    // Garantir que gram_value não é undefined
+    const platingTypeData = {
+      name: data.name,
+      gram_value: data.gram_value,
+      description: data.description || '',
+    };
+
     setIsSubmitting(true);
     try {
-      await InventoryModel.createPlatingType(data);
+      await InventoryModel.createPlatingType(platingTypeData);
       toast.success('Tipo de banho salvo com sucesso!');
       onSuccess?.();
       onClose();
