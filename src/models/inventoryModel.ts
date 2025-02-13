@@ -47,10 +47,11 @@ export interface InventoryItem {
   popularity: number;
   created_at?: string;
   updated_at?: string;
-  // Novos campos para joias
+  // Campos para joias
   plating_type_id?: string;
   material_weight?: number;
   packaging_cost?: number;
+  markup_percentage: number;
   profit_margin?: number;
   reseller_commission?: number;
   // Propriedades virtuais para exibição

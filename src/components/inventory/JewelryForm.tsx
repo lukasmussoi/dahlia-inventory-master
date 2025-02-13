@@ -20,7 +20,6 @@ import { z } from "zod";
 import { PriceSummary } from "./form/PriceSummary";
 import { PhotoFields } from "./form/PhotoFields";
 
-// Schema de validação do formulário
 const formSchema = z.object({
   name: z.string().min(3, "Nome deve ter pelo menos 3 caracteres"),
   plating_type_id: z.string().min(1, "Tipo de banho é obrigatório"),
@@ -32,6 +31,8 @@ const formSchema = z.object({
   total_cost_with_packaging: z.number().optional(),
   quantity: z.number().int().min(0, "Quantidade não pode ser negativa"),
   min_stock: z.number().int().min(0, "Estoque mínimo não pode ser negativa"),
+  markup_percentage: z.number().optional(),
+  price: z.number().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -49,7 +50,6 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
   const [photos, setPhotos] = useState<File[]>([]);
   const [primaryPhotoIndex, setPrimaryPhotoIndex] = useState<number | null>(null);
 
-  // Inicializar formulário com validação
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -64,42 +64,46 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
     },
   });
 
-  // Buscar tipos de banho
   const { data: platingTypes = [] } = useQuery({
     queryKey: ['plating-types'],
     queryFn: () => InventoryModel.getAllPlatingTypes(),
   });
 
-  // Buscar fornecedores
   const { data: suppliers = [] } = useQuery({
     queryKey: ['suppliers'],
     queryFn: () => InventoryModel.getAllSuppliers(),
   });
 
-  // Calcular valores automaticamente quando os campos dependentes mudarem
+  const { totalCost, suggestedPrice, profit } = form.watch((data) => {
+    const total = (data.unit_cost || 0) + (data.packaging_cost || 0);
+    const markup = (data.markup_percentage || 30) / 100;
+    const suggested = total * (1 + markup);
+    const finalProfit = (data.price || 0) - total;
+    return {
+      totalCost: total,
+      suggestedPrice: suggested,
+      profit: finalProfit,
+    };
+  });
+
   useEffect(() => {
     const subscription = form.watch((value, { name, type }) => {
-      // Só recalcular se a mudança vier de uma interação do usuário
       if (type !== "change") return;
       
       const formValues = form.getValues();
       const updates: Partial<FormValues> = {};
       
-      // Buscar o valor da grama do tipo de banho selecionado
       const selectedPlatingType = platingTypes.find(
         pt => pt.id === formValues.plating_type_id
       );
       
       if (selectedPlatingType && formValues.material_weight && formValues.raw_cost) {
-        // Custo total = (gramas * valor da grama do banho) + preço do bruto
         const totalCost = (formValues.material_weight * selectedPlatingType.gram_value) + formValues.raw_cost;
         updates.total_cost = totalCost;
 
-        // Custo total com embalagem
         const totalCostWithPackaging = totalCost + (formValues.packaging_cost || 0);
         updates.total_cost_with_packaging = totalCostWithPackaging;
 
-        // Atualizar todos os valores de uma vez
         Object.entries(updates).forEach(([field, value]) => {
           form.setValue(field as keyof FormValues, value, {
             shouldValidate: false,
@@ -197,9 +201,10 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
             </div>
 
             <PriceSummary
-              totalCost={form.watch('total_cost') || 0}
-              finalPrice={form.watch('total_cost_with_packaging') || 0}
-              finalProfit={0}
+              totalCost={totalCost}
+              finalPrice={form.watch('price') || 0}
+              finalProfit={profit}
+              suggestedPrice={suggestedPrice}
             />
           </div>
 
@@ -376,6 +381,41 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                         className="h-12 bg-gray-50"
                         value={form.watch('total_cost_with_packaging') || 0}
                       />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium border-b pb-2">Precificação</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="markup_percentage">Markup (%)</Label>
+                      <Input
+                        id="markup_percentage"
+                        type="number"
+                        step="0.1"
+                        placeholder="30.0"
+                        className="h-12"
+                        {...form.register('markup_percentage', { valueAsNumber: true })}
+                      />
+                      {form.formState.errors.markup_percentage && (
+                        <p className="text-red-500 text-sm">{form.formState.errors.markup_percentage.message}</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="price">Preço Final (R$)</Label>
+                      <Input
+                        id="price"
+                        type="number"
+                        step="0.01"
+                        placeholder="0.00"
+                        className="h-12"
+                        {...form.register('price', { valueAsNumber: true })}
+                      />
+                      <p className="text-sm text-muted-foreground">
+                        Preço sugerido: R$ {suggestedPrice.toFixed(2)}
+                      </p>
                     </div>
                   </div>
                 </div>

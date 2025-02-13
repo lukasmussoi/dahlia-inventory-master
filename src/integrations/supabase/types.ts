@@ -18,6 +18,7 @@ export type Database = {
           gram_value: number | null
           height: number | null
           id: string
+          markup_percentage: number | null
           material_weight: number | null
           min_stock: number
           name: string
@@ -44,6 +45,7 @@ export type Database = {
           gram_value?: number | null
           height?: number | null
           id?: string
+          markup_percentage?: number | null
           material_weight?: number | null
           min_stock?: number
           name: string
@@ -70,6 +72,7 @@ export type Database = {
           gram_value?: number | null
           height?: number | null
           id?: string
+          markup_percentage?: number | null
           material_weight?: number | null
           min_stock?: number
           name?: string

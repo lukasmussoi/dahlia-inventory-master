@@ -20,6 +20,10 @@ const formSchema = z.object({
   depth: z.number().min(0, "Profundidade não pode ser negativa").nullable(),
   min_stock: z.number().min(0, "Estoque mínimo não pode ser negativo"),
   supplier_id: z.string().optional(),
+  markup_percentage: z.number().min(0, "Markup não pode ser negativo"),
+  plating_type_id: z.string().optional(),
+  material_weight: z.number().min(0, "Peso do material não pode ser negativo").optional(),
+  packaging_cost: z.number().min(0, "Custo da embalagem não pode ser negativo").optional(),
 });
 
 export type FormValues = z.infer<typeof formSchema>;
@@ -50,8 +54,27 @@ export const useInventoryForm = ({ item, onSuccess, onClose }: UseInventoryFormP
       depth: item?.depth || null,
       min_stock: item?.min_stock || 0,
       supplier_id: item?.supplier_id || undefined,
+      markup_percentage: item?.markup_percentage || 30.0,
+      plating_type_id: item?.plating_type_id || undefined,
+      material_weight: item?.material_weight || 0,
+      packaging_cost: item?.packaging_cost || 0,
     },
   });
+
+  // Calcular valores em tempo real baseado nas mudanças do formulário
+  const calculateValues = () => {
+    const values = form.getValues();
+    const totalCost = values.unit_cost + (values.packaging_cost || 0);
+    const markup = values.markup_percentage / 100;
+    const suggestedPrice = totalCost * (1 + markup);
+    const profit = values.price - totalCost;
+
+    return {
+      totalCost,
+      suggestedPrice,
+      profit,
+    };
+  };
 
   const handleSubmit = async (values: FormValues) => {
     try {
@@ -62,28 +85,22 @@ export const useInventoryForm = ({ item, onSuccess, onClose }: UseInventoryFormP
         return;
       }
 
+      // Calcular valores finais antes de salvar
+      const { totalCost } = calculateValues();
+
+      const itemData = {
+        ...values,
+        unit_cost: totalCost,
+      };
+
       if (item) {
-        await InventoryModel.updateItem(item.id, values);
+        await InventoryModel.updateItem(item.id, itemData);
         if (photos.length > 0) {
           await InventoryModel.updateItemPhotos(item.id, photos, primaryPhotoIndex);
         }
         toast.success("Item atualizado com sucesso!");
       } else {
-        const newItem = {
-          name: values.name,
-          category_id: values.category_id,
-          quantity: values.quantity,
-          price: values.price,
-          unit_cost: values.unit_cost,
-          suggested_price: values.suggested_price,
-          min_stock: values.min_stock,
-          supplier_id: values.supplier_id,
-          weight: values.weight,
-          width: values.width,
-          height: values.height,
-          depth: values.depth,
-        };
-        const createdItem = await InventoryModel.createItem(newItem);
+        const createdItem = await InventoryModel.createItem(itemData);
         if (photos.length > 0) {
           await InventoryModel.updateItemPhotos(createdItem.id, photos, primaryPhotoIndex);
         }
@@ -107,5 +124,6 @@ export const useInventoryForm = ({ item, onSuccess, onClose }: UseInventoryFormP
     setPhotos,
     primaryPhotoIndex,
     setPrimaryPhotoIndex,
+    calculateValues,
   };
 };
