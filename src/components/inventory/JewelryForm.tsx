@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -31,8 +32,9 @@ const formSchema = z.object({
   total_cost_with_packaging: z.number().optional(),
   quantity: z.number().int().min(0, "Quantidade não pode ser negativa"),
   min_stock: z.number().int().min(0, "Estoque mínimo não pode ser negativa"),
-  markup_percentage: z.number().optional(),
-  price: z.number().optional(),
+  markup_percentage: z.number().min(0, "Markup não pode ser negativo").default(30),
+  price: z.number().min(0, "Preço não pode ser negativo").default(0),
+  category_id: z.string().min(1, "Categoria é obrigatória"),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -46,21 +48,23 @@ interface JewelryFormProps {
 
 export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [photos, setPhotos] = useState<File[]>([]);
   const [primaryPhotoIndex, setPrimaryPhotoIndex] = useState<number | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: item?.name || '',
-      plating_type_id: item?.plating_type_id || '',
-      supplier_id: item?.supplier_id || '',
+      name: item?.name || "",
+      plating_type_id: item?.plating_type_id || "",
+      supplier_id: item?.supplier_id || "",
       raw_cost: item?.unit_cost || 0,
       material_weight: item?.material_weight || 0,
       packaging_cost: item?.packaging_cost || 0,
       quantity: item?.quantity || 0,
       min_stock: item?.min_stock || 0,
+      markup_percentage: item?.markup_percentage || 30,
+      price: item?.price || 0,
+      category_id: item?.category_id || "",
     },
   });
 
@@ -74,107 +78,77 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
     queryFn: () => InventoryModel.getAllSuppliers(),
   });
 
-  const { totalCost, suggestedPrice, profit } = form.watch((data) => {
-    const total = (data.unit_cost || 0) + (data.packaging_cost || 0);
-    const markup = (data.markup_percentage || 30) / 100;
-    const suggested = total * (1 + markup);
-    const finalProfit = (data.price || 0) - total;
-    return {
-      totalCost: total,
-      suggestedPrice: suggested,
-      profit: finalProfit,
-    };
-  });
-
+  // Usar useEffect para calcular valores em tempo real
   useEffect(() => {
-    const subscription = form.watch((value, { name, type }) => {
-      if (type !== "change") return;
+    const subscription = form.watch((values) => {
+      const rawCost = form.getValues('raw_cost') || 0;
+      const packagingCost = form.getValues('packaging_cost') || 0;
+      const materialWeight = form.getValues('material_weight') || 0;
+      const selectedPlatingType = platingTypes.find(pt => pt.id === form.getValues('plating_type_id'));
       
-      const formValues = form.getValues();
-      const updates: Partial<FormValues> = {};
+      const platingCost = selectedPlatingType ? materialWeight * selectedPlatingType.gram_value : 0;
+      const totalCost = rawCost + platingCost;
+      const totalCostWithPackaging = totalCost + packagingCost;
       
-      const selectedPlatingType = platingTypes.find(
-        pt => pt.id === formValues.plating_type_id
-      );
-      
-      if (selectedPlatingType && formValues.material_weight && formValues.raw_cost) {
-        const totalCost = (formValues.material_weight * selectedPlatingType.gram_value) + formValues.raw_cost;
-        updates.total_cost = totalCost;
-
-        const totalCostWithPackaging = totalCost + (formValues.packaging_cost || 0);
-        updates.total_cost_with_packaging = totalCostWithPackaging;
-
-        Object.entries(updates).forEach(([field, value]) => {
-          form.setValue(field as keyof FormValues, value, {
-            shouldValidate: false,
-            shouldDirty: true,
-            shouldTouch: false,
-          });
-        });
-      }
+      form.setValue('total_cost', totalCost);
+      form.setValue('total_cost_with_packaging', totalCostWithPackaging);
     });
 
     return () => subscription.unsubscribe();
   }, [form, platingTypes]);
 
-  const onSubmit = async (data: FormValues) => {
-    setIsSubmitting(true);
+  const handleSubmit = async (values: FormValues) => {
     try {
+      setIsSubmitting(true);
+
+      if (photos.length > 5) {
+        toast.error("Máximo de 5 fotos permitido");
+        return;
+      }
+
       const itemData = {
-        name: data.name,
-        plating_type_id: data.plating_type_id,
-        supplier_id: data.supplier_id,
-        material_weight: data.material_weight,
-        packaging_cost: data.packaging_cost,
-        unit_cost: data.total_cost_with_packaging || 0,
-        price: data.total_cost_with_packaging || 0,
-        quantity: data.quantity,
-        min_stock: data.min_stock,
-        category_id: item?.category_id || '00000000-0000-0000-0000-000000000000',
-        suggested_price: data.total_cost_with_packaging || 0,
+        name: values.name,
+        plating_type_id: values.plating_type_id,
+        supplier_id: values.supplier_id,
+        material_weight: values.material_weight,
+        packaging_cost: values.packaging_cost,
+        unit_cost: values.total_cost_with_packaging || 0,
+        price: values.price,
+        quantity: values.quantity,
+        min_stock: values.min_stock,
+        category_id: values.category_id,
+        markup_percentage: values.markup_percentage,
       };
 
       if (item) {
         await InventoryModel.updateItem(item.id, itemData);
-        if (selectedFile) {
-          await InventoryModel.updateItemPhotos(item.id, [selectedFile], 0);
+        if (photos.length > 0) {
+          await InventoryModel.updateItemPhotos(item.id, photos, primaryPhotoIndex);
         }
-        toast.success('Peça atualizada com sucesso!');
+        toast.success("Peça atualizada com sucesso!");
       } else {
-        const newItem = await InventoryModel.createItem(itemData);
-        if (selectedFile) {
-          await InventoryModel.updateItemPhotos(newItem.id, [selectedFile], 0);
+        const createdItem = await InventoryModel.createItem(itemData);
+        if (photos.length > 0) {
+          await InventoryModel.updateItemPhotos(createdItem.id, photos, primaryPhotoIndex);
         }
-        toast.success('Peça cadastrada com sucesso!');
+        toast.success("Peça criada com sucesso!");
       }
-      
       onSuccess?.();
       onClose();
     } catch (error) {
       console.error('Erro ao salvar peça:', error);
-      toast.error('Erro ao salvar peça');
+      toast.error("Erro ao salvar peça. Verifique os dados e tente novamente.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error('O arquivo deve ter no máximo 5MB');
-        return;
-      }
-      
-      if (!file.type.startsWith('image/')) {
-        toast.error('O arquivo deve ser uma imagem');
-        return;
-      }
-      
-      setSelectedFile(file);
-      toast.success('Foto selecionada com sucesso!');
-    }
-  };
+  // Calcular valores para exibição
+  const totalCost = form.watch('total_cost_with_packaging') || 0;
+  const price = form.watch('price') || 0;
+  const markup = form.watch('markup_percentage') || 30;
+  const suggestedPrice = totalCost * (1 + markup / 100);
+  const profit = price - totalCost;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -202,7 +176,7 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
 
             <PriceSummary
               totalCost={totalCost}
-              finalPrice={form.watch('price') || 0}
+              finalPrice={price}
               finalProfit={profit}
               suggestedPrice={suggestedPrice}
             />
@@ -210,7 +184,7 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
 
           <div className="flex-1 overflow-y-auto">
             <Form {...form}>
-              <form id="jewelry-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <form id="jewelry-form" onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
                 <div className="space-y-4">
                   <h3 className="text-lg font-medium border-b pb-2">Informações Básicas</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -259,18 +233,6 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                           <SelectValue placeholder="Selecione o fornecedor" />
                         </SelectTrigger>
                         <SelectContent>
-                          <div className="p-2">
-                            <Input
-                              placeholder="Buscar fornecedor..."
-                              className="mb-2"
-                              onChange={(e) => {
-                                const filtered = suppliers.filter(s => 
-                                  s.name.toLowerCase().includes(e.target.value.toLowerCase())
-                                );
-                                // Atualizar lista de fornecedores filtrados
-                              }}
-                            />
-                          </div>
                           {suppliers.map((supplier) => (
                             <SelectItem key={supplier.id} value={supplier.id}>
                               {supplier.name}
@@ -326,7 +288,9 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                         {...form.register('packaging_cost', { valueAsNumber: true })}
                       />
                     </div>
+                  </div>
 
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="quantity">Quantidade em Estoque *</Label>
                       <Input
@@ -353,34 +317,6 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                       {form.formState.errors.min_stock && (
                         <p className="text-red-500 text-sm">{form.formState.errors.min_stock.message}</p>
                       )}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="total_cost">Custo Total (R$)</Label>
-                      <Input
-                        id="total_cost"
-                        type="number"
-                        step="0.01"
-                        placeholder="0,00"
-                        readOnly
-                        className="h-12 bg-gray-50"
-                        value={form.watch('total_cost') || 0}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="total_cost_with_packaging">Custo Total com Embalagem (R$)</Label>
-                      <Input
-                        id="total_cost_with_packaging"
-                        type="number"
-                        step="0.01"
-                        placeholder="0,00"
-                        readOnly
-                        className="h-12 bg-gray-50"
-                        value={form.watch('total_cost_with_packaging') || 0}
-                      />
                     </div>
                   </div>
                 </div>
