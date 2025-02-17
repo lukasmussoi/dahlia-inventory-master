@@ -159,8 +159,8 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[1000px] h-[90vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className="max-w-[95vw] max-h-[95vh] h-auto flex flex-col p-6 gap-4">
+        <DialogHeader className="pb-4">
           <DialogTitle className="text-2xl">
             {item ? "Editar Peça" : "Nova Peça"}
           </DialogTitle>
@@ -169,10 +169,11 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col md:flex-row gap-6 flex-1">
-          <div className="md:w-[350px] space-y-6">
-            <div className="space-y-2">
-              <Label>Fotos da Peça</Label>
+        <div className="flex flex-col lg:flex-row gap-6 overflow-hidden h-full">
+          {/* Coluna da esquerda - Fotos e Resumo */}
+          <div className="lg:w-[350px] space-y-4 flex-shrink-0">
+            <div className="bg-white rounded-lg p-4 shadow-sm border">
+              <Label className="text-lg font-medium mb-4">Fotos da Peça</Label>
               <PhotoFields
                 photos={photos}
                 setPhotos={setPhotos}
@@ -181,19 +182,23 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
               />
             </div>
 
-            <PriceSummary
-              totalCost={calculatedValues.totalCost}
-              finalPrice={form.watch('price') || 0}
-              finalProfit={calculatedValues.profit}
-              suggestedPrice={calculatedValues.suggestedPrice}
-            />
+            <div className="bg-white rounded-lg p-4 shadow-sm border">
+              <PriceSummary
+                totalCost={calculatedValues.totalCost}
+                finalPrice={form.watch('price') || 0}
+                finalProfit={calculatedValues.profit}
+                suggestedPrice={calculatedValues.suggestedPrice}
+              />
+            </div>
           </div>
 
+          {/* Coluna da direita - Formulário */}
           <div className="flex-1 overflow-y-auto">
             <Form {...form}>
-              <form id="jewelry-form" onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-                <div className="space-y-4">
-                  <h3 className="text-lg font-medium border-b pb-2">Informações Básicas</h3>
+              <form id="jewelry-form" onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 pr-2">
+                {/* Seção: Informações Básicas */}
+                <div className="bg-white rounded-lg p-6 shadow-sm border">
+                  <h3 className="text-lg font-medium mb-4">Informações Básicas</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="name">Nome da Peça *</Label>
@@ -251,8 +256,9 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                   </div>
                 </div>
 
-                <div className="space-y-4">
-                  <h3 className="text-lg font-medium border-b pb-2">Custos e Pesos</h3>
+                {/* Seção: Custos e Pesos */}
+                <div className="bg-white rounded-lg p-6 shadow-sm border">
+                  <h3 className="text-lg font-medium mb-4">Custos e Pesos</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="raw_cost">Preço do Bruto (R$) *</Label>
@@ -297,7 +303,7 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                     <div className="space-y-2">
                       <Label htmlFor="quantity">Quantidade em Estoque *</Label>
                       <Input
@@ -328,8 +334,9 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                   </div>
                 </div>
 
-                <div className="space-y-4">
-                  <h3 className="text-lg font-medium border-b pb-2">Precificação</h3>
+                {/* Seção: Precificação */}
+                <div className="bg-white rounded-lg p-6 shadow-sm border">
+                  <h3 className="text-lg font-medium mb-4">Precificação</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="markup_percentage">Markup (%)</Label>
@@ -367,7 +374,7 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
           </div>
         </div>
 
-        <div className="flex justify-end gap-4 pt-4 border-t">
+        <div className="flex justify-end gap-4 pt-4 border-t mt-4">
           <Button variant="outline" onClick={onClose} className="h-12 px-6 text-base">
             Cancelar
           </Button>
