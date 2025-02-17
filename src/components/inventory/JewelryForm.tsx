@@ -1,3 +1,7 @@
+
+/**
+ * JewelryForm - Componente para criação e edição de joias no inventário
+ */
 import { useState, useEffect, useMemo } from "react";
 import {
   Dialog,
@@ -20,6 +24,7 @@ import { z } from "zod";
 import { PriceSummary } from "./form/PriceSummary";
 import { PhotoFields } from "./form/PhotoFields";
 
+// Schema de validação do formulário
 const formSchema = z.object({
   name: z.string().min(3, "Nome deve ter pelo menos 3 caracteres"),
   plating_type_id: z.string().min(1, "Tipo de banho é obrigatório"),
@@ -75,6 +80,7 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
     queryFn: () => InventoryModel.getAllSuppliers(),
   });
 
+  // Calcular valores em tempo real
   const calculatedValues = useMemo(() => {
     const rawCost = form.watch('raw_cost') || 0;
     const packagingCost = form.watch('packaging_cost') || 0;
@@ -94,8 +100,15 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
       suggestedPrice,
       profit,
     };
-  }, [form.watch('raw_cost'), form.watch('packaging_cost'), form.watch('material_weight'), 
-      form.watch('markup_percentage'), form.watch('price'), form.watch('plating_type_id'), platingTypes]);
+  }, [
+    form.watch('raw_cost'),
+    form.watch('packaging_cost'),
+    form.watch('material_weight'),
+    form.watch('markup_percentage'),
+    form.watch('price'),
+    form.watch('plating_type_id'),
+    platingTypes
+  ]);
 
   const handleSubmit = async (values: FormValues) => {
     try {
@@ -344,7 +357,7 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                         {...form.register('price', { valueAsNumber: true })}
                       />
                       <p className="text-sm text-muted-foreground">
-                        Preço sugerido: R$ {suggestedPrice.toFixed(2)}
+                        Preço sugerido: R$ {calculatedValues.suggestedPrice.toFixed(2)}
                       </p>
                     </div>
                   </div>
