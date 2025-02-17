@@ -1,4 +1,3 @@
-
 /**
  * JewelryForm - Componente para criação e edição de joias no inventário
  */
@@ -169,33 +168,11 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col lg:flex-row gap-6 overflow-hidden h-full">
-          {/* Coluna da esquerda - Fotos e Resumo */}
-          <div className="lg:w-[350px] space-y-4 flex-shrink-0">
-            <div className="bg-white rounded-lg p-4 shadow-sm border">
-              <Label className="text-lg font-medium mb-4">Fotos da Peça</Label>
-              <PhotoFields
-                photos={photos}
-                setPhotos={setPhotos}
-                primaryPhotoIndex={primaryPhotoIndex}
-                setPrimaryPhotoIndex={setPrimaryPhotoIndex}
-              />
-            </div>
-
-            <div className="bg-white rounded-lg p-4 shadow-sm border">
-              <PriceSummary
-                totalCost={calculatedValues.totalCost}
-                finalPrice={form.watch('price') || 0}
-                finalProfit={calculatedValues.profit}
-                suggestedPrice={calculatedValues.suggestedPrice}
-              />
-            </div>
-          </div>
-
-          {/* Coluna da direita - Formulário */}
-          <div className="flex-1 overflow-y-auto">
+        <div className="grid lg:grid-cols-[1fr_350px] gap-6 overflow-hidden h-full">
+          {/* Coluna principal - Formulário */}
+          <div className="overflow-y-auto pr-2">
             <Form {...form}>
-              <form id="jewelry-form" onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 pr-2">
+              <form id="jewelry-form" onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
                 {/* Seção: Informações Básicas */}
                 <div className="bg-white rounded-lg p-6 shadow-sm border">
                   <h3 className="text-lg font-medium mb-4">Informações Básicas</h3>
@@ -371,6 +348,26 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                 </div>
               </form>
             </Form>
+          </div>
+
+          {/* Coluna lateral - Fotos e Resumo */}
+          <div className="flex flex-col gap-6">
+            <div className="bg-white rounded-lg p-4 shadow-sm border">
+              <Label className="text-lg font-medium mb-4">Fotos da Peça</Label>
+              <PhotoFields
+                photos={photos}
+                setPhotos={setPhotos}
+                primaryPhotoIndex={primaryPhotoIndex}
+                setPrimaryPhotoIndex={setPrimaryPhotoIndex}
+              />
+            </div>
+
+            <PriceSummary
+              totalCost={calculatedValues.totalCost}
+              finalPrice={form.watch('price') || 0}
+              finalProfit={calculatedValues.profit}
+              suggestedPrice={calculatedValues.suggestedPrice}
+            />
           </div>
         </div>
 

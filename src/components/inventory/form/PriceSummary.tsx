@@ -17,34 +17,38 @@ export function PriceSummary({ totalCost, finalPrice, finalProfit, suggestedPric
   };
 
   return (
-    <div className="bg-[#1A1F2C] p-4 rounded-lg shadow-lg">
-      <h3 className="text-lg font-semibold text-white mb-3">Resumo do Produto</h3>
-      <div className="grid grid-cols-1 gap-2">
-        <Card className="p-3 bg-white/10 border-0">
-          <h4 className="text-xs font-medium text-gray-300 mb-1">Custo Total</h4>
-          <p className="text-lg font-bold text-white">
+    <div className="bg-[#1A1F2C] p-4 rounded-lg shadow-lg max-w-md">
+      <h3 className="text-lg font-semibold text-white mb-4">Resumo do Produto</h3>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between bg-white/10 p-3 rounded-lg">
+          <span className="text-sm font-medium text-gray-300">Custo Total</span>
+          <span className="text-base font-bold text-white">
             {formatCurrency(totalCost)}
-          </p>
-        </Card>
+          </span>
+        </div>
         
-        <Card className="p-3 bg-white/10 border-0">
-          <h4 className="text-xs font-medium text-gray-300 mb-1">Preço Final</h4>
-          <p className="text-lg font-bold text-white">
-            {formatCurrency(finalPrice)}
-          </p>
+        <div className="flex flex-col bg-white/10 p-3 rounded-lg">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-gray-300">Preço Final</span>
+            <span className="text-base font-bold text-white">
+              {formatCurrency(finalPrice)}
+            </span>
+          </div>
           {suggestedPrice && suggestedPrice !== finalPrice && (
-            <p className="text-xs text-gray-400">
-              Sugerido: {formatCurrency(suggestedPrice)}
-            </p>
+            <div className="flex justify-end mt-1">
+              <span className="text-xs text-gray-400">
+                Sugerido: {formatCurrency(suggestedPrice)}
+              </span>
+            </div>
           )}
-        </Card>
+        </div>
         
-        <Card className="p-3 bg-white/10 border-0">
-          <h4 className="text-xs font-medium text-gray-300 mb-1">Lucro Final</h4>
-          <p className={`text-lg font-bold ${finalProfit >= 0 ? 'text-[#F97316]' : 'text-red-500'}`}>
+        <div className="flex items-center justify-between bg-white/10 p-3 rounded-lg">
+          <span className="text-sm font-medium text-gray-300">Lucro Final</span>
+          <span className={`text-base font-bold ${finalProfit >= 0 ? 'text-[#F97316]' : 'text-red-500'}`}>
             {formatCurrency(finalProfit)}
-          </p>
-        </Card>
+          </span>
+        </div>
       </div>
     </div>
   );
