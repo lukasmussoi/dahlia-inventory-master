@@ -158,25 +158,25 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[95vw] max-h-[95vh] h-auto flex flex-col p-6 gap-4">
+      <DialogContent className="w-[95vw] h-[95vh] p-4 md:p-6 overflow-hidden">
         <DialogHeader className="pb-4">
-          <DialogTitle className="text-2xl">
+          <DialogTitle className="text-xl md:text-2xl">
             {item ? "Editar Peça" : "Nova Peça"}
           </DialogTitle>
-          <DialogDescription className="text-base">
+          <DialogDescription className="text-sm md:text-base">
             Preencha os dados da peça. Os campos marcados com * são obrigatórios.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid lg:grid-cols-[1fr_350px] gap-6 overflow-hidden h-full">
-          {/* Coluna principal - Formulário */}
-          <div className="overflow-y-auto pr-2">
+        <div className="flex flex-col lg:grid lg:grid-cols-[1fr_350px] gap-4 md:gap-6 h-[calc(100%-180px)] overflow-hidden">
+          {/* Coluna do Formulário - Responsiva */}
+          <div className="overflow-y-auto">
             <Form {...form}>
-              <form id="jewelry-form" onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+              <form id="jewelry-form" onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 md:space-y-6 pr-2">
                 {/* Seção: Informações Básicas */}
-                <div className="bg-white rounded-lg p-6 shadow-sm border">
-                  <h3 className="text-lg font-medium mb-4">Informações Básicas</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-white rounded-lg p-4 md:p-6 shadow-sm border">
+                  <h3 className="text-base md:text-lg font-medium mb-4">Informações Básicas</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="name">Nome da Peça *</Label>
                       <Input 
@@ -234,9 +234,9 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                 </div>
 
                 {/* Seção: Custos e Pesos */}
-                <div className="bg-white rounded-lg p-6 shadow-sm border">
-                  <h3 className="text-lg font-medium mb-4">Custos e Pesos</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-white rounded-lg p-4 md:p-6 shadow-sm border">
+                  <h3 className="text-base md:text-lg font-medium mb-4">Custos e Pesos</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="raw_cost">Preço do Bruto (R$) *</Label>
                       <Input
@@ -312,9 +312,9 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                 </div>
 
                 {/* Seção: Precificação */}
-                <div className="bg-white rounded-lg p-6 shadow-sm border">
-                  <h3 className="text-lg font-medium mb-4">Precificação</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-white rounded-lg p-4 md:p-6 shadow-sm border">
+                  <h3 className="text-base md:text-lg font-medium mb-4">Precificação</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="markup_percentage">Markup (%)</Label>
                       <Input
@@ -350,10 +350,10 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
             </Form>
           </div>
 
-          {/* Coluna lateral - Fotos e Resumo */}
-          <div className="flex flex-col gap-6">
-            <div className="bg-white rounded-lg p-4 shadow-sm border">
-              <Label className="text-lg font-medium mb-4">Fotos da Peça</Label>
+          {/* Coluna Lateral - Fotos e Resumo - Responsiva */}
+          <div className="flex flex-col gap-4 md:gap-6 min-h-[300px] lg:min-h-0 overflow-y-auto">
+            <div className="bg-white rounded-lg p-4 shadow-sm border flex-shrink-0">
+              <Label className="text-base md:text-lg font-medium block mb-4">Fotos da Peça</Label>
               <PhotoFields
                 photos={photos}
                 setPhotos={setPhotos}
@@ -362,23 +362,30 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
               />
             </div>
 
-            <PriceSummary
-              totalCost={calculatedValues.totalCost}
-              finalPrice={form.watch('price') || 0}
-              finalProfit={calculatedValues.profit}
-              suggestedPrice={calculatedValues.suggestedPrice}
-            />
+            <div className="flex-shrink-0">
+              <PriceSummary
+                totalCost={calculatedValues.totalCost}
+                finalPrice={form.watch('price') || 0}
+                finalProfit={calculatedValues.profit}
+                suggestedPrice={calculatedValues.suggestedPrice}
+              />
+            </div>
           </div>
         </div>
 
-        <div className="flex justify-end gap-4 pt-4 border-t mt-4">
-          <Button variant="outline" onClick={onClose} className="h-12 px-6 text-base">
+        {/* Botões de Ação - Responsivos */}
+        <div className="flex justify-end gap-3 md:gap-4 pt-4 border-t mt-4">
+          <Button 
+            variant="outline" 
+            onClick={onClose} 
+            className="h-10 md:h-12 px-4 md:px-6 text-sm md:text-base"
+          >
             Cancelar
           </Button>
           <Button 
             type="submit"
             form="jewelry-form"
-            className="bg-[#F97316] hover:bg-[#F97316]/90 h-12 px-8 text-base font-semibold"
+            className="bg-[#F97316] hover:bg-[#F97316]/90 h-10 md:h-12 px-6 md:px-8 text-sm md:text-base font-semibold"
             disabled={isSubmitting}
           >
             {isSubmitting ? "Salvando..." : "Salvar"}
