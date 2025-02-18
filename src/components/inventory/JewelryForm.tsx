@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from "react";
 import {
   Dialog,
@@ -154,8 +153,7 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-[95vw] md:w-[80vw] h-[95vh] p-0 overflow-hidden bg-background">
-        {/* Cabeçalho */}
+      <DialogContent className="w-[98vw] md:w-[95vw] h-[98vh] p-0 overflow-hidden bg-background">
         <div className="px-4 py-3 md:px-6 md:py-4 border-b bg-white/80 backdrop-blur-sm sticky top-0 z-10">
           <DialogTitle className="text-xl font-semibold text-gray-900">
             {item ? "Editar Peça" : "Nova Peça"}
@@ -165,13 +163,10 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
           </DialogDescription>
         </div>
 
-        {/* Conteúdo Principal */}
         <div className="flex flex-col lg:grid lg:grid-cols-[2fr_1fr] h-[calc(100%-8rem)] overflow-hidden">
-          {/* Coluna do Formulário */}
           <div className="flex-1 overflow-y-auto px-4 py-4 md:px-6 md:py-6 border-r">
             <Form {...form}>
               <form id="jewelry-form" onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-                {/* Informações Básicas */}
                 <div className="bg-white rounded-lg p-5 shadow-sm border">
                   <h3 className="text-lg font-semibold mb-4 text-gray-900">Informações Básicas</h3>
                   <div className="grid sm:grid-cols-2 gap-4">
@@ -208,7 +203,6 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                   </div>
                 </div>
 
-                {/* Custos e Pesos */}
                 <div className="bg-white rounded-lg p-5 shadow-sm border">
                   <h3 className="text-lg font-semibold mb-4 text-gray-900">Custos e Pesos</h3>
                   <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -244,7 +238,6 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                   </div>
                 </div>
 
-                {/* Estoque */}
                 <div className="bg-white rounded-lg p-5 shadow-sm border">
                   <h3 className="text-lg font-semibold mb-4 text-gray-900">Estoque</h3>
                   <div className="grid sm:grid-cols-2 gap-4">
@@ -271,10 +264,8 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
             </Form>
           </div>
 
-          {/* Coluna Lateral */}
           <div className="lg:h-full overflow-y-auto px-4 py-4 md:px-6 md:py-6 bg-gray-50/50">
             <div className="space-y-6">
-              {/* Resumo do Produto */}
               <div className="bg-[#1A1F2C] rounded-lg p-5 shadow-lg">
                 <h3 className="text-lg font-semibold text-white mb-4">Resumo do Produto</h3>
                 <div className="space-y-3">
@@ -301,7 +292,6 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                 </div>
               </div>
 
-              {/* Upload de Fotos */}
               <div className="bg-white rounded-lg p-5 shadow-sm border">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Fotos da Peça</h3>
                 <PhotoFields
@@ -312,7 +302,6 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                 />
               </div>
 
-              {/* Precificação */}
               <div className="bg-white rounded-lg p-5 shadow-sm border">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Precificação</h3>
                 <div className="space-y-4">
@@ -341,7 +330,6 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
           </div>
         </div>
 
-        {/* Barra de Ações */}
         <div className="border-t bg-white/80 backdrop-blur-sm sticky bottom-0 right-0 left-0 p-4 md:p-6 flex justify-end gap-4 items-center">
           <Button 
             variant="outline" 
