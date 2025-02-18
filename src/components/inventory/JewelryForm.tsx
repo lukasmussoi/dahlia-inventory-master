@@ -1,6 +1,3 @@
-/**
- * JewelryForm - Componente para criação e edição de joias no inventário
- */
 import { useState, useEffect, useMemo } from "react";
 import {
   Dialog,
@@ -158,68 +155,44 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-[95vw] h-[95vh] p-4 md:p-6 overflow-hidden">
-        <DialogHeader className="pb-4">
-          <DialogTitle className="text-xl md:text-2xl">
+      <DialogContent className="w-[90vw] md:w-[80vw] lg:w-[70vw] h-[90vh] p-4 md:p-6">
+        <DialogHeader className="space-y-2">
+          <DialogTitle className="text-xl md:text-2xl font-semibold">
             {item ? "Editar Peça" : "Nova Peça"}
           </DialogTitle>
-          <DialogDescription className="text-sm md:text-base">
+          <DialogDescription className="text-sm text-muted-foreground">
             Preencha os dados da peça. Os campos marcados com * são obrigatórios.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col lg:grid lg:grid-cols-[1fr_350px] gap-4 md:gap-6 h-[calc(100%-180px)] overflow-hidden">
-          {/* Coluna do Formulário - Responsiva */}
-          <div className="overflow-y-auto">
+        <div className="mt-4 grid md:grid-cols-[2fr_1fr] gap-6 h-[calc(100%-12rem)] overflow-hidden">
+          {/* Formulário Principal */}
+          <div className="space-y-6 overflow-y-auto pr-4">
             <Form {...form}>
-              <form id="jewelry-form" onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 md:space-y-6 pr-2">
-                {/* Seção: Informações Básicas */}
-                <div className="bg-white rounded-lg p-4 md:p-6 shadow-sm border">
-                  <h3 className="text-base md:text-lg font-medium mb-4">Informações Básicas</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <form id="jewelry-form" onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+                {/* Informações Básicas */}
+                <div className="bg-card p-4 rounded-lg border shadow-sm">
+                  <h3 className="text-lg font-medium mb-4">Informações Básicas</h3>
+                  <div className="grid sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="name">Nome da Peça *</Label>
                       <Input 
-                        id="name"
-                        placeholder="Ex: Anel Solitário"
                         {...form.register('name')}
-                        className="h-12"
+                        placeholder="Ex: Anel Solitário"
                       />
                       {form.formState.errors.name && (
-                        <p className="text-red-500 text-sm">{form.formState.errors.name.message}</p>
+                        <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>
                       )}
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="plating_type">Tipo de Banho *</Label>
+                      <Label htmlFor="category">Categoria *</Label>
                       <Select 
-                        onValueChange={(value) => form.setValue('plating_type_id', value)}
-                        value={form.watch('plating_type_id')}
+                        onValueChange={(value) => form.setValue('category_id', value)}
+                        value={form.watch('category_id')}
                       >
-                        <SelectTrigger className="h-12">
-                          <SelectValue placeholder="Selecione o tipo de banho" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {platingTypes.map((type) => (
-                            <SelectItem key={type.id} value={type.id}>
-                              {type.name} - R$ {type.gram_value.toFixed(2)}/g
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {form.formState.errors.plating_type_id && (
-                        <p className="text-red-500 text-sm">{form.formState.errors.plating_type_id.message}</p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="supplier">Fornecedor</Label>
-                      <Select
-                        onValueChange={(value) => form.setValue('supplier_id', value)}
-                        value={form.watch('supplier_id')}
-                      >
-                        <SelectTrigger className="h-12">
-                          <SelectValue placeholder="Selecione o fornecedor" />
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione a categoria" />
                         </SelectTrigger>
                         <SelectContent>
                           {suppliers.map((supplier) => (
@@ -233,116 +206,57 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                   </div>
                 </div>
 
-                {/* Seção: Custos e Pesos */}
-                <div className="bg-white rounded-lg p-4 md:p-6 shadow-sm border">
-                  <h3 className="text-base md:text-lg font-medium mb-4">Custos e Pesos</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {/* Custos e Pesos */}
+                <div className="bg-card p-4 rounded-lg border shadow-sm">
+                  <h3 className="text-lg font-medium mb-4">Custos e Pesos</h3>
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="raw_cost">Preço do Bruto (R$) *</Label>
+                      <Label htmlFor="raw_cost">Custo do Bruto (R$) *</Label>
                       <Input
-                        id="raw_cost"
                         type="number"
                         step="0.01"
-                        placeholder="0,00"
-                        className="h-12"
                         {...form.register('raw_cost', { valueAsNumber: true })}
                       />
-                      {form.formState.errors.raw_cost && (
-                        <p className="text-red-500 text-sm">{form.formState.errors.raw_cost.message}</p>
-                      )}
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="material_weight">Peso (g) *</Label>
                       <Input
-                        id="material_weight"
                         type="number"
                         step="0.01"
-                        placeholder="0,00"
-                        className="h-12"
                         {...form.register('material_weight', { valueAsNumber: true })}
                       />
-                      {form.formState.errors.material_weight && (
-                        <p className="text-red-500 text-sm">{form.formState.errors.material_weight.message}</p>
-                      )}
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="packaging_cost">Custo da Embalagem (R$)</Label>
                       <Input
-                        id="packaging_cost"
                         type="number"
                         step="0.01"
-                        placeholder="0,00"
-                        className="h-12"
                         {...form.register('packaging_cost', { valueAsNumber: true })}
                       />
                     </div>
                   </div>
+                </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                {/* Estoque */}
+                <div className="bg-card p-4 rounded-lg border shadow-sm">
+                  <h3 className="text-lg font-medium mb-4">Estoque</h3>
+                  <div className="grid sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="quantity">Quantidade em Estoque *</Label>
+                      <Label htmlFor="quantity">Quantidade *</Label>
                       <Input
-                        id="quantity"
                         type="number"
-                        placeholder="0"
-                        className="h-12"
                         {...form.register('quantity', { valueAsNumber: true })}
                       />
-                      {form.formState.errors.quantity && (
-                        <p className="text-red-500 text-sm">{form.formState.errors.quantity.message}</p>
-                      )}
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="min_stock">Estoque Mínimo *</Label>
                       <Input
-                        id="min_stock"
                         type="number"
-                        placeholder="0"
-                        className="h-12"
                         {...form.register('min_stock', { valueAsNumber: true })}
                       />
-                      {form.formState.errors.min_stock && (
-                        <p className="text-red-500 text-sm">{form.formState.errors.min_stock.message}</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Seção: Precificação */}
-                <div className="bg-white rounded-lg p-4 md:p-6 shadow-sm border">
-                  <h3 className="text-base md:text-lg font-medium mb-4">Precificação</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="markup_percentage">Markup (%)</Label>
-                      <Input
-                        id="markup_percentage"
-                        type="number"
-                        step="0.1"
-                        placeholder="30.0"
-                        className="h-12"
-                        {...form.register('markup_percentage', { valueAsNumber: true })}
-                      />
-                      {form.formState.errors.markup_percentage && (
-                        <p className="text-red-500 text-sm">{form.formState.errors.markup_percentage.message}</p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="price">Preço Final (R$)</Label>
-                      <Input
-                        id="price"
-                        type="number"
-                        step="0.01"
-                        placeholder="0.00"
-                        className="h-12"
-                        {...form.register('price', { valueAsNumber: true })}
-                      />
-                      <p className="text-sm text-muted-foreground">
-                        Preço sugerido: R$ {calculatedValues.suggestedPrice.toFixed(2)}
-                      </p>
                     </div>
                   </div>
                 </div>
@@ -350,10 +264,19 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
             </Form>
           </div>
 
-          {/* Coluna Lateral - Fotos e Resumo - Responsiva */}
-          <div className="flex flex-col gap-4 md:gap-6 min-h-[300px] lg:min-h-0 overflow-y-auto">
-            <div className="bg-white rounded-lg p-4 shadow-sm border flex-shrink-0">
-              <Label className="text-base md:text-lg font-medium block mb-4">Fotos da Peça</Label>
+          {/* Painel Lateral */}
+          <div className="space-y-6">
+            {/* Resumo do Produto */}
+            <PriceSummary
+              totalCost={calculatedValues.totalCost}
+              finalPrice={form.watch('price') || 0}
+              finalProfit={calculatedValues.profit}
+              suggestedPrice={calculatedValues.suggestedPrice}
+            />
+
+            {/* Upload de Fotos */}
+            <div className="bg-card p-4 rounded-lg border shadow-sm">
+              <Label className="text-lg font-medium block mb-4">Fotos da Peça</Label>
               <PhotoFields
                 photos={photos}
                 setPhotos={setPhotos}
@@ -362,31 +285,46 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
               />
             </div>
 
-            <div className="flex-shrink-0">
-              <PriceSummary
-                totalCost={calculatedValues.totalCost}
-                finalPrice={form.watch('price') || 0}
-                finalProfit={calculatedValues.profit}
-                suggestedPrice={calculatedValues.suggestedPrice}
-              />
+            {/* Precificação */}
+            <div className="bg-card p-4 rounded-lg border shadow-sm">
+              <h3 className="text-lg font-medium mb-4">Precificação</h3>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="markup_percentage">Markup (%)</Label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    {...form.register('markup_percentage', { valueAsNumber: true })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="price">Preço Final (R$)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    {...form.register('price', { valueAsNumber: true })}
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Botões de Ação - Responsivos */}
-        <div className="flex justify-end gap-3 md:gap-4 pt-4 border-t mt-4">
+        {/* Botões de Ação */}
+        <div className="flex justify-end gap-4 pt-4 mt-4 border-t">
           <Button 
             variant="outline" 
-            onClick={onClose} 
-            className="h-10 md:h-12 px-4 md:px-6 text-sm md:text-base"
+            onClick={onClose}
+            className="min-w-[100px]"
           >
             Cancelar
           </Button>
           <Button 
             type="submit"
             form="jewelry-form"
-            className="bg-[#F97316] hover:bg-[#F97316]/90 h-10 md:h-12 px-6 md:px-8 text-sm md:text-base font-semibold"
             disabled={isSubmitting}
+            className="min-w-[100px] bg-[#F97316] hover:bg-[#F97316]/90"
           >
             {isSubmitting ? "Salvando..." : "Salvar"}
           </Button>
