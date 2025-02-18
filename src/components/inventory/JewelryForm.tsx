@@ -153,8 +153,8 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-[92vw] md:w-[85vw] h-[92vh] p-0 md:p-0 overflow-hidden bg-background">
-        <div className="px-4 py-3 md:px-6 md:py-4 border-b bg-white/50 backdrop-blur-sm sticky top-0 z-10">
+      <DialogContent className="w-[95vw] md:w-[80vw] h-[95vh] md:h-[90vh] p-0 overflow-hidden bg-background">
+        <div className="px-4 py-3 md:px-6 md:py-4 border-b bg-white/80 backdrop-blur-sm sticky top-0 z-10">
           <DialogTitle className="text-xl md:text-2xl font-semibold text-gray-900">
             {item ? "Editar Peça" : "Nova Peça"}
           </DialogTitle>
@@ -163,22 +163,22 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
           </DialogDescription>
         </div>
 
-        <div className="flex flex-col lg:grid lg:grid-cols-[1.6fr_1fr] h-[calc(100%-8rem)] overflow-hidden">
+        <div className="flex flex-col lg:grid lg:grid-cols-[2fr_1fr] h-[calc(100%-8rem)] overflow-hidden">
           <div className="flex-1 overflow-y-auto px-4 py-4 md:px-6 md:py-6 border-r">
             <Form {...form}>
-              <form id="jewelry-form" onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-                <div className="bg-white rounded-lg p-4 md:p-5 shadow-sm border">
+              <form id="jewelry-form" onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 max-w-4xl mx-auto">
+                <div className="bg-white rounded-lg p-5 shadow-sm border">
                   <h3 className="text-lg font-semibold mb-4 text-gray-900 flex items-center gap-2">
-                    <span className="size-6 flex items-center justify-center rounded-full bg-orange-100 text-orange-600 text-sm font-medium">1</span>
+                    <span className="size-7 flex items-center justify-center rounded-full bg-orange-100 text-orange-600 text-sm font-medium">1</span>
                     Informações Básicas
                   </h3>
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="name" className="text-gray-700">Nome da Peça *</Label>
+                      <Label htmlFor="name" className="text-gray-700 font-medium">Nome da Peça *</Label>
                       <Input 
                         {...form.register('name')}
                         placeholder="Ex: Anel Solitário"
-                        className="h-11"
+                        className="h-12"
                       />
                       {form.formState.errors.name && (
                         <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>
@@ -186,12 +186,12 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="category" className="text-gray-700">Categoria *</Label>
+                      <Label htmlFor="category" className="text-gray-700 font-medium">Categoria *</Label>
                       <Select 
                         onValueChange={(value) => form.setValue('category_id', value)}
                         value={form.watch('category_id')}
                       >
-                        <SelectTrigger className="h-11">
+                        <SelectTrigger className="h-12">
                           <SelectValue placeholder="Selecione a categoria" />
                         </SelectTrigger>
                         <SelectContent>
@@ -206,64 +206,64 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                   </div>
                 </div>
 
-                <div className="bg-white rounded-lg p-4 md:p-5 shadow-sm border">
+                <div className="bg-white rounded-lg p-5 shadow-sm border">
                   <h3 className="text-lg font-semibold mb-4 text-gray-900 flex items-center gap-2">
-                    <span className="size-6 flex items-center justify-center rounded-full bg-orange-100 text-orange-600 text-sm font-medium">2</span>
+                    <span className="size-7 flex items-center justify-center rounded-full bg-orange-100 text-orange-600 text-sm font-medium">2</span>
                     Custos e Pesos
                   </h3>
                   <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="raw_cost" className="text-gray-700">Custo do Bruto (R$) *</Label>
+                      <Label htmlFor="raw_cost" className="text-gray-700 font-medium">Custo do Bruto (R$) *</Label>
                       <Input
                         type="number"
                         step="0.01"
-                        className="h-11"
+                        className="h-12"
                         {...form.register('raw_cost', { valueAsNumber: true })}
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="material_weight" className="text-gray-700">Peso (g) *</Label>
+                      <Label htmlFor="material_weight" className="text-gray-700 font-medium">Peso (g) *</Label>
                       <Input
                         type="number"
                         step="0.01"
-                        className="h-11"
+                        className="h-12"
                         {...form.register('material_weight', { valueAsNumber: true })}
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="packaging_cost" className="text-gray-700">Custo da Embalagem (R$)</Label>
+                      <Label htmlFor="packaging_cost" className="text-gray-700 font-medium">Custo da Embalagem (R$)</Label>
                       <Input
                         type="number"
                         step="0.01"
-                        className="h-11"
+                        className="h-12"
                         {...form.register('packaging_cost', { valueAsNumber: true })}
                       />
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-white rounded-lg p-4 md:p-5 shadow-sm border">
+                <div className="bg-white rounded-lg p-5 shadow-sm border">
                   <h3 className="text-lg font-semibold mb-4 text-gray-900 flex items-center gap-2">
-                    <span className="size-6 flex items-center justify-center rounded-full bg-orange-100 text-orange-600 text-sm font-medium">3</span>
+                    <span className="size-7 flex items-center justify-center rounded-full bg-orange-100 text-orange-600 text-sm font-medium">3</span>
                     Estoque
                   </h3>
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="quantity" className="text-gray-700">Quantidade *</Label>
+                      <Label htmlFor="quantity" className="text-gray-700 font-medium">Quantidade *</Label>
                       <Input
                         type="number"
-                        className="h-11"
+                        className="h-12"
                         {...form.register('quantity', { valueAsNumber: true })}
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="min_stock" className="text-gray-700">Estoque Mínimo *</Label>
+                      <Label htmlFor="min_stock" className="text-gray-700 font-medium">Estoque Mínimo *</Label>
                       <Input
                         type="number"
-                        className="h-11"
+                        className="h-12"
                         {...form.register('min_stock', { valueAsNumber: true })}
                       />
                     </div>
@@ -275,34 +275,34 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
 
           <div className="lg:h-full overflow-y-auto px-4 py-4 md:px-6 md:py-6 bg-gray-50/50">
             <div className="space-y-6">
-              <div className="bg-[#1A1F2C] rounded-xl p-5 shadow-lg">
-                <h3 className="text-lg font-semibold text-white mb-4">Resumo do Produto</h3>
+              <div className="bg-[#1A1F2C] rounded-xl p-6 shadow-lg">
+                <h3 className="text-xl font-semibold text-white mb-5">Resumo do Produto</h3>
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between bg-white/10 p-3 rounded-lg">
-                    <span className="text-sm font-medium text-gray-300">Custo Total</span>
-                    <span className="text-lg font-bold text-white">
+                  <div className="bg-white/10 p-4 rounded-lg">
+                    <span className="text-sm font-medium text-gray-300 block mb-1">Custo Total</span>
+                    <span className="text-2xl font-bold text-white">
                       {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(calculatedValues.totalCost)}
                     </span>
                   </div>
                   
-                  <div className="flex items-center justify-between bg-white/10 p-3 rounded-lg">
-                    <span className="text-sm font-medium text-gray-300">Preço Final</span>
-                    <span className="text-lg font-bold text-white">
+                  <div className="bg-white/10 p-4 rounded-lg">
+                    <span className="text-sm font-medium text-gray-300 block mb-1">Preço Final</span>
+                    <span className="text-2xl font-bold text-white">
                       {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(form.watch('price') || 0)}
                     </span>
                   </div>
                   
-                  <div className="flex items-center justify-between bg-white/10 p-3 rounded-lg">
-                    <span className="text-sm font-medium text-gray-300">Lucro Final</span>
-                    <span className={`text-lg font-bold ${calculatedValues.profit >= 0 ? 'text-[#F97316]' : 'text-red-500'}`}>
+                  <div className="bg-white/10 p-4 rounded-lg">
+                    <span className="text-sm font-medium text-gray-300 block mb-1">Lucro Final</span>
+                    <span className={`text-2xl font-bold ${calculatedValues.profit >= 0 ? 'text-[#22C55E]' : 'text-red-500'}`}>
                       {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(calculatedValues.profit)}
                     </span>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white rounded-xl p-5 shadow-sm border">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Fotos da Peça</h3>
+              <div className="bg-white rounded-xl p-6 shadow-sm border">
+                <h3 className="text-xl font-semibold text-gray-900 mb-4">Fotos da Peça</h3>
                 <PhotoFields
                   photos={photos}
                   setPhotos={setPhotos}
@@ -311,25 +311,25 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                 />
               </div>
 
-              <div className="bg-white rounded-xl p-5 shadow-sm border">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Precificação</h3>
+              <div className="bg-white rounded-xl p-6 shadow-sm border">
+                <h3 className="text-xl font-semibold text-gray-900 mb-4">Precificação</h3>
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="markup_percentage" className="text-gray-700">Markup (%)</Label>
+                    <Label htmlFor="markup_percentage" className="text-gray-700 font-medium">Markup (%)</Label>
                     <Input
                       type="number"
                       step="0.1"
-                      className="h-11"
+                      className="h-12"
                       {...form.register('markup_percentage', { valueAsNumber: true })}
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="price" className="text-gray-700">Preço Final (R$)</Label>
+                    <Label htmlFor="price" className="text-gray-700 font-medium">Preço Final (R$)</Label>
                     <Input
                       type="number"
                       step="0.01"
-                      className="h-11"
+                      className="h-12"
                       {...form.register('price', { valueAsNumber: true })}
                     />
                   </div>
@@ -339,11 +339,11 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
           </div>
         </div>
 
-        <div className="border-t bg-white/50 backdrop-blur-sm sticky bottom-0 right-0 left-0 p-4 md:p-6 flex justify-end gap-3 items-center">
+        <div className="border-t bg-white/80 backdrop-blur-sm sticky bottom-0 right-0 left-0 p-4 md:p-6 flex justify-end gap-4 items-center">
           <Button 
             variant="outline" 
             onClick={onClose}
-            className="h-11 px-6 min-w-[120px] font-medium"
+            className="h-12 px-8 min-w-[140px] font-medium text-base"
           >
             Cancelar
           </Button>
@@ -351,7 +351,7 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
             type="submit"
             form="jewelry-form"
             disabled={isSubmitting}
-            className="h-11 px-6 min-w-[120px] font-medium bg-[#F97316] hover:bg-[#F97316]/90"
+            className="h-12 px-8 min-w-[140px] font-medium text-base bg-[#F97316] hover:bg-[#F97316]/90"
           >
             {isSubmitting ? "Salvando..." : "Salvar"}
           </Button>
