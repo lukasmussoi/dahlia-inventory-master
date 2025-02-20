@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
-import { InventoryModel, PlatingType, Supplier, InventoryItem } from "@/models/inventoryModel";
+import { InventoryModel, PlatingType, Supplier, InventoryItem, InventoryCategory } from "@/models/inventoryModel";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -72,6 +72,11 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
   });
 
   // Buscar dados necessários
+  const { data: categories = [] } = useQuery({
+    queryKey: ['inventory-categories'],
+    queryFn: () => InventoryModel.getAllCategories(),
+  });
+
   const { data: platingTypes = [] } = useQuery({
     queryKey: ['plating-types'],
     queryFn: () => InventoryModel.getAllPlatingTypes(),
@@ -122,6 +127,12 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
         return;
       }
 
+      // Validar categoria
+      if (!values.category_id) {
+        toast.error("Selecione uma categoria");
+        return;
+      }
+
       const itemData = {
         name: values.name,
         category_id: values.category_id,
@@ -150,7 +161,7 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
         console.log("Criando novo item");
         const createdItem = await InventoryModel.createItem(itemData);
         console.log("Item criado:", createdItem);
-        if (photos.length > 0) {
+        if (photos.length > 0 && createdItem) {
           await InventoryModel.updateItemPhotos(createdItem.id, photos, primaryPhotoIndex);
         }
         toast.success("Peça criada com sucesso!");
@@ -208,6 +219,28 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                       />
                       {form.formState.errors.name && (
                         <p className="text-red-500 text-sm">{form.formState.errors.name.message}</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="category">Categoria *</Label>
+                      <Select 
+                        onValueChange={(value) => form.setValue('category_id', value)}
+                        value={form.watch('category_id')}
+                      >
+                        <SelectTrigger className="h-12">
+                          <SelectValue placeholder="Selecione a categoria" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {categories.map((category) => (
+                            <SelectItem key={category.id} value={category.id}>
+                              {category.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {form.formState.errors.category_id && (
+                        <p className="text-red-500 text-sm">{form.formState.errors.category_id.message}</p>
                       )}
                     </div>
 
@@ -370,13 +403,6 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                     </div>
                   </div>
                 </div>
-
-                {/* Campo oculto para categoria */}
-                <input 
-                  type="hidden" 
-                  {...form.register('category_id')}
-                  value="f47ac10b-58cc-4372-a567-0e02b2c3d479" // ID fixo da categoria
-                />
               </form>
             </Form>
           </div>
