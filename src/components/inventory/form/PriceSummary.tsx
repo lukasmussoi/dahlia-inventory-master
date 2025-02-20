@@ -34,7 +34,7 @@ export function PriceSummary({ totalCost, finalPrice, finalProfit, suggestedPric
               {formatCurrency(finalPrice)}
             </span>
           </div>
-          {suggestedPrice && suggestedPrice !== finalPrice && (
+          {suggestedPrice !== undefined && suggestedPrice !== finalPrice && (
             <div className="flex justify-end mt-1">
               <span className="text-xs text-gray-400">
                 Sugerido: {formatCurrency(suggestedPrice)}
