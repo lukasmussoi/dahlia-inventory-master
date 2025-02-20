@@ -10,6 +10,7 @@ import {
   Building2,
   FolderTree,
   Droplet,
+  LineChart,
 } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
@@ -56,6 +57,11 @@ export function TopNavbar({ isAdmin }: TopNavbarProps) {
           title: "Gestão de Estoque",
           url: "/dashboard/inventory",
           icon: Package,
+        },
+        {
+          title: "Relatórios",
+          url: "/dashboard/inventory/reports",
+          icon: LineChart,
         },
         ...(isAdmin ? [
           {
