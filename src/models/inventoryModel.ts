@@ -244,17 +244,34 @@ export class InventoryModel {
 
   // Criar novo item
   static async createItem(item: Omit<InventoryItem, 'id' | 'created_at' | 'updated_at' | 'sku' | 'barcode' | 'popularity'>): Promise<InventoryItem> {
-    const { data, error } = await supabase
-      .from('inventory')
-      .insert({
-        ...item,
-        popularity: 0
-      })
-      .select()
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from('inventory')
+        .insert({
+          name: item.name,
+          category_id: item.category_id,
+          plating_type_id: item.plating_type_id,
+          supplier_id: item.supplier_id,
+          material_weight: item.material_weight,
+          packaging_cost: item.packaging_cost,
+          unit_cost: item.unit_cost,
+          price: item.price,
+          quantity: item.quantity,
+          min_stock: item.min_stock,
+          markup_percentage: item.markup_percentage,
+          suggested_price: item.suggested_price,
+          popularity: 0,
+          profit_margin: (item.price - item.unit_cost) / item.price
+        })
+        .select('*')
+        .single();
 
-    if (error) throw error;
-    return data;
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Erro ao criar item:', error);
+      throw error;
+    }
   }
 
   // Atualizar item existente
@@ -307,7 +324,7 @@ export class InventoryModel {
 
         if (uploadError) throw uploadError;
 
-        const { data: { publicUrl } } = supabase.storage
+        const { data } = supabase.storage
           .from('inventory_photos')
           .getPublicUrl(fileName);
 
@@ -316,7 +333,7 @@ export class InventoryModel {
           .from('inventory_photos')
           .insert({
             inventory_id: inventoryId,
-            photo_url: publicUrl,
+            photo_url: data.publicUrl,
             is_primary: index === primaryIndex
           });
 
@@ -332,17 +349,23 @@ export class InventoryModel {
 
   // Método para buscar fotos de um item
   static async getItemPhotos(inventoryId: string): Promise<{ url: string; isPrimary: boolean }[]> {
-    const { data, error } = await supabase
-      .from('inventory_photos')
-      .select('photo_url, is_primary')
-      .eq('inventory_id', inventoryId)
-      .order('is_primary', { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from('inventory_photos')
+        .select('photo_url, is_primary')
+        .eq('inventory_id', inventoryId)
+        .order('is_primary', { ascending: false });
 
-    if (error) throw error;
-    return (data || []).map(photo => ({
-      url: photo.photo_url,
-      isPrimary: photo.is_primary || false
-    }));
+      if (error) throw error;
+
+      return (data || []).map(photo => ({
+        url: photo.photo_url,
+        isPrimary: photo.is_primary || false
+      }));
+    } catch (error) {
+      console.error('Erro ao buscar fotos do item:', error);
+      return [];
+    }
   }
 
   // Buscar todos os tipos de banho
