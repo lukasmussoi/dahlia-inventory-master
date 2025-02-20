@@ -1,3 +1,4 @@
+
 /**
  * JewelryForm - Componente para criação e edição de joias no inventário
  */
@@ -26,16 +27,16 @@ import { PhotoFields } from "./form/PhotoFields";
 // Schema de validação do formulário
 const formSchema = z.object({
   name: z.string().min(3, "Nome deve ter pelo menos 3 caracteres"),
+  category_id: z.string().min(1, "Categoria é obrigatória"),
   plating_type_id: z.string().min(1, "Tipo de banho é obrigatório"),
   supplier_id: z.string().optional(),
-  raw_cost: z.number().min(0, "Custo não pode ser negativo"),
   material_weight: z.number().min(0.01, "Peso deve ser maior que 0"),
-  packaging_cost: z.number().min(0, "Custo não pode ser negativo"),
+  packaging_cost: z.number().min(0, "Custo não pode ser negativo").default(0),
+  raw_cost: z.number().min(0, "Custo não pode ser negativo"),
   quantity: z.number().int().min(0, "Quantidade não pode ser negativa"),
-  min_stock: z.number().int().min(0, "Estoque mínimo não pode ser negativa"),
+  min_stock: z.number().int().min(0, "Estoque mínimo não pode ser negativo"),
   markup_percentage: z.number().min(0, "Markup não pode ser negativo").default(30),
-  price: z.number().min(0, "Preço não pode ser negativo").default(0),
-  category_id: z.string().min(1, "Categoria é obrigatória"),
+  price: z.number().min(0, "Preço não pode ser negativo"),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -52,23 +53,25 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
   const [photos, setPhotos] = useState<File[]>([]);
   const [primaryPhotoIndex, setPrimaryPhotoIndex] = useState<number | null>(null);
 
+  // Inicializar formulário com valores padrão
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: item?.name || "",
+      category_id: item?.category_id || "",
       plating_type_id: item?.plating_type_id || "",
       supplier_id: item?.supplier_id || "",
-      raw_cost: item?.unit_cost || 0,
       material_weight: item?.material_weight || 0,
       packaging_cost: item?.packaging_cost || 0,
+      raw_cost: item?.unit_cost || 0,
       quantity: item?.quantity || 0,
       min_stock: item?.min_stock || 0,
       markup_percentage: item?.markup_percentage || 30,
       price: item?.price || 0,
-      category_id: item?.category_id || "",
     },
   });
 
+  // Buscar dados necessários
   const { data: platingTypes = [] } = useQuery({
     queryKey: ['plating-types'],
     queryFn: () => InventoryModel.getAllPlatingTypes(),
@@ -111,6 +114,7 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
 
   const handleSubmit = async (values: FormValues) => {
     try {
+      console.log("Iniciando submissão do formulário", values);
       setIsSubmitting(true);
 
       if (photos.length > 5) {
@@ -122,7 +126,7 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
         name: values.name,
         category_id: values.category_id,
         plating_type_id: values.plating_type_id,
-        supplier_id: values.supplier_id,
+        supplier_id: values.supplier_id || null,
         material_weight: values.material_weight,
         packaging_cost: values.packaging_cost,
         unit_cost: calculatedValues.totalCost,
@@ -133,19 +137,25 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
         suggested_price: calculatedValues.suggestedPrice,
       };
 
+      console.log("Dados preparados para salvamento:", itemData);
+
       if (item) {
+        console.log("Atualizando item existente");
         await InventoryModel.updateItem(item.id, itemData);
         if (photos.length > 0) {
           await InventoryModel.updateItemPhotos(item.id, photos, primaryPhotoIndex);
         }
         toast.success("Peça atualizada com sucesso!");
       } else {
+        console.log("Criando novo item");
         const createdItem = await InventoryModel.createItem(itemData);
+        console.log("Item criado:", createdItem);
         if (photos.length > 0) {
           await InventoryModel.updateItemPhotos(createdItem.id, photos, primaryPhotoIndex);
         }
         toast.success("Peça criada com sucesso!");
       }
+      
       onSuccess?.();
       onClose();
     } catch (error) {
@@ -155,6 +165,17 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
       setIsSubmitting(false);
     }
   };
+
+  // Monitorar erros do formulário
+  useEffect(() => {
+    const subscription = form.watch(() => {
+      const errors = form.formState.errors;
+      if (Object.keys(errors).length > 0) {
+        console.log("Erros de validação:", errors);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -316,7 +337,7 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                   <h3 className="text-lg font-medium mb-4">Precificação</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="markup_percentage">Markup (%)</Label>
+                      <Label htmlFor="markup_percentage">Markup (%) *</Label>
                       <Input
                         id="markup_percentage"
                         type="number"
@@ -331,7 +352,7 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="price">Preço Final (R$)</Label>
+                      <Label htmlFor="price">Preço Final (R$) *</Label>
                       <Input
                         id="price"
                         type="number"
@@ -340,12 +361,22 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                         className="h-12"
                         {...form.register('price', { valueAsNumber: true })}
                       />
+                      {form.formState.errors.price && (
+                        <p className="text-red-500 text-sm">{form.formState.errors.price.message}</p>
+                      )}
                       <p className="text-sm text-muted-foreground">
                         Preço sugerido: R$ {calculatedValues.suggestedPrice.toFixed(2)}
                       </p>
                     </div>
                   </div>
                 </div>
+
+                {/* Campo oculto para categoria */}
+                <input 
+                  type="hidden" 
+                  {...form.register('category_id')}
+                  value="f47ac10b-58cc-4372-a567-0e02b2c3d479" // ID fixo da categoria
+                />
               </form>
             </Form>
           </div>
