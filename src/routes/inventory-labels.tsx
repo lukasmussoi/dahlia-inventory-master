@@ -6,7 +6,7 @@ import { AuthController } from "@/controllers/authController";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-const InventoryLabelsRoute = () => {
+export default function InventoryLabelsRoute() {
   const navigate = useNavigate();
 
   // Verificar autenticação ao carregar a página
@@ -54,7 +54,4 @@ const InventoryLabelsRoute = () => {
       </main>
     </div>
   );
-};
-
-export default InventoryLabelsRoute;
-
+}
