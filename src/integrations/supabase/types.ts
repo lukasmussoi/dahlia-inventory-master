@@ -136,6 +136,44 @@ export type Database = {
         }
         Relationships: []
       }
+      inventory_label_history: {
+        Row: {
+          created_at: string | null
+          id: string
+          inventory_id: string
+          printed_at: string | null
+          quantity: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          inventory_id: string
+          printed_at?: string | null
+          quantity?: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          inventory_id?: string
+          printed_at?: string | null
+          quantity?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_label_history_inventory_id_fkey"
+            columns: ["inventory_id"]
+            isOneToOne: false
+            referencedRelation: "inventory"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_movements: {
         Row: {
           created_at: string
