@@ -1,17 +1,18 @@
+
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./index";
-import AuthRoutes from "./auth";
-import Dashboard from "./dashboard";
-import NotFound from "./not-found";
-import Inventory from "./inventory";
-import Suitcases from "./suitcases";
-import Suppliers from "./suppliers";
-import Categories from "./categories";
-import Users from "./users";
-import PlatingTypes from "./plating-types";
-import DashboardContent from "@/components/dashboard/DashboardContent";
-import InventoryReports from "./inventory/reports";
-import InventoryLabelsRoute from "./inventory-labels";
+import Index from "@/pages/Index";
+import AuthRoutes from "@/routes/auth";
+import Dashboard from "@/routes/dashboard";
+import NotFound from "@/pages/NotFound";
+import Inventory from "@/routes/inventory";
+import Suitcases from "@/routes/suitcases";
+import Suppliers from "@/routes/suppliers";
+import Categories from "@/routes/categories";
+import Users from "@/routes/users";
+import PlatingTypes from "@/routes/plating-types";
+import { DashboardContent } from "@/components/dashboard/DashboardContent";
+import InventoryReports from "@/routes/inventory-reports";
+import InventoryLabelsRoute from "@/routes/inventory-labels";
 
 const Router = () => {
   return (
@@ -39,3 +40,4 @@ const Router = () => {
 };
 
 export default Router;
+

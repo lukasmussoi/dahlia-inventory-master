@@ -3,6 +3,15 @@
  * Utilitários para geração de comandos PPLA para impressora Argox OS-214 Plus
  */
 
+// Adiciona tipagem para Web Serial API
+declare global {
+  interface Navigator {
+    serial: {
+      requestPort(): Promise<any>;
+    };
+  }
+}
+
 // Configurações padrão para etiquetas
 const LABEL_WIDTH = 50; // mm
 const LABEL_HEIGHT = 25; // mm
@@ -15,7 +24,7 @@ const LABEL_HEIGHT = 25; // mm
 export const generatePPLACommands = (item: {
   id: string;
   name: string;
-  sku: string;
+  sku?: string;
 }) => {
   // Início do comando PPLA
   let command = "Q50,24\n"; // Define tamanho da etiqueta
@@ -26,11 +35,11 @@ export const generatePPLACommands = (item: {
   // Posiciona e imprime o nome do item
   command += `A50,20,0,3,1,1,N,"${item.name}"\n`;
 
-  // Gera e posiciona o código de barras Code 128
-  command += `B50,50,0,1,2,2,80,B,"${item.sku}"\n`;
-
-  // Posiciona e imprime o SKU em texto
-  command += `A50,140,0,3,1,1,N,"${item.sku}"\n`;
+  // Gera e posiciona o código de barras Code 128 (se houver SKU)
+  if (item.sku) {
+    command += `B50,50,0,1,2,2,80,B,"${item.sku}"\n`;
+    command += `A50,140,0,3,1,1,N,"${item.sku}"\n`;
+  }
 
   // Finaliza o comando
   command += "E\n"; // Fim do comando
@@ -66,3 +75,4 @@ export const sendToPrinter = async (commands: string): Promise<void> => {
     throw new Error("Não foi possível conectar à impressora. Verifique se ela está ligada e conectada.");
   }
 };
+
