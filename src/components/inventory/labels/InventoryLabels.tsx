@@ -8,10 +8,12 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { InventoryLabelsList } from "./InventoryLabelsList";
 import { InventoryLabelsFilters } from "./InventoryLabelsFilters";
+import { generatePPLACommands, sendToPrinter } from "@/utils/printerUtils";
 
 export function InventoryLabels() {
   const [showPrinted, setShowPrinted] = useState(false);
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  const [isPrinting, setIsPrinting] = useState(false);
 
   const { data: items, isLoading } = useQuery({
     queryKey: ['inventory-items'],
@@ -24,16 +26,30 @@ export function InventoryLabels() {
   });
 
   const handlePrintLabels = async (itemIds: string[]) => {
+    setIsPrinting(true);
     try {
-      // TODO: Implementar a lógica de impressão real aqui
+      // Para cada item selecionado
       for (const itemId of itemIds) {
+        const item = items?.find(i => i.id === itemId);
+        if (!item) continue;
+
+        // Gera os comandos PPLA para o item
+        const commands = generatePPLACommands(item);
+
+        // Envia para a impressora
+        await sendToPrinter(commands);
+
+        // Registra a impressão no histórico
         await LabelModel.registerLabelPrint(itemId);
       }
-      toast.success("Etiquetas enviadas para impressão com sucesso!");
+
+      toast.success("Etiquetas impressas com sucesso!");
       setSelectedItems([]); // Limpa a seleção após imprimir
     } catch (error) {
       console.error("Erro ao imprimir etiquetas:", error);
-      toast.error("Erro ao imprimir etiquetas");
+      toast.error("Erro ao imprimir etiquetas. Verifique a conexão com a impressora.");
+    } finally {
+      setIsPrinting(false);
     }
   };
 
@@ -50,9 +66,13 @@ export function InventoryLabels() {
           <Button
             onClick={() => handlePrintLabels(selectedItems)}
             className="flex items-center gap-2"
+            disabled={isPrinting}
           >
             <Printer className="h-4 w-4" />
-            Imprimir Selecionados ({selectedItems.length})
+            {isPrinting 
+              ? "Imprimindo..." 
+              : `Imprimir Selecionados (${selectedItems.length})`
+            }
           </Button>
         )}
       </div>
