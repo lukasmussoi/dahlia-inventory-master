@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { InventoryModel } from "@/models/inventoryModel";
@@ -24,6 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { PrintLabelDialog } from "./PrintLabelDialog";
 
 export function InventoryLabels() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -32,20 +32,18 @@ export function InventoryLabels() {
   const [isPrinting, setIsPrinting] = useState(false);
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const [selectedItemForHistory, setSelectedItemForHistory] = useState<string | null>(null);
+  const [selectedItemForPrint, setSelectedItemForPrint] = useState<any>(null);
 
-  // Buscar itens do inventário
   const { data: items, isLoading: isLoadingItems } = useQuery({
     queryKey: ['inventory-items'],
     queryFn: () => InventoryModel.getAllItems(),
   });
 
-  // Buscar histórico de etiquetas
   const { data: labelHistory } = useQuery({
     queryKey: ['label-history'],
     queryFn: () => LabelModel.getAllLabelHistory(),
   });
 
-  // Buscar usuários para exibir nomes no histórico
   const { data: profiles } = useQuery({
     queryKey: ['user-profiles'],
     queryFn: () => LabelModel.getAllProfiles(),
@@ -58,18 +56,13 @@ export function InventoryLabels() {
         const item = items?.find(i => i.id === itemId);
         if (!item) continue;
 
-        // Gera os comandos PPLA para o item
         const commands = generatePPLACommands(item);
-
-        // Envia para a impressora
         await sendToPrinter(commands);
-
-        // Registra a impressão no histórico
         await LabelModel.registerLabelPrint(itemId);
       }
 
       toast.success("Etiquetas impressas com sucesso!");
-      setSelectedItems([]); // Limpa a seleção após imprimir
+      setSelectedItems([]);
     } catch (error) {
       console.error("Erro ao imprimir etiquetas:", error);
       toast.error("Erro ao imprimir etiquetas. Verifique a conexão com a impressora.");
@@ -79,14 +72,12 @@ export function InventoryLabels() {
   };
 
   const filteredItems = items?.filter(item => {
-    // Aplicar filtro de busca
     if (searchTerm && !item.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
         !item.sku?.toLowerCase().includes(searchTerm.toLowerCase()) &&
         !item.barcode?.toLowerCase().includes(searchTerm.toLowerCase())) {
       return false;
     }
 
-    // Aplicar filtro de status de impressão
     if (filterOption === "printed") {
       return labelHistory?.some(history => history.inventory_id === item.id);
     } else if (filterOption === "not_printed") {
@@ -113,7 +104,6 @@ export function InventoryLabels() {
 
   return (
     <div className="container mx-auto py-6 space-y-6">
-      {/* Cabeçalho e Ações Principais */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Etiquetas de Produtos</h1>
         {selectedItems.length > 0 && (
@@ -131,7 +121,6 @@ export function InventoryLabels() {
         )}
       </div>
 
-      {/* Filtros e Busca */}
       <Card>
         <CardContent className="pt-6">
           <div className="flex flex-col md:flex-row gap-4">
@@ -189,7 +178,6 @@ export function InventoryLabels() {
         </CardContent>
       </Card>
 
-      {/* Tabela de Itens */}
       <Card>
         <CardContent className="pt-6">
           <Table>
@@ -303,7 +291,6 @@ export function InventoryLabels() {
         </CardContent>
       </Card>
 
-      {/* Modal de Histórico */}
       <Dialog open={historyDialogOpen} onOpenChange={setHistoryDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -335,6 +322,12 @@ export function InventoryLabels() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <PrintLabelDialog
+        isOpen={!!selectedItemForPrint}
+        onClose={() => setSelectedItemForPrint(null)}
+        item={selectedItemForPrint}
+      />
     </div>
   );
 }
