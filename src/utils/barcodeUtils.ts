@@ -15,10 +15,12 @@ export async function generateBarcode(text: string): Promise<string> {
     JsBarcode(canvas, text, {
       format: "CODE128",
       width: 2,
-      height: 60,
+      height: 40,
       displayValue: true,
-      fontSize: 12,
-      margin: 10,
+      fontSize: 10,
+      margin: 2,
+      textAlign: "center",
+      background: "#ffffff",
     });
 
     // Converter o canvas para uma URL de dados PNG

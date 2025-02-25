@@ -56,13 +56,28 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
     const x = marginLeft + currentColumn * (labelWidth + spacing);
     const y = marginTop + currentRow * (labelHeight + spacing);
 
-    // Adicionar elementos à etiqueta
+    // Desenhar borda da etiqueta (opcional)
+    // doc.rect(x, y, labelWidth, labelHeight);
+
+    // Adicionar nome do produto centralizado no topo
     doc.setFontSize(10);
-    doc.addImage(barcodeData, "PNG", x, y, labelWidth - 10, 15);
-    doc.text(item.name, x, y + 20);
+    doc.setFont("helvetica", "normal");
+    const nameWidth = doc.getStringUnitWidth(item.name) * 10 / doc.internal.scaleFactor;
+    const nameX = x + (labelWidth - nameWidth) / 2;
+    doc.text(item.name, nameX, y + 5);
+
+    // Adicionar código de barras centralizado
+    const barcodeWidth = 80;
+    const barcodeX = x + (labelWidth - barcodeWidth) / 2;
+    doc.addImage(barcodeData, "PNG", barcodeX, y + 7, barcodeWidth, 15);
+
+    // Adicionar preço alinhado à direita
     doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
-    doc.text(`R$ ${item.price.toFixed(2)}`, x, y + 25);
+    const priceText = `R$ ${item.price.toFixed(2)}`;
+    const priceWidth = doc.getStringUnitWidth(priceText) * 12 / doc.internal.scaleFactor;
+    const priceX = x + labelWidth - 5;  // 5mm da margem direita
+    doc.text(priceText, priceX, y + 28, { align: 'right' });
 
     currentRow++;
   }
