@@ -7,6 +7,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import AuthPage from "./routes/auth";
 import Dashboard from "./routes/dashboard";
 import NotFound from "./pages/NotFound";
+import Inventory from "./routes/inventory";
+import InventoryLabelsRoute from "./routes/inventory-labels";
 
 const queryClient = new QueryClient();
 
@@ -18,7 +20,10 @@ const App = () => (
         <Sonner />
         <Routes>
           <Route path="/" element={<AuthPage />} />
-          <Route path="/dashboard/*" element={<Dashboard />} />
+          <Route path="/dashboard/*" element={<Dashboard />}>
+            <Route path="inventory" element={<Inventory />} />
+            <Route path="inventory/labels" element={<InventoryLabelsRoute />} />
+          </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
       </TooltipProvider>
