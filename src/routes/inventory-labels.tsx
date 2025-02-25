@@ -5,6 +5,7 @@ import { InventoryLabels } from "@/components/inventory/labels/InventoryLabels";
 import { AuthController } from "@/controllers/authController";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export default function InventoryLabelsRoute() {
   const navigate = useNavigate();
@@ -12,8 +13,17 @@ export default function InventoryLabelsRoute() {
   // Verificar autenticação ao carregar a página
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          toast.error("Você precisa estar autenticado para acessar esta página");
+          navigate('/');
+          return;
+        }
+        console.log("Usuário autenticado:", session.user);
+      } catch (error) {
+        console.error("Erro ao verificar autenticação:", error);
+        toast.error("Erro ao verificar autenticação");
         navigate('/');
       }
     };
@@ -23,6 +33,7 @@ export default function InventoryLabelsRoute() {
     // Monitorar mudanças no estado da autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT' || !session) {
+        toast.error("Sessão encerrada");
         navigate('/');
       }
     });
@@ -46,6 +57,8 @@ export default function InventoryLabelsRoute() {
       </div>
     );
   }
+
+  console.log("Perfil do usuário carregado:", userProfile);
 
   return (
     <div className="h-full min-h-screen bg-background">

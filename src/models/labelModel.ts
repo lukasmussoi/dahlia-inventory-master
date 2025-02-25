@@ -18,34 +18,51 @@ export interface UserProfile {
 export class LabelModel {
   // Buscar todo o histórico de impressão de etiquetas
   static async getAllLabelHistory(): Promise<LabelHistory[]> {
+    console.log('Buscando histórico de etiquetas...');
     const { data, error } = await supabase
       .from('inventory_label_history')
       .select('*')
       .order('printed_at', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      console.error('Erro ao buscar histórico:', error);
+      throw error;
+    }
+    console.log('Histórico encontrado:', data);
     return data;
   }
 
   // Buscar histórico de impressão para um item específico
   static async getItemLabelHistory(inventoryId: string): Promise<LabelHistory[]> {
+    console.log('Buscando histórico para o item:', inventoryId);
     const { data, error } = await supabase
       .from('inventory_label_history')
       .select('*')
       .eq('inventory_id', inventoryId)
       .order('printed_at', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      console.error('Erro ao buscar histórico do item:', error);
+      throw error;
+    }
+    console.log('Histórico do item encontrado:', data);
     return data;
   }
 
   // Registrar uma nova impressão de etiqueta
   static async registerLabelPrint(inventoryId: string, quantity: number = 1): Promise<void> {
+    console.log('Registrando impressão de etiqueta:', { inventoryId, quantity });
     // Obter o usuário atual
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
-    if (userError) throw userError;
-    if (!user) throw new Error('Usuário não autenticado');
+    if (userError) {
+      console.error('Erro ao obter usuário:', userError);
+      throw userError;
+    }
+    if (!user) {
+      console.error('Usuário não autenticado');
+      throw new Error('Usuário não autenticado');
+    }
 
     const { error } = await supabase
       .from('inventory_label_history')
@@ -56,17 +73,25 @@ export class LabelModel {
         printed_at: new Date().toISOString(),
       });
 
-    if (error) throw error;
+    if (error) {
+      console.error('Erro ao registrar impressão:', error);
+      throw error;
+    }
+    console.log('Impressão registrada com sucesso');
   }
 
   // Buscar perfis de usuários para exibir nomes
   static async getAllProfiles(): Promise<UserProfile[]> {
+    console.log('Buscando perfis de usuários...');
     const { data, error } = await supabase
       .from('profiles')
       .select('id, full_name');
 
-    if (error) throw error;
+    if (error) {
+      console.error('Erro ao buscar perfis:', error);
+      throw error;
+    }
+    console.log('Perfis encontrados:', data);
     return data;
   }
 }
-

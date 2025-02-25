@@ -1,3 +1,4 @@
+
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Routes, Route, useNavigate } from "react-router-dom";
 import { TopNavbar } from "@/components/dashboard/TopNavbar";
@@ -11,6 +12,7 @@ import Suppliers from "./suppliers";
 import Categories from "./categories";
 import Users from "./users";
 import PlatingTypes from "./plating-types";
+import InventoryLabels from "./inventory-labels";
 
 const queryClient = new QueryClient();
 
@@ -58,6 +60,7 @@ const Dashboard = () => {
             <Route index element={<DashboardContent />} />
             <Route path="inventory">
               <Route index element={<Inventory />} />
+              <Route path="labels" element={<InventoryLabels />} />
               <Route path="suppliers" element={<Suppliers />} />
               <Route path="categories" element={<Categories />} />
             </Route>
