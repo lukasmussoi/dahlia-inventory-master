@@ -41,10 +41,17 @@ export class LabelModel {
 
   // Registrar uma nova impressão de etiqueta
   static async registerLabelPrint(inventoryId: string, quantity: number = 1): Promise<void> {
+    // Obter o usuário atual
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError) throw userError;
+    if (!user) throw new Error('Usuário não autenticado');
+
     const { error } = await supabase
       .from('inventory_label_history')
       .insert({
         inventory_id: inventoryId,
+        user_id: user.id,
         quantity: quantity,
         printed_at: new Date().toISOString(),
       });
@@ -62,3 +69,4 @@ export class LabelModel {
     return data;
   }
 }
+
