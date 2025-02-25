@@ -49,26 +49,8 @@ export function InventoryLabels() {
     queryFn: () => LabelModel.getAllProfiles(),
   });
 
-  const handlePrintLabels = async (itemIds: string[]) => {
-    setIsPrinting(true);
-    try {
-      for (const itemId of itemIds) {
-        const item = items?.find(i => i.id === itemId);
-        if (!item) continue;
-
-        const commands = generatePPLACommands(item);
-        await sendToPrinter(commands);
-        await LabelModel.registerLabelPrint(itemId);
-      }
-
-      toast.success("Etiquetas impressas com sucesso!");
-      setSelectedItems([]);
-    } catch (error) {
-      console.error("Erro ao imprimir etiquetas:", error);
-      toast.error("Erro ao imprimir etiquetas. Verifique a conexão com a impressora.");
-    } finally {
-      setIsPrinting(false);
-    }
+  const handlePrintLabels = async () => {
+    setSelectedItemForPrint(items?.find(item => item.id === selectedItems[0]));
   };
 
   const filteredItems = items?.filter(item => {
@@ -108,7 +90,7 @@ export function InventoryLabels() {
         <h1 className="text-2xl font-bold text-gray-900">Etiquetas de Produtos</h1>
         {selectedItems.length > 0 && (
           <Button
-            onClick={() => handlePrintLabels(selectedItems)}
+            onClick={() => handlePrintLabels()}
             className="flex items-center gap-2"
             disabled={isPrinting}
           >
@@ -265,7 +247,9 @@ export function InventoryLabels() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handlePrintLabels([item.id])}
+                            onClick={() => {
+                              setSelectedItemForPrint(item);
+                            }}
                             disabled={isPrinting}
                           >
                             <Printer className="h-4 w-4" />

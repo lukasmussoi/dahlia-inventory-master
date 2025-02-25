@@ -7,6 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
 import { generatePdfLabel } from "@/utils/pdfUtils";
+import { toast } from "sonner";
 
 interface PrintLabelDialogProps {
   isOpen: boolean;
@@ -23,6 +24,11 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
 
   const handlePrint = async () => {
     try {
+      if (!item) {
+        toast.error("Nenhum item selecionado para impressão");
+        return;
+      }
+
       // Gerar PDF temporário
       const pdfUrl = await generatePdfLabel({
         item,
@@ -35,9 +41,11 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
       // Abrir PDF em nova aba
       window.open(pdfUrl, '_blank');
       
+      toast.success("Etiquetas geradas com sucesso!");
       onClose();
     } catch (error) {
       console.error("Erro ao gerar PDF:", error);
+      toast.error("Erro ao gerar etiquetas. Por favor, tente novamente.");
     }
   };
 
