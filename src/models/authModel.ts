@@ -42,4 +42,32 @@ export class AuthModel {
     // Verificar se o usuário é administrador
     return await UserRoleModel.isUserAdmin(user.id);
   }
+
+  // Função para obter o perfil e papéis do usuário atual
+  static async getUserProfileWithRoles() {
+    try {
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError) throw authError;
+      if (!user) return { profile: null, isAdmin: false };
+
+      // Buscar perfil do usuário
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, full_name, status, created_at, updated_at')
+        .eq('id', user.id)
+        .maybeSingle();
+      if (profileError) throw profileError;
+
+      // Verificar se o usuário é admin
+      const isAdmin = await UserRoleModel.isUserAdmin(user.id);
+
+      return {
+        profile,
+        isAdmin
+      };
+    } catch (error) {
+      console.error('Erro ao buscar perfil e papéis do usuário:', error);
+      throw error;
+    }
+  }
 }

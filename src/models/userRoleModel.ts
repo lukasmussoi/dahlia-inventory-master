@@ -13,7 +13,7 @@ export interface UserWithRoles {
   full_name: string;
   status: 'active' | 'inactive' | 'suspended';
   email?: string;
-  roles: UserRole[];
+  roles: string[]; // Mudança aqui: usar string[] ao invés de UserRole[]
   created_at?: string;
   updated_at?: string;
 }
@@ -22,7 +22,7 @@ export interface CreateUserData {
   email: string;
   password: string;
   fullName: string;
-  roles: UserRole[];
+  roles: string[]; // Mudança aqui: usar string[] ao invés de UserRole[]
 }
 
 export class UserRoleModel {
@@ -92,7 +92,7 @@ export class UserRoleModel {
           id: profile.id,
           full_name: profile.full_name,
           status: profile.status as 'active' | 'inactive' | 'suspended',
-          roles: roles.map(r => r.user_role) as UserRole[],
+          roles: roles.map(r => r.user_role), // Agora convertendo para string[]
           created_at: profile.created_at,
           updated_at: profile.updated_at
         };
@@ -113,7 +113,7 @@ export class UserRoleModel {
   }
 
   // Atualizar papéis de um usuário
-  static async updateUserRoles(userId: string, roles: UserRole[]): Promise<void> {
+  static async updateUserRoles(userId: string, roles: string[]): Promise<void> {
     // Primeiro removemos todos os papéis existentes
     const { error: deleteError } = await supabase
       .from('user_roles')
@@ -126,7 +126,7 @@ export class UserRoleModel {
     if (roles.length > 0) {
       const rolesToInsert = roles.map(role => ({
         user_id: userId,
-        user_role: role
+        user_role: role as 'admin' | 'promoter' | 'seller'
       }));
       
       const { error: insertError } = await supabase

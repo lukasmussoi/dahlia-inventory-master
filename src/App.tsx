@@ -11,7 +11,14 @@ import Inventory from "./routes/inventory";
 import InventoryLabelsRoute from "./routes/inventory-labels";
 import EtiquetasCustomRoute from "./routes/etiquetas-custom";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 const App = () => (
   <BrowserRouter>

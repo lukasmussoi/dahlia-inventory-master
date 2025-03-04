@@ -1,12 +1,14 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { InventoryModel } from "@/models/inventoryModel";
 import { LabelModel } from "@/models/labelModel";
-import { Printer, Tag, Search, XCircle, CheckCircle, History, Filter, X } from "lucide-react";
+import { Printer, Tag, Search, XCircle, CheckCircle, History, Filter, X, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
+import { Link } from "react-router-dom";
 import {
   Table,
   TableBody,
@@ -88,19 +90,28 @@ export function InventoryLabels() {
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Etiquetas de Produtos</h1>
-        {selectedItems.length > 0 && (
-          <Button
-            onClick={() => handlePrintLabels()}
-            className="flex items-center gap-2"
-            disabled={isPrinting}
-          >
-            <Printer className="h-4 w-4" />
-            {isPrinting 
-              ? "Imprimindo..." 
-              : `Imprimir Selecionados (${selectedItems.length})`
-            }
-          </Button>
-        )}
+        <div className="flex gap-2">
+          <Link to="/dashboard/inventory/etiquetas-custom">
+            <Button variant="outline" className="flex items-center gap-2">
+              <Settings className="h-4 w-4" />
+              Etiquetas Customizadas
+            </Button>
+          </Link>
+          
+          {selectedItems.length > 0 && (
+            <Button
+              onClick={() => handlePrintLabels()}
+              className="flex items-center gap-2"
+              disabled={isPrinting}
+            >
+              <Printer className="h-4 w-4" />
+              {isPrinting 
+                ? "Imprimindo..." 
+                : `Imprimir Selecionados (${selectedItems.length})`
+              }
+            </Button>
+          )}
+        </div>
       </div>
 
       <Card>
