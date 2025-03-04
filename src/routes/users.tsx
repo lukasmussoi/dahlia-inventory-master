@@ -1,6 +1,7 @@
+
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { UserRoleModel, UserWithRoles, UserRole, CreateUserData } from "@/models/userRoleModel";
+import { UserRoleModel, UserWithRoles, UserRole } from "@/models/userRoleModel";
 import {
   Table,
   TableBody,
@@ -50,7 +51,12 @@ const Users = () => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [userToDelete, setUserToDelete] = useState<UserWithRoles | null>(null);
-  const [newUserData, setNewUserData] = useState<Partial<CreateUserData>>({
+  const [newUserData, setNewUserData] = useState<{
+    email: string;
+    password: string;
+    fullName: string;
+    roles: UserRole[];
+  }>({
     email: "",
     password: "",
     fullName: "",
@@ -107,11 +113,16 @@ const Users = () => {
   });
 
   const createUserMutation = useMutation({
-    mutationFn: (userData: CreateUserData) => UserRoleModel.createUser(userData),
+    mutationFn: (userData: {
+      email: string;
+      password: string;
+      fullName: string;
+      roles: UserRole[];
+    }) => UserRoleModel.createUser(userData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       setShowCreateDialog(false);
-      setNewUserData({});
+      setNewUserData({ email: "", password: "", fullName: "", roles: [] });
       toast.success('Usuário criado com sucesso!');
     },
     onError: (error) => {
@@ -178,7 +189,7 @@ const Users = () => {
       toast.error('Preencha todos os campos obrigatórios');
       return;
     }
-    createUserMutation.mutate(newUserData as CreateUserData);
+    createUserMutation.mutate(newUserData);
   };
 
   const handleUpdatePassword = () => {
@@ -247,10 +258,10 @@ const Users = () => {
                 <div className="grid gap-2">
                   <Label>Funções</Label>
                   <div className="flex gap-2">
-                    {(['admin', 'promoter', 'seller'] as UserRole[]).map((role) => (
+                    {(['admin', 'promoter', 'seller'] as Array<'admin' | 'promoter' | 'seller'>).map((role) => (
                       <Badge
                         key={role}
-                        variant={newUserData.roles?.includes(role) ? 'default' : 'outline'}
+                        variant={newUserData.roles.includes(role) ? 'default' : 'outline'}
                         className="cursor-pointer"
                         onClick={() => {
                           const currentRoles = newUserData.roles || [];
@@ -334,12 +345,12 @@ const Users = () => {
                 </TableCell>
                 <TableCell>
                   <div className="flex gap-2">
-                    {['admin', 'promoter', 'seller'].map((role) => (
+                    {(['admin', 'promoter', 'seller'] as Array<'admin' | 'promoter' | 'seller'>).map((role) => (
                       <Badge
                         key={role}
-                        variant={user.roles.includes(role as UserRole) ? 'default' : 'outline'}
+                        variant={user.roles.includes(role) ? 'default' : 'outline'}
                         className="cursor-pointer"
-                        onClick={() => handleRoleToggle(user, role as UserRole)}
+                        onClick={() => handleRoleToggle(user, role)}
                       >
                         {role === 'admin' ? 'Admin' :
                          role === 'promoter' ? 'Promotor' :

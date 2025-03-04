@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -29,7 +28,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { CheckIcon, DragHandleDots2Icon, TrashIcon } from "@radix-ui/react-icons";
+import { Check, GripVertical, Trash2 } from "lucide-react";
 import { CampoEtiqueta, ModeloEtiqueta } from "@/models/etiquetaCustomModel";
 import { EtiquetaCustomController } from "@/controllers/etiquetaCustomController";
 import { toast } from "sonner";
@@ -65,7 +64,6 @@ const EditorEtiqueta: React.FC<EditorEtiquetaProps> = ({ modelo, onSalvar, onCan
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    // Carregar campos disponíveis para o tipo selecionado
     const camposDisponiveis = EtiquetaCustomController.getCamposDisponiveis(tipoEtiqueta);
     setCamposDisponiveis(camposDisponiveis);
   }, [tipoEtiqueta]);
@@ -100,10 +98,8 @@ const EditorEtiqueta: React.FC<EditorEtiquetaProps> = ({ modelo, onSalvar, onCan
         };
 
         if (modelo?.id) {
-          // Atualizar modelo existente
           return await EtiquetaCustomController.atualizarModelo(modelo.id, etiquetaData);
         } else {
-          // Criar novo modelo
           return await EtiquetaCustomController.salvarModelo(etiquetaData);
         }
       } finally {
@@ -179,7 +175,7 @@ const EditorEtiqueta: React.FC<EditorEtiquetaProps> = ({ modelo, onSalvar, onCan
                 <Select 
                   value={tipoEtiqueta} 
                   onValueChange={setTipoEtiqueta}
-                  disabled={!!modelo?.id} // Não permitir mudar o tipo em edição
+                  disabled={!!modelo?.id}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o tipo" />
@@ -279,7 +275,7 @@ const EditorEtiqueta: React.FC<EditorEtiquetaProps> = ({ modelo, onSalvar, onCan
                                 removerCampo(campo.id);
                               }}
                             >
-                              <TrashIcon className="h-3 w-3" />
+                              <Trash2 className="h-3 w-3" />
                             </Button>
                           </div>
                           <div className="text-sm truncate">{campo.valor || 'Texto de exemplo'}</div>
