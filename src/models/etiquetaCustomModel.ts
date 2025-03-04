@@ -55,7 +55,9 @@ export class EtiquetaCustomModel {
       throw error;
     }
     
-    return data || [];
+    // Transformar os dados para o formato esperado no frontend
+    const modelosFormatados = data.map(item => this.formatarModelo(item));
+    return modelosFormatados || [];
   }
 
   // Buscar um modelo específico
@@ -72,19 +74,19 @@ export class EtiquetaCustomModel {
       throw error;
     }
     
-    return data;
+    return data ? this.formatarModelo(data) : null;
   }
 
   // Criar novo modelo de etiqueta
   static async createModelo(modelo: Omit<ModeloEtiqueta, 'id' | 'criado_em' | 'atualizado_em'>): Promise<ModeloEtiqueta> {
     console.log('Criando novo modelo de etiqueta:', modelo);
+
+    // Transformar o modelo para o formato do banco de dados
+    const modeloBD = this.formatarModeloBD(modelo);
+
     const { data, error } = await supabase
       .from('etiquetas_custom')
-      .insert({
-        ...modelo,
-        criado_em: new Date().toISOString(),
-        atualizado_em: new Date().toISOString()
-      })
+      .insert(modeloBD)
       .select()
       .single();
 
@@ -93,18 +95,19 @@ export class EtiquetaCustomModel {
       throw error;
     }
     
-    return data;
+    return this.formatarModelo(data);
   }
 
   // Atualizar modelo de etiqueta existente
   static async updateModelo(id: string, modelo: Partial<ModeloEtiqueta>): Promise<ModeloEtiqueta> {
     console.log('Atualizando modelo de etiqueta:', id, modelo);
+
+    // Transformar o modelo para o formato do banco de dados
+    const modeloBD = this.formatarModeloBD(modelo);
+
     const { data, error } = await supabase
       .from('etiquetas_custom')
-      .update({
-        ...modelo,
-        atualizado_em: new Date().toISOString()
-      })
+      .update(modeloBD)
       .eq('id', id)
       .select()
       .single();
@@ -114,7 +117,7 @@ export class EtiquetaCustomModel {
       throw error;
     }
     
-    return data;
+    return this.formatarModelo(data);
   }
 
   // Excluir modelo de etiqueta
@@ -180,5 +183,54 @@ export class EtiquetaCustomModel {
       default:
         return [];
     }
+  }
+
+  // Função auxiliar para transformar o modelo vindo do banco para o formato do frontend
+  private static formatarModelo(modeloBD: any): ModeloEtiqueta {
+    return {
+      id: modeloBD.id,
+      descricao: modeloBD.descricao,
+      tipo: modeloBD.tipo,
+      largura: Number(modeloBD.largura),
+      altura: Number(modeloBD.altura),
+      espacamentoHorizontal: Number(modeloBD.espacamento_horizontal),
+      espacamentoVertical: Number(modeloBD.espacamento_vertical),
+      formatoPagina: modeloBD.formato_pagina,
+      orientacao: modeloBD.orientacao,
+      larguraPagina: modeloBD.largura_pagina ? Number(modeloBD.largura_pagina) : undefined,
+      alturaPagina: modeloBD.altura_pagina ? Number(modeloBD.altura_pagina) : undefined,
+      margemSuperior: Number(modeloBD.margem_superior),
+      margemInferior: Number(modeloBD.margem_inferior),
+      margemEsquerda: Number(modeloBD.margem_esquerda),
+      margemDireita: Number(modeloBD.margem_direita),
+      campos: Array.isArray(modeloBD.campos) ? modeloBD.campos : [],
+      criado_por: modeloBD.criado_por,
+      criado_em: modeloBD.criado_em,
+      atualizado_em: modeloBD.atualizado_em
+    };
+  }
+
+  // Função auxiliar para transformar o modelo do frontend para o formato do banco
+  private static formatarModeloBD(modelo: Partial<ModeloEtiqueta>): any {
+    const modeloBD: any = {};
+
+    if (modelo.descricao !== undefined) modeloBD.descricao = modelo.descricao;
+    if (modelo.tipo !== undefined) modeloBD.tipo = modelo.tipo;
+    if (modelo.largura !== undefined) modeloBD.largura = modelo.largura;
+    if (modelo.altura !== undefined) modeloBD.altura = modelo.altura;
+    if (modelo.espacamentoHorizontal !== undefined) modeloBD.espacamento_horizontal = modelo.espacamentoHorizontal;
+    if (modelo.espacamentoVertical !== undefined) modeloBD.espacamento_vertical = modelo.espacamentoVertical;
+    if (modelo.formatoPagina !== undefined) modeloBD.formato_pagina = modelo.formatoPagina;
+    if (modelo.orientacao !== undefined) modeloBD.orientacao = modelo.orientacao;
+    if (modelo.larguraPagina !== undefined) modeloBD.largura_pagina = modelo.larguraPagina;
+    if (modelo.alturaPagina !== undefined) modeloBD.altura_pagina = modelo.alturaPagina;
+    if (modelo.margemSuperior !== undefined) modeloBD.margem_superior = modelo.margemSuperior;
+    if (modelo.margemInferior !== undefined) modeloBD.margem_inferior = modelo.margemInferior;
+    if (modelo.margemEsquerda !== undefined) modeloBD.margem_esquerda = modelo.margemEsquerda;
+    if (modelo.margemDireita !== undefined) modeloBD.margem_direita = modelo.margemDireita;
+    if (modelo.campos !== undefined) modeloBD.campos = modelo.campos;
+    if (modelo.criado_por !== undefined) modeloBD.criado_por = modelo.criado_por;
+
+    return modeloBD;
   }
 }
