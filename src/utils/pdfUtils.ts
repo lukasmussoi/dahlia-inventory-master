@@ -22,8 +22,8 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
   });
 
   // Configurações da etiqueta
-  const labelWidth = 100;  // largura em mm
-  const labelHeight = 30;  // altura em mm
+  const labelWidth = 80;  // largura em mm
+  const labelHeight = 8;  // altura em mm (ajustado para 8mm conforme solicitado)
   const marginLeft = 10;   // margem esquerda em mm
   const marginTop = 10;    // margem superior em mm
   const spacing = 5;       // espaçamento entre etiquetas em mm
@@ -56,28 +56,21 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
     const x = marginLeft + currentColumn * (labelWidth + spacing);
     const y = marginTop + currentRow * (labelHeight + spacing);
 
-    // Desenhar borda da etiqueta (opcional)
-    // doc.rect(x, y, labelWidth, labelHeight);
-
-    // Adicionar nome do produto centralizado no topo
-    doc.setFontSize(10);
+    // Adicionar nome do produto à esquerda da etiqueta
+    doc.setFontSize(7); // Tamanho 7 para o nome conforme solicitado
     doc.setFont("helvetica", "normal");
-    const nameWidth = doc.getStringUnitWidth(item.name) * 10 / doc.internal.scaleFactor;
-    const nameX = x + (labelWidth - nameWidth) / 2;
-    doc.text(item.name, nameX, y + 5);
+    doc.text(item.name, x + 2, y + 4); // Posicionado à esquerda com pequena margem
 
-    // Adicionar código de barras centralizado
-    const barcodeWidth = 80;
-    const barcodeX = x + (labelWidth - barcodeWidth) / 2;
-    doc.addImage(barcodeData, "PNG", barcodeX, y + 7, barcodeWidth, 15);
+    // Adicionar código de barras ao centro
+    const barcodeWidth = 40; // Largura reduzida do código de barras
+    const barcodeHeight = 6; // Altura reduzida do código de barras
+    doc.addImage(barcodeData, "PNG", x + 20, y + 1, barcodeWidth, barcodeHeight);
 
-    // Adicionar preço alinhado à direita
-    doc.setFontSize(12);
+    // Adicionar preço à direita alinhado com o código de barras
+    doc.setFontSize(10); // Tamanho 10 para o preço conforme solicitado
     doc.setFont("helvetica", "bold");
     const priceText = `R$ ${item.price.toFixed(2)}`;
-    const priceWidth = doc.getStringUnitWidth(priceText) * 12 / doc.internal.scaleFactor;
-    const priceX = x + labelWidth - 5;  // 5mm da margem direita
-    doc.text(priceText, priceX, y + 28, { align: 'right' });
+    doc.text(priceText, x + labelWidth - 5, y + 4, { align: 'right' });
 
     currentRow++;
   }

@@ -14,13 +14,14 @@ export async function generateBarcode(text: string): Promise<string> {
     // Gerar o código de barras no canvas
     JsBarcode(canvas, text, {
       format: "CODE128",
-      width: 2,
-      height: 40,
+      width: 1, // Largura mais fina das barras
+      height: 20, // Altura menor para caber na etiqueta de 8mm
       displayValue: true,
-      fontSize: 10,
-      margin: 2,
+      fontSize: 6, // Fonte menor para o valor do código
+      margin: 0, // Sem margem
       textAlign: "center",
       background: "#ffffff",
+      textMargin: 1 // Margem mínima entre o texto e o código
     });
 
     // Converter o canvas para uma URL de dados PNG
