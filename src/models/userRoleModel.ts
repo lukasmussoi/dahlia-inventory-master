@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { UserProfile } from "./userModel";
 
@@ -47,6 +48,15 @@ export class UserRoleModel {
   static async isUserAdmin(userId: string): Promise<boolean> {
     const { data, error } = await supabase
       .rpc('is_admin', { user_id: userId });
+
+    if (error) throw error;
+    return data || false;
+  }
+
+  // Verificar se o usuário atual é admin
+  static async isCurrentUserAdmin(): Promise<boolean> {
+    const { data, error } = await supabase
+      .rpc('check_is_admin', { user_id: 'auth.uid()' });
 
     if (error) throw error;
     return data || false;
