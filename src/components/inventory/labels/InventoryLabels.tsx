@@ -12,7 +12,7 @@ import { LabelModel, LabelHistory } from "@/models/labelModel";
 
 export function InventoryLabels() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
   const [showPrinted, setShowPrinted] = useState(false);
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const navigate = useNavigate();

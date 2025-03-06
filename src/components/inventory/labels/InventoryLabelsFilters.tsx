@@ -43,7 +43,7 @@ export function InventoryLabelsFilters({
             <SelectValue placeholder="Filtrar por categoria" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Todas as categorias</SelectItem>
+            <SelectItem value="all">Todas as categorias</SelectItem>
             <SelectItem value="1">Brincos</SelectItem>
             <SelectItem value="2">Colares</SelectItem>
             <SelectItem value="3">Pulseiras</SelectItem>

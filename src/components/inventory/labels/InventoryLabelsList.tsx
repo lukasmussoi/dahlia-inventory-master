@@ -51,7 +51,7 @@ export function InventoryLabelsList({
       );
     }
     
-    if (categoryId) {
+    if (categoryId && categoryId !== 'all') {
       filtered = filtered.filter(item => 
         item.category_id === categoryId
       );
