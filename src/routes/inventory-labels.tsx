@@ -14,13 +14,13 @@ export default function InventoryLabelsRoute() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
+        const user = await AuthController.checkAuth();
+        if (!user) {
           toast.error("Você precisa estar autenticado para acessar esta página");
           navigate('/');
           return;
         }
-        console.log("Usuário autenticado:", session.user);
+        console.log("Usuário autenticado:", user);
       } catch (error) {
         console.error("Erro ao verificar autenticação:", error);
         toast.error("Erro ao verificar autenticação");
@@ -58,7 +58,7 @@ export default function InventoryLabelsRoute() {
     );
   }
 
-  console.log("Perfil do usuário carregado:", userProfile);
+  console.log("Perfil do usuário carregado na página de etiquetas:", userProfile);
 
   return (
     <div className="h-full min-h-screen bg-background">

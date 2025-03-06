@@ -13,6 +13,7 @@ import Categories from "./categories";
 import Users from "./users";
 import PlatingTypes from "./plating-types";
 import InventoryLabels from "./inventory-labels";
+import EtiquetasCustom from "./etiquetas-custom";
 
 const queryClient = new QueryClient();
 
@@ -60,6 +61,7 @@ const Dashboard = () => {
             <Route index element={<DashboardContent />} />
             <Route path="inventory" element={<Inventory />} />
             <Route path="inventory/labels" element={<InventoryLabels />} />
+            <Route path="inventory/etiquetas-custom" element={<EtiquetasCustom />} />
             <Route path="suppliers" element={<Suppliers />} />
             <Route path="categories" element={<Categories />} />
             <Route path="plating-types" element={<PlatingTypes />} />

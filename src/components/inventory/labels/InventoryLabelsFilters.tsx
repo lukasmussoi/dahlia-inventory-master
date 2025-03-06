@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-interface InventoryLabelsFiltersProps {
+export interface InventoryLabelsFiltersProps {
   showPrinted: boolean;
   onShowPrintedChange: (value: boolean) => void;
   searchTerm: string;

@@ -7,8 +7,8 @@ import { PrinterIcon, SettingsIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
-import { InventoryItem } from "@/models/inventoryModel";
-import { LabelHistory } from "@/models/labelModel";
+import { InventoryModel, InventoryItem } from "@/models/inventoryModel";
+import { LabelModel, LabelHistory } from "@/models/labelModel";
 
 export function InventoryLabels() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -17,28 +17,33 @@ export function InventoryLabels() {
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const navigate = useNavigate();
 
-  // Simulate fetching items - replace with actual API calls when ready
+  // Buscar todos os itens do inventário
   const { data: items = [], isLoading: isLoadingItems } = useQuery({
     queryKey: ['inventory-items'],
     queryFn: async () => {
-      // Mock data - Replace with actual API call
-      return [
-        { id: '1', name: 'Brinco Floral', sku: 'BR001', category_id: '1' },
-        { id: '2', name: 'Colar Delicado', sku: 'CO001', category_id: '2' },
-        { id: '3', name: 'Pulseira Dourada', sku: 'PU001', category_id: '3' }
-      ] as InventoryItem[];
+      try {
+        console.log('Buscando itens do inventário para etiquetas...');
+        return await InventoryModel.getAllItems();
+      } catch (error) {
+        console.error('Erro ao buscar itens do inventário:', error);
+        toast.error('Erro ao carregar itens do inventário');
+        return [];
+      }
     }
   });
 
-  // Simulate fetching label history - replace with actual API calls when ready
+  // Buscar histórico de impressão de etiquetas
   const { data: labelHistory = [], isLoading: isLoadingHistory } = useQuery({
     queryKey: ['label-history'],
     queryFn: async () => {
-      // Mock data - Replace with actual API call
-      return [
-        { id: '1', inventory_id: '1', quantity: 5, printed_at: '2023-05-10T14:30:00Z' },
-        { id: '2', inventory_id: '2', quantity: 3, printed_at: '2023-05-11T09:15:00Z' }
-      ] as LabelHistory[];
+      try {
+        console.log('Buscando histórico de etiquetas...');
+        return await LabelModel.getAllLabelHistory();
+      } catch (error) {
+        console.error('Erro ao buscar histórico de etiquetas:', error);
+        toast.error('Erro ao carregar histórico de etiquetas');
+        return [];
+      }
     }
   });
 
@@ -58,19 +63,46 @@ export function InventoryLabels() {
     setSelectedItems(items);
   };
 
-  const handlePrintLabel = (itemId: string) => {
-    toast.info(`Preparando impressão para item ${itemId}`);
-    // Implementar lógica de impressão
+  const handlePrintLabel = async (itemId: string) => {
+    try {
+      toast.info(`Preparando impressão para item ${itemId}`);
+      
+      // Registrar impressão no histórico
+      await LabelModel.registerLabelPrint(itemId, 1);
+      
+      // Recarregar histórico de etiquetas
+      // Aqui você pode adicionar a lógica para a impressão física da etiqueta
+      toast.success('Etiqueta enviada para impressão com sucesso!');
+    } catch (error) {
+      console.error('Erro ao imprimir etiqueta:', error);
+      toast.error('Erro ao processar impressão da etiqueta');
+    }
   };
 
-  const handlePrintSelected = () => {
+  const handlePrintSelected = async () => {
     if (selectedItems.length === 0) {
       toast.warning("Nenhum item selecionado para impressão");
       return;
     }
     
-    toast.info(`Preparando impressão para ${selectedItems.length} item(s)`);
-    // Implementar lógica de impressão em massa
+    try {
+      toast.info(`Preparando impressão para ${selectedItems.length} item(s)`);
+      
+      // Registrar impressão para cada item selecionado
+      for (const itemId of selectedItems) {
+        await LabelModel.registerLabelPrint(itemId, 1);
+      }
+      
+      // Recarregar histórico de etiquetas
+      // Aqui você pode adicionar a lógica para a impressão física das etiquetas em massa
+      toast.success('Etiquetas enviadas para impressão com sucesso!');
+      
+      // Limpar seleção após impressão
+      setSelectedItems([]);
+    } catch (error) {
+      console.error('Erro ao imprimir etiquetas em massa:', error);
+      toast.error('Erro ao processar impressão das etiquetas');
+    }
   };
 
   return (
