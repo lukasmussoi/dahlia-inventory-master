@@ -14,6 +14,8 @@ import { LabelHistory } from "@/models/labelModel";
 import { InventoryItem } from "@/models/inventoryModel";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useState, useEffect } from "react";
+import { toast } from "sonner";
 
 interface InventoryLabelsListProps {
   items: InventoryItem[];
@@ -22,6 +24,8 @@ interface InventoryLabelsListProps {
   onSelectedItemsChange: (items: string[]) => void;
   onPrintLabel: (itemId: string) => void;
   labelHistory: LabelHistory[];
+  searchTerm: string;
+  categoryId: string;
 }
 
 export function InventoryLabelsList({
@@ -31,7 +35,32 @@ export function InventoryLabelsList({
   onSelectedItemsChange,
   onPrintLabel,
   labelHistory,
+  searchTerm,
+  categoryId,
 }: InventoryLabelsListProps) {
+  const [filteredItems, setFilteredItems] = useState<InventoryItem[]>([]);
+
+  useEffect(() => {
+    // Aplicar filtros de busca e categoria
+    let filtered = [...items];
+    
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      filtered = filtered.filter(item => 
+        item.name.toLowerCase().includes(searchLower) || 
+        (item.sku && item.sku.toLowerCase().includes(searchLower))
+      );
+    }
+    
+    if (categoryId) {
+      filtered = filtered.filter(item => 
+        item.category_id === categoryId
+      );
+    }
+    
+    setFilteredItems(filtered);
+  }, [items, searchTerm, categoryId]);
+
   if (isLoading) {
     return (
       <div className="w-full h-64 flex items-center justify-center">
@@ -40,7 +69,7 @@ export function InventoryLabelsList({
     );
   }
 
-  if (items.length === 0) {
+  if (filteredItems.length === 0) {
     return (
       <div className="text-center py-8">
         <p className="text-gray-500">Nenhum item encontrado.</p>
@@ -66,7 +95,7 @@ export function InventoryLabelsList({
   };
 
   const handleSelectAll = (checked: boolean) => {
-    onSelectedItemsChange(checked ? items.map(item => item.id) : []);
+    onSelectedItemsChange(checked ? filteredItems.map(item => item.id) : []);
   };
 
   const toggleItemSelection = (itemId: string) => {
@@ -83,7 +112,7 @@ export function InventoryLabelsList({
           <TableRow>
             <TableHead className="w-[50px]">
               <Checkbox
-                checked={items.length > 0 && selectedItems.length === items.length}
+                checked={filteredItems.length > 0 && selectedItems.length === filteredItems.length}
                 onCheckedChange={handleSelectAll}
               />
             </TableHead>
@@ -94,7 +123,7 @@ export function InventoryLabelsList({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {items.map((item) => (
+          {filteredItems.map((item) => (
             <TableRow key={item.id}>
               <TableCell>
                 <Checkbox

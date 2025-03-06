@@ -1,21 +1,21 @@
 
 import { supabase } from "@/integrations/supabase/client";
 
-export type UserRole = string;
+export type UserRole = "admin" | "promoter" | "seller";
 
 export interface UserWithRoles {
   id: string;
   email: string;
   fullName: string;
-  status: string;
-  roles: string[];
+  status: 'active' | 'inactive' | 'suspended';
+  roles: UserRole[];
 }
 
 export interface CreateUserData {
   email: string;
   password: string;
   fullName: string;
-  roles: string[];
+  roles: UserRole[];
 }
 
 export class UserRoleModel {
@@ -36,11 +36,6 @@ export class UserRoleModel {
         return [];
       }
 
-      // Buscar dados de email para cada perfil
-      // Este exemplo assume que você tem uma função que pode buscar emails de usuários
-      // Normalmente isso seria feito via API administrativa do Supabase
-      // Aqui estamos simulando isso
-
       // Para cada perfil, buscar as funções
       const usersWithRoles = await Promise.all(
         profiles.map(async (profile) => {
@@ -56,7 +51,7 @@ export class UserRoleModel {
               id: profile.id,
               email: 'Email não disponível', // Placeholder
               fullName: profile.full_name,
-              status: profile.status || 'inactive',
+              status: (profile.status as 'active' | 'inactive' | 'suspended') || 'inactive',
               roles: []
             };
           }
@@ -68,8 +63,8 @@ export class UserRoleModel {
             id: profile.id,
             email: email,
             fullName: profile.full_name,
-            status: profile.status || 'inactive',
-            roles: roles?.map(r => r.user_role) || []
+            status: (profile.status as 'active' | 'inactive' | 'suspended') || 'inactive',
+            roles: (roles?.map(r => r.user_role) || []) as UserRole[]
           };
         })
       );
@@ -82,7 +77,7 @@ export class UserRoleModel {
   }
 
   // Atualizar status do usuário
-  static async updateUserStatus(userId: string, status: string): Promise<void> {
+  static async updateUserStatus(userId: string, status: 'active' | 'inactive' | 'suspended'): Promise<void> {
     try {
       const { error } = await supabase
         .from('profiles')
@@ -100,7 +95,7 @@ export class UserRoleModel {
   }
 
   // Atualizar funções do usuário
-  static async updateUserRoles(userId: string, roles: string[]): Promise<void> {
+  static async updateUserRoles(userId: string, roles: UserRole[]): Promise<void> {
     try {
       // Primeiro, remove todas as funções atuais
       const { error: deleteError } = await supabase
@@ -115,18 +110,18 @@ export class UserRoleModel {
 
       // Em seguida, insere as novas funções
       if (roles.length > 0) {
-        const rolesToInsert = roles.map(role => ({
-          user_id: userId,
-          user_role: role
-        }));
+        for (const role of roles) {
+          const { error: insertError } = await supabase
+            .from('user_roles')
+            .insert({
+              user_id: userId,
+              user_role: role
+            });
 
-        const { error: insertError } = await supabase
-          .from('user_roles')
-          .insert(rolesToInsert);
-
-        if (insertError) {
-          console.error('Erro ao inserir novas funções do usuário:', insertError);
-          throw insertError;
+          if (insertError) {
+            console.error('Erro ao inserir nova função do usuário:', insertError);
+            throw insertError;
+          }
         }
       }
     } catch (error) {
@@ -179,18 +174,18 @@ export class UserRoleModel {
 
       // Adicionar funções
       if (userData.roles.length > 0) {
-        const rolesToInsert = userData.roles.map(role => ({
-          user_id: newUserId,
-          user_role: role
-        }));
+        for (const role of userData.roles) {
+          const { error: rolesError } = await supabase
+            .from('user_roles')
+            .insert({
+              user_id: newUserId,
+              user_role: role
+            });
 
-        const { error: rolesError } = await supabase
-          .from('user_roles')
-          .insert(rolesToInsert);
-
-        if (rolesError) {
-          console.error('Erro ao adicionar funções do usuário:', rolesError);
-          throw rolesError;
+          if (rolesError) {
+            console.error('Erro ao adicionar função do usuário:', rolesError);
+            throw rolesError;
+          }
         }
       }
 

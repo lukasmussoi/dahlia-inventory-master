@@ -24,12 +24,12 @@ export class AuthController {
   // Função para buscar perfil do usuário com suas permissões
   static async getUserProfileWithRoles() {
     try {
-      const data = await AuthModel.getCurrentUserProfile();
+      const data = await AuthModel.getUserProfileWithRoles();
       
       // Verificar permissões do usuário
       if (data) {
         try {
-          const isAdmin = await AuthModel.checkIsUserAdmin();
+          const isAdmin = await AuthModel.isUserAdmin();
           return {
             ...data,
             isAdmin
