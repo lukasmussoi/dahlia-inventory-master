@@ -50,7 +50,7 @@ const Inventory = () => {
   return (
     <div className="h-full min-h-screen bg-background">
       <main className="flex-1 space-y-4 p-4 pt-20">
-        <InventoryContent isAdmin={userProfile?.isAdmin || false} />
+        <InventoryContent isAdmin={userProfile?.isAdmin} />
       </main>
     </div>
   );

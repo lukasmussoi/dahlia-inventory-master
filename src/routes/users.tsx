@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { UserRoleModel, UserWithRoles, UserRole } from "@/models/userRoleModel";
+import { UserRoleModel, UserWithRoles, UserRole, CreateUserData } from "@/models/userRoleModel";
 import {
   Table,
   TableBody,
@@ -50,12 +50,7 @@ const Users = () => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [userToDelete, setUserToDelete] = useState<UserWithRoles | null>(null);
-  const [newUserData, setNewUserData] = useState<{
-    email: string;
-    password: string;
-    fullName: string;
-    roles: UserRole[];
-  }>({
+  const [newUserData, setNewUserData] = useState<Partial<CreateUserData>>({
     email: "",
     password: "",
     fullName: "",
@@ -98,7 +93,7 @@ const Users = () => {
 
   const updateProfileMutation = useMutation({
     mutationFn: async ({ userId, fullName }: { userId: string, fullName: string }) => {
-      await UserRoleModel.updateUserProfile(userId, fullName);
+      await UserRoleModel.updateUserProfile(userId, { full_name: fullName });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
@@ -112,16 +107,11 @@ const Users = () => {
   });
 
   const createUserMutation = useMutation({
-    mutationFn: (userData: {
-      email: string;
-      password: string;
-      fullName: string;
-      roles: UserRole[];
-    }) => UserRoleModel.createUser(userData),
+    mutationFn: (userData: CreateUserData) => UserRoleModel.createUser(userData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       setShowCreateDialog(false);
-      setNewUserData({ email: "", password: "", fullName: "", roles: [] });
+      setNewUserData({});
       toast.success('Usuário criado com sucesso!');
     },
     onError: (error) => {
@@ -171,7 +161,7 @@ const Users = () => {
 
   const handleEditUser = (user: UserWithRoles) => {
     setEditingUser(user);
-    setEditName(user.fullName);
+    setEditName(user.full_name);
   };
 
   const handleSaveEdit = () => {
@@ -188,7 +178,7 @@ const Users = () => {
       toast.error('Preencha todos os campos obrigatórios');
       return;
     }
-    createUserMutation.mutate(newUserData);
+    createUserMutation.mutate(newUserData as CreateUserData);
   };
 
   const handleUpdatePassword = () => {
@@ -257,10 +247,10 @@ const Users = () => {
                 <div className="grid gap-2">
                   <Label>Funções</Label>
                   <div className="flex gap-2">
-                    {(['admin', 'promoter', 'seller'] as Array<UserRole>).map((role) => (
+                    {(['admin', 'promoter', 'seller'] as UserRole[]).map((role) => (
                       <Badge
                         key={role}
-                        variant={newUserData.roles.includes(role) ? 'default' : 'outline'}
+                        variant={newUserData.roles?.includes(role) ? 'default' : 'outline'}
                         className="cursor-pointer"
                         onClick={() => {
                           const currentRoles = newUserData.roles || [];
@@ -282,14 +272,7 @@ const Users = () => {
                 <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
                   Cancelar
                 </Button>
-                <Button onClick={() => {
-                  if (!newUserData.email || !newUserData.password || !newUserData.fullName) {
-                    toast.error('Preencha todos os campos obrigatórios');
-                    return;
-                  }
-                  toast.success('Usuário criado com sucesso (simulado)');
-                  setShowCreateDialog(false);
-                }}>
+                <Button onClick={handleCreateUser}>
                   Criar Usuário
                 </Button>
               </DialogFooter>
@@ -327,7 +310,7 @@ const Users = () => {
             {filteredUsers?.map((user) => (
               <TableRow key={user.id}>
                 <TableCell className="flex items-center gap-2">
-                  {user.fullName}
+                  {user.full_name}
                   <Button
                     variant="ghost"
                     size="sm"
@@ -351,12 +334,12 @@ const Users = () => {
                 </TableCell>
                 <TableCell>
                   <div className="flex gap-2">
-                    {(['admin', 'promoter', 'seller'] as Array<UserRole>).map((role) => (
+                    {['admin', 'promoter', 'seller'].map((role) => (
                       <Badge
                         key={role}
-                        variant={user.roles.includes(role) ? 'default' : 'outline'}
+                        variant={user.roles.includes(role as UserRole) ? 'default' : 'outline'}
                         className="cursor-pointer"
-                        onClick={() => handleRoleToggle(user, role)}
+                        onClick={() => handleRoleToggle(user, role as UserRole)}
                       >
                         {role === 'admin' ? 'Admin' :
                          role === 'promoter' ? 'Promotor' :
@@ -470,11 +453,7 @@ const Users = () => {
             >
               Cancelar
             </Button>
-            <Button onClick={() => {
-              toast.success('Senha atualizada com sucesso (simulado)');
-              setShowPasswordDialog(false);
-              setNewPassword("");
-            }}>
+            <Button onClick={handleUpdatePassword}>
               Atualizar Senha
             </Button>
           </DialogFooter>
@@ -486,16 +465,13 @@ const Users = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir o usuário {userToDelete?.fullName}? Esta ação não pode ser desfeita.
+              Tem certeza que deseja excluir o usuário {userToDelete?.full_name}? Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setUserToDelete(null)}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => {
-                toast.success('Usuário excluído com sucesso (simulado)');
-                setUserToDelete(null);
-              }}
+              onClick={() => userToDelete && deleteUserMutation.mutate(userToDelete.id)}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Excluir

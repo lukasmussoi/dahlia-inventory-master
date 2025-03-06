@@ -13,7 +13,6 @@ import Categories from "./categories";
 import Users from "./users";
 import PlatingTypes from "./plating-types";
 import InventoryLabels from "./inventory-labels";
-import EtiquetasCustom from "./etiquetas-custom";
 
 const queryClient = new QueryClient();
 
@@ -55,18 +54,21 @@ const Dashboard = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <div className="min-h-screen bg-gradient-to-br from-pearl to-pearl-dark">
-        <TopNavbar isAdmin={userProfile?.isAdmin || false} />
+        <TopNavbar isAdmin={userProfile?.isAdmin} />
         <div className="pt-16">
           <Routes>
             <Route index element={<DashboardContent />} />
-            <Route path="inventory" element={<Inventory />} />
-            <Route path="inventory/labels" element={<InventoryLabels />} />
-            <Route path="inventory/etiquetas-custom" element={<EtiquetasCustom />} />
-            <Route path="suppliers" element={<Suppliers />} />
-            <Route path="categories" element={<Categories />} />
-            <Route path="plating-types" element={<PlatingTypes />} />
+            <Route path="inventory">
+              <Route index element={<Inventory />} />
+              <Route path="labels" element={<InventoryLabels />} />
+              <Route path="suppliers" element={<Suppliers />} />
+              <Route path="categories" element={<Categories />} />
+            </Route>
             <Route path="suitcases" element={<Suitcases />} />
-            <Route path="settings/users" element={<Users />} />
+            <Route path="plating-types" element={<PlatingTypes />} />
+            <Route path="settings">
+              <Route path="users" element={<Users />} />
+            </Route>
           </Routes>
         </div>
       </div>

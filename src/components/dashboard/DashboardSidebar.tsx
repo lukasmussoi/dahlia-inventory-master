@@ -1,133 +1,124 @@
-import {
-  Home,
-  Package,
-  FolderTree,
-  Truck,
-  Droplets,
-  Briefcase,
-  Tag,
-  Users,
-  Settings,
-  BarChart,
-  Printer,
-} from "lucide-react";
-import { NavLink } from "react-router-dom";
 
-interface MenuItem {
-  title: string;
-  href: string;
-  icon: any;
-  submenu: MenuItem[];
+import {
+  Users,
+  Package,
+  Briefcase,
+  Settings,
+  LogOut,
+  LayoutDashboard,
+  Building2,
+  Droplet,
+} from "lucide-react";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from "@/components/ui/sidebar";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { useIsMobile } from "@/hooks/use-mobile";
+
+interface DashboardSidebarProps {
+  isAdmin?: boolean;
 }
 
-const menuItems = [
-  {
-    title: "Dashboard",
-    href: "/dashboard",
-    icon: Home,
-    submenu: [],
-  },
-  {
-    title: "Estoque",
-    href: "/dashboard/inventory",
-    icon: Package,
-    submenu: [
+export function DashboardSidebar({ isAdmin }: DashboardSidebarProps) {
+  const isMobile = useIsMobile();
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+      toast.error('Erro ao fazer logout');
+    }
+  };
+
+  const menuItems = [
+    {
+      title: "Dashboard",
+      icon: LayoutDashboard,
+      url: "/dashboard",
+    },
+    ...(isAdmin ? [
       {
-        title: "Produtos",
-        href: "/dashboard/inventory",
-        icon: Package,
-      },
+        title: "Usuárias",
+        icon: Users,
+        url: "/dashboard/users",
+      }
+    ] : []),
+    {
+      title: "Estoque",
+      icon: Package,
+      url: "/dashboard/inventory",
+    },
+    {
+      title: "Maletas",
+      icon: Briefcase,
+      url: "/dashboard/suitcases",
+    },
+    ...(isAdmin ? [
       {
-        title: "Categorias",
-        href: "/dashboard/categories",
-        icon: FolderTree,
+        title: "Tipos de Banho",
+        icon: Droplet,
+        url: "/dashboard/plating-types",
       },
       {
         title: "Fornecedores",
-        href: "/dashboard/suppliers",
-        icon: Truck,
+        icon: Building2,
+        url: "/dashboard/suppliers",
       },
       {
-        title: "Banhos",
-        href: "/dashboard/plating-types",
-        icon: Droplets,
-      },
-      {
-        title: "Maletas",
-        href: "/dashboard/suitcases",
-        icon: Briefcase,
-      },
-      {
-        title: "Etiquetas",
-        href: "/dashboard/inventory/labels",
-        icon: Tag,
-      },
-      {
-        title: "Etiquetas Customizadas",
-        href: "/dashboard/inventory/etiquetas-custom",
-        icon: Printer,
-      },
-      {
-        title: "Relatórios",
-        href: "/dashboard/inventory-reports",
-        icon: BarChart,
-      },
-    ],
-  },
-  {
-    title: "Usuários",
-    href: "/dashboard/users",
-    icon: Users,
-    submenu: [],
-  },
-  {
-    title: "Configurações",
-    href: "/dashboard/settings",
-    icon: Settings,
-    submenu: [],
-  },
-];
+        title: "Configurações",
+        icon: Settings,
+        url: "/dashboard/settings",
+      }
+    ] : []),
+  ];
 
-export function DashboardSidebar() {
   return (
-    <div className="flex flex-col w-64 border-r bg-secondary">
-      <div className="flex-1 px-4 py-6">
-        <nav className="flex flex-col space-y-1">
-          {menuItems.map((item) => (
-            <div key={item.title}>
-              <NavLink
-                to={item.href}
-                className={({ isActive }) =>
-                  `flex items-center space-x-2 rounded-md p-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground ${
-                    isActive ? "bg-accent text-accent-foreground" : ""
-                  }`
-                }
-              >
-                <item.icon className="h-4 w-4" />
-                <span>{item.title}</span>
-              </NavLink>
-              {item.submenu.length > 0 && (
-                <div className="ml-4 flex flex-col space-y-1">
-                  {item.submenu.map((subItem) => (
-                    <NavLink
-                      key={subItem.title}
-                      to={subItem.href}
-                      className={({ isActive }) =>
-                        `flex items-center space-x-2 rounded-md p-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground ${
-                          isActive ? "bg-accent text-accent-foreground" : ""
-                        }`
-                      }
+    <Sidebar className="bg-white/80 backdrop-blur-lg border-r border-gray-200">
+      <SidebarContent>
+        <div className="p-4">
+          <h1 className={`text-xl md:text-2xl font-semibold text-gold transition-all ${isMobile ? 'text-center' : ''}`}>
+            {isMobile ? "DM" : "Dália Manager"}
+          </h1>
+        </div>
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {menuItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild>
+                    <a
+                      href={item.url}
+                      className="flex items-center gap-3 px-3 py-2 text-gray-700 hover:bg-gold/10 rounded-md transition-colors"
                     >
-                      <subItem.icon className="h-4 w-4" />
-                      <span>{subItem.title}</span>
-                    </NavLink>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-        </nav>
-      </div>
-    </div>
+                      <item.icon className="h-5 w-5 flex-shrink-0" />
+                      <span className="whitespace-nowrap overflow-hidden text-ellipsis">
+                        {item.title}
+                      </span>
+                    </a>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+              <SidebarMenuItem>
+                <SidebarMenuButton onClick={handleLogout}>
+                  <div className="flex items-center gap-3 px-3 py-2 text-red-600 hover:bg-red-50 rounded-md transition-colors cursor-pointer">
+                    <LogOut className="h-5 w-5 flex-shrink-0" />
+                    <span className="whitespace-nowrap overflow-hidden text-ellipsis">Sair</span>
+                  </div>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+    </Sidebar>
   );
 }

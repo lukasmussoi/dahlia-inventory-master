@@ -24,7 +24,7 @@ export class AuthController {
   // Função para buscar perfil do usuário com suas permissões
   static async getUserProfileWithRoles() {
     try {
-      const data = await AuthModel.getUserProfileWithRoles();
+      const data = await AuthModel.getCurrentUserProfile();
       return data;
     } catch (error) {
       console.error('Erro ao buscar perfil do usuário:', error);

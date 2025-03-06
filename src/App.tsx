@@ -9,17 +9,8 @@ import Dashboard from "./routes/dashboard";
 import NotFound from "./pages/NotFound";
 import Inventory from "./routes/inventory";
 import InventoryLabelsRoute from "./routes/inventory-labels";
-import EtiquetasCustomRoute from "./routes/etiquetas-custom";
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 1,
-      refetchOnWindowFocus: false,
-      staleTime: 5 * 60 * 1000, // 5 minutos
-    },
-  },
-});
+const queryClient = new QueryClient();
 
 const App = () => (
   <BrowserRouter>
@@ -32,7 +23,6 @@ const App = () => (
           <Route path="/dashboard/*" element={<Dashboard />}>
             <Route path="inventory" element={<Inventory />} />
             <Route path="inventory/labels" element={<InventoryLabelsRoute />} />
-            <Route path="inventory/etiquetas-custom" element={<EtiquetasCustomRoute />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

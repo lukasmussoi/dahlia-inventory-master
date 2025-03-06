@@ -12,7 +12,6 @@ import {
   Droplet,
   LineChart,
   Tag,
-  Printer,
 } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
@@ -64,11 +63,6 @@ export function TopNavbar({ isAdmin }: TopNavbarProps) {
           title: "Etiquetas",
           url: "/dashboard/inventory/labels",
           icon: Tag,
-        },
-        {
-          title: "Etiquetas Customizadas",
-          url: "/dashboard/inventory/etiquetas-custom",
-          icon: Printer,
         },
         {
           title: "Relatórios",
