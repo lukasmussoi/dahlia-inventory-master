@@ -1,5 +1,5 @@
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { EtiquetasCustom } from "@/components/etiquetas/EtiquetasCustom";
 import { AuthController } from "@/controllers/authController";
@@ -9,6 +9,7 @@ import { toast } from "sonner";
 
 export default function EtiquetasCustomRoute() {
   const navigate = useNavigate();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   // Verificar autenticação ao carregar a página
   useEffect(() => {
@@ -16,11 +17,13 @@ export default function EtiquetasCustomRoute() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
+          console.log("Sessão não encontrada, redirecionando para login");
           toast.error("Você precisa estar autenticado para acessar esta página");
           navigate('/');
           return;
         }
-        console.log("Usuário autenticado:", session.user);
+        console.log("Usuário autenticado:", session.user.id);
+        setIsAuthenticated(true);
       } catch (error) {
         console.error("Erro ao verificar autenticação:", error);
         toast.error("Erro ao verificar autenticação");
@@ -47,10 +50,11 @@ export default function EtiquetasCustomRoute() {
   const { data: userProfile, isLoading: isLoadingProfile } = useQuery({
     queryKey: ['user-profile'],
     queryFn: () => AuthController.getUserProfileWithRoles(),
+    enabled: isAuthenticated, // Só busca o perfil se estiver autenticado
   });
 
   // Se estiver carregando, mostrar loading
-  if (isLoadingProfile) {
+  if (isLoadingProfile || !isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-gold"></div>

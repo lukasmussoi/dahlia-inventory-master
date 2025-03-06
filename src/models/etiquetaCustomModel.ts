@@ -45,91 +45,123 @@ export class EtiquetaCustomModel {
   // Buscar todos os modelos de etiquetas
   static async getAllModelos(): Promise<ModeloEtiqueta[]> {
     console.log('Buscando modelos de etiquetas...');
-    const { data, error } = await supabase
-      .from('etiquetas_custom')
-      .select('*')
-      .order('descricao');
+    
+    try {
+      const { data, error } = await supabase
+        .from('etiquetas_custom')
+        .select('*')
+        .order('descricao');
 
-    if (error) {
-      console.error('Erro ao buscar modelos de etiquetas:', error);
+      if (error) {
+        console.error('Erro ao buscar modelos de etiquetas:', error);
+        throw error;
+      }
+      
+      console.log('Modelos de etiquetas encontrados:', data?.length || 0);
+      
+      // Transformar os dados para o formato esperado no frontend
+      const modelosFormatados = data.map(item => this.formatarModelo(item));
+      return modelosFormatados || [];
+    } catch (error) {
+      console.error('Exceção ao buscar modelos de etiquetas:', error);
       throw error;
     }
-    
-    // Transformar os dados para o formato esperado no frontend
-    const modelosFormatados = data.map(item => this.formatarModelo(item));
-    return modelosFormatados || [];
   }
 
   // Buscar um modelo específico
   static async getModeloById(id: string): Promise<ModeloEtiqueta | null> {
     console.log('Buscando modelo de etiqueta por ID:', id);
-    const { data, error } = await supabase
-      .from('etiquetas_custom')
-      .select('*')
-      .eq('id', id)
-      .single();
+    
+    try {
+      const { data, error } = await supabase
+        .from('etiquetas_custom')
+        .select('*')
+        .eq('id', id)
+        .single();
 
-    if (error) {
-      console.error('Erro ao buscar modelo de etiqueta:', error);
+      if (error) {
+        console.error('Erro ao buscar modelo de etiqueta:', error);
+        throw error;
+      }
+      
+      return data ? this.formatarModelo(data) : null;
+    } catch (error) {
+      console.error('Exceção ao buscar modelo por ID:', error);
       throw error;
     }
-    
-    return data ? this.formatarModelo(data) : null;
   }
 
   // Criar novo modelo de etiqueta
   static async createModelo(modelo: Omit<ModeloEtiqueta, 'id' | 'criado_em' | 'atualizado_em'>): Promise<ModeloEtiqueta> {
     console.log('Criando novo modelo de etiqueta:', modelo);
 
-    // Transformar o modelo para o formato do banco de dados
-    const modeloBD = this.formatarModeloBD(modelo);
+    try {
+      // Transformar o modelo para o formato do banco de dados
+      const modeloBD = this.formatarModeloBD(modelo);
 
-    const { data, error } = await supabase
-      .from('etiquetas_custom')
-      .insert(modeloBD)
-      .select()
-      .single();
+      const { data, error } = await supabase
+        .from('etiquetas_custom')
+        .insert(modeloBD)
+        .select()
+        .single();
 
-    if (error) {
-      console.error('Erro ao criar modelo de etiqueta:', error);
+      if (error) {
+        console.error('Erro ao criar modelo de etiqueta:', error);
+        throw error;
+      }
+      
+      return this.formatarModelo(data);
+    } catch (error) {
+      console.error('Exceção ao criar modelo:', error);
       throw error;
     }
-    
-    return this.formatarModelo(data);
   }
 
   // Atualizar modelo de etiqueta existente
   static async updateModelo(id: string, modelo: Partial<ModeloEtiqueta>): Promise<ModeloEtiqueta> {
     console.log('Atualizando modelo de etiqueta:', id, modelo);
 
-    // Transformar o modelo para o formato do banco de dados
-    const modeloBD = this.formatarModeloBD(modelo);
+    try {
+      // Transformar o modelo para o formato do banco de dados
+      const modeloBD = this.formatarModeloBD(modelo);
 
-    const { data, error } = await supabase
-      .from('etiquetas_custom')
-      .update(modeloBD)
-      .eq('id', id)
-      .select()
-      .single();
+      const { data, error } = await supabase
+        .from('etiquetas_custom')
+        .update(modeloBD)
+        .eq('id', id)
+        .select()
+        .single();
 
-    if (error) {
-      console.error('Erro ao atualizar modelo de etiqueta:', error);
+      if (error) {
+        console.error('Erro ao atualizar modelo de etiqueta:', error);
+        throw error;
+      }
+      
+      return this.formatarModelo(data);
+    } catch (error) {
+      console.error('Exceção ao atualizar modelo:', error);
       throw error;
     }
-    
-    return this.formatarModelo(data);
   }
 
   // Excluir modelo de etiqueta
   static async deleteModelo(id: string): Promise<void> {
     console.log('Excluindo modelo de etiqueta:', id);
-    const { error } = await supabase
-      .from('etiquetas_custom')
-      .delete()
-      .eq('id', id);
+    
+    try {
+      const { error } = await supabase
+        .from('etiquetas_custom')
+        .delete()
+        .eq('id', id);
 
-    if (error) {
-      console.error('Erro ao excluir modelo de etiqueta:', error);
+      if (error) {
+        console.error('Erro ao excluir modelo de etiqueta:', error);
+        throw error;
+      }
+      
+      console.log('Modelo de etiqueta excluído com sucesso');
+    } catch (error) {
+      console.error('Exceção ao excluir modelo:', error);
       throw error;
     }
   }
@@ -137,18 +169,24 @@ export class EtiquetaCustomModel {
   // Clonar um modelo existente
   static async clonarModelo(id: string, novaDescricao: string): Promise<ModeloEtiqueta> {
     console.log('Clonando modelo de etiqueta:', id);
-    const modelo = await this.getModeloById(id);
     
-    if (!modelo) {
-      throw new Error('Modelo não encontrado');
+    try {
+      const modelo = await this.getModeloById(id);
+      
+      if (!modelo) {
+        throw new Error('Modelo não encontrado');
+      }
+      
+      const { id: modeloId, criado_em, atualizado_em, ...modeloParaClonar } = modelo;
+      
+      return this.createModelo({
+        ...modeloParaClonar,
+        descricao: novaDescricao || `Cópia de ${modelo.descricao}`
+      });
+    } catch (error) {
+      console.error('Exceção ao clonar modelo:', error);
+      throw error;
     }
-    
-    const { id: modeloId, criado_em, atualizado_em, ...modeloParaClonar } = modelo;
-    
-    return this.createModelo({
-      ...modeloParaClonar,
-      descricao: novaDescricao || `Cópia de ${modelo.descricao}`
-    });
   }
 
   // Obter campos disponíveis para um tipo de etiqueta

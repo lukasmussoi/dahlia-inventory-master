@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export interface UserRole {
@@ -13,7 +12,7 @@ export interface UserWithRoles {
   full_name: string;
   status: 'active' | 'inactive' | 'suspended';
   email?: string;
-  roles: string[]; // Mudança aqui: usar string[] ao invés de UserRole[]
+  roles: string[]; // Usando string[] ao invés de UserRole[]
   created_at?: string;
   updated_at?: string;
 }
@@ -22,18 +21,46 @@ export interface CreateUserData {
   email: string;
   password: string;
   fullName: string;
-  roles: string[]; // Mudança aqui: usar string[] ao invés de UserRole[]
+  roles: string[]; // Usando string[] ao invés de UserRole[]
 }
 
 export class UserRoleModel {
   // Verificar se um usuário é admin
   static async isUserAdmin(userId: string): Promise<boolean> {
     try {
-      const { data, error } = await supabase
-        .rpc('check_is_admin', { user_id: userId });
+      console.log("Verificando se usuário é admin:", userId);
       
-      if (error) throw error;
-      return !!data; // Converter para boolean
+      // Primeiro tenta a função RPC
+      try {
+        const { data, error } = await supabase
+          .rpc('check_is_admin', { user_id: userId });
+        
+        if (error) {
+          console.error('Erro ao verificar via RPC se o usuário é admin:', error);
+          // Continua para tentar pelo método alternativo
+        } else {
+          console.log("Resultado da verificação via RPC:", data);
+          return !!data; // Converter para boolean
+        }
+      } catch (rpcError) {
+        console.error('Exceção ao verificar via RPC se o usuário é admin:', rpcError);
+        // Continua para tentar pelo método alternativo
+      }
+      
+      // Método alternativo: consulta direta à tabela user_roles
+      const { data: roles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('user_role')
+        .eq('user_id', userId);
+        
+      if (rolesError) {
+        console.error('Erro ao consultar papéis do usuário:', rolesError);
+        return false;
+      }
+      
+      const isAdmin = roles?.some(role => role.user_role === 'admin') || false;
+      console.log("Resultado da verificação via consulta direta:", isAdmin);
+      return isAdmin;
     } catch (error) {
       console.error('Erro ao verificar se o usuário é admin:', error);
       return false;
@@ -42,13 +69,22 @@ export class UserRoleModel {
 
   // Buscar todos os papéis de um usuário
   static async getUserRoles(userId: string): Promise<UserRole[]> {
-    const { data, error } = await supabase
-      .from('user_roles')
-      .select('*')
-      .eq('user_id', userId);
-    
-    if (error) throw error;
-    return data || [];
+    try {
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('*')
+        .eq('user_id', userId);
+      
+      if (error) {
+        console.error('Erro ao buscar papéis do usuário:', error);
+        throw error;
+      }
+      
+      return data || [];
+    } catch (error) {
+      console.error('Exceção ao buscar papéis do usuário:', error);
+      return [];
+    }
   }
 
   // Adicionar um papel a um usuário
@@ -188,10 +224,20 @@ export class UserRoleModel {
 
   // Método auxiliar: verificar se o usuário atual tem permissão de admin
   static async checkIsUserAdmin(): Promise<boolean> {
-    const { data: { user }, error } = await supabase.auth.getUser();
-    if (error || !user) return false;
-    
-    // Verificar se o usuário é administrador
-    return await this.isUserAdmin(user.id);
+    try {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (error || !user) {
+        console.log("Usuário não autenticado ou erro ao obter usuário");
+        return false;
+      }
+      
+      // Verificar se o usuário é administrador
+      const isAdmin = await this.isUserAdmin(user.id);
+      console.log("Verificação de admin atual:", isAdmin);
+      return isAdmin;
+    } catch (error) {
+      console.error('Exceção ao verificar se usuário atual é admin:', error);
+      return false;
+    }
   }
 }

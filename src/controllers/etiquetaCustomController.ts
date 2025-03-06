@@ -7,12 +7,14 @@ export class EtiquetaCustomController {
   // Listar todos os modelos de etiquetas
   static async listarModelos() {
     try {
+      console.log("Iniciando carregamento de modelos de etiquetas...");
       const modelos = await EtiquetaCustomModel.getAllModelos();
+      console.log("Modelos carregados com sucesso:", modelos.length);
       return modelos;
     } catch (error) {
       console.error('Erro ao listar modelos de etiquetas:', error);
       toast.error('Erro ao carregar modelos de etiquetas');
-      throw error;
+      return []; // Retornar array vazio para evitar erros no componente
     }
   }
 
@@ -38,6 +40,8 @@ export class EtiquetaCustomController {
         throw new Error('Usuário não autenticado');
       }
 
+      console.log("Salvando modelo com usuário:", user.id);
+      
       const novoModelo = await EtiquetaCustomModel.createModelo({
         ...modelo,
         criado_por: user.id
