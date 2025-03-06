@@ -51,6 +51,8 @@ export default function EtiquetasCustomRoute() {
     queryKey: ['user-profile'],
     queryFn: () => AuthController.getUserProfileWithRoles(),
     enabled: isAuthenticated, // Só busca o perfil se estiver autenticado
+    staleTime: 60 * 1000, // 1 minuto
+    retry: 1,
   });
 
   // Se estiver carregando, mostrar loading
@@ -63,6 +65,10 @@ export default function EtiquetasCustomRoute() {
   }
 
   console.log("Perfil do usuário carregado:", userProfile);
+
+  // Verificar se o usuário tem permissão para acessar a página
+  const hasAdminRole = userProfile?.roles?.includes('admin');
+  console.log("Usuário é admin:", hasAdminRole);
 
   return (
     <div className="h-full min-h-screen bg-background">

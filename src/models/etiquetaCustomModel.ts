@@ -47,6 +47,15 @@ export class EtiquetaCustomModel {
     console.log('Buscando modelos de etiquetas...');
     
     try {
+      // Verificar se o usuário está autenticado
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.error('Usuário não autenticado');
+        return [];
+      }
+      
+      console.log('Usuário autenticado, ID:', session.user.id);
+      
       const { data, error } = await supabase
         .from('etiquetas_custom')
         .select('*')
@@ -58,6 +67,7 @@ export class EtiquetaCustomModel {
       }
       
       console.log('Modelos de etiquetas encontrados:', data?.length || 0);
+      console.log('Dados brutos:', data);
       
       // Transformar os dados para o formato esperado no frontend
       const modelosFormatados = data.map(item => this.formatarModelo(item));
@@ -77,7 +87,7 @@ export class EtiquetaCustomModel {
         .from('etiquetas_custom')
         .select('*')
         .eq('id', id)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Erro ao buscar modelo de etiqueta:', error);
@@ -103,11 +113,15 @@ export class EtiquetaCustomModel {
         .from('etiquetas_custom')
         .insert(modeloBD)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Erro ao criar modelo de etiqueta:', error);
         throw error;
+      }
+      
+      if (!data) {
+        throw new Error('Não foi possível criar o modelo de etiqueta');
       }
       
       return this.formatarModelo(data);
@@ -130,11 +144,15 @@ export class EtiquetaCustomModel {
         .update(modeloBD)
         .eq('id', id)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Erro ao atualizar modelo de etiqueta:', error);
         throw error;
+      }
+      
+      if (!data) {
+        throw new Error('Não foi possível atualizar o modelo de etiqueta');
       }
       
       return this.formatarModelo(data);
