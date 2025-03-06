@@ -54,7 +54,7 @@ const Dashboard = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <div className="min-h-screen bg-gradient-to-br from-pearl to-pearl-dark">
-        <TopNavbar isAdmin={userProfile?.isAdmin} />
+        <TopNavbar isAdmin={userProfile?.isAdmin || false} />
         <div className="pt-16">
           <Routes>
             <Route index element={<DashboardContent />} />

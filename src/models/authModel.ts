@@ -8,6 +8,7 @@ export interface UserProfile {
   full_name: string;
   status?: string;
   roles?: string[];
+  isAdmin?: boolean;
 }
 
 export class AuthModel {
@@ -98,13 +99,17 @@ export class AuthModel {
       console.log('Perfil do usuário:', profile);
       console.log('Funções do usuário:', roles);
 
+      // Verificar se o usuário é administrador
+      const isAdmin = await this.isUserAdmin(user.id);
+
       // Retornar perfil completo
       return {
         id: profile.id,
         email: user.email,
         full_name: profile.full_name,
         status: profile.status,
-        roles: roles?.map(r => r.user_role) || []
+        roles: roles?.map(r => r.user_role) || [],
+        isAdmin
       };
     } catch (error) {
       console.error('Erro ao obter perfil do usuário com funções:', error);

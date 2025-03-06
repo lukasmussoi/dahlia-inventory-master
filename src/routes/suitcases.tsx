@@ -27,7 +27,10 @@ const Suitcases = () => {
 
   return (
     <div className="min-h-screen w-full bg-pearl pt-20">
-      <SuitcasesContent isAdmin={userProfile?.isAdmin} userProfile={userProfile?.profile} />
+      <SuitcasesContent 
+        isAdmin={userProfile?.isAdmin || false} 
+        userProfile={userProfile} 
+      />
     </div>
   );
 };
