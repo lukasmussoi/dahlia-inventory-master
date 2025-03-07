@@ -21,11 +21,26 @@ import {
 // Fator de escala para visualização
 const SCALE_FACTOR = 3;
 
+interface CampoEtiqueta {
+  type: string;
+  text?: string;
+  left: number;
+  top: number;
+  width: number;
+  height?: number;
+  fontSize?: number;
+  fontFamily?: string;
+  fontWeight?: string;
+  fill?: string;
+  textAlign?: string;
+  barcodeType?: string;
+}
+
 interface LabelCanvasProps {
   width: number;
   height: number;
-  campos: any[];
-  onUpdate: (campos: any[]) => void;
+  campos: CampoEtiqueta[];
+  onUpdate: (campos: CampoEtiqueta[]) => void;
 }
 
 export function LabelCanvas({ width, height, campos, onUpdate }: LabelCanvasProps) {
@@ -66,11 +81,11 @@ export function LabelCanvas({ width, height, campos, onUpdate }: LabelCanvasProp
     fabricCanvas.add(border);
 
     // Configurar manipulação de seleção
-    fabricCanvas.on("selection:created", (e) => {
+    fabricCanvas.on("selection:created", (e: any) => {
       setSelectedElement(e.selected?.[0] || null);
     });
 
-    fabricCanvas.on("selection:updated", (e) => {
+    fabricCanvas.on("selection:updated", (e: any) => {
       setSelectedElement(e.selected?.[0] || null);
     });
 
@@ -98,7 +113,7 @@ export function LabelCanvas({ width, height, campos, onUpdate }: LabelCanvasProp
 
     // Carregar objetos salvos
     try {
-      campos.forEach((campo: any) => {
+      campos.forEach((campo) => {
         if (campo.type === "text") {
           const text = new fabric.Textbox(campo.text || "", {
             left: (campo.left || 10) * SCALE_FACTOR,
@@ -206,7 +221,7 @@ export function LabelCanvas({ width, height, campos, onUpdate }: LabelCanvasProp
         }
         
         return null;
-      }).filter(Boolean);
+      }).filter(Boolean) as CampoEtiqueta[];
 
       onUpdate(updatedCampos);
     };

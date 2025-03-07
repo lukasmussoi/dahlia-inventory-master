@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -20,6 +19,22 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LabelCanvas } from "./LabelCanvas";
+import { Json } from "@/integrations/supabase/types";
+
+interface CampoEtiqueta {
+  type: string;
+  text?: string;
+  left: number;
+  top: number;
+  width: number;
+  height?: number;
+  fontSize?: number;
+  fontFamily?: string;
+  fontWeight?: string;
+  fill?: string;
+  textAlign?: string;
+  barcodeType?: string;
+}
 
 interface CustomLabelEditorProps {
   isOpen: boolean;
@@ -52,7 +67,6 @@ export function CustomLabelEditor({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Inicializar valores do formulário com base na etiqueta selecionada
   useEffect(() => {
     if (label) {
       setFormValues({
@@ -82,11 +96,21 @@ export function CustomLabelEditor({
     }
   };
 
-  const handleCanvasUpdate = (campos: any) => {
+  const handleCanvasUpdate = (campos: CampoEtiqueta[]) => {
     setFormValues((prev) => ({
       ...prev,
-      campos,
+      campos: campos as unknown as Json,
     }));
+  };
+
+  const getLabelCampos = (): CampoEtiqueta[] => {
+    if (!formValues.campos) return [];
+    
+    if (Array.isArray(formValues.campos)) {
+      return formValues.campos as unknown as CampoEtiqueta[];
+    }
+    
+    return [];
   };
 
   return (
@@ -342,7 +366,7 @@ export function CustomLabelEditor({
             <LabelCanvas
               width={formValues.largura || 60}
               height={formValues.altura || 30}
-              campos={formValues.campos || []}
+              campos={getLabelCampos()}
               onUpdate={handleCanvasUpdate}
             />
           </TabsContent>

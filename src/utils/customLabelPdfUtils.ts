@@ -2,6 +2,7 @@
 import { jsPDF } from "jspdf";
 import { CustomLabel } from "@/models/labelModel";
 import { generateBarcode } from "./barcodeUtils";
+import { Json } from "@/integrations/supabase/types";
 
 // Interface para os campos de etiqueta
 interface CampoEtiqueta {
@@ -17,6 +18,34 @@ interface CampoEtiqueta {
   fill?: string;
   textAlign?: string;
   barcodeType?: string;
+}
+
+/**
+ * Converte Json para array de CampoEtiqueta
+ * @param json Objeto JSON dos campos
+ * @returns Array de CampoEtiqueta
+ */
+function convertJsonToCamposArray(json: Json): CampoEtiqueta[] {
+  if (!json) return [];
+  
+  if (Array.isArray(json)) {
+    return json.map(item => ({
+      type: typeof item.type === 'string' ? item.type : 'text',
+      text: typeof item.text === 'string' ? item.text : '',
+      left: typeof item.left === 'number' ? item.left : 0,
+      top: typeof item.top === 'number' ? item.top : 0,
+      width: typeof item.width === 'number' ? item.width : 100,
+      height: typeof item.height === 'number' ? item.height : 30,
+      fontSize: typeof item.fontSize === 'number' ? item.fontSize : 12,
+      fontFamily: typeof item.fontFamily === 'string' ? item.fontFamily : 'helvetica',
+      fontWeight: typeof item.fontWeight === 'string' ? item.fontWeight : 'normal',
+      fill: typeof item.fill === 'string' ? item.fill : '#000000',
+      textAlign: typeof item.textAlign === 'string' ? item.textAlign : 'left',
+      barcodeType: typeof item.barcodeType === 'string' ? item.barcodeType : 'CODE128'
+    } as CampoEtiqueta));
+  }
+  
+  return [];
 }
 
 /**
@@ -64,6 +93,9 @@ export const generatePdfFromCustomLabel = async (label: CustomLabel): Promise<st
     price: 99.9
   };
   
+  // Converter campos JSON para array de CampoEtiqueta
+  const campos = convertJsonToCamposArray(label.campos);
+  
   // Desenhar grade de etiquetas
   for (let linha = 0; linha < etiquetasVertical; linha++) {
     for (let coluna = 0; coluna < etiquetasHorizontal; coluna++) {
@@ -75,8 +107,8 @@ export const generatePdfFromCustomLabel = async (label: CustomLabel): Promise<st
       doc.rect(x, y, label.largura, label.altura);
       
       // Adicionar elementos conforme campos da etiqueta
-      if (label.campos && Array.isArray(label.campos)) {
-        for (const campo of label.campos as CampoEtiqueta[]) {
+      if (campos.length > 0) {
+        for (const campo of campos) {
           if (campo.type === "text") {
             doc.setFont(campo.fontFamily || "helvetica", campo.fontWeight || "normal");
             doc.setFontSize(campo.fontSize || 10);
@@ -184,9 +216,12 @@ export const generatePpla = (label: CustomLabel, item: any): string => {
   command += "D8\n"; // Define densidade de impressão
   command += "ZT\n"; // Limpa buffer
   
+  // Converter campos JSON para array de CampoEtiqueta
+  const campos = convertJsonToCamposArray(label.campos);
+  
   // Processar campos
-  if (label.campos && Array.isArray(label.campos)) {
-    for (const campo of label.campos as CampoEtiqueta[]) {
+  if (campos.length > 0) {
+    for (const campo of campos) {
       if (campo.type === "text") {
         // Texto comum
         command += `A${Math.round(campo.left * 8)},${Math.round(campo.top * 8)},0,3,1,1,N,"${

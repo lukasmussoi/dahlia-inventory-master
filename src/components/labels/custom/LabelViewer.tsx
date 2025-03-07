@@ -10,6 +10,17 @@ import { generatePdfFromCustomLabel, generatePpla } from "@/utils/customLabelPdf
 import { CustomLabel } from "@/models/labelModel";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
+import { Json } from "@/integrations/supabase/types";
+
+// Interface para campos de etiqueta para checagem de tipos
+interface CampoEtiqueta {
+  type: string;
+  left: number;
+  top: number;
+  width: number;
+  height?: number;
+  text?: string;
+}
 
 export function LabelViewer() {
   const { id } = useParams<{ id: string }>();
@@ -103,6 +114,17 @@ export function LabelViewer() {
     }
   };
 
+  // Função auxiliar para obter a contagem de elementos
+  const getElementsCount = (): number => {
+    if (!label || !label.campos) return 0;
+    
+    if (Array.isArray(label.campos)) {
+      return label.campos.length;
+    }
+    
+    return 0;
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -181,7 +203,7 @@ export function LabelViewer() {
             <div>
               <h3 className="text-sm font-medium mb-1">Elementos</h3>
               <p className="text-sm text-muted-foreground">
-                Total de elementos: {label.campos?.length || 0}<br />
+                Total de elementos: {getElementsCount()}<br />
                 Tipo de etiqueta: {label.tipo || "produto"}<br />
                 Data de criação: {new Date(label.criado_em).toLocaleString('pt-BR')}
               </p>
