@@ -1,5 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
+import { Json } from "@/integrations/supabase/types";
 
 export interface LabelHistory {
   id: string;
@@ -24,7 +25,7 @@ export interface CustomLabel {
   criado_em: string;
   atualizado_em: string;
   criado_por: string;
-  campos: any[];
+  campos: Json; // Corrigido para tipo Json
   margem_direita: number;
   margem_esquerda: number;
   margem_inferior: number;
@@ -131,7 +132,7 @@ export class LabelModel {
       throw error;
     }
     console.log('Etiquetas customizadas encontradas:', data);
-    return data;
+    return data as CustomLabel[];
   }
 
   // Buscar uma etiqueta customizada específica
@@ -148,7 +149,7 @@ export class LabelModel {
       throw error;
     }
     console.log('Etiqueta customizada encontrada:', data);
-    return data;
+    return data as CustomLabel;
   }
 
   // Criar uma nova etiqueta customizada
