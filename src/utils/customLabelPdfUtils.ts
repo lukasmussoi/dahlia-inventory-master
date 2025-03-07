@@ -29,20 +29,34 @@ function convertJsonToCamposArray(json: Json): CampoEtiqueta[] {
   if (!json) return [];
   
   if (Array.isArray(json)) {
-    return json.map(item => ({
-      type: typeof item.type === 'string' ? item.type : 'text',
-      text: typeof item.text === 'string' ? item.text : '',
-      left: typeof item.left === 'number' ? item.left : 0,
-      top: typeof item.top === 'number' ? item.top : 0,
-      width: typeof item.width === 'number' ? item.width : 100,
-      height: typeof item.height === 'number' ? item.height : 30,
-      fontSize: typeof item.fontSize === 'number' ? item.fontSize : 12,
-      fontFamily: typeof item.fontFamily === 'string' ? item.fontFamily : 'helvetica',
-      fontWeight: typeof item.fontWeight === 'string' ? item.fontWeight : 'normal',
-      fill: typeof item.fill === 'string' ? item.fill : '#000000',
-      textAlign: typeof item.textAlign === 'string' ? item.textAlign : 'left',
-      barcodeType: typeof item.barcodeType === 'string' ? item.barcodeType : 'CODE128'
-    } as CampoEtiqueta));
+    return json.map(item => {
+      // Verificar se o item é um objeto antes de acessar as propriedades
+      if (typeof item === 'object' && item !== null) {
+        return {
+          type: typeof (item as any).type === 'string' ? (item as any).type : 'text',
+          text: typeof (item as any).text === 'string' ? (item as any).text : '',
+          left: typeof (item as any).left === 'number' ? (item as any).left : 0,
+          top: typeof (item as any).top === 'number' ? (item as any).top : 0,
+          width: typeof (item as any).width === 'number' ? (item as any).width : 100,
+          height: typeof (item as any).height === 'number' ? (item as any).height : 30,
+          fontSize: typeof (item as any).fontSize === 'number' ? (item as any).fontSize : 12,
+          fontFamily: typeof (item as any).fontFamily === 'string' ? (item as any).fontFamily : 'helvetica',
+          fontWeight: typeof (item as any).fontWeight === 'string' ? (item as any).fontWeight : 'normal',
+          fill: typeof (item as any).fill === 'string' ? (item as any).fill : '#000000',
+          textAlign: typeof (item as any).textAlign === 'string' ? (item as any).textAlign : 'left',
+          barcodeType: typeof (item as any).barcodeType === 'string' ? (item as any).barcodeType : 'CODE128'
+        } as CampoEtiqueta;
+      }
+      // Retornar um objeto padrão para itens inválidos
+      return {
+        type: 'text',
+        text: '',
+        left: 0,
+        top: 0,
+        width: 100,
+        height: 30
+      } as CampoEtiqueta;
+    });
   }
   
   return [];

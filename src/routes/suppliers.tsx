@@ -1,6 +1,5 @@
 
-import { useEffect, useState } from "react";
-import { AuthController } from "@/controllers/authController";
+import { useState, useEffect } from "react";
 import { SupplierModel } from "@/models/supplierModel";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -23,6 +22,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Supplier {
   id: string;
@@ -44,11 +44,20 @@ const Suppliers = () => {
     contactInfo: "",
   });
 
+  // Verificar autenticação ao carregar a página
   useEffect(() => {
-    AuthController.checkAuth();
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("Você precisa estar autenticado para acessar esta página");
+        // Não estamos redirecionando para manter a compatibilidade
+      }
+    };
+
+    checkAuth();
   }, []);
 
-  const { data: suppliers = [], refetch } = useQuery({
+  const { data: suppliers = [], refetch, isLoading } = useQuery({
     queryKey: ['suppliers'],
     queryFn: () => SupplierModel.getSuppliers(),
   });
@@ -62,14 +71,17 @@ const Suppliers = () => {
           formData.name,
           formData.contactInfo
         );
+        toast.success("Fornecedor atualizado com sucesso!");
       } else {
         await SupplierModel.createSupplier(formData.name, formData.contactInfo);
+        toast.success("Fornecedor criado com sucesso!");
       }
       setIsDialogOpen(false);
       refetch();
       resetForm();
     } catch (error) {
       console.error('Erro ao salvar fornecedor:', error);
+      toast.error("Erro ao salvar fornecedor");
     }
   };
 
@@ -86,9 +98,11 @@ const Suppliers = () => {
     if (window.confirm('Tem certeza que deseja excluir este fornecedor?')) {
       try {
         await SupplierModel.deleteSupplier(id);
+        toast.success("Fornecedor excluído com sucesso!");
         refetch();
       } catch (error) {
         console.error('Erro ao deletar fornecedor:', error);
+        toast.error("Erro ao deletar fornecedor");
       }
     }
   };
@@ -102,6 +116,14 @@ const Suppliers = () => {
     setIsDialogOpen(false);
     resetForm();
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">
@@ -175,34 +197,35 @@ const Suppliers = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {suppliers.map((supplier: Supplier) => (
-              <TableRow key={supplier.id}>
-                <TableCell>{supplier.name}</TableCell>
-                <TableCell>{supplier.contact_info || "-"}</TableCell>
-                <TableCell>
-                  {new Date(supplier.created_at).toLocaleDateString("pt-BR")}
-                </TableCell>
-                <TableCell>
-                  <div className="flex space-x-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleEdit(supplier)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDelete(supplier.id)}
-                    >
-                      <Trash2 className="h-4 w-4 text-red-500" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-            {suppliers.length === 0 && (
+            {suppliers.length > 0 ? (
+              suppliers.map((supplier: Supplier) => (
+                <TableRow key={supplier.id}>
+                  <TableCell>{supplier.name}</TableCell>
+                  <TableCell>{supplier.contact_info || "-"}</TableCell>
+                  <TableCell>
+                    {new Date(supplier.created_at).toLocaleDateString("pt-BR")}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex space-x-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEdit(supplier)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete(supplier.id)}
+                      >
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
               <TableRow>
                 <TableCell colSpan={4} className="text-center py-4">
                   Nenhum fornecedor cadastrado
