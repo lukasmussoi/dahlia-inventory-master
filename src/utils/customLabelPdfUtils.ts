@@ -3,6 +3,22 @@ import { jsPDF } from "jspdf";
 import { CustomLabel } from "@/models/labelModel";
 import { generateBarcode } from "./barcodeUtils";
 
+// Interface para os campos de etiqueta
+interface CampoEtiqueta {
+  type: string;
+  text?: string;
+  left: number;
+  top: number;
+  width: number;
+  height?: number;
+  fontSize?: number;
+  fontFamily?: string;
+  fontWeight?: string;
+  fill?: string;
+  textAlign?: string;
+  barcodeType?: string;
+}
+
 /**
  * Gera um PDF a partir de uma etiqueta customizada
  * @param label Etiqueta customizada
@@ -60,7 +76,7 @@ export const generatePdfFromCustomLabel = async (label: CustomLabel): Promise<st
       
       // Adicionar elementos conforme campos da etiqueta
       if (label.campos && Array.isArray(label.campos)) {
-        for (const campo of label.campos) {
+        for (const campo of label.campos as CampoEtiqueta[]) {
           if (campo.type === "text") {
             doc.setFont(campo.fontFamily || "helvetica", campo.fontWeight || "normal");
             doc.setFontSize(campo.fontSize || 10);
@@ -73,9 +89,9 @@ export const generatePdfFromCustomLabel = async (label: CustomLabel): Promise<st
                               campo.textAlign === "right" ? "right" : "left";
                               
             doc.text(
-              texto, 
+              texto || "", 
               x + campo.left + (campo.width / 2), 
-              y + campo.top + (campo.fontSize / 2), 
+              y + campo.top + ((campo.fontSize || 10) / 2), 
               { 
                 align: textAlign,
                 maxWidth: campo.width 
@@ -89,7 +105,7 @@ export const generatePdfFromCustomLabel = async (label: CustomLabel): Promise<st
               
               // Ajustar as dimensões
               const barcodeWidth = campo.width;
-              const barcodeHeight = campo.height;
+              const barcodeHeight = campo.height || 20;
               
               // Adicionar imagem do código de barras
               doc.addImage(
@@ -118,7 +134,7 @@ export const generatePdfFromCustomLabel = async (label: CustomLabel): Promise<st
             doc.text(
               preco, 
               x + campo.left + (campo.width / 2), 
-              y + campo.top + (campo.fontSize / 2), 
+              y + campo.top + ((campo.fontSize || 12) / 2), 
               { 
                 align: textAlign,
                 maxWidth: campo.width 
@@ -136,7 +152,7 @@ export const generatePdfFromCustomLabel = async (label: CustomLabel): Promise<st
             doc.text(
               mockItem.sku, 
               x + campo.left + (campo.width / 2), 
-              y + campo.top + (campo.fontSize / 2), 
+              y + campo.top + ((campo.fontSize || 8) / 2), 
               { 
                 align: textAlign,
                 maxWidth: campo.width 
@@ -170,11 +186,11 @@ export const generatePpla = (label: CustomLabel, item: any): string => {
   
   // Processar campos
   if (label.campos && Array.isArray(label.campos)) {
-    for (const campo of label.campos) {
+    for (const campo of label.campos as CampoEtiqueta[]) {
       if (campo.type === "text") {
         // Texto comum
         command += `A${Math.round(campo.left * 8)},${Math.round(campo.top * 8)},0,3,1,1,N,"${
-          campo.text === "Nome do Produto" ? item.name : campo.text
+          campo.text === "Nome do Produto" ? item.name : (campo.text || "")
         }"\n`;
       }
       else if (campo.type === "barcode") {

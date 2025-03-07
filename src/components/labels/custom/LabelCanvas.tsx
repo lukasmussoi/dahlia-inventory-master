@@ -18,18 +18,15 @@ import {
   SendToBack,
 } from "lucide-react";
 
-// Adicionar fabric.js
-<lov-add-dependency>fabric@5.3.0</lov-add-dependency>
+// Fator de escala para visualização
+const SCALE_FACTOR = 3;
 
 interface LabelCanvasProps {
   width: number;
   height: number;
-  campos: any;
-  onUpdate: (campos: any) => void;
+  campos: any[];
+  onUpdate: (campos: any[]) => void;
 }
-
-// Fator de escala para visualização
-const SCALE_FACTOR = 3;
 
 export function LabelCanvas({ width, height, campos, onUpdate }: LabelCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
