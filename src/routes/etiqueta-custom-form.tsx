@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 
 export default function EtiquetaCustomFormPage() {
+  console.log("Componente EtiquetaCustomFormPage inicializado");
   const { id } = useParams();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
@@ -28,8 +29,9 @@ export default function EtiquetaCustomFormPage() {
         }
         
         console.log("Usuário autenticado:", user);
+        console.log("ID do modelo recebido:", id);
         
-        // Se tiver um ID, carregar o modelo existente
+        // Se tiver um ID, e não for 'novo', carregar o modelo existente
         if (id && id !== 'novo') {
           console.log("Carregando modelo existente com ID:", id);
           const modeloData = await EtiquetaCustomModel.getById(id);
@@ -43,7 +45,7 @@ export default function EtiquetaCustomFormPage() {
           console.log("Modelo carregado com sucesso:", modeloData);
           setModelo(modeloData);
         } else {
-          console.log("Criando novo modelo");
+          console.log("Criando novo modelo (id = novo ou nulo)");
           // Se for 'novo', não precisamos carregar nenhum modelo
           // Apenas continuar com o modelo nulo para criar um novo
         }
