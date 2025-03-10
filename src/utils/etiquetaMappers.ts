@@ -8,6 +8,8 @@ import type { Json } from "@/integrations/supabase/types";
 export function mapDatabaseToModel(item: EtiquetaCustomDB): ModeloEtiqueta {
   let campos: CampoEtiqueta[] = [];
   
+  console.log("Mapeando item do banco para modelo:", item);
+  
   // Certifica que campos seja tratado como um array de CampoEtiqueta
   if (item.campos) {
     try {
@@ -61,22 +63,24 @@ export function mapDatabaseToModel(item: EtiquetaCustomDB): ModeloEtiqueta {
     valor: campo.valor
   }));
 
+  console.log("Campos mapeados:", campos);
+
   return {
     id: item.id,
     nome: item.descricao,
     descricao: item.descricao,
-    largura: item.largura,
-    altura: item.altura,
-    formatoPagina: item.formato_pagina,
-    orientacao: item.orientacao,
-    margemSuperior: item.margem_superior,
-    margemInferior: item.margem_inferior,
-    margemEsquerda: item.margem_esquerda,
-    margemDireita: item.margem_direita,
-    espacamentoHorizontal: item.espacamento_horizontal,
-    espacamentoVertical: item.espacamento_vertical,
-    larguraPagina: item.largura_pagina,
-    alturaPagina: item.altura_pagina,
+    largura: Number(item.largura) || 80,
+    altura: Number(item.altura) || 40,
+    formatoPagina: item.formato_pagina || "A4",
+    orientacao: item.orientacao || "retrato",
+    margemSuperior: Number(item.margem_superior) || 10,
+    margemInferior: Number(item.margem_inferior) || 10,
+    margemEsquerda: Number(item.margem_esquerda) || 10,
+    margemDireita: Number(item.margem_direita) || 10,
+    espacamentoHorizontal: Number(item.espacamento_horizontal) || 0,
+    espacamentoVertical: Number(item.espacamento_vertical) || 0,
+    larguraPagina: Number(item.largura_pagina) || undefined,
+    alturaPagina: Number(item.altura_pagina) || undefined,
     campos: campos,
     usuario_id: item.criado_por,
     criado_em: item.criado_em,
@@ -88,6 +92,8 @@ export function mapDatabaseToModel(item: EtiquetaCustomDB): ModeloEtiqueta {
  * Prepara um modelo para inclusão no banco de dados
  */
 export function mapModelToDatabase(modelo: ModeloEtiqueta) {
+  console.log("Mapeando modelo para banco de dados:", modelo);
+  
   // Garante que todos os campos tenham os valores obrigatórios
   const camposValidados = modelo.campos.map(campo => ({
     tipo: campo.tipo || 'nome',
@@ -99,21 +105,23 @@ export function mapModelToDatabase(modelo: ModeloEtiqueta) {
     valor: campo.valor
   }));
 
+  console.log("Campos validados para salvar:", camposValidados);
+
   return {
     descricao: modelo.nome,
     tipo: 'padrao',
-    largura: modelo.largura,
-    altura: modelo.altura,
-    formato_pagina: modelo.formatoPagina,
-    orientacao: modelo.orientacao,
-    margem_superior: modelo.margemSuperior,
-    margem_inferior: modelo.margemInferior,
-    margem_esquerda: modelo.margemEsquerda,
-    margem_direita: modelo.margemDireita,
-    espacamento_horizontal: modelo.espacamentoHorizontal,
-    espacamento_vertical: modelo.espacamentoVertical,
-    largura_pagina: modelo.larguraPagina,
-    altura_pagina: modelo.alturaPagina,
+    largura: Number(modelo.largura) || 80,
+    altura: Number(modelo.altura) || 40,
+    formato_pagina: modelo.formatoPagina || "A4",
+    orientacao: modelo.orientacao || "retrato",
+    margem_superior: Number(modelo.margemSuperior) || 10,
+    margem_inferior: Number(modelo.margemInferior) || 10,
+    margem_esquerda: Number(modelo.margemEsquerda) || 10,
+    margem_direita: Number(modelo.margemDireita) || 10,
+    espacamento_horizontal: Number(modelo.espacamentoHorizontal) || 0,
+    espacamento_vertical: Number(modelo.espacamentoVertical) || 0,
+    largura_pagina: modelo.larguraPagina ? Number(modelo.larguraPagina) : null,
+    altura_pagina: modelo.alturaPagina ? Number(modelo.alturaPagina) : null,
     campos: camposValidados as unknown as Json
   };
 }

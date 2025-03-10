@@ -23,7 +23,15 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
       throw new Error("Item não fornecido para gerar etiqueta");
     }
     
+    // Calcular número total de cópias
     const totalCopies = multiplyByStock ? copies * (item.quantity || 1) : copies;
+    console.log("Gerando etiquetas:", { 
+      item: item.name, 
+      copies, 
+      totalCopies, 
+      multiplyByStock, 
+      selectedModeloId 
+    });
 
     // Se um modelo personalizado foi selecionado, usamos a nova implementação
     if (selectedModeloId) {
@@ -34,22 +42,66 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
         console.log("Modelo personalizado encontrado:", modeloCustom);
         console.log("Campos do modelo:", modeloCustom.campos);
         
-        // Usamos o novo gerador de etiquetas
-        return await generateEtiquetaPDF(
-          modeloCustom,
-          [item], // Passamos o item como um array
-          {
-            startRow,
-            startColumn,
-            copias: totalCopies
+        // Validar dimensões da página personalizada
+        if (modeloCustom.formatoPagina === "Personalizado") {
+          console.log("Verificando dimensões personalizadas:", {
+            larguraPagina: modeloCustom.larguraPagina,
+            alturaPagina: modeloCustom.alturaPagina
+          });
+          
+          // Se as dimensões não estiverem definidas, definir um padrão
+          if (!modeloCustom.larguraPagina || !modeloCustom.alturaPagina) {
+            console.warn("Dimensões personalizadas não definidas. Usando valores padrão.");
+            modeloCustom.larguraPagina = 210; // A4 width em mm
+            modeloCustom.alturaPagina = 297; // A4 height em mm
           }
-        );
+          
+          // Validar valores positivos
+          if (modeloCustom.larguraPagina <= 0 || modeloCustom.alturaPagina <= 0) {
+            console.error("Dimensões de página inválidas:", { 
+              largura: modeloCustom.larguraPagina, 
+              altura: modeloCustom.alturaPagina 
+            });
+            throw new Error("Dimensões de página personalizadas inválidas. Os valores devem ser maiores que zero.");
+          }
+        }
+        
+        // Validar se há campos definidos
+        if (!modeloCustom.campos || modeloCustom.campos.length === 0) {
+          console.error("Modelo sem campos definidos");
+          throw new Error("O modelo de etiqueta não possui elementos para impressão. Adicione elementos ao modelo.");
+        }
+        
+        // Usamos o gerador de etiquetas personalizadas
+        try {
+          console.log("Iniciando geração de PDF com modelo personalizado");
+          return await generateEtiquetaPDF(
+            modeloCustom,
+            [item], // Passamos o item como um array
+            {
+              startRow,
+              startColumn,
+              copias: totalCopies
+            }
+          );
+        } catch (error) {
+          console.error("Erro ao gerar PDF com modelo personalizado:", error);
+          
+          // Mensagem de erro específica
+          if (error instanceof Error) {
+            throw new Error(`Erro ao gerar etiquetas personalizadas: ${error.message}`);
+          } else {
+            throw new Error("Erro ao gerar etiquetas personalizadas. Verifique as configurações do modelo.");
+          }
+        }
       } else {
-        console.warn("Modelo personalizado não encontrado, usando configurações padrão");
+        console.warn("Modelo personalizado não encontrado, ID:", selectedModeloId);
+        throw new Error("Modelo de etiqueta não encontrado. Por favor, selecione outro modelo.");
       }
     }
 
     // Configurações padrão da etiqueta (caso não tenha modelo personalizado)
+    console.log("Usando configurações padrão para etiquetas");
     let labelWidth = 80;  // largura em mm
     let labelHeight = 8;  // altura em mm (ajustado para 8mm conforme solicitado)
     let marginLeft = 10;   // margem esquerda em mm
@@ -65,7 +117,7 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
 
     // Criar novo documento PDF com as configurações adequadas
     const doc = new jsPDF({
-      orientation: orientation as any,
+      orientation: orientation as "portrait" | "landscape",
       unit: "mm",
       format: format,
     });
@@ -178,7 +230,14 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
     return URL.createObjectURL(pdfBlob);
   } catch (error) {
     console.error("Erro ao gerar PDF:", error);
-    toast.error("Erro ao gerar etiquetas. Por favor, tente novamente.");
+    
+    // Exibir mensagem de erro mais descritiva
+    if (error instanceof Error) {
+      toast.error(`Erro ao gerar etiquetas: ${error.message}`);
+    } else {
+      toast.error("Erro ao gerar etiquetas. Por favor, verifique as configurações e tente novamente.");
+    }
+    
     throw error;
   }
 }

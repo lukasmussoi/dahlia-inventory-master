@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -159,7 +160,11 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
       onClose();
     } catch (error) {
       console.error("Erro ao gerar PDF:", error);
-      toast.error("Erro ao gerar etiquetas. Por favor, tente novamente.");
+      if (error instanceof Error) {
+        toast.error(`Erro ao gerar etiquetas: ${error.message}`);
+      } else {
+        toast.error("Erro ao gerar etiquetas. Por favor, tente novamente.");
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -311,4 +316,3 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
     </Dialog>
   );
 }
-
