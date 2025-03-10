@@ -13,32 +13,47 @@ export default function EtiquetaCustomFormPage() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [modelo, setModelo] = useState(null);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        console.log("Verificando autenticação e carregando modelo...");
         const user = await AuthController.checkAuth();
         if (!user) {
+          console.log("Usuário não autenticado");
+          toast.error("Você precisa estar autenticado para acessar esta página");
           navigate('/');
           return;
         }
         
+        console.log("Usuário autenticado:", user);
+        
         // Se tiver um ID, carregar o modelo existente
         if (id && id !== 'novo') {
+          console.log("Carregando modelo existente com ID:", id);
           const modeloData = await EtiquetaCustomModel.getById(id);
           if (!modeloData) {
+            console.log("Modelo não encontrado");
             toast.error("Modelo de etiqueta não encontrado");
             navigate('/dashboard/inventory/labels');
             return;
           }
+          
+          console.log("Modelo carregado com sucesso:", modeloData);
           setModelo(modeloData);
+        } else {
+          console.log("Criando novo modelo");
+          // Se for 'novo', não precisamos carregar nenhum modelo
+          // Apenas continuar com o modelo nulo para criar um novo
         }
         
         setIsLoading(false);
       } catch (error) {
         console.error("Erro ao verificar autenticação ou carregar modelo:", error);
+        setError("Erro ao carregar dados. Por favor, tente novamente.");
         toast.error("Erro ao carregar dados. Por favor, tente novamente.");
-        navigate('/dashboard/inventory/labels');
+        setIsLoading(false);
       }
     };
 
@@ -50,13 +65,28 @@ export default function EtiquetaCustomFormPage() {
   };
 
   const handleSuccess = () => {
-    toast.success(id ? "Modelo atualizado com sucesso!" : "Modelo criado com sucesso!");
+    toast.success(id && id !== 'novo' ? "Modelo atualizado com sucesso!" : "Modelo criado com sucesso!");
     navigate('/dashboard/inventory/labels');
   };
 
+  // Se estiver em estado de erro, mostrar mensagem
+  if (error) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
+          <p>{error}</p>
+        </div>
+        <Button variant="outline" onClick={handleGoBack} className="mt-4">
+          Voltar para Etiquetas
+        </Button>
+      </div>
+    );
+  }
+
+  // Se estiver carregando, mostrar loader
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-gold"></div>
       </div>
     );
