@@ -1,10 +1,11 @@
+
 import { Form } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DimensoesEtiquetaFields } from "./form/DimensoesEtiquetaFields";
 import { FormatoEtiquetaFields } from "./form/FormatoEtiquetaFields";
 import { MargensEtiquetaFields } from "./form/MargensEtiquetaFields";
 import { EspacamentoEtiquetaFields } from "./form/EspacamentoEtiquetaFields";
-import { ElementosEtiquetaFields } from "./form/ElementosEtiquetaFields";
 import { useEtiquetaCustomForm } from "@/hooks/useEtiquetaCustomForm";
 import type { ModeloEtiqueta } from "@/types/etiqueta";
 import { 
@@ -16,7 +17,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, WrenchIcon } from "lucide-react";
+import { AlertCircle, WrenchIcon, ArrowLeft, ArrowRight, Layout, Settings, File } from "lucide-react";
 import { EtiquetaEditor } from './editor/EtiquetaEditor';
 
 type EtiquetaCustomFormProps = {
@@ -62,63 +63,123 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
             />
           </div>
 
-          <div className="border-t pt-4">
-            <h3 className="text-lg font-medium mb-4">Editor Visual</h3>
-            <FormField
-              control={form.control}
-              name="campos"
-              render={({ field }) => (
-                <FormItem>
-                  <FormControl>
-                    <EtiquetaEditor
-                      campos={field.value}
-                      largura={form.getValues('largura')}
-                      altura={form.getValues('altura')}
-                      onCamposChange={field.onChange}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
+          <Tabs defaultValue="editor" className="w-full">
+            <TabsList className="grid grid-cols-3 mb-4">
+              <TabsTrigger value="editor" className="flex items-center gap-2">
+                <Layout className="h-4 w-4" />
+                Editor Visual
+              </TabsTrigger>
+              <TabsTrigger value="config" className="flex items-center gap-2">
+                <Settings className="h-4 w-4" />
+                Configurações da Página
+              </TabsTrigger>
+              <TabsTrigger value="preview" className="flex items-center gap-2">
+                <File className="h-4 w-4" />
+                Pré-visualização
+              </TabsTrigger>
+            </TabsList>
 
-          <DimensoesEtiquetaFields form={form} />
-          <FormatoEtiquetaFields form={form} />
-          <MargensEtiquetaFields form={form} />
-          <EspacamentoEtiquetaFields form={form} />
-          
-          {pageAreaWarning && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Problema nas dimensões</AlertTitle>
-              <AlertDescription className="flex flex-col space-y-2">
-                <span>{pageAreaWarning}</span>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={corrigirDimensoesAutomaticamente}
-                  className="w-fit"
+            <TabsContent value="editor" className="space-y-4">
+              <FormField
+                control={form.control}
+                name="campos"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <EtiquetaEditor
+                        campos={field.value}
+                        largura={form.getValues('largura')}
+                        altura={form.getValues('altura')}
+                        onCamposChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </TabsContent>
+
+            <TabsContent value="config" className="space-y-6">
+              <DimensoesEtiquetaFields form={form} />
+              <FormatoEtiquetaFields form={form} />
+              <MargensEtiquetaFields form={form} />
+              <EspacamentoEtiquetaFields form={form} />
+              
+              {pageAreaWarning && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Problema nas dimensões</AlertTitle>
+                  <AlertDescription className="flex flex-col space-y-2">
+                    <span>{pageAreaWarning}</span>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={corrigirDimensoesAutomaticamente}
+                      className="w-fit"
+                    >
+                      <WrenchIcon className="h-4 w-4 mr-2" />
+                      Corrigir automaticamente
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              )}
+            </TabsContent>
+
+            <TabsContent value="preview" className="space-y-4">
+              <div className="bg-white p-4 border rounded">
+                <h3 className="text-lg font-medium mb-4">Pré-visualização da Etiqueta</h3>
+                <div 
+                  className="border border-dashed border-gray-300 relative bg-white"
+                  style={{
+                    width: `${form.getValues('largura') * 2}px`,
+                    height: `${form.getValues('altura') * 2}px`,
+                  }}
                 >
-                  Corrigir automaticamente
-                </Button>
-              </AlertDescription>
-            </Alert>
-          )}
-          
-          <ElementosEtiquetaFields form={form} />
+                  {form.getValues('campos').map((campo, index) => (
+                    <div
+                      key={`${campo.tipo}-${index}`}
+                      className="absolute"
+                      style={{
+                        left: campo.x * 2,
+                        top: campo.y * 2,
+                        width: campo.largura * 2,
+                        height: campo.altura * 2,
+                      }}
+                    >
+                      <div className="w-full h-full flex items-center justify-center p-1">
+                        <div 
+                          className="text-center truncate w-full"
+                          style={{ fontSize: campo.tamanhoFonte * 2 }}
+                        >
+                          {campo.tipo === 'nome' ? 'Pingente Coroa Cristal' :
+                          campo.tipo === 'codigo' ? '123456789' : 
+                          'R$ 59,90'}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4 text-sm text-gray-500">
+                  Esta é uma prévia aproximada de como sua etiqueta aparecerá quando impressa.
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
         </div>
 
         <div className="flex justify-end gap-2 pt-4 sticky bottom-0 bg-background border-t mt-4">
-          <Button variant="outline" type="button" onClick={onClose}>
+          <Button variant="outline" type="button" onClick={onClose} className="flex items-center gap-2">
+            <ArrowLeft className="h-4 w-4" />
             Cancelar
           </Button>
           <Button 
             type="submit" 
             disabled={isLoading || !!pageAreaWarning}
+            className="flex items-center gap-2"
           >
             {isLoading ? "Salvando..." : (modelo?.id ? "Atualizar" : "Criar")}
+            <ArrowRight className="h-4 w-4" />
           </Button>
         </div>
       </form>

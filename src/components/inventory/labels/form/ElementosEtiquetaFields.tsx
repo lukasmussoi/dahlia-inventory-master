@@ -39,11 +39,11 @@ export function ElementosEtiquetaFields({ form }: ElementosEtiquetaFieldsProps) 
         const campoInicial = elementosIniciais[index];
         return {
           tipo: campo.tipo || campoInicial.tipo,
-          x: Number(campo.x) || campoInicial.x,
-          y: Number(campo.y) || campoInicial.y,
-          largura: Number(campo.largura) || campoInicial.largura, 
-          altura: Number(campo.altura) || campoInicial.altura,
-          tamanhoFonte: Number(campo.tamanhoFonte) || campoInicial.tamanhoFonte
+          x: Number(campo.x || campoInicial.x),
+          y: Number(campo.y || campoInicial.y),
+          largura: Number(campo.largura || campoInicial.largura), 
+          altura: Number(campo.altura || campoInicial.altura),
+          tamanhoFonte: Number(campo.tamanhoFonte || campoInicial.tamanhoFonte)
         } as CampoEtiqueta;
       });
       
