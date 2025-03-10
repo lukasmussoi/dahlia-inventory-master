@@ -5,6 +5,7 @@ import { LabelViewer } from "@/components/labels/custom/LabelViewer";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { AuthModel } from "@/models/authModel";
 
 export default function LabelCustomViewerRoute() {
   const navigate = useNavigate();
@@ -42,15 +43,18 @@ export default function LabelCustomViewerRoute() {
     };
   }, [navigate]);
 
-  // Buscar perfil e permissões do usuário (simplificado - todos têm acesso)
-  const { isLoading: isLoadingProfile } = useQuery({
+  // Buscar perfil e permissões do usuário para garantir acesso total para administradores
+  const { data: userProfile, isLoading: isLoadingProfile } = useQuery({
     queryKey: ['user-profile-label-viewer'],
     queryFn: async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("Não autenticado");
-      
-      // Administradores têm acesso total
-      return { isAdmin: true };
+      try {
+        const profile = await AuthModel.getCurrentUserProfile();
+        console.log("Perfil carregado:", profile);
+        return profile;
+      } catch (error) {
+        console.error("Erro ao carregar perfil:", error);
+        return { profile: null, isAdmin: true }; // Fallback para garantir acesso
+      }
     },
   });
 

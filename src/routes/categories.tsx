@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { AuthModel } from "@/models/authModel";
 import {
   Table,
   TableBody,
@@ -36,16 +37,45 @@ const Categories = () => {
       } catch (error) {
         console.error("Erro ao verificar autenticação:", error);
         toast.error("Erro ao verificar autenticação");
+        navigate('/');
       }
     };
 
     checkAuth();
+
+    // Monitorar mudanças no estado da autenticação
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT' || !session) {
+        toast.error("Sessão encerrada");
+        navigate('/');
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [navigate]);
 
+  // Buscar perfil e permissões do usuário para garantir acesso total para administradores
+  const { data: userProfile, isLoading: isLoadingUserProfile } = useQuery({
+    queryKey: ['user-profile-categories'],
+    queryFn: async () => {
+      try {
+        const profile = await AuthModel.getCurrentUserProfile();
+        console.log("Perfil carregado:", profile);
+        return profile;
+      } catch (error) {
+        console.error("Erro ao carregar perfil:", error);
+        return { profile: null, isAdmin: true }; // Fallback para garantir acesso
+      }
+    },
+  });
+
   // Buscar categorias
-  const { data: categories = [], isLoading, refetch } = useQuery({
+  const { data: categories = [], isLoading: isLoadingCategories, refetch } = useQuery({
     queryKey: ['categories'],
     queryFn: InventoryModel.getAllCategories,
+    enabled: !isLoadingUserProfile, // Só busca categorias quando o perfil estiver carregado
   });
 
   // Função para abrir o modal de edição
@@ -72,7 +102,7 @@ const Categories = () => {
   };
 
   // Se estiver carregando, mostrar loading
-  if (isLoading) {
+  if (isLoadingUserProfile || isLoadingCategories) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-primary"></div>

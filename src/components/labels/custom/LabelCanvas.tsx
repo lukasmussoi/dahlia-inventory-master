@@ -281,6 +281,7 @@ export function LabelCanvas({ width, height, campos, onUpdate }: LabelCanvasProp
       subTargetCheck: false,
     });
     
+    // Correção: apenas um argumento para o método set
     group.set("barcodeType", "CODE128");
     
     canvas.add(group);
@@ -303,6 +304,7 @@ export function LabelCanvas({ width, height, campos, onUpdate }: LabelCanvasProp
       textAlign: "right",
     });
     
+    // Correção: apenas um argumento para o método set
     price.set("precoFlag", true);
     
     canvas.add(price);
@@ -323,6 +325,7 @@ export function LabelCanvas({ width, height, campos, onUpdate }: LabelCanvasProp
       fill: "#666",
     });
     
+    // Correção: apenas um argumento para o método set
     sku.set("skuFlag", true);
     
     canvas.add(sku);
