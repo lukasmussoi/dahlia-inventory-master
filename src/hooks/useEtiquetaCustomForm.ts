@@ -250,7 +250,6 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
       if (success) {
         toast.success(modelo?.id ? "Modelo atualizado com sucesso!" : "Modelo criado com sucesso!");
         onSuccess?.();
-        onClose?.();
       }
     } catch (error) {
       console.error("Erro ao salvar modelo:", error);

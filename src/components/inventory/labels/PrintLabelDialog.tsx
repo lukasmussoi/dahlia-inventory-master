@@ -24,13 +24,13 @@ import { Plus, AlertTriangle, Printer, X, FileEdit, Settings } from "lucide-reac
 import { LabelModel } from "@/models/labelModel";
 import { generatePdfLabel } from "@/utils/pdfUtils";
 import { EtiquetaCustomModel } from "@/models/etiquetaCustomModel";
-import { EtiquetaCustomForm } from "./EtiquetaCustomForm";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import type { ModeloEtiqueta } from "@/types/etiqueta";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { useNavigate } from "react-router-dom";
 
 interface PrintLabelDialogProps {
   isOpen: boolean;
@@ -39,13 +39,13 @@ interface PrintLabelDialogProps {
 }
 
 export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProps) {
+  const navigate = useNavigate();
   const [labelModel, setLabelModel] = useState("Padrão");
   const [copies, setCopies] = useState("1");
   const [startRow, setStartRow] = useState("1");
   const [startColumn, setStartColumn] = useState("1");
   const [multiplyByStock, setMultiplyByStock] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [showModeloForm, setShowModeloForm] = useState(false);
   const [modelosCustom, setModelosCustom] = useState<ModeloEtiqueta[]>([]);
   const [selectedModeloId, setSelectedModeloId] = useState<string | undefined>(undefined);
   const [selectedModelo, setSelectedModelo] = useState<ModeloEtiqueta | null>(null);
@@ -215,46 +215,23 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
     }
   };
 
-  const handleModeloSuccess = async () => {
-    setShowModeloForm(false);
-    try {
-      const modelos = await EtiquetaCustomModel.getAll();
-      setModelosCustom(modelos);
-      toast.success("Modelo de etiqueta adicionado com sucesso!");
-    } catch (error) {
-      console.error("Erro ao recarregar modelos:", error);
-    }
+  const handleNovoModelo = () => {
+    // Fechar o diálogo atual
+    onClose();
+    // Redirecionar para a página de criação de modelo
+    navigate('/dashboard/inventory/labels/modelo-etiqueta/novo');
   };
 
   const editarModeloSelecionado = () => {
     if (selectedModelo && selectedModelo.id) {
-      // Funcionalidade futura: implementar edição do modelo
-      toast.info("Funcionalidade de edição de modelo será implementada em breve");
+      // Fechar o diálogo atual
+      onClose();
+      // Redirecionar para a página de edição do modelo
+      navigate(`/dashboard/inventory/labels/modelo-etiqueta/${selectedModelo.id}`);
     } else {
       toast.error("Nenhum modelo selecionado para editar");
     }
   };
-
-  if (showModeloForm) {
-    return (
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle>Criar Novo Modelo de Etiqueta</DialogTitle>
-            <DialogDescription>
-              Configure o modelo de etiqueta personalizada para impressão.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex-grow overflow-auto">
-            <EtiquetaCustomForm
-              onClose={() => setShowModeloForm(false)}
-              onSuccess={handleModeloSuccess}
-            />
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
-  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -355,7 +332,7 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setShowModeloForm(true)}
+                onClick={handleNovoModelo}
                 className="flex items-center gap-2"
               >
                 <Plus className="h-4 w-4" />
