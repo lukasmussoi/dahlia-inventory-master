@@ -1,12 +1,9 @@
-
 import { Form } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MargensEtiquetaFields } from "./form/MargensEtiquetaFields";
-import { FormatoEtiquetaFields } from "./form/FormatoEtiquetaFields";
-import { EspacamentoEtiquetaFields } from "./form/EspacamentoEtiquetaFields";
+import { EtiquetaEditor } from './editor/EtiquetaEditor';
 import { useEtiquetaCustomForm } from "@/hooks/useEtiquetaCustomForm";
-import type { ModeloEtiqueta } from "@/types/etiqueta";
+import type { ModeloEtiqueta, CampoEtiqueta } from "@/types/etiqueta";
 import { 
   FormField, 
   FormItem, 
@@ -16,8 +13,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, WrenchIcon, ArrowLeft, ArrowRight, Layout, Settings, File } from "lucide-react";
-import { EtiquetaEditor } from './editor/EtiquetaEditor';
+import { AlertCircle, WrenchIcon, ArrowLeft, ArrowRight, Layout, File } from "lucide-react";
 
 type EtiquetaCustomFormProps = {
   modelo?: ModeloEtiqueta;
@@ -82,7 +78,7 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
                   <FormItem>
                     <FormControl>
                       <EtiquetaEditor
-                        campos={field.value}
+                        campos={field.value as CampoEtiqueta[]}
                         largura={form.getValues('largura')}
                         altura={form.getValues('altura')}
                         formatoPagina={form.getValues('formatoPagina')}
@@ -95,7 +91,7 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
                         espacamentoVertical={form.getValues('espacamentoVertical')}
                         larguraPagina={form.getValues('larguraPagina')}
                         alturaPagina={form.getValues('alturaPagina')}
-                        onCamposChange={field.onChange}
+                        onCamposChange={(campos: CampoEtiqueta[]) => field.onChange(campos)}
                         onDimensoesChange={(largura, altura) => {
                           form.setValue('largura', largura);
                           form.setValue('altura', altura);
