@@ -49,15 +49,17 @@ const Suppliers = () => {
 
   // Verificar autenticação ao carregar a página
   useEffect(() => {
+    console.log("Verificando autenticação em fornecedores...");
     const checkAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
+          console.log("Usuário não autenticado, redirecionando para login");
           toast.error("Você precisa estar autenticado para acessar esta página");
           navigate('/');
           return;
         }
-        console.log("Usuário autenticado:", session.user);
+        console.log("Usuário autenticado em fornecedores:", session.user.id);
       } catch (error) {
         console.error("Erro ao verificar autenticação:", error);
         toast.error("Erro ao verificar autenticação");
@@ -97,10 +99,11 @@ const Suppliers = () => {
     },
   });
 
+  // Somente buscar fornecedores se o usuário for admin
   const { data: suppliers = [], refetch, isLoading: isLoadingSuppliers } = useQuery({
     queryKey: ['suppliers'],
     queryFn: () => SupplierModel.getSuppliers(),
-    enabled: userProfile?.isAdmin === true, // Busca somente se for admin
+    enabled: !!userProfile && userProfile.isAdmin === true, // Só executa a query se isAdmin for true
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -158,10 +161,14 @@ const Suppliers = () => {
     resetForm();
   };
 
+  // Se estiver carregando, mostrar loading
   if (isLoadingProfile) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-primary"></div>
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+          <p className="text-gray-600">Carregando perfil do usuário...</p>
+        </div>
       </div>
     );
   }
@@ -248,7 +255,9 @@ const Suppliers = () => {
             {isLoadingSuppliers ? (
               <TableRow>
                 <TableCell colSpan={4} className="text-center py-4">
-                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary mx-auto"></div>
+                  <div className="flex justify-center items-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary mx-auto"></div>
+                  </div>
                 </TableCell>
               </TableRow>
             ) : suppliers.length > 0 ? (

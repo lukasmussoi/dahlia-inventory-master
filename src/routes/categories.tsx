@@ -25,15 +25,17 @@ const Categories = () => {
 
   // Verificar autenticação ao carregar a página
   useEffect(() => {
+    console.log("Verificando autenticação em categorias...");
     const checkAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
+          console.log("Usuário não autenticado, redirecionando para login");
           toast.error("Você precisa estar autenticado para acessar esta página");
           navigate('/');
           return;
         }
-        console.log("Usuário autenticado:", session.user);
+        console.log("Usuário autenticado em categorias:", session.user.id);
       } catch (error) {
         console.error("Erro ao verificar autenticação:", error);
         toast.error("Erro ao verificar autenticação");
@@ -62,7 +64,7 @@ const Categories = () => {
     queryFn: async () => {
       try {
         const profile = await AuthModel.getCurrentUserProfile();
-        console.log("Perfil carregado:", profile);
+        console.log("Perfil carregado (categorias):", profile);
         return profile;
       } catch (error) {
         console.error("Erro ao carregar perfil:", error);
@@ -73,11 +75,11 @@ const Categories = () => {
     },
   });
 
-  // Buscar categorias
+  // Buscar categorias somente se usuário for admin
   const { data: categories = [], isLoading: isLoadingCategories, refetch } = useQuery({
     queryKey: ['categories'],
     queryFn: InventoryModel.getAllCategories,
-    enabled: userProfile?.isAdmin === true, // Busca somente se for admin
+    enabled: !!userProfile && userProfile.isAdmin === true, // Só executa a query se isAdmin for true
   });
 
   // Função para abrir o modal de edição
@@ -107,7 +109,10 @@ const Categories = () => {
   if (isLoadingUserProfile) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-primary"></div>
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+          <p className="text-gray-600">Carregando perfil do usuário...</p>
+        </div>
       </div>
     );
   }
@@ -147,7 +152,9 @@ const Categories = () => {
             {isLoadingCategories ? (
               <TableRow>
                 <TableCell colSpan={3} className="text-center py-4">
-                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary mx-auto"></div>
+                  <div className="flex justify-center items-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary mx-auto"></div>
+                  </div>
                 </TableCell>
               </TableRow>
             ) : categories.length > 0 ? (

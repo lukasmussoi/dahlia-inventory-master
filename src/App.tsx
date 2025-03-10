@@ -11,8 +11,17 @@ import Inventory from "./routes/inventory";
 import InventoryLabelsRoute from "./routes/inventory-labels";
 import LabelsCustomRoute from "./routes/labels-custom";
 import LabelCustomViewerRoute from "./routes/label-custom-viewer";
+import Categories from "./routes/categories";
+import Suppliers from "./routes/suppliers";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 const App = () => (
   <BrowserRouter>
@@ -27,6 +36,8 @@ const App = () => (
             <Route path="inventory/labels" element={<InventoryLabelsRoute />} />
             <Route path="inventory/labels/custom" element={<LabelsCustomRoute />} />
             <Route path="inventory/labels/custom/:id" element={<LabelCustomViewerRoute />} />
+            <Route path="inventory/categories" element={<Categories />} />
+            <Route path="inventory/suppliers" element={<Suppliers />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

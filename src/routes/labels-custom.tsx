@@ -12,15 +12,17 @@ export default function LabelsCustomRoute() {
 
   // Verificar autenticação ao carregar a página
   useEffect(() => {
+    console.log("Verificando autenticação em etiquetas customizadas...");
     const checkAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
+          console.log("Usuário não autenticado, redirecionando para login");
           toast.error("Você precisa estar autenticado para acessar esta página");
           navigate('/');
           return;
         }
-        console.log("Usuário autenticado na rota de etiquetas customizadas:", session.user);
+        console.log("Usuário autenticado em etiquetas customizadas:", session.user.id);
       } catch (error) {
         console.error("Erro ao verificar autenticação:", error);
         toast.error("Erro ao verificar autenticação");
@@ -58,13 +60,17 @@ export default function LabelsCustomRoute() {
         return { profile: null, isAdmin: false };
       }
     },
+    retry: 1,
   });
 
   // Se estiver carregando, mostrar loading
   if (isLoadingProfile) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-primary"></div>
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+          <p className="text-gray-600">Carregando perfil do usuário...</p>
+        </div>
       </div>
     );
   }

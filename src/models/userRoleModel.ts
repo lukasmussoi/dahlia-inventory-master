@@ -15,6 +15,46 @@ export interface CreateUserData {
 }
 
 export class UserRoleModel {
+  // Verificar se o usuário é admin
+  static async isUserAdmin(userId: string): Promise<boolean> {
+    console.log("Verificando se usuário é admin:", userId);
+    try {
+      // Verificar com RPC
+      const { data, error } = await supabase
+        .rpc('is_admin', { user_id: userId });
+
+      if (error) {
+        console.error("Erro ao verificar se usuário é admin via RPC:", error);
+        throw error;
+      }
+      
+      console.log("Resultado da verificação admin via RPC:", data);
+      
+      if (data !== null) {
+        return data;
+      }
+      
+      // Caso a RPC falhe, tenta método alternativo
+      console.log("Tentando método alternativo para verificar admin...");
+      const { data: roles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('user_role')
+        .eq('user_id', userId)
+        .eq('user_role', 'admin');
+
+      if (rolesError) {
+        console.error("Erro ao buscar papéis do usuário:", rolesError);
+        throw rolesError;
+      }
+      
+      console.log("Papéis de admin encontrados:", roles);
+      return Array.isArray(roles) && roles.length > 0;
+    } catch (error) {
+      console.error("Erro completo ao verificar admin:", error);
+      return false;
+    }
+  }
+
   // Buscar todos os usuários com suas funções
   static async getAllUsersWithRoles(): Promise<UserWithRoles[]> {
     const { data: profiles, error: profilesError } = await supabase
@@ -41,15 +81,6 @@ export class UserRoleModel {
     }
 
     return usersWithRoles;
-  }
-
-  // Verificar se o usuário é admin
-  static async isUserAdmin(userId: string): Promise<boolean> {
-    const { data, error } = await supabase
-      .rpc('is_admin', { user_id: userId });
-
-    if (error) throw error;
-    return data || false;
   }
 
   // Atualizar funções do usuário

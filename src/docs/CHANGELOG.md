@@ -3,6 +3,24 @@
 
 Este documento mantém um registro de todas as alterações significativas feitas no sistema, incluindo correções de bugs, novas funcionalidades e melhorias.
 
+## [Versão 1.0.3] - 2025-03-12
+
+### Correções
+- Corrigido problema crítico que causava tela em branco nas rotas de categorias, fornecedores e etiquetas customizadas
+- Adicionadas políticas de segurança (RLS) para todas as tabelas principais: fornecedores, categorias e etiquetas customizadas
+- Implementado melhor mecanismo de verificação de permissões de administrador
+- Melhorado o tratamento de erros e exibição de mensagens ao usuário
+- Adicionados logs extensivos para auxiliar no debug de problemas de autenticação e autorização
+- Garantido que queries sejam executadas somente quando o usuário tem as permissões adequadas (enabled: isAdmin)
+
+### Melhorias
+- Adicionada função de segurança aprimorada para verificação de administrador
+- Implementado feedback visual durante carregamento de dados em todas as telas
+- Melhorado redirecionamento de usuários sem permissões adequadas
+- Código do AuthModel refatorado para melhor tratamento de erros e logging
+- Adicionadas verificações duplas de autenticação para maior segurança
+- Removida dependência de controle de acesso client-side, utilizando políticas RLS no banco de dados
+
 ## [Versão 1.0.2] - 2025-03-11
 
 ### Correções
