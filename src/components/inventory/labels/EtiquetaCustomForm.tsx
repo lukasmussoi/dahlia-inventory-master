@@ -5,7 +5,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Form,
   FormControl,
@@ -14,17 +13,15 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { toast } from "sonner";
-import { CampoEtiqueta, EtiquetaCustomModel, ModeloEtiqueta } from "@/models/etiquetaCustomModel";
+import { EtiquetaCustomModel, ModeloEtiqueta } from "@/models/etiquetaCustomModel";
+import { DimensoesEtiquetaFields } from "./form/DimensoesEtiquetaFields";
+import { FormatoEtiquetaFields } from "./form/FormatoEtiquetaFields";
+import { MargensEtiquetaFields } from "./form/MargensEtiquetaFields";
+import { EspacamentoEtiquetaFields } from "./form/EspacamentoEtiquetaFields";
 
-const etiquetaSchema = z.object({
+const formSchema = z.object({
+  nome: z.string().min(3, "Nome deve ter pelo menos 3 caracteres"),
   descricao: z.string().min(3, "Descrição deve ter pelo menos 3 caracteres"),
   largura: z.number().min(10, "Largura mínima de 10mm"),
   altura: z.number().min(10, "Altura mínima de 10mm"),
@@ -47,42 +44,10 @@ type EtiquetaCustomFormProps = {
 export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCustomFormProps) {
   const [isLoading, setIsLoading] = useState(false);
 
-  // Campos padrão para código de barras, nome e preço
-  const camposPadrao: CampoEtiqueta[] = [
-    {
-      tipo: "codigo_barras",
-      x: 10,
-      y: 10,
-      largura: 40,
-      altura: 10,
-      valor: "",
-      mostrarCodigo: true
-    },
-    {
-      tipo: "texto",
-      x: 10,
-      y: 25,
-      largura: 80,
-      altura: 10,
-      valor: "{nome}",
-      tamanhoFonte: 10
-    },
-    {
-      tipo: "preco",
-      x: 70,
-      y: 10,
-      largura: 20,
-      altura: 10,
-      valor: "{preco}",
-      tamanhoFonte: 12,
-      negrito: true,
-      moeda: "R$"
-    }
-  ];
-
-  const form = useForm<z.infer<typeof etiquetaSchema>>({
-    resolver: zodResolver(etiquetaSchema),
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
+      nome: modelo?.nome || "",
       descricao: modelo?.descricao || "",
       largura: modelo?.largura || 80,
       altura: modelo?.altura || 40,
@@ -97,13 +62,13 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
     },
   });
 
-  async function onSubmit(values: z.infer<typeof etiquetaSchema>) {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       setIsLoading(true);
 
       const modeloData: ModeloEtiqueta = {
         ...values,
-        campos: modelo?.campos || camposPadrao,
+        campos: modelo?.campos || [],
       };
 
       let success: boolean | string | null;
@@ -131,10 +96,10 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <FormField
           control={form.control}
-          name="descricao"
+          name="nome"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Descrição do Modelo</FormLabel>
+              <FormLabel>Nome do Modelo</FormLabel>
               <FormControl>
                 <Input placeholder="Ex: Etiqueta Padrão 80x40mm" {...field} />
               </FormControl>
@@ -143,152 +108,24 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
           )}
         />
 
-        <div className="grid grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="largura"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Largura (mm)</FormLabel>
-                <FormControl>
-                  <Input type="number" {...field} 
-                    onChange={e => field.onChange(Number(e.target.value))}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+        <FormField
+          control={form.control}
+          name="descricao"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Descrição do Modelo</FormLabel>
+              <FormControl>
+                <Input placeholder="Ex: Etiqueta para produtos pequenos" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-          <FormField
-            control={form.control}
-            name="altura"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Altura (mm)</FormLabel>
-                <FormControl>
-                  <Input type="number" {...field}
-                    onChange={e => field.onChange(Number(e.target.value))}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="formatoPagina"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Formato da Página</FormLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o formato" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="A4">A4</SelectItem>
-                    <SelectItem value="Letter">Letter</SelectItem>
-                    <SelectItem value="Legal">Legal</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="orientacao"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Orientação</FormLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione a orientação" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="retrato">Retrato</SelectItem>
-                    <SelectItem value="paisagem">Paisagem</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          {["margemSuperior", "margemInferior", "margemEsquerda", "margemDireita"].map((margin) => (
-            <FormField
-              key={margin}
-              control={form.control}
-              name={margin as keyof z.infer<typeof etiquetaSchema>}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    {margin === "margemSuperior" ? "Margem Superior" :
-                     margin === "margemInferior" ? "Margem Inferior" :
-                     margin === "margemEsquerda" ? "Margem Esquerda" :
-                     "Margem Direita"} (mm)
-                  </FormLabel>
-                  <FormControl>
-                    <Input type="number" {...field}
-                      onChange={e => field.onChange(Number(e.target.value))}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          ))}
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="espacamentoHorizontal"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Espaçamento Horizontal (mm)</FormLabel>
-                <FormControl>
-                  <Input type="number" {...field}
-                    onChange={e => field.onChange(Number(e.target.value))}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="espacamentoVertical"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Espaçamento Vertical (mm)</FormLabel>
-                <FormControl>
-                  <Input type="number" {...field}
-                    onChange={e => field.onChange(Number(e.target.value))}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+        <DimensoesEtiquetaFields form={form} />
+        <FormatoEtiquetaFields form={form} />
+        <MargensEtiquetaFields form={form} />
+        <EspacamentoEtiquetaFields form={form} />
 
         <div className="flex justify-end gap-2 pt-4">
           <Button variant="outline" type="button" onClick={onClose}>

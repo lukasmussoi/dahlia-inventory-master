@@ -1,6 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { PostgrestResponse } from "@supabase/supabase-js";
 
 export interface CampoEtiqueta {
   tipo: string;
@@ -41,7 +42,6 @@ export interface ModeloEtiqueta {
 }
 
 export class EtiquetaCustomModel {
-  // Buscar todos os modelos de etiquetas
   static async getAll(): Promise<ModeloEtiqueta[]> {
     try {
       const { data, error } = await supabase
@@ -50,7 +50,28 @@ export class EtiquetaCustomModel {
         .order('criado_em', { ascending: false });
 
       if (error) throw error;
-      return data || [];
+
+      return data.map(item => ({
+        id: item.id,
+        nome: item.descricao,
+        descricao: item.descricao,
+        largura: item.largura,
+        altura: item.altura,
+        formatoPagina: item.formato_pagina,
+        orientacao: item.orientacao,
+        margemSuperior: item.margem_superior,
+        margemInferior: item.margem_inferior,
+        margemEsquerda: item.margem_esquerda,
+        margemDireita: item.margem_direita,
+        espacamentoHorizontal: item.espacamento_horizontal,
+        espacamentoVertical: item.espacamento_vertical,
+        larguraPagina: item.largura_pagina,
+        alturaPagina: item.altura_pagina,
+        campos: item.campos as CampoEtiqueta[],
+        usuario_id: item.criado_por,
+        criado_em: item.criado_em,
+        atualizado_em: item.atualizado_em
+      }));
     } catch (error) {
       console.error('Erro ao buscar modelos de etiquetas:', error);
       toast.error('Erro ao carregar modelos de etiquetas');
@@ -58,7 +79,6 @@ export class EtiquetaCustomModel {
     }
   }
 
-  // Buscar um modelo específico
   static async getById(id: string): Promise<ModeloEtiqueta | null> {
     try {
       const { data, error } = await supabase
@@ -68,7 +88,30 @@ export class EtiquetaCustomModel {
         .single();
 
       if (error) throw error;
-      return data;
+      
+      if (!data) return null;
+
+      return {
+        id: data.id,
+        nome: data.descricao,
+        descricao: data.descricao,
+        largura: data.largura,
+        altura: data.altura,
+        formatoPagina: data.formato_pagina,
+        orientacao: data.orientacao,
+        margemSuperior: data.margem_superior,
+        margemInferior: data.margem_inferior,
+        margemEsquerda: data.margem_esquerda,
+        margemDireita: data.margem_direita,
+        espacamentoHorizontal: data.espacamento_horizontal,
+        espacamentoVertical: data.espacamento_vertical,
+        larguraPagina: data.largura_pagina,
+        alturaPagina: data.altura_pagina,
+        campos: data.campos as CampoEtiqueta[],
+        usuario_id: data.criado_por,
+        criado_em: data.criado_em,
+        atualizado_em: data.atualizado_em
+      };
     } catch (error) {
       console.error('Erro ao buscar modelo de etiqueta:', error);
       toast.error('Erro ao carregar modelo de etiqueta');
@@ -76,13 +119,12 @@ export class EtiquetaCustomModel {
     }
   }
 
-  // Criar novo modelo de etiqueta
   static async create(modelo: ModeloEtiqueta): Promise<string | null> {
     try {
       const { data, error } = await supabase
         .from('etiquetas_custom')
-        .insert([{
-          descricao: modelo.descricao || '',
+        .insert({
+          descricao: modelo.nome,
           tipo: 'padrao',
           largura: modelo.largura,
           altura: modelo.altura,
@@ -98,7 +140,7 @@ export class EtiquetaCustomModel {
           altura_pagina: modelo.alturaPagina,
           campos: modelo.campos,
           criado_por: (await supabase.auth.getUser()).data.user?.id
-        }])
+        })
         .select('id')
         .single();
 
@@ -111,13 +153,12 @@ export class EtiquetaCustomModel {
     }
   }
 
-  // Atualizar modelo de etiqueta
   static async update(id: string, modelo: ModeloEtiqueta): Promise<boolean> {
     try {
       const { error } = await supabase
         .from('etiquetas_custom')
         .update({
-          descricao: modelo.descricao,
+          descricao: modelo.nome,
           largura: modelo.largura,
           altura: modelo.altura,
           formato_pagina: modelo.formatoPagina,
@@ -143,7 +184,6 @@ export class EtiquetaCustomModel {
     }
   }
 
-  // Excluir modelo de etiqueta
   static async delete(id: string): Promise<boolean> {
     try {
       const { error } = await supabase
