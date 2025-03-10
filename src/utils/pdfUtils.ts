@@ -1,6 +1,8 @@
+
 import { jsPDF } from "jspdf";
 import { generateBarcode } from "./barcodeUtils";
 import { toast } from "sonner";
+import { EtiquetaCustomModel } from "@/models/etiquetaCustomModel";
 
 interface GeneratePdfLabelOptions {
   item: any;
@@ -21,23 +23,50 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
     
     const totalCopies = multiplyByStock ? copies * (item.quantity || 1) : copies;
 
-    // Criar novo documento PDF
-    const doc = new jsPDF({
-      orientation: "landscape",
-      unit: "mm",
-      format: "a4",
-    });
+    // Configurações padrão da etiqueta
+    let labelWidth = 80;  // largura em mm
+    let labelHeight = 8;  // altura em mm (ajustado para 8mm conforme solicitado)
+    let marginLeft = 10;   // margem esquerda em mm
+    let marginTop = 10;    // margem superior em mm
+    let spacing = 5;       // espaçamento entre etiquetas em mm
+    let orientation = "landscape";
+    let format = "a4";
 
-    // Configurações da etiqueta
-    const labelWidth = 80;  // largura em mm
-    const labelHeight = 8;  // altura em mm (ajustado para 8mm conforme solicitado)
-    const marginLeft = 10;   // margem esquerda em mm
-    const marginTop = 10;    // margem superior em mm
-    const spacing = 5;       // espaçamento entre etiquetas em mm
+    // Se um modelo personalizado foi selecionado, carrega suas configurações
+    if (selectedModeloId) {
+      console.log("Usando modelo personalizado ID:", selectedModeloId);
+      const modeloCustom = await EtiquetaCustomModel.getById(selectedModeloId);
+      
+      if (modeloCustom) {
+        console.log("Modelo personalizado encontrado:", modeloCustom);
+        
+        labelWidth = modeloCustom.largura;
+        labelHeight = modeloCustom.altura;
+        marginLeft = modeloCustom.margemEsquerda;
+        marginTop = modeloCustom.margemSuperior;
+        spacing = Math.max(modeloCustom.espacamentoHorizontal, modeloCustom.espacamentoVertical);
+        orientation = modeloCustom.orientacao === "retrato" ? "portrait" : "landscape";
+        format = modeloCustom.formatoPagina.toLowerCase();
+      } else {
+        console.warn("Modelo personalizado não encontrado, usando configurações padrão");
+      }
+    }
+
+    // Criar novo documento PDF com as configurações adequadas
+    const doc = new jsPDF({
+      orientation: orientation as any,
+      unit: "mm",
+      format: format,
+    });
 
     // Calcular quantas etiquetas cabem por página
     const labelsPerRow = Math.floor((doc.internal.pageSize.width - 2 * marginLeft) / (labelWidth + spacing));
     const labelsPerColumn = Math.floor((doc.internal.pageSize.height - 2 * marginTop) / (labelHeight + spacing));
+
+    console.log("Configurações de etiqueta:", { 
+      labelWidth, labelHeight, marginLeft, marginTop, spacing,
+      labelsPerRow, labelsPerColumn, totalCopies
+    });
 
     let currentRow = startRow - 1;
     let currentColumn = startColumn - 1;

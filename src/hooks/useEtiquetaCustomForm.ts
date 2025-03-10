@@ -49,10 +49,24 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
     try {
       setIsLoading(true);
 
+      // Garantir que todos os campos obrigatórios estejam preenchidos
       const modeloData: ModeloEtiqueta = {
-        ...data,
+        nome: data.nome,
+        descricao: data.descricao,
+        largura: data.largura,
+        altura: data.altura,
+        formatoPagina: data.formatoPagina,
+        orientacao: data.orientacao,
+        margemSuperior: data.margemSuperior,
+        margemInferior: data.margemInferior,
+        margemEsquerda: data.margemEsquerda,
+        margemDireita: data.margemDireita,
+        espacamentoHorizontal: data.espacamentoHorizontal,
+        espacamentoVertical: data.espacamentoVertical,
         campos: modelo?.campos || [],
       };
+
+      console.log("Salvando modelo:", modeloData);
 
       let success: boolean | string | null;
       if (modelo?.id) {

@@ -47,6 +47,8 @@ export class EtiquetaCustomModel {
         throw new Error('Usuário não autenticado');
       }
 
+      console.log("Criando modelo de etiqueta:", modelo);
+
       const modeloDb = {
         ...mapModelToDatabase(modelo),
         criado_por: user.data.user.id

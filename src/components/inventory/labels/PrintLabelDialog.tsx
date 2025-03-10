@@ -43,16 +43,26 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
   const [modelosCustom, setModelosCustom] = useState<ModeloEtiqueta[]>([]);
   const [selectedModeloId, setSelectedModeloId] = useState<string | undefined>(undefined);
 
+  // Load custom models when dialog opens
   useEffect(() => {
     const loadModelosCustom = async () => {
-      const modelos = await EtiquetaCustomModel.getAll();
-      setModelosCustom(modelos);
+      try {
+        console.log("Carregando modelos de etiquetas personalizadas...");
+        const modelos = await EtiquetaCustomModel.getAll();
+        console.log("Modelos carregados:", modelos);
+        setModelosCustom(modelos);
+      } catch (error) {
+        console.error("Erro ao carregar modelos:", error);
+        toast.error("Erro ao carregar modelos de etiquetas");
+      }
     };
+    
     if (isOpen) {
       loadModelosCustom();
     }
   }, [isOpen]);
 
+  // Reset form when dialog opens
   useEffect(() => {
     if (isOpen) {
       setCopies("1");
@@ -96,8 +106,9 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
 
     try {
       setIsProcessing(true);
+      console.log("Iniciando impressão com modelo:", selectedModeloId);
 
-      // Utilizar a interface correta para o generatePdfLabel
+      // Usar a interface correta para o generatePdfLabel
       const pdfUrl = await generatePdfLabel({
         item,
         copies: parseInt(copies),
@@ -107,8 +118,10 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
         selectedModeloId
       });
 
+      // Registrar impressão no histórico
       await LabelModel.registerLabelPrint(item.id, parseInt(copies));
 
+      // Abrir PDF em nova aba
       window.open(pdfUrl, '_blank');
       
       toast.success("Etiquetas geradas com sucesso!");
@@ -123,8 +136,13 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
 
   const handleModeloSuccess = async () => {
     setShowModeloForm(false);
-    const modelos = await EtiquetaCustomModel.getAll();
-    setModelosCustom(modelos);
+    try {
+      const modelos = await EtiquetaCustomModel.getAll();
+      setModelosCustom(modelos);
+      toast.success("Modelo de etiqueta adicionado com sucesso!");
+    } catch (error) {
+      console.error("Erro ao recarregar modelos:", error);
+    }
   };
 
   if (showModeloForm) {
@@ -234,11 +252,17 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
                   <SelectValue placeholder="Selecione o modelo" />
                 </SelectTrigger>
                 <SelectContent>
-                  {modelosCustom.map((modelo) => (
-                    <SelectItem key={modelo.id} value={modelo.id || ""}>
-                      {modelo.nome}
+                  {modelosCustom.length > 0 ? (
+                    modelosCustom.map((modelo) => (
+                      <SelectItem key={modelo.id} value={modelo.id || ""}>
+                        {modelo.nome}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="sem-modelos" disabled>
+                      Nenhum modelo disponível
                     </SelectItem>
-                  ))}
+                  )}
                 </SelectContent>
               </Select>
             </div>
