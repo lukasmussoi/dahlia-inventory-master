@@ -5,6 +5,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -96,13 +97,14 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
     try {
       setIsProcessing(true);
 
+      // Utilizar a interface correta para o generatePdfLabel
       const pdfUrl = await generatePdfLabel({
         item,
         copies: parseInt(copies),
         startRow: parseInt(startRow),
         startColumn: parseInt(startColumn),
         multiplyByStock,
-        modeloId: selectedModeloId
+        selectedModeloId
       });
 
       await LabelModel.registerLabelPrint(item.id, parseInt(copies));
@@ -131,6 +133,9 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Criar Novo Modelo de Etiqueta</DialogTitle>
+            <DialogDescription>
+              Preencha os campos abaixo para criar um novo modelo de etiqueta personalizada.
+            </DialogDescription>
           </DialogHeader>
           <EtiquetaCustomForm
             onClose={() => setShowModeloForm(false)}
@@ -146,6 +151,9 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Imprimir Etiquetas</DialogTitle>
+          <DialogDescription>
+            Configure as opções de impressão para gerar etiquetas para o item selecionado.
+          </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-2 gap-4">

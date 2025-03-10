@@ -45,12 +45,12 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
     },
   });
 
-  async function onSubmit(values: FormValues) {
+  async function onSubmit(data: FormValues) {
     try {
       setIsLoading(true);
 
       const modeloData: ModeloEtiqueta = {
-        ...values,
+        ...data,
         campos: modelo?.campos || [],
       };
 
@@ -77,6 +77,6 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
   return {
     form,
     isLoading,
-    onSubmit: form.handleSubmit(onSubmit),
+    onSubmit
   };
 }

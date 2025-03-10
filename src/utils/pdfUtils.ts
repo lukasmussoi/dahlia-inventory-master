@@ -1,4 +1,3 @@
-
 import { jsPDF } from "jspdf";
 import { generateBarcode } from "./barcodeUtils";
 import { toast } from "sonner";
@@ -9,11 +8,12 @@ interface GeneratePdfLabelOptions {
   startRow: number;
   startColumn: number;
   multiplyByStock: boolean;
+  selectedModeloId?: string;
 }
 
 export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promise<string> {
   try {
-    const { item, copies, multiplyByStock, startRow, startColumn } = options;
+    const { item, copies, multiplyByStock, startRow, startColumn, selectedModeloId } = options;
     
     if (!item) {
       throw new Error("Item não fornecido para gerar etiqueta");

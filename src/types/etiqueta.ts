@@ -1,4 +1,6 @@
 
+import type { Json } from "@/integrations/supabase/types";
+
 export interface CampoEtiqueta {
   tipo: string;
   x: number;
@@ -53,7 +55,7 @@ export interface EtiquetaCustomDB {
   espacamento_vertical: number;
   largura_pagina?: number;
   altura_pagina?: number;
-  campos: CampoEtiqueta[];
+  campos: Json;
   criado_por: string;
   criado_em: string;
   atualizado_em: string;

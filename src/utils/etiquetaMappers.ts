@@ -1,10 +1,27 @@
 
 import type { ModeloEtiqueta, EtiquetaCustomDB, CampoEtiqueta } from "@/types/etiqueta";
+import type { Json } from "@/integrations/supabase/types";
 
 /**
  * Converte um registro do banco de dados para o formato usado no frontend
  */
 export function mapDatabaseToModel(item: EtiquetaCustomDB): ModeloEtiqueta {
+  let campos: CampoEtiqueta[] = [];
+  
+  // Certifica que campos seja tratado como um array de CampoEtiqueta
+  if (item.campos) {
+    try {
+      if (typeof item.campos === 'string') {
+        campos = JSON.parse(item.campos as string);
+      } else {
+        campos = item.campos as unknown as CampoEtiqueta[];
+      }
+    } catch (error) {
+      console.error('Erro ao converter campos da etiqueta:', error);
+      campos = [];
+    }
+  }
+
   return {
     id: item.id,
     nome: item.descricao,
@@ -21,7 +38,7 @@ export function mapDatabaseToModel(item: EtiquetaCustomDB): ModeloEtiqueta {
     espacamentoVertical: item.espacamento_vertical,
     larguraPagina: item.largura_pagina,
     alturaPagina: item.altura_pagina,
-    campos: item.campos || [],
+    campos: campos,
     usuario_id: item.criado_por,
     criado_em: item.criado_em,
     atualizado_em: item.atualizado_em
@@ -47,6 +64,6 @@ export function mapModelToDatabase(modelo: ModeloEtiqueta) {
     espacamento_vertical: modelo.espacamentoVertical,
     largura_pagina: modelo.larguraPagina,
     altura_pagina: modelo.alturaPagina,
-    campos: modelo.campos
+    campos: modelo.campos as unknown as Json
   };
 }

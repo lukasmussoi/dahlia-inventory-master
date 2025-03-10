@@ -7,6 +7,14 @@ import { MargensEtiquetaFields } from "./form/MargensEtiquetaFields";
 import { EspacamentoEtiquetaFields } from "./form/EspacamentoEtiquetaFields";
 import { useEtiquetaCustomForm } from "@/hooks/useEtiquetaCustomForm";
 import type { ModeloEtiqueta } from "@/types/etiqueta";
+import { 
+  FormField, 
+  FormItem, 
+  FormLabel, 
+  FormControl, 
+  FormMessage 
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 
 type EtiquetaCustomFormProps = {
   modelo?: ModeloEtiqueta;
@@ -20,6 +28,36 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="nome"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Nome do modelo</FormLabel>
+                <FormControl>
+                  <Input {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="descricao"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Descrição</FormLabel>
+                <FormControl>
+                  <Input {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
         <DimensoesEtiquetaFields form={form} />
         <FormatoEtiquetaFields form={form} />
         <MargensEtiquetaFields form={form} />
