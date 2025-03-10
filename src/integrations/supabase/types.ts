@@ -513,18 +513,30 @@ export type Database = {
         }
         Returns: boolean
       }
-      has_role: {
-        Args: {
-          role: Database["public"]["Enums"]["user_role"]
-        }
-        Returns: boolean
-      }
-      is_admin: {
-        Args: {
-          user_id: string
-        }
-        Returns: boolean
-      }
+      has_role:
+        | {
+            Args: {
+              role: Database["public"]["Enums"]["user_role"]
+            }
+            Returns: boolean
+          }
+        | {
+            Args: {
+              role_name: string
+            }
+            Returns: boolean
+          }
+      is_admin:
+        | {
+            Args: Record<PropertyKey, never>
+            Returns: boolean
+          }
+        | {
+            Args: {
+              user_id: string
+            }
+            Returns: boolean
+          }
     }
     Enums: {
       plating_type: "ouro" | "prata" | "rose" | "rhodium" | "sem_banho"

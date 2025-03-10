@@ -66,10 +66,19 @@ const Categories = () => {
         return profile;
       } catch (error) {
         console.error("Erro ao carregar perfil:", error);
-        return { profile: null, isAdmin: true }; // Fallback para garantir acesso
+        toast.error("Erro ao verificar permissões. Redirecionando...");
+        navigate('/dashboard');
+        return { profile: null, isAdmin: false };
       }
     },
   });
+
+  // Verificar se o usuário é administrador
+  if (userProfile && !userProfile.isAdmin) {
+    toast.error("Você não tem permissão para acessar esta página");
+    navigate('/dashboard');
+    return null;
+  }
 
   // Buscar categorias
   const { data: categories = [], isLoading: isLoadingCategories, refetch } = useQuery({

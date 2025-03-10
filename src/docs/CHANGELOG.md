@@ -14,6 +14,8 @@ Este documento mantém um registro de todas as alterações significativas feita
 - Implementado verificação de autenticação consistente em todas as rotas
 - Garantido acesso total para administradores em todos os módulos do sistema
 - Criado documento de histórico de alterações (CHANGELOG.md) para documentação de mudanças
+- Adicionadas políticas de segurança (RLS) para garantir acesso adequado a tabelas importantes
+- Corrigidas funções de segurança para verificar corretamente funções de usuários
 
 ## [Versão 1.0.0] - 2025-03-01
 

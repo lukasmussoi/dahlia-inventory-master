@@ -53,7 +53,9 @@ export default function LabelCustomViewerRoute() {
         return profile;
       } catch (error) {
         console.error("Erro ao carregar perfil:", error);
-        return { profile: null, isAdmin: true }; // Fallback para garantir acesso
+        toast.error("Erro ao verificar permissões. Redirecionando...");
+        navigate('/dashboard');
+        return { profile: null, isAdmin: false };
       }
     },
   });
@@ -65,6 +67,13 @@ export default function LabelCustomViewerRoute() {
         <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-primary"></div>
       </div>
     );
+  }
+
+  // Verificar se o usuário é administrador
+  if (!userProfile?.isAdmin) {
+    toast.error("Você não tem permissão para acessar esta página");
+    navigate('/dashboard');
+    return null;
   }
 
   return (
