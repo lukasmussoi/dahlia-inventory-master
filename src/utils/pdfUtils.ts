@@ -4,6 +4,7 @@ import { generateBarcode } from "./barcodeUtils";
 import { toast } from "sonner";
 import { EtiquetaCustomModel } from "@/models/etiquetaCustomModel";
 import type { CampoEtiqueta } from "@/types/etiqueta";
+import { generateEtiquetaPDF } from "./etiquetaGenerator";
 
 interface GeneratePdfLabelOptions {
   item: any;
@@ -24,52 +25,43 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
     
     const totalCopies = multiplyByStock ? copies * (item.quantity || 1) : copies;
 
-    // Configurações padrão da etiqueta
-    let labelWidth = 80;  // largura em mm
-    let labelHeight = 8;  // altura em mm (ajustado para 8mm conforme solicitado)
-    let marginLeft = 10;   // margem esquerda em mm
-    let marginTop = 10;    // margem superior em mm
-    let spacing = 5;       // espaçamento entre etiquetas em mm
-    let orientation = "landscape";
-    let format: string | [number, number] = "a4";
-    let campos: CampoEtiqueta[] = [
-      { tipo: 'nome', x: 2, y: 4, largura: 40, altura: 10, tamanhoFonte: 7 },
-      { tipo: 'codigo', x: 20, y: 1, largura: 40, altura: 6, tamanhoFonte: 8 },
-      { tipo: 'preco', x: 70, y: 4, largura: 20, altura: 10, tamanhoFonte: 10 }
-    ];
-
-    // Se um modelo personalizado foi selecionado, carrega suas configurações
+    // Se um modelo personalizado foi selecionado, usamos a nova implementação
     if (selectedModeloId) {
       console.log("Usando modelo personalizado ID:", selectedModeloId);
       const modeloCustom = await EtiquetaCustomModel.getById(selectedModeloId);
       
       if (modeloCustom) {
         console.log("Modelo personalizado encontrado:", modeloCustom);
+        console.log("Campos do modelo:", modeloCustom.campos);
         
-        labelWidth = modeloCustom.largura;
-        labelHeight = modeloCustom.altura;
-        marginLeft = modeloCustom.margemEsquerda;
-        marginTop = modeloCustom.margemSuperior;
-        spacing = Math.max(modeloCustom.espacamentoHorizontal, modeloCustom.espacamentoVertical);
-        orientation = modeloCustom.orientacao === "retrato" ? "portrait" : "landscape";
-        
-        // Se o formato for personalizado, usar as dimensões especificadas
-        if (modeloCustom.formatoPagina === "Personalizado" && modeloCustom.larguraPagina && modeloCustom.alturaPagina) {
-          console.log("Usando formato de página personalizado:", modeloCustom.larguraPagina, "x", modeloCustom.alturaPagina);
-          format = [modeloCustom.larguraPagina, modeloCustom.alturaPagina];
-        } else {
-          format = modeloCustom.formatoPagina.toLowerCase();
-        }
-        
-        // Usar os campos personalizados se existirem
-        if (modeloCustom.campos && modeloCustom.campos.length > 0) {
-          campos = modeloCustom.campos;
-          console.log("Usando campos personalizados:", campos);
-        }
+        // Usamos o novo gerador de etiquetas
+        return await generateEtiquetaPDF(
+          modeloCustom,
+          [item], // Passamos o item como um array
+          {
+            startRow,
+            startColumn,
+            copias: totalCopies
+          }
+        );
       } else {
         console.warn("Modelo personalizado não encontrado, usando configurações padrão");
       }
     }
+
+    // Configurações padrão da etiqueta (caso não tenha modelo personalizado)
+    let labelWidth = 80;  // largura em mm
+    let labelHeight = 8;  // altura em mm (ajustado para 8mm conforme solicitado)
+    let marginLeft = 10;   // margem esquerda em mm
+    let marginTop = 10;    // margem superior em mm
+    let spacing = 5;       // espaçamento entre etiquetas em mm
+    let orientation = "landscape";
+    let format = "a4";
+    let campos: CampoEtiqueta[] = [
+      { tipo: 'nome', x: 2, y: 4, largura: 40, altura: 10, tamanhoFonte: 7 },
+      { tipo: 'codigo', x: 20, y: 1, largura: 40, altura: 6, tamanhoFonte: 8 },
+      { tipo: 'preco', x: 70, y: 4, largura: 20, altura: 10, tamanhoFonte: 10 }
+    ];
 
     // Criar novo documento PDF com as configurações adequadas
     const doc = new jsPDF({

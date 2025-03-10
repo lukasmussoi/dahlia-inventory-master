@@ -1,8 +1,11 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import type { ModeloEtiqueta, EtiquetaCustomDB } from "@/types/etiqueta";
+import type { ModeloEtiqueta, EtiquetaCustomDB, CampoEtiqueta } from "@/types/etiqueta";
 import { mapDatabaseToModel, mapModelToDatabase } from "@/utils/etiquetaMappers";
+
+// Reexportamos os tipos para que possam ser importados deste arquivo
+export type { ModeloEtiqueta, CampoEtiqueta };
 
 export class EtiquetaCustomModel {
   static async getAll(): Promise<ModeloEtiqueta[]> {

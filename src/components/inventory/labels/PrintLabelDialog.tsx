@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -80,11 +79,20 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
     if (selectedModeloId) {
       const carregarModeloSelecionado = async () => {
         try {
+          console.log("Carregando detalhes do modelo:", selectedModeloId);
           const modelo = await EtiquetaCustomModel.getById(selectedModeloId);
-          setSelectedModelo(modelo);
-          console.log("Detalhes do modelo selecionado:", modelo);
+          console.log("Detalhes do modelo carregado:", modelo);
+          
+          if (modelo) {
+            setSelectedModelo(modelo);
+            console.log("Campos do modelo carregado:", modelo.campos);
+          } else {
+            console.error("Modelo não encontrado");
+            toast.error("Erro ao carregar modelo de etiqueta");
+          }
         } catch (error) {
           console.error("Erro ao carregar detalhes do modelo:", error);
+          toast.error("Erro ao carregar modelo de etiqueta");
         }
       };
       
@@ -129,6 +137,7 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
       setIsProcessing(true);
       console.log("Iniciando impressão com modelo:", selectedModeloId);
       console.log("Detalhes do modelo para impressão:", selectedModelo);
+      console.log("Item para impressão:", item);
 
       // Usar a interface correta para o generatePdfLabel
       const pdfUrl = await generatePdfLabel({
@@ -302,3 +311,4 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
     </Dialog>
   );
 }
+

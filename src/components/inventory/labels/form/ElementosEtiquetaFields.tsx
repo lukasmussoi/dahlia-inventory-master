@@ -35,7 +35,7 @@ export function ElementosEtiquetaFields({ form }: ElementosEtiquetaFieldsProps) 
       setCamposAtuais(elementosIniciais);
     } else {
       // Garantir que todos os campos tenham valores válidos
-      const camposCorrigidos = camposAtuais.map((campo, index) => {
+      const camposCorrigidos = camposAtuais.map((campo: any, index: number) => {
         const campoInicial = elementosIniciais[index];
         return {
           tipo: campo.tipo || campoInicial.tipo,
@@ -44,7 +44,7 @@ export function ElementosEtiquetaFields({ form }: ElementosEtiquetaFieldsProps) 
           largura: Number(campo.largura) || campoInicial.largura, 
           altura: Number(campo.altura) || campoInicial.altura,
           tamanhoFonte: Number(campo.tamanhoFonte) || campoInicial.tamanhoFonte
-        };
+        } as CampoEtiqueta;
       });
       
       form.setValue('campos', camposCorrigidos);

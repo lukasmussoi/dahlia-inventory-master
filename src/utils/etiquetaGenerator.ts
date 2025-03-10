@@ -1,394 +1,145 @@
 
-import { jsPDF } from 'jspdf';
-import { ModeloEtiqueta, CampoEtiqueta } from '@/models/etiquetaCustomModel';
-import { generateBarcode } from './barcodeUtils';
+import { jsPDF } from "jspdf";
+import { generateBarcode } from "./barcodeUtils";
+import type { ModeloEtiqueta, CampoEtiqueta } from "@/types/etiqueta";
 
-interface EtiquetaData {
-  nome?: string;
-  codigo?: string;
-  codigoBarras?: string;
-  preco?: number;
-  precoCusto?: number;
-  unidade?: string;
-  fornecedor?: string;
-  localizacao?: string;
-  gtin?: string;
-  descricao?: string;
-  dataValidade?: string;
-  // Campos para contatos
-  endereco?: string;
-  cidade?: string;
-  estado?: string;
-  cep?: string;
-  telefone?: string;
-  email?: string;
-  // Campos para notas fiscais
-  numero?: string;
-  data?: string;
-  cliente?: string;
-  valorTotal?: number;
-  chaveAcesso?: string;
-  // Campos para ordens de serviço
-  status?: string;
-  // Campos para vendas
-  formaPagamento?: string;
-}
-
-export async function gerarEtiquetasPDF(
+// Função para gerar etiquetas em PDF
+export async function generateEtiquetaPDF(
   modelo: ModeloEtiqueta,
-  dados: EtiquetaData[],
-  copias: number = 1
+  dados: any[],
+  options: {
+    startRow?: number;
+    startColumn?: number;
+    copias?: number;
+  } = {}
 ): Promise<string> {
-  // Definir dimensões da página
-  let larguraPagina = 210; // A4 padrão em mm
-  let alturaPagina = 297;
+  console.log("Gerando etiqueta com modelo:", modelo);
+  console.log("Campos do modelo:", modelo.campos);
+
+  const { startRow = 1, startColumn = 1, copias = 1 } = options;
   
-  if (modelo.formatoPagina === 'personalizado' && modelo.larguraPagina && modelo.alturaPagina) {
-    larguraPagina = modelo.larguraPagina;
-    alturaPagina = modelo.alturaPagina;
-  } else if (modelo.formatoPagina === 'A3') {
-    larguraPagina = 297;
-    alturaPagina = 420;
-  } else if (modelo.formatoPagina === 'A5') {
-    larguraPagina = 148;
-    alturaPagina = 210;
-  } else if (modelo.formatoPagina === 'A2') {
-    larguraPagina = 420;
-    alturaPagina = 594;
+  // Configurações da página
+  const orientacao = modelo.orientacao === "retrato" ? "portrait" : "landscape";
+  let formato: string | [number, number] = modelo.formatoPagina.toLowerCase();
+  
+  // Se o formato for personalizado, usar as dimensões especificadas
+  if (modelo.formatoPagina === "Personalizado" && modelo.larguraPagina && modelo.alturaPagina) {
+    formato = [modelo.larguraPagina, modelo.alturaPagina];
   }
   
-  // Trocar largura e altura se for paisagem
-  if (modelo.orientacao === 'paisagem') {
-    [larguraPagina, alturaPagina] = [alturaPagina, larguraPagina];
-  }
-  
-  // Criar PDF
+  // Criar documento PDF
   const doc = new jsPDF({
-    orientation: modelo.orientacao === 'paisagem' ? 'landscape' : 'portrait',
-    unit: 'mm',
-    format: modelo.formatoPagina === 'personalizado' ? [larguraPagina, alturaPagina] : modelo.formatoPagina
+    orientation: orientacao as "portrait" | "landscape",
+    unit: "mm",
+    format: formato,
   });
   
-  // Calcular quantas etiquetas cabem por página
-  const larguraEtiqueta = modelo.largura + modelo.espacamentoHorizontal;
-  const alturaEtiqueta = modelo.altura + modelo.espacamentoVertical;
+  // Dimensões da página
+  const pageWidth = doc.internal.pageSize.width;
+  const pageHeight = doc.internal.pageSize.height;
   
-  const areaUtil = {
-    largura: larguraPagina - modelo.margemEsquerda - modelo.margemDireita,
-    altura: alturaPagina - modelo.margemSuperior - modelo.margemInferior
-  };
+  // Configurações da etiqueta
+  const labelWidth = modelo.largura;
+  const labelHeight = modelo.altura;
+  const marginLeft = modelo.margemEsquerda;
+  const marginTop = modelo.margemSuperior;
+  const spacingH = modelo.espacamentoHorizontal;
+  const spacingV = modelo.espacamentoVertical;
   
-  const etiquetasPorLinha = Math.floor(areaUtil.largura / larguraEtiqueta);
-  const etiquetasPorColuna = Math.floor(areaUtil.altura / alturaEtiqueta);
-  const etiquetasPorPagina = etiquetasPorLinha * etiquetasPorColuna;
+  // Calcular quantas etiquetas cabem na página
+  const labelsPerRow = Math.floor((pageWidth - marginLeft - modelo.margemDireita) / (labelWidth + spacingH));
+  const labelsPerColumn = Math.floor((pageHeight - marginTop - modelo.margemInferior) / (labelHeight + spacingV));
   
-  // Variáveis para controlar a posição atual
-  let etiquetaAtual = 0;
-  let paginaAtual = 1;
+  console.log("Configurações de página:", {
+    pageWidth, 
+    pageHeight,
+    labelsPerRow,
+    labelsPerColumn,
+    labelWidth,
+    labelHeight,
+    marginLeft,
+    marginTop
+  });
   
-  // Cache para códigos de barras
-  const barcodeCache: {[key: string]: string} = {};
+  // Validações
+  if (labelsPerRow <= 0 || labelsPerColumn <= 0) {
+    throw new Error("Configuração inválida: as dimensões da etiqueta não permitem impressão na página.");
+  }
   
-  // Para cada item, gerar o número de cópias solicitado
+  let currentRow = startRow - 1;
+  let currentColumn = startColumn - 1;
+  
+  // Garantir valores válidos
+  if (currentRow < 0) currentRow = 0;
+  if (currentColumn < 0) currentColumn = 0;
+  
+  // Para cada item de dados
   for (const item of dados) {
-    for (let i = 0; i < copias; i++) {
-      // Calcular posição na página
-      const coluna = etiquetaAtual % etiquetasPorLinha;
-      const linha = Math.floor((etiquetaAtual % etiquetasPorPagina) / etiquetasPorLinha);
-      
-      // Se for uma nova página, adicionar
-      if (etiquetaAtual > 0 && etiquetaAtual % etiquetasPorPagina === 0) {
-        doc.addPage();
-        paginaAtual++;
+    // Repetir conforme número de cópias
+    for (let c = 0; c < copias; c++) {
+      // Se chegou ao final da página, adicionar nova página
+      if (currentRow >= labelsPerColumn) {
+        currentRow = 0;
+        currentColumn++;
+        
+        if (currentColumn >= labelsPerRow) {
+          currentColumn = 0;
+          doc.addPage();
+        }
       }
       
-      // Posição da etiqueta na página
-      const x = modelo.margemEsquerda + coluna * larguraEtiqueta;
-      const y = modelo.margemSuperior + linha * alturaEtiqueta;
+      // Calcular posição da etiqueta na página
+      const x = marginLeft + currentColumn * (labelWidth + spacingH);
+      const y = marginTop + currentRow * (labelHeight + spacingV);
       
-      // Desenhar etiqueta
-      await desenharEtiqueta(doc, modelo, item, x, y, barcodeCache);
+      // Adicionar os elementos conforme definido no modelo
+      for (const campo of modelo.campos) {
+        await adicionarElemento(doc, campo, item, x, y);
+      }
       
-      etiquetaAtual++;
+      currentRow++;
     }
   }
   
   // Retornar URL do PDF gerado
-  return URL.createObjectURL(doc.output('blob'));
+  const pdfBlob = doc.output("blob");
+  return URL.createObjectURL(pdfBlob);
 }
 
-async function desenharEtiqueta(
-  doc: jsPDF,
-  modelo: ModeloEtiqueta,
-  dados: EtiquetaData,
-  x: number,
-  y: number,
-  barcodeCache: {[key: string]: string}
-): Promise<void> {
-  // Para cada campo na etiqueta
-  for (const campo of modelo.campos) {
-    // Posição do campo dentro da etiqueta
-    const campoX = x + campo.x;
-    const campoY = y + campo.y;
-    
-    // Configurar fonte
-    if (campo.fonte) {
-      const estilo = (campo.negrito ? 'bold' : '') + (campo.italico ? 'italic' : '');
-      doc.setFont(campo.fonte, estilo || 'normal');
-    }
-    
-    if (campo.tamanhoFonte) {
-      doc.setFontSize(campo.tamanhoFonte);
-    }
-    
-    // Renderizar campo de acordo com seu tipo
-    switch (campo.tipo) {
-      case 'texto':
-        renderizarTexto(doc, campo, campoX, campoY, dados);
-        break;
+// Função para adicionar um elemento na etiqueta
+async function adicionarElemento(doc: jsPDF, campo: CampoEtiqueta, item: any, xBase: number, yBase: number): Promise<void> {
+  const x = xBase + campo.x;
+  const y = yBase + campo.y;
+  
+  // Configurar fonte e tamanho
+  doc.setFontSize(campo.tamanhoFonte);
+  const fontStyle = campo.valor?.includes("negrito") ? "bold" : "normal";
+  doc.setFont("helvetica", fontStyle);
+  
+  // Adicionar o elemento conforme seu tipo
+  switch (campo.tipo) {
+    case "nome":
+      doc.text(item.name || "Sem nome", x, y);
+      break;
       
-      case 'preco':
-        renderizarPreco(doc, campo, campoX, campoY, dados);
-        break;
+    case "codigo":
+      try {
+        const barcodeText = item.barcode || item.sku || "0000000000";
+        const barcodeData = await generateBarcode(barcodeText);
+        doc.addImage(barcodeData, "PNG", x, y, campo.largura, campo.altura);
+      } catch (error) {
+        console.error("Erro ao gerar código de barras:", error);
+      }
+      break;
       
-      case 'codigo':
-        renderizarCodigo(doc, campo, campoX, campoY, dados);
-        break;
+    case "preco":
+      const price = typeof item.price === 'number' ? item.price.toFixed(2) : '0.00';
+      const priceText = `R$ ${price}`;
+      doc.text(priceText, x, y);
+      break;
       
-      case 'codigoBarras':
-        await renderizarCodigoBarras(doc, campo, campoX, campoY, dados, barcodeCache);
-        break;
-      
-      case 'data':
-        renderizarData(doc, campo, campoX, campoY, dados);
-        break;
-      
-      case 'textoGenerico':
-        renderizarTextoGenerico(doc, campo, campoX, campoY);
-        break;
-    }
+    default:
+      // Tipos não reconhecidos são ignorados
+      console.warn(`Tipo de campo não reconhecido: ${campo.tipo}`);
   }
-}
-
-function renderizarTexto(
-  doc: jsPDF,
-  campo: CampoEtiqueta,
-  x: number,
-  y: number,
-  dados: EtiquetaData
-): void {
-  let valor = '';
-  
-  // Obter valor do campo correspondente nos dados
-  switch (campo.valor) {
-    case 'nome':
-      valor = dados.nome || '';
-      break;
-    case 'fornecedor':
-      valor = dados.fornecedor || '';
-      break;
-    case 'unidade':
-      valor = dados.unidade || '';
-      break;
-    case 'localizacao':
-      valor = dados.localizacao || '';
-      break;
-    case 'gtin':
-      valor = dados.gtin || '';
-      break;
-    case 'descricao':
-      valor = dados.descricao || '';
-      break;
-    // Para contatos
-    case 'endereco':
-      valor = dados.endereco || '';
-      break;
-    case 'cidade':
-      valor = dados.cidade || '';
-      break;
-    case 'estado':
-      valor = dados.estado || '';
-      break;
-    case 'cep':
-      valor = dados.cep || '';
-      break;
-    case 'telefone':
-      valor = dados.telefone || '';
-      break;
-    case 'email':
-      valor = dados.email || '';
-      break;
-    // Para notas/vendas
-    case 'cliente':
-      valor = dados.cliente || '';
-      break;
-    case 'numero':
-      valor = dados.numero || '';
-      break;
-    case 'status':
-      valor = dados.status || '';
-      break;
-    case 'formaPagamento':
-      valor = dados.formaPagamento || '';
-      break;
-    case 'chaveAcesso':
-      valor = dados.chaveAcesso || '';
-      break;
-  }
-  
-  // Adicionar rótulo se existir
-  if (campo.rotulo) {
-    valor = `${campo.rotulo} ${valor}`;
-  }
-  
-  // Renderizar texto
-  doc.text(valor, x, y + campo.altura / 2 + (campo.tamanhoFonte || 12) / 4);
-}
-
-function renderizarPreco(
-  doc: jsPDF,
-  campo: CampoEtiqueta,
-  x: number,
-  y: number,
-  dados: EtiquetaData
-): void {
-  let valor = 0;
-  
-  // Obter valor do campo correspondente nos dados
-  if (campo.valor === 'preco') {
-    valor = dados.preco || 0;
-  } else if (campo.valor === 'precoCusto') {
-    valor = dados.precoCusto || 0;
-  } else if (campo.valor === 'valorTotal') {
-    valor = dados.valorTotal || 0;
-  }
-  
-  // Formatar preço
-  const precoFormatado = valor.toLocaleString('pt-BR', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  });
-  
-  // Adicionar símbolo da moeda se existir
-  const textoPreco = (campo.moeda || '') + precoFormatado;
-  
-  // Adicionar rótulo se existir
-  const textoFinal = campo.rotulo ? `${campo.rotulo} ${textoPreco}` : textoPreco;
-  
-  // Renderizar texto
-  doc.text(textoFinal, x, y + campo.altura / 2 + (campo.tamanhoFonte || 12) / 4);
-}
-
-function renderizarCodigo(
-  doc: jsPDF,
-  campo: CampoEtiqueta,
-  x: number,
-  y: number,
-  dados: EtiquetaData
-): void {
-  let valor = '';
-  
-  // Obter valor do campo correspondente nos dados
-  if (campo.valor === 'codigo') {
-    valor = dados.codigo || '';
-  }
-  
-  // Adicionar rótulo se existir
-  const textoFinal = campo.rotulo ? `${campo.rotulo} ${valor}` : valor;
-  
-  // Renderizar texto
-  doc.text(textoFinal, x, y + campo.altura / 2 + (campo.tamanhoFonte || 12) / 4);
-}
-
-async function renderizarCodigoBarras(
-  doc: jsPDF,
-  campo: CampoEtiqueta,
-  x: number,
-  y: number,
-  dados: EtiquetaData,
-  barcodeCache: {[key: string]: string}
-): Promise<void> {
-  let valor = '';
-  
-  // Obter valor do campo correspondente nos dados
-  if (campo.valor === 'codigoBarras') {
-    valor = dados.codigoBarras || '';
-  } else if (campo.valor === 'codigo') {
-    valor = dados.codigo || '';
-  } else if (campo.valor === 'gtin') {
-    valor = dados.gtin || '';
-  }
-  
-  if (!valor) {
-    return; // Sem código para gerar
-  }
-  
-  // Verificar cache primeiro
-  let barcodeData = barcodeCache[valor];
-  
-  if (!barcodeData) {
-    // Gerar código de barras
-    barcodeData = await generateBarcode(valor);
-    barcodeCache[valor] = barcodeData;
-  }
-  
-  // Adicionar código de barras
-  doc.addImage(
-    barcodeData, 
-    'PNG', 
-    x, 
-    y, 
-    campo.largura, 
-    campo.altura
-  );
-  
-  // Adicionar texto do código se necessário
-  if (campo.mostrarCodigo) {
-    doc.setFontSize(8);
-    doc.text(
-      valor, 
-      x + campo.largura / 2, 
-      y + campo.altura + 3, 
-      { align: 'center' }
-    );
-  }
-}
-
-function renderizarData(
-  doc: jsPDF,
-  campo: CampoEtiqueta,
-  x: number,
-  y: number,
-  dados: EtiquetaData
-): void {
-  let valor = '';
-  
-  // Obter valor do campo correspondente nos dados
-  if (campo.valor === 'dataValidade') {
-    valor = dados.dataValidade || '';
-  } else if (campo.valor === 'data') {
-    valor = dados.data || '';
-  }
-  
-  // Formatar data se for uma string de data válida
-  if (valor && !isNaN(Date.parse(valor))) {
-    const data = new Date(valor);
-    valor = data.toLocaleDateString('pt-BR');
-  }
-  
-  // Adicionar rótulo se existir
-  const textoFinal = campo.rotulo ? `${campo.rotulo} ${valor}` : valor;
-  
-  // Renderizar texto
-  doc.text(textoFinal, x, y + campo.altura / 2 + (campo.tamanhoFonte || 12) / 4);
-}
-
-function renderizarTextoGenerico(
-  doc: jsPDF,
-  campo: CampoEtiqueta,
-  x: number,
-  y: number
-): void {
-  // Renderizar texto personalizado
-  doc.text(campo.valor, x, y + campo.altura / 2 + (campo.tamanhoFonte || 12) / 4);
 }

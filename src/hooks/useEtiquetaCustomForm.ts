@@ -7,6 +7,15 @@ import { toast } from "sonner";
 import { EtiquetaCustomModel } from "@/models/etiquetaCustomModel";
 import type { ModeloEtiqueta, CampoEtiqueta } from "@/types/etiqueta";
 
+const campoEtiquetaSchema = z.object({
+  tipo: z.enum(['nome', 'codigo', 'preco']),
+  x: z.number().min(0),
+  y: z.number().min(0),
+  largura: z.number().min(0),
+  altura: z.number().min(0),
+  tamanhoFonte: z.number().min(0),
+});
+
 const formSchema = z.object({
   nome: z.string().min(3, "Nome deve ter pelo menos 3 caracteres"),
   descricao: z.string().min(3, "Descrição deve ter pelo menos 3 caracteres"),
@@ -22,14 +31,7 @@ const formSchema = z.object({
   espacamentoVertical: z.number().min(0),
   larguraPagina: z.number().optional(),
   alturaPagina: z.number().optional(),
-  campos: z.array(z.object({
-    tipo: z.enum(['nome', 'codigo', 'preco']),
-    x: z.number().min(0),
-    y: z.number().min(0),
-    largura: z.number().min(0),
-    altura: z.number().min(0),
-    tamanhoFonte: z.number().min(0),
-  })),
+  campos: z.array(campoEtiquetaSchema),
 });
 
 export type FormValues = z.infer<typeof formSchema>;
@@ -43,6 +45,18 @@ const defaultCampos: CampoEtiqueta[] = [
 
 export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => void, onSuccess?: () => void) {
   const [isLoading, setIsLoading] = useState(false);
+
+  // Certifique-se de que os campos do modelo, se fornecidos, estejam no formato correto
+  const modeloCampos = modelo?.campos 
+    ? modelo.campos.map(campo => ({
+        tipo: campo.tipo,
+        x: Number(campo.x),
+        y: Number(campo.y),
+        largura: Number(campo.largura),
+        altura: Number(campo.altura),
+        tamanhoFonte: Number(campo.tamanhoFonte)
+      }))
+    : defaultCampos;
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -61,7 +75,7 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
       espacamentoVertical: modelo?.espacamentoVertical || 0,
       larguraPagina: modelo?.larguraPagina,
       alturaPagina: modelo?.alturaPagina,
-      campos: modelo?.campos || defaultCampos,
+      campos: modeloCampos,
     },
   });
 
