@@ -281,8 +281,8 @@ export function LabelCanvas({ width, height, campos, onUpdate }: LabelCanvasProp
       subTargetCheck: false,
     });
     
-    // Correção: apenas um argumento para o método set
-    group.set("barcodeType", "CODE128");
+    // Correção: usar setProperty em vez de set com dois argumentos
+    group.set({ barcodeType: "CODE128" });
     
     canvas.add(group);
     canvas.setActiveObject(group);
@@ -304,8 +304,8 @@ export function LabelCanvas({ width, height, campos, onUpdate }: LabelCanvasProp
       textAlign: "right",
     });
     
-    // Correção: apenas um argumento para o método set
-    price.set("precoFlag", true);
+    // Correção: usar setProperty em vez de set com dois argumentos
+    price.set({ precoFlag: true });
     
     canvas.add(price);
     canvas.setActiveObject(price);
@@ -325,8 +325,8 @@ export function LabelCanvas({ width, height, campos, onUpdate }: LabelCanvasProp
       fill: "#666",
     });
     
-    // Correção: apenas um argumento para o método set
-    sku.set("skuFlag", true);
+    // Correção: usar setProperty em vez de set com dois argumentos
+    sku.set({ skuFlag: true });
     
     canvas.add(sku);
     canvas.setActiveObject(sku);

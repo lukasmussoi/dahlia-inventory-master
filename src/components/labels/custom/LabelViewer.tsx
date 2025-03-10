@@ -6,11 +6,10 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Separator } from "@/components/ui/separator";
 import { Printer, Download, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { generatePdfFromCustomLabel, generatePpla } from "@/utils/customLabelPdfUtils";
 import { CustomLabel } from "@/models/labelModel";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { Json } from "@/integrations/supabase/types";
+import { generatePdfFromCustomLabel, generatePpla } from "@/utils/customLabelPdfUtils";
 
 // Interface para campos de etiqueta para checagem de tipos
 interface CampoEtiqueta {

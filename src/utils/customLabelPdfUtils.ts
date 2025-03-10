@@ -194,6 +194,21 @@ export function generateCustomLabelPDF(
   return pdf;
 }
 
+// Função para gerar PDF a partir de uma etiqueta customizada (exportando com o nome correto)
+export async function generatePdfFromCustomLabel(
+  etiqueta: CustomLabel,
+  quantidade: number = 1
+): Promise<string> {
+  try {
+    const pdf = generateCustomLabelPDF(etiqueta, quantidade);
+    const pdfBlob = pdf.output('blob');
+    return URL.createObjectURL(pdfBlob);
+  } catch (error) {
+    console.error("Erro ao gerar PDF de etiqueta customizada:", error);
+    throw error;
+  }
+}
+
 // Função para imprimir etiqueta customizada
 export async function printCustomLabel(
   etiqueta: CustomLabel,
@@ -220,4 +235,11 @@ export async function printCustomLabel(
     console.error("Erro ao imprimir etiqueta:", error);
     throw error;
   }
+}
+
+// Função adicional para gerar arquivo PPLA (simulação - não implementada de fato)
+export function generatePpla(etiqueta: CustomLabel): string {
+  // Simulação da função de geração de arquivo PPLA (apenas para completar a importação)
+  console.log("Função generatePpla chamada para etiqueta:", etiqueta.id);
+  return "Arquivo PPLA simulado"; // Retorna um placeholder
 }

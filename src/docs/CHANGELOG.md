@@ -9,6 +9,8 @@ Este documento mantém um registro de todas as alterações significativas feita
 - Corrigido problema de TypeScript no componente LabelCanvas.tsx relacionado ao método set() do fabric.js
 - Corrigido problema de tipagem no customLabelPdfUtils.ts para campos JSON
 - Corrigido problema de acesso em rotas de etiquetas customizadas, categorias e fornecedores
+- Adicionada função generatePdfFromCustomLabel e generatePpla no customLabelPdfUtils.ts para corrigir erros de importação
+- Corrigido problema de chamada de método em objetos do Fabric.js usando a sintaxe correta do objeto
 
 ### Melhorias
 - Implementado verificação de autenticação consistente em todas as rotas
