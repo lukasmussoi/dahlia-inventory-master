@@ -1,14 +1,17 @@
-
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { useState, useEffect } from "react";
-import { generatePdfLabel } from "@/utils/pdfUtils";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { Plus } from "lucide-react";
 import { LabelModel } from "@/models/labelModel";
+import { generatePdfLabel } from "@/utils/pdfUtils";
+import { EtiquetaCustomModel, ModeloEtiqueta } from "@/models/etiquetaCustomModel";
+import { EtiquetaCustomForm } from "./EtiquetaCustomForm";
 
 interface PrintLabelDialogProps {
   isOpen: boolean;
@@ -23,8 +26,19 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
   const [startColumn, setStartColumn] = useState("1");
   const [multiplyByStock, setMultiplyByStock] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showModeloForm, setShowModeloForm] = useState(false);
+  const [modelosCustom, setModelosCustom] = useState<ModeloEtiqueta[]>([]);
 
-  // Resetar estado quando o modal é aberto/fechado
+  useEffect(() => {
+    const loadModelosCustom = async () => {
+      const modelos = await EtiquetaCustomModel.getAll();
+      setModelosCustom(modelos);
+    };
+    if (isOpen) {
+      loadModelosCustom();
+    }
+  }, [isOpen]);
+
   useEffect(() => {
     if (isOpen) {
       setCopies("1");
@@ -68,7 +82,6 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
     try {
       setIsProcessing(true);
 
-      // Gerar PDF temporário
       const pdfUrl = await generatePdfLabel({
         item,
         copies: parseInt(copies),
@@ -77,10 +90,8 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
         multiplyByStock,
       });
 
-      // Registrar impressão no histórico
       await LabelModel.registerLabelPrint(item.id, parseInt(copies));
 
-      // Abrir PDF em nova aba
       window.open(pdfUrl, '_blank');
       
       toast.success("Etiquetas geradas com sucesso!");
@@ -93,14 +104,30 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
     }
   };
 
+  if (showModeloForm) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Criar Novo Modelo de Etiqueta</DialogTitle>
+          </DialogHeader>
+          <EtiquetaCustomForm
+            onClose={() => setShowModeloForm(false)}
+            onSuccess={() => {
+              setShowModeloForm(false);
+              EtiquetaCustomModel.getAll().then(setModelosCustom);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[425px]">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent>
         <DialogHeader>
-          <DialogTitle>Impressão de etiquetas</DialogTitle>
-          <DialogDescription>
-            Configure as opções de impressão para o item: {item?.name || ''}
-          </DialogDescription>
+          <DialogTitle>Imprimir Etiquetas</DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-2 gap-4">
@@ -155,6 +182,37 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
               onCheckedChange={setMultiplyByStock}
             />
             <Label htmlFor="multiply-stock">Multiplicar por estoque</Label>
+          </div>
+        </div>
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="text-sm font-medium">Modelo de Etiqueta</h3>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowModeloForm(true)}
+              className="flex items-center gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              Novo Modelo
+            </Button>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="modelos-custom">Modelos personalizados</Label>
+              <Select value={labelModel} disabled>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o modelo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {modelosCustom.map((modelo) => (
+                    <SelectItem key={modelo.id} value={modelo.id}>
+                      {modelo.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
         <div className="flex justify-end space-x-2">

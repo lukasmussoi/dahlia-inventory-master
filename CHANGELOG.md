@@ -1,5 +1,17 @@
-
 # CHANGELOG
+
+## [1.0.3] - 2025-03-20
+
+### Adicionado
+- Implementado módulo de etiquetas personalizadas
+- Adicionada funcionalidade para criar e gerenciar modelos de etiquetas
+- Integração com a janela modal de impressão de etiquetas
+- Suporte a diferentes tamanhos e configurações de etiquetas
+
+### Melhorado
+- Interface de impressão de etiquetas com suporte a modelos personalizados
+- Validação de dados no formulário de criação de etiquetas
+- Feedback visual durante operações de salvamento
 
 ## [1.0.2] - 2025-03-15
 
