@@ -6,6 +6,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,13 +20,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, AlertTriangle } from "lucide-react";
+import { Plus, AlertTriangle, Printer, X, FileEdit, Settings } from "lucide-react";
 import { LabelModel } from "@/models/labelModel";
 import { generatePdfLabel } from "@/utils/pdfUtils";
 import { EtiquetaCustomModel } from "@/models/etiquetaCustomModel";
 import { EtiquetaCustomForm } from "./EtiquetaCustomForm";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import type { ModeloEtiqueta } from "@/types/etiqueta";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 
 interface PrintLabelDialogProps {
   isOpen: boolean;
@@ -45,6 +50,7 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
   const [selectedModeloId, setSelectedModeloId] = useState<string | undefined>(undefined);
   const [selectedModelo, setSelectedModelo] = useState<ModeloEtiqueta | null>(null);
   const [modeloWarning, setModeloWarning] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<string>("configuracao");
 
   // Load custom models when dialog opens
   useEffect(() => {
@@ -75,6 +81,7 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
       setSelectedModeloId(undefined);
       setSelectedModelo(null);
       setModeloWarning(null);
+      setActiveTab("configuracao");
     }
   }, [isOpen]);
 
@@ -231,7 +238,7 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
   if (showModeloForm) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden">
+        <DialogContent className="max-w-3xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>Criar Novo Modelo de Etiqueta</DialogTitle>
             <DialogDescription>
@@ -249,82 +256,111 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent>
+      <DialogContent className="max-w-md sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Imprimir Etiquetas</DialogTitle>
           <DialogDescription>
             Configure as opções de impressão para gerar etiquetas para o item selecionado.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="label-model">Modelo da etiqueta</Label>
-              <Select value={labelModel} disabled>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o modelo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Padrão">Padrão</SelectItem>
-                </SelectContent>
-              </Select>
+        
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="configuracao">Configuração</TabsTrigger>
+            <TabsTrigger value="modelo">Modelo de Etiqueta</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="configuracao" className="space-y-4 py-2">
+            <Card>
+              <CardHeader className="p-3">
+                <CardTitle className="text-base">Detalhes da Impressão</CardTitle>
+              </CardHeader>
+              <CardContent className="p-3 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="label-model">Modelo da etiqueta</Label>
+                    <Select value={labelModel} disabled>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o modelo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Padrão">Padrão</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="copies">Cópias</Label>
+                    <Input
+                      id="copies"
+                      type="number"
+                      min="1"
+                      value={copies}
+                      onChange={(e) => setCopies(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="start-row">Linha início</Label>
+                    <Input
+                      id="start-row"
+                      type="number"
+                      min="1"
+                      value={startRow}
+                      onChange={(e) => setStartRow(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="start-column">Coluna início</Label>
+                    <Input
+                      id="start-column"
+                      type="number"
+                      min="1"
+                      value={startColumn}
+                      onChange={(e) => setStartColumn(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2 pt-2">
+                  <Switch
+                    id="multiply-stock"
+                    checked={multiplyByStock}
+                    onCheckedChange={setMultiplyByStock}
+                  />
+                  <Label htmlFor="multiply-stock">Multiplicar por estoque</Label>
+                </div>
+              </CardContent>
+            </Card>
+            
+            {selectedModelo && (
+              <Card>
+                <CardHeader className="p-3">
+                  <CardTitle className="text-base">Modelo Selecionado</CardTitle>
+                </CardHeader>
+                <CardContent className="p-3 space-y-2 text-sm">
+                  <div><strong>Nome:</strong> {selectedModelo.nome}</div>
+                  <div><strong>Dimensões:</strong> {selectedModelo.largura}mm × {selectedModelo.altura}mm</div>
+                  <div><strong>Formato:</strong> {selectedModelo.formatoPagina}</div>
+                  <div><strong>Orientação:</strong> {selectedModelo.orientacao === "retrato" ? "Retrato" : "Paisagem"}</div>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+          
+          <TabsContent value="modelo" className="space-y-4 py-2">
+            <div className="flex justify-between items-center">
+              <h3 className="text-sm font-medium">Selecione um Modelo</h3>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowModeloForm(true)}
+                className="flex items-center gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Novo Modelo
+              </Button>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="copies">Cópias</Label>
-              <Input
-                id="copies"
-                type="number"
-                min="1"
-                value={copies}
-                onChange={(e) => setCopies(e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="start-row">Linha início</Label>
-              <Input
-                id="start-row"
-                type="number"
-                min="1"
-                value={startRow}
-                onChange={(e) => setStartRow(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="start-column">Coluna início</Label>
-              <Input
-                id="start-column"
-                type="number"
-                min="1"
-                value={startColumn}
-                onChange={(e) => setStartColumn(e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="multiply-stock"
-              checked={multiplyByStock}
-              onCheckedChange={setMultiplyByStock}
-            />
-            <Label htmlFor="multiply-stock">Multiplicar por estoque</Label>
-          </div>
-        </div>
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-sm font-medium">Modelo de Etiqueta</h3>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowModeloForm(true)}
-              className="flex items-center gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              Novo Modelo
-            </Button>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
+            
             <div className="space-y-2">
               <Label htmlFor="modelos-custom">Modelos personalizados</Label>
               <Select 
@@ -349,42 +385,56 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
                 </SelectContent>
               </Select>
             </div>
-          </div>
-          
-          {selectedModelo && (
-            <div className="border p-4 rounded-md bg-slate-50">
-              <h4 className="font-medium mb-2">Detalhes do modelo: {selectedModelo.nome}</h4>
-              <div className="text-sm space-y-1">
-                <p>Dimensões da etiqueta: {selectedModelo.largura}mm × {selectedModelo.altura}mm</p>
-                <p>Formato da página: {selectedModelo.formatoPagina} 
-                  {selectedModelo.formatoPagina === "Personalizado" && selectedModelo.larguraPagina && selectedModelo.alturaPagina 
-                    ? ` (${selectedModelo.larguraPagina}mm × ${selectedModelo.alturaPagina}mm)` 
-                    : ""
-                  }
-                </p>
-                <p>Orientação: {selectedModelo.orientacao === "retrato" ? "Retrato" : "Paisagem"}</p>
-              </div>
-            </div>
-          )}
-          
-          {modeloWarning && (
-            <Alert variant="warning" className="bg-yellow-50 border-yellow-200">
-              <AlertTriangle className="h-4 w-4 text-yellow-700" />
-              <AlertTitle className="text-yellow-800">Atenção</AlertTitle>
-              <AlertDescription className="text-yellow-700">
-                {modeloWarning}
-              </AlertDescription>
-            </Alert>
-          )}
-        </div>
-        <div className="flex justify-end space-x-2">
+            
+            {selectedModelo && (
+              <Card>
+                <CardHeader className="p-3">
+                  <CardTitle className="text-base">Detalhes do Modelo</CardTitle>
+                </CardHeader>
+                <CardContent className="p-3 space-y-2 text-sm">
+                  <div><strong>Nome:</strong> {selectedModelo.nome}</div>
+                  <div><strong>Descrição:</strong> {selectedModelo.descricao}</div>
+                  <div><strong>Dimensões:</strong> {selectedModelo.largura}mm × {selectedModelo.altura}mm</div>
+                  <div>
+                    <strong>Página:</strong> {selectedModelo.formatoPagina} 
+                    {selectedModelo.formatoPagina === "Personalizado" && selectedModelo.larguraPagina && selectedModelo.alturaPagina 
+                      ? ` (${selectedModelo.larguraPagina}mm × ${selectedModelo.alturaPagina}mm)` 
+                      : ""
+                    }
+                  </div>
+                  <div><strong>Orientação:</strong> {selectedModelo.orientacao === "retrato" ? "Retrato" : "Paisagem"}</div>
+                  <div><strong>Margens:</strong> S:{selectedModelo.margemSuperior}mm, I:{selectedModelo.margemInferior}mm, 
+                    E:{selectedModelo.margemEsquerda}mm, D:{selectedModelo.margemDireita}mm</div>
+                  <div><strong>Espaçamento:</strong> H:{selectedModelo.espacamentoHorizontal}mm, V:{selectedModelo.espacamentoVertical}mm</div>
+                </CardContent>
+              </Card>
+            )}
+            
+            {modeloWarning && (
+              <Alert variant="warning" className="bg-yellow-50 border-yellow-200">
+                <AlertTriangle className="h-4 w-4 text-yellow-700" />
+                <AlertTitle className="text-yellow-800">Atenção</AlertTitle>
+                <AlertDescription className="text-yellow-700">
+                  {modeloWarning}
+                </AlertDescription>
+              </Alert>
+            )}
+          </TabsContent>
+        </Tabs>
+        
+        <DialogFooter className="space-x-2">
           <Button variant="outline" onClick={onClose} disabled={isProcessing}>
             Cancelar
           </Button>
-          <Button onClick={handlePrint} disabled={isProcessing}>
+          <Button 
+            onClick={handlePrint} 
+            disabled={isProcessing || !selectedModeloId}
+            className="flex items-center gap-2"
+          >
+            <Printer className="h-4 w-4" />
             {isProcessing ? "Processando..." : "Imprimir"}
           </Button>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
