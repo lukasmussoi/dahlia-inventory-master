@@ -21,7 +21,7 @@ type DimensoesEtiquetaFieldsProps = {
 
 export function DimensoesEtiquetaFields({ form }: DimensoesEtiquetaFieldsProps) {
   return (
-    <div className="grid grid-cols-2 gap-4">
+    <>
       <FormField
         control={form.control}
         name="largura"
@@ -33,6 +33,8 @@ export function DimensoesEtiquetaFields({ form }: DimensoesEtiquetaFieldsProps) 
                 type="number" 
                 {...field} 
                 onChange={e => field.onChange(Number(e.target.value))}
+                min={10}
+                max={210}
               />
             </FormControl>
             <FormMessage />
@@ -51,12 +53,14 @@ export function DimensoesEtiquetaFields({ form }: DimensoesEtiquetaFieldsProps) 
                 type="number" 
                 {...field} 
                 onChange={e => field.onChange(Number(e.target.value))}
+                min={5}
+                max={297}
               />
             </FormControl>
             <FormMessage />
           </FormItem>
         )}
       />
-    </div>
+    </>
   );
 }

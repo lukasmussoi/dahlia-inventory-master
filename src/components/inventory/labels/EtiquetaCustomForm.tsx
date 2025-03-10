@@ -80,6 +80,10 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
             </TabsList>
 
             <TabsContent value="editor" className="space-y-4">
+              <div className="grid grid-cols-3 gap-4 mb-4">
+                <DimensoesEtiquetaFields form={form} />
+              </div>
+              
               <FormField
                 control={form.control}
                 name="campos"
@@ -91,6 +95,10 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
                         largura={form.getValues('largura')}
                         altura={form.getValues('altura')}
                         onCamposChange={field.onChange}
+                        onDimensoesChange={(largura, altura) => {
+                          form.setValue('largura', largura);
+                          form.setValue('altura', altura);
+                        }}
                       />
                     </FormControl>
                     <FormMessage />
@@ -100,7 +108,6 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
             </TabsContent>
 
             <TabsContent value="config" className="space-y-6">
-              <DimensoesEtiquetaFields form={form} />
               <FormatoEtiquetaFields form={form} />
               <MargensEtiquetaFields form={form} />
               <EspacamentoEtiquetaFields form={form} />
