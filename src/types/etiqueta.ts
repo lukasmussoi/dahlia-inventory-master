@@ -36,3 +36,25 @@ export interface ModeloEtiqueta {
   criado_em?: string;
   atualizado_em?: string;
 }
+
+export interface EtiquetaCustomDB {
+  id: string;
+  descricao: string;
+  tipo: string;
+  largura: number;
+  altura: number;
+  formato_pagina: string;
+  orientacao: string;
+  margem_superior: number;
+  margem_inferior: number;
+  margem_esquerda: number;
+  margem_direita: number;
+  espacamento_horizontal: number;
+  espacamento_vertical: number;
+  largura_pagina?: number;
+  altura_pagina?: number;
+  campos: CampoEtiqueta[];
+  criado_por: string;
+  criado_em: string;
+  atualizado_em: string;
+}

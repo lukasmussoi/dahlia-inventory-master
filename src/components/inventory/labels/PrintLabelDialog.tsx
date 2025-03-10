@@ -21,8 +21,9 @@ import { toast } from "sonner";
 import { Plus } from "lucide-react";
 import { LabelModel } from "@/models/labelModel";
 import { generatePdfLabel } from "@/utils/pdfUtils";
-import { EtiquetaCustomModel, ModeloEtiqueta } from "@/models/etiquetaCustomModel";
+import { EtiquetaCustomModel } from "@/models/etiquetaCustomModel";
 import { EtiquetaCustomForm } from "./EtiquetaCustomForm";
+import type { ModeloEtiqueta } from "@/types/etiqueta";
 
 interface PrintLabelDialogProps {
   isOpen: boolean;
@@ -31,7 +32,7 @@ interface PrintLabelDialogProps {
 }
 
 export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProps) {
-  const [labelModel] = useState("Padrão");
+  const [labelModel, setLabelModel] = useState("Padrão");
   const [copies, setCopies] = useState("1");
   const [startRow, setStartRow] = useState("1");
   const [startColumn, setStartColumn] = useState("1");
@@ -39,6 +40,7 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
   const [isProcessing, setIsProcessing] = useState(false);
   const [showModeloForm, setShowModeloForm] = useState(false);
   const [modelosCustom, setModelosCustom] = useState<ModeloEtiqueta[]>([]);
+  const [selectedModeloId, setSelectedModeloId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     const loadModelosCustom = async () => {
@@ -56,6 +58,7 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
       setStartRow("1");
       setStartColumn("1");
       setMultiplyByStock(false);
+      setSelectedModeloId(undefined);
     }
   }, [isOpen]);
 
@@ -99,6 +102,7 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
         startRow: parseInt(startRow),
         startColumn: parseInt(startColumn),
         multiplyByStock,
+        modeloId: selectedModeloId
       });
 
       await LabelModel.registerLabelPrint(item.id, parseInt(copies));
@@ -115,6 +119,12 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
     }
   };
 
+  const handleModeloSuccess = async () => {
+    setShowModeloForm(false);
+    const modelos = await EtiquetaCustomModel.getAll();
+    setModelosCustom(modelos);
+  };
+
   if (showModeloForm) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
@@ -124,10 +134,7 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
           </DialogHeader>
           <EtiquetaCustomForm
             onClose={() => setShowModeloForm(false)}
-            onSuccess={() => {
-              setShowModeloForm(false);
-              EtiquetaCustomModel.getAll().then(setModelosCustom);
-            }}
+            onSuccess={handleModeloSuccess}
           />
         </DialogContent>
       </Dialog>
@@ -211,13 +218,16 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="modelos-custom">Modelos personalizados</Label>
-              <Select value={labelModel} disabled>
+              <Select 
+                value={selectedModeloId} 
+                onValueChange={setSelectedModeloId}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o modelo" />
                 </SelectTrigger>
                 <SelectContent>
                   {modelosCustom.map((modelo) => (
-                    <SelectItem key={modelo.id} value={modelo.id}>
+                    <SelectItem key={modelo.id} value={modelo.id || ""}>
                       {modelo.nome}
                     </SelectItem>
                   ))}

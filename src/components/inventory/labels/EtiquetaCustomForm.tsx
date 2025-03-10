@@ -1,7 +1,6 @@
 
 import { Form } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { DimensoesEtiquetaFields } from "./form/DimensoesEtiquetaFields";
 import { FormatoEtiquetaFields } from "./form/FormatoEtiquetaFields";
 import { MargensEtiquetaFields } from "./form/MargensEtiquetaFields";
@@ -20,7 +19,7 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
 
   return (
     <Form {...form}>
-      <form onSubmit={onSubmit} className="space-y-4">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <DimensoesEtiquetaFields form={form} />
         <FormatoEtiquetaFields form={form} />
         <MargensEtiquetaFields form={form} />
