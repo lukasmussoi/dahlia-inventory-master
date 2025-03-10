@@ -5,6 +5,7 @@ import { DimensoesEtiquetaFields } from "./form/DimensoesEtiquetaFields";
 import { FormatoEtiquetaFields } from "./form/FormatoEtiquetaFields";
 import { MargensEtiquetaFields } from "./form/MargensEtiquetaFields";
 import { EspacamentoEtiquetaFields } from "./form/EspacamentoEtiquetaFields";
+import { ElementosEtiquetaFields } from "./form/ElementosEtiquetaFields";
 import { useEtiquetaCustomForm } from "@/hooks/useEtiquetaCustomForm";
 import type { ModeloEtiqueta } from "@/types/etiqueta";
 import { 
@@ -27,7 +28,7 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
@@ -62,6 +63,7 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
         <FormatoEtiquetaFields form={form} />
         <MargensEtiquetaFields form={form} />
         <EspacamentoEtiquetaFields form={form} />
+        <ElementosEtiquetaFields form={form} />
 
         <div className="flex justify-end gap-2 pt-4">
           <Button variant="outline" type="button" onClick={onClose}>

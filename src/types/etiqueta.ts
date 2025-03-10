@@ -1,20 +1,13 @@
-
 import type { Json } from "@/integrations/supabase/types";
 
 export interface CampoEtiqueta {
-  tipo: string;
+  tipo: 'nome' | 'codigo' | 'preco';
   x: number;
   y: number;
   largura: number;
   altura: number;
-  valor: string;
-  rotulo?: string;
-  fonte?: string;
-  tamanhoFonte?: number;
-  negrito?: boolean;
-  italico?: boolean;
-  mostrarCodigo?: boolean;
-  moeda?: string;
+  tamanhoFonte: number;
+  valor?: string;
 }
 
 export interface ModeloEtiqueta {
@@ -23,14 +16,14 @@ export interface ModeloEtiqueta {
   descricao?: string;
   largura: number;
   altura: number;
+  formatoPagina: string;
+  orientacao: string;
   margemSuperior: number;
   margemInferior: number;
   margemEsquerda: number;
   margemDireita: number;
   espacamentoHorizontal: number;
   espacamentoVertical: number;
-  formatoPagina: string;
-  orientacao: string;
   larguraPagina?: number;
   alturaPagina?: number;
   campos: CampoEtiqueta[];
