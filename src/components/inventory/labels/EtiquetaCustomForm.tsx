@@ -1,4 +1,3 @@
-
 import { Form } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { DimensoesEtiquetaFields } from "./form/DimensoesEtiquetaFields";
@@ -18,6 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, WrenchIcon } from "lucide-react";
+import { EtiquetaEditor } from './editor/EtiquetaEditor';
 
 type EtiquetaCustomFormProps = {
   modelo?: ModeloEtiqueta;
@@ -31,7 +31,7 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <div className="max-h-[65vh] overflow-y-auto pr-2">
+        <div className="max-h-[75vh] overflow-y-auto pr-2 space-y-6">
           <div className="grid grid-cols-2 gap-4">
             <FormField
               control={form.control}
@@ -62,13 +62,34 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
             />
           </div>
 
+          <div className="border-t pt-4">
+            <h3 className="text-lg font-medium mb-4">Editor Visual</h3>
+            <FormField
+              control={form.control}
+              name="campos"
+              render={({ field }) => (
+                <FormItem>
+                  <FormControl>
+                    <EtiquetaEditor
+                      campos={field.value}
+                      largura={form.getValues('largura')}
+                      altura={form.getValues('altura')}
+                      onCamposChange={field.onChange}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
           <DimensoesEtiquetaFields form={form} />
           <FormatoEtiquetaFields form={form} />
           <MargensEtiquetaFields form={form} />
           <EspacamentoEtiquetaFields form={form} />
           
           {pageAreaWarning && (
-            <Alert variant="destructive" className="mt-4">
+            <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Problema nas dimensões</AlertTitle>
               <AlertDescription className="flex flex-col space-y-2">
@@ -77,10 +98,9 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
                   type="button" 
                   variant="outline" 
                   size="sm" 
-                  className="w-fit flex gap-2 items-center"
                   onClick={corrigirDimensoesAutomaticamente}
+                  className="w-fit"
                 >
-                  <WrenchIcon className="h-4 w-4" />
                   Corrigir automaticamente
                 </Button>
               </AlertDescription>
@@ -90,14 +110,13 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
           <ElementosEtiquetaFields form={form} />
         </div>
 
-        <div className="flex justify-end gap-2 pt-4 sticky bottom-0 bg-background py-2 border-t mt-4">
+        <div className="flex justify-end gap-2 pt-4 sticky bottom-0 bg-background border-t mt-4">
           <Button variant="outline" type="button" onClick={onClose}>
             Cancelar
           </Button>
           <Button 
             type="submit" 
             disabled={isLoading || !!pageAreaWarning}
-            className={pageAreaWarning ? "opacity-50 cursor-not-allowed" : ""}
           >
             {isLoading ? "Salvando..." : (modelo?.id ? "Atualizar" : "Criar")}
           </Button>
