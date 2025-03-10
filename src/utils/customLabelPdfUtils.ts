@@ -32,19 +32,20 @@ function convertJsonToCamposArray(json: Json): CampoEtiqueta[] {
     return json.map(item => {
       // Verificar se o item é um objeto antes de acessar as propriedades
       if (typeof item === 'object' && item !== null) {
+        const campoItem = item as Record<string, unknown>;
         return {
-          type: typeof (item as any).type === 'string' ? (item as any).type : 'text',
-          text: typeof (item as any).text === 'string' ? (item as any).text : '',
-          left: typeof (item as any).left === 'number' ? (item as any).left : 0,
-          top: typeof (item as any).top === 'number' ? (item as any).top : 0,
-          width: typeof (item as any).width === 'number' ? (item as any).width : 100,
-          height: typeof (item as any).height === 'number' ? (item as any).height : 30,
-          fontSize: typeof (item as any).fontSize === 'number' ? (item as any).fontSize : 12,
-          fontFamily: typeof (item as any).fontFamily === 'string' ? (item as any).fontFamily : 'helvetica',
-          fontWeight: typeof (item as any).fontWeight === 'string' ? (item as any).fontWeight : 'normal',
-          fill: typeof (item as any).fill === 'string' ? (item as any).fill : '#000000',
-          textAlign: typeof (item as any).textAlign === 'string' ? (item as any).textAlign : 'left',
-          barcodeType: typeof (item as any).barcodeType === 'string' ? (item as any).barcodeType : 'CODE128'
+          type: typeof campoItem.type === 'string' ? campoItem.type : 'text',
+          text: typeof campoItem.text === 'string' ? campoItem.text : '',
+          left: typeof campoItem.left === 'number' ? campoItem.left : 0,
+          top: typeof campoItem.top === 'number' ? campoItem.top : 0,
+          width: typeof campoItem.width === 'number' ? campoItem.width : 100,
+          height: typeof campoItem.height === 'number' ? campoItem.height : 30,
+          fontSize: typeof campoItem.fontSize === 'number' ? campoItem.fontSize : 12,
+          fontFamily: typeof campoItem.fontFamily === 'string' ? campoItem.fontFamily : 'helvetica',
+          fontWeight: typeof campoItem.fontWeight === 'string' ? campoItem.fontWeight : 'normal',
+          fill: typeof campoItem.fill === 'string' ? campoItem.fill : '#000000',
+          textAlign: typeof campoItem.textAlign === 'string' ? campoItem.textAlign : 'left',
+          barcodeType: typeof campoItem.barcodeType === 'string' ? campoItem.barcodeType : 'CODE128'
         } as CampoEtiqueta;
       }
       // Retornar um objeto padrão para itens inválidos

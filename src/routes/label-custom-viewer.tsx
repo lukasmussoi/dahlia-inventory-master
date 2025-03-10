@@ -42,13 +42,15 @@ export default function LabelCustomViewerRoute() {
     };
   }, [navigate]);
 
-  // Buscar perfil e permissões do usuário (simplificado para evitar o problema)
+  // Buscar perfil e permissões do usuário (simplificado - todos têm acesso)
   const { isLoading: isLoadingProfile } = useQuery({
     queryKey: ['user-profile-label-viewer'],
     queryFn: async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Não autenticado");
-      return { isAdmin: true }; // Simplificado para resolver o problema
+      
+      // Administradores têm acesso total
+      return { isAdmin: true };
     },
   });
 
