@@ -10,18 +10,13 @@ export type { ModeloEtiqueta, CampoEtiqueta };
 export class EtiquetaCustomModel {
   static async getAll(): Promise<ModeloEtiqueta[]> {
     try {
-      console.log("Buscando todos os modelos de etiquetas");
       const { data, error } = await supabase
         .from('etiquetas_custom')
         .select('*')
         .order('criado_em', { ascending: false });
 
-      if (error) {
-        console.error("Erro ao buscar modelos:", error);
-        throw error;
-      }
+      if (error) throw error;
 
-      console.log("Modelos carregados:", data);
       return data.map(item => mapDatabaseToModel(item));
     } catch (error) {
       console.error('Erro ao buscar modelos de etiquetas:', error);
@@ -32,19 +27,14 @@ export class EtiquetaCustomModel {
 
   static async getById(id: string): Promise<ModeloEtiqueta | null> {
     try {
-      console.log("Buscando modelo com ID:", id);
       const { data, error } = await supabase
         .from('etiquetas_custom')
         .select('*')
         .eq('id', id)
         .single();
 
-      if (error) {
-        console.error("Erro ao buscar modelo por ID:", error);
-        throw error;
-      }
+      if (error) throw error;
       
-      console.log("Modelo encontrado:", data);
       return mapDatabaseToModel(data);
     } catch (error) {
       console.error(`Erro ao buscar modelo de etiqueta ID ${id}:`, error);
@@ -67,20 +57,13 @@ export class EtiquetaCustomModel {
         criado_por: user.data.user.id
       };
 
-      console.log("Modelo convertido para formato do banco:", modeloDb);
-
       const { data, error } = await supabase
         .from('etiquetas_custom')
         .insert(modeloDb)
         .select('id')
         .single();
 
-      if (error) {
-        console.error("Erro ao inserir modelo no banco:", error);
-        throw error;
-      }
-      
-      console.log("Modelo criado com sucesso, ID:", data?.id);
+      if (error) throw error;
       return data?.id || null;
     } catch (error) {
       console.error('Erro ao criar modelo de etiqueta:', error);
@@ -91,23 +74,14 @@ export class EtiquetaCustomModel {
 
   static async update(id: string, modelo: ModeloEtiqueta): Promise<boolean> {
     try {
-      console.log("Atualizando modelo ID:", id);
-      console.log("Dados do modelo:", modelo);
-      
       const modeloDb = mapModelToDatabase(modelo);
-      console.log("Modelo convertido para formato do banco:", modeloDb);
 
       const { error } = await supabase
         .from('etiquetas_custom')
         .update(modeloDb)
         .eq('id', id);
 
-      if (error) {
-        console.error("Erro ao atualizar modelo no banco:", error);
-        throw error;
-      }
-      
-      console.log("Modelo atualizado com sucesso");
+      if (error) throw error;
       return true;
     } catch (error) {
       console.error('Erro ao atualizar modelo de etiqueta:', error);
@@ -118,19 +92,12 @@ export class EtiquetaCustomModel {
 
   static async delete(id: string): Promise<boolean> {
     try {
-      console.log("Excluindo modelo ID:", id);
-      
       const { error } = await supabase
         .from('etiquetas_custom')
         .delete()
         .eq('id', id);
 
-      if (error) {
-        console.error("Erro ao excluir modelo do banco:", error);
-        throw error;
-      }
-      
-      console.log("Modelo excluído com sucesso");
+      if (error) throw error;
       return true;
     } catch (error) {
       console.error('Erro ao excluir modelo de etiqueta:', error);

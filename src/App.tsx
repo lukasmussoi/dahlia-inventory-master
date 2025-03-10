@@ -9,7 +9,6 @@ import Dashboard from "./routes/dashboard";
 import NotFound from "./pages/NotFound";
 import Inventory from "./routes/inventory";
 import InventoryLabelsRoute from "./routes/inventory-labels";
-import EtiquetaCustomFormPage from "./routes/etiqueta-custom-form";
 
 const queryClient = new QueryClient();
 
@@ -24,7 +23,6 @@ const App = () => (
           <Route path="/dashboard/*" element={<Dashboard />}>
             <Route path="inventory" element={<Inventory />} />
             <Route path="inventory/labels" element={<InventoryLabelsRoute />} />
-            <Route path="inventory/labels/modelo-etiqueta/:id" element={<EtiquetaCustomFormPage />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -41,6 +41,7 @@ const formSchema = z.object({
   }),
   campos: z.array(campoEtiquetaSchema),
 }).refine((data) => {
+  // Se o formato for personalizado, largura e altura da página são obrigatórios
   if (data.formatoPagina === "Personalizado") {
     return !!data.larguraPagina && !!data.alturaPagina;
   }
@@ -49,6 +50,7 @@ const formSchema = z.object({
   message: "Dimensões da página são obrigatórias para formato personalizado",
   path: ["formatoPagina"],
 }).refine((data) => {
+  // Verificar se as dimensões da etiqueta cabem na página
   if (data.formatoPagina === "Personalizado" && data.larguraPagina && data.alturaPagina) {
     const areaUtilLargura = data.larguraPagina - data.margemEsquerda - data.margemDireita;
     return data.largura <= areaUtilLargura;
@@ -58,6 +60,7 @@ const formSchema = z.object({
   message: "A largura da etiqueta excede a área útil da página. Reduza a largura da etiqueta ou aumente a largura da página.",
   path: ["largura"],
 }).refine((data) => {
+  // Verificar se as dimensões da etiqueta cabem na página
   if (data.formatoPagina === "Personalizado" && data.larguraPagina && data.alturaPagina) {
     const areaUtilAltura = data.alturaPagina - data.margemSuperior - data.margemInferior;
     return data.altura <= areaUtilAltura;
@@ -70,6 +73,7 @@ const formSchema = z.object({
 
 export type FormValues = z.infer<typeof formSchema>;
 
+// Define campos padrão com todos os valores obrigatórios
 const defaultCampos: CampoEtiqueta[] = [
   { tipo: 'nome', x: 2, y: 4, largura: 40, altura: 10, tamanhoFonte: 7 },
   { tipo: 'codigo', x: 20, y: 1, largura: 40, altura: 6, tamanhoFonte: 8 },
@@ -80,6 +84,7 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
   const [isLoading, setIsLoading] = useState(false);
   const [pageAreaWarning, setPageAreaWarning] = useState<string | null>(null);
 
+  // Certifique-se de que os campos do modelo, se fornecidos, estejam no formato correto
   const modeloCampos = modelo?.campos 
     ? modelo.campos.map(campo => ({
         tipo: campo.tipo,
@@ -90,15 +95,6 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
         tamanhoFonte: Number(campo.tamanhoFonte)
       }))
     : defaultCampos;
-
-  const camposValidados: CampoEtiqueta[] = modeloCampos.map(campo => ({
-    tipo: campo.tipo || 'nome',
-    x: typeof campo.x === 'number' ? campo.x : 0,
-    y: typeof campo.y === 'number' ? campo.y : 0,
-    largura: typeof campo.largura === 'number' ? campo.largura : 40,
-    altura: typeof campo.altura === 'number' ? campo.altura : 10,
-    tamanhoFonte: typeof campo.tamanhoFonte === 'number' ? campo.tamanhoFonte : 8
-  }));
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -117,13 +113,15 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
       espacamentoVertical: modelo?.espacamentoVertical || 0,
       larguraPagina: modelo?.larguraPagina || 210,
       alturaPagina: modelo?.alturaPagina || 297,
-      campos: camposValidados,
+      campos: modeloCampos,
     },
     mode: "onChange",
   });
 
+  // Observar alterações nos campos relevantes para validação em tempo real
   useEffect(() => {
     const subscription = form.watch((value, { name }) => {
+      // Verificar apenas quando os campos relacionados às dimensões mudarem
       if (['formatoPagina', 'largura', 'altura', 'larguraPagina', 'alturaPagina', 
            'margemEsquerda', 'margemDireita', 'margemSuperior', 'margemInferior'].includes(name as string)) {
         validarDimensoes();
@@ -132,9 +130,11 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
     return () => subscription.unsubscribe();
   }, [form.watch]);
 
+  // Função para validar dimensões e exibir avisos
   const validarDimensoes = () => {
     const values = form.getValues();
     
+    // Se o formato for personalizado
     if (values.formatoPagina === "Personalizado") {
       if (!values.larguraPagina || !values.alturaPagina) {
         setPageAreaWarning("Dimensões da página são obrigatórias para formato personalizado");
@@ -169,14 +169,18 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
       }
     }
     
+    // Se chegou aqui, não há problemas
     setPageAreaWarning(null);
   };
 
+  // Função para corrigir automaticamente as dimensões
   const corrigirDimensoesAutomaticamente = () => {
     const values = form.getValues();
     
     if (values.formatoPagina === "Personalizado") {
+      // Se a página for personalizada
       if (!values.larguraPagina || !values.alturaPagina) {
+        // Definir dimensões padrão
         form.setValue("larguraPagina", 210);
         form.setValue("alturaPagina", 297);
       }
@@ -184,16 +188,19 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
       const areaUtilLargura = values.larguraPagina - values.margemEsquerda - values.margemDireita;
       const areaUtilAltura = values.alturaPagina - values.margemSuperior - values.margemInferior;
       
+      // Corrigir largura da etiqueta se necessário
       if (values.largura > areaUtilLargura) {
         const novaLargura = Math.floor(areaUtilLargura * 0.9);
         form.setValue("largura", novaLargura);
       }
       
+      // Corrigir altura da etiqueta se necessário
       if (values.altura > areaUtilAltura) {
         const novaAltura = Math.floor(areaUtilAltura * 0.9);
         form.setValue("altura", novaAltura);
       }
       
+      // Recalcular depois das correções
       validarDimensoes();
       
       toast.success("Dimensões ajustadas automaticamente.");
@@ -202,6 +209,7 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
 
   async function onSubmit(data: FormValues) {
     try {
+      // Validar novamente antes de salvar
       validarDimensoes();
       if (pageAreaWarning) {
         toast.error("Há problemas com as dimensões da etiqueta. Por favor, corrija antes de salvar.");
@@ -211,6 +219,7 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
       setIsLoading(true);
       console.log("Enviando dados do formulário:", data);
 
+      // Garantir que todos os campos obrigatórios estejam preenchidos e com o tipo correto
       const camposValidados: CampoEtiqueta[] = data.campos.map(campo => ({
         tipo: campo.tipo,
         x: Number(campo.x),
@@ -220,6 +229,7 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
         tamanhoFonte: Number(campo.tamanhoFonte),
       }));
 
+      // Garantir que todos os campos obrigatórios estejam preenchidos
       const modeloData: ModeloEtiqueta = {
         nome: data.nome,
         descricao: data.descricao,
@@ -250,6 +260,7 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
       if (success) {
         toast.success(modelo?.id ? "Modelo atualizado com sucesso!" : "Modelo criado com sucesso!");
         onSuccess?.();
+        onClose?.();
       }
     } catch (error) {
       console.error("Erro ao salvar modelo:", error);
