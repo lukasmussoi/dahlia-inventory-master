@@ -19,11 +19,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { Plus, AlertTriangle } from "lucide-react";
 import { LabelModel } from "@/models/labelModel";
 import { generatePdfLabel } from "@/utils/pdfUtils";
 import { EtiquetaCustomModel } from "@/models/etiquetaCustomModel";
 import { EtiquetaCustomForm } from "./EtiquetaCustomForm";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import type { ModeloEtiqueta } from "@/types/etiqueta";
 
 interface PrintLabelDialogProps {
@@ -43,6 +44,7 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
   const [modelosCustom, setModelosCustom] = useState<ModeloEtiqueta[]>([]);
   const [selectedModeloId, setSelectedModeloId] = useState<string | undefined>(undefined);
   const [selectedModelo, setSelectedModelo] = useState<ModeloEtiqueta | null>(null);
+  const [modeloWarning, setModeloWarning] = useState<string | null>(null);
 
   // Load custom models when dialog opens
   useEffect(() => {
@@ -72,11 +74,14 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
       setMultiplyByStock(false);
       setSelectedModeloId(undefined);
       setSelectedModelo(null);
+      setModeloWarning(null);
     }
   }, [isOpen]);
 
   // Carregar detalhes do modelo selecionado
   useEffect(() => {
+    setModeloWarning(null);
+    
     if (selectedModeloId) {
       const carregarModeloSelecionado = async () => {
         try {
@@ -87,6 +92,33 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
           if (modelo) {
             setSelectedModelo(modelo);
             console.log("Campos do modelo carregado:", modelo.campos);
+            
+            // Verificar se as dimensões são válidas
+            if (modelo.formatoPagina === "Personalizado") {
+              if (!modelo.larguraPagina || !modelo.alturaPagina) {
+                setModeloWarning("Este modelo tem formato personalizado, mas as dimensões da página não estão definidas.");
+                return;
+              }
+              
+              // Verificar se a etiqueta cabe na página
+              const areaUtilLargura = modelo.larguraPagina - modelo.margemEsquerda - modelo.margemDireita;
+              if (modelo.largura > areaUtilLargura) {
+                setModeloWarning(
+                  `A largura da etiqueta (${modelo.largura}mm) é maior que a área útil disponível (${areaUtilLargura}mm). ` +
+                  `Isso pode causar problemas na impressão. Considere editar o modelo.`
+                );
+                return;
+              }
+              
+              const areaUtilAltura = modelo.alturaPagina - modelo.margemSuperior - modelo.margemInferior;
+              if (modelo.altura > areaUtilAltura) {
+                setModeloWarning(
+                  `A altura da etiqueta (${modelo.altura}mm) é maior que a área útil disponível (${areaUtilAltura}mm). ` +
+                  `Isso pode causar problemas na impressão. Considere editar o modelo.`
+                );
+                return;
+              }
+            }
           } else {
             console.error("Modelo não encontrado");
             toast.error("Erro ao carregar modelo de etiqueta");
@@ -126,6 +158,12 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
     if (isNaN(startColNum) || startColNum < 1) {
       toast.error("Coluna de início deve ser pelo menos 1");
       return false;
+    }
+
+    if (selectedModeloId && modeloWarning) {
+      if (!confirm("O modelo selecionado pode ter problemas de impressão. Deseja continuar mesmo assim?")) {
+        return false;
+      }
     }
 
     return true;
@@ -178,6 +216,15 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
       toast.success("Modelo de etiqueta adicionado com sucesso!");
     } catch (error) {
       console.error("Erro ao recarregar modelos:", error);
+    }
+  };
+
+  const editarModeloSelecionado = () => {
+    if (selectedModelo && selectedModelo.id) {
+      // Funcionalidade futura: implementar edição do modelo
+      toast.info("Funcionalidade de edição de modelo será implementada em breve");
+    } else {
+      toast.error("Nenhum modelo selecionado para editar");
     }
   };
 
@@ -303,6 +350,32 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
               </Select>
             </div>
           </div>
+          
+          {selectedModelo && (
+            <div className="border p-4 rounded-md bg-slate-50">
+              <h4 className="font-medium mb-2">Detalhes do modelo: {selectedModelo.nome}</h4>
+              <div className="text-sm space-y-1">
+                <p>Dimensões da etiqueta: {selectedModelo.largura}mm × {selectedModelo.altura}mm</p>
+                <p>Formato da página: {selectedModelo.formatoPagina} 
+                  {selectedModelo.formatoPagina === "Personalizado" && selectedModelo.larguraPagina && selectedModelo.alturaPagina 
+                    ? ` (${selectedModelo.larguraPagina}mm × ${selectedModelo.alturaPagina}mm)` 
+                    : ""
+                  }
+                </p>
+                <p>Orientação: {selectedModelo.orientacao === "retrato" ? "Retrato" : "Paisagem"}</p>
+              </div>
+            </div>
+          )}
+          
+          {modeloWarning && (
+            <Alert variant="warning" className="bg-yellow-50 border-yellow-200">
+              <AlertTriangle className="h-4 w-4 text-yellow-700" />
+              <AlertTitle className="text-yellow-800">Atenção</AlertTitle>
+              <AlertDescription className="text-yellow-700">
+                {modeloWarning}
+              </AlertDescription>
+            </Alert>
+          )}
         </div>
         <div className="flex justify-end space-x-2">
           <Button variant="outline" onClick={onClose} disabled={isProcessing}>

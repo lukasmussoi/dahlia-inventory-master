@@ -64,6 +64,37 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
             });
             throw new Error("Dimensões de página personalizadas inválidas. Os valores devem ser maiores que zero.");
           }
+          
+          // Validar se a etiqueta cabe na página
+          const areaUtilLargura = modeloCustom.larguraPagina - modeloCustom.margemEsquerda - modeloCustom.margemDireita;
+          if (modeloCustom.largura > areaUtilLargura) {
+            console.error("Etiqueta maior que área útil:", {
+              larguraEtiqueta: modeloCustom.largura,
+              areaUtilLargura
+            });
+            
+            const sugestaoLarguraEtiqueta = Math.floor(areaUtilLargura * 0.9);
+            throw new Error(
+              `A largura da etiqueta (${modeloCustom.largura}mm) é maior que a área útil disponível (${areaUtilLargura}mm). ` +
+              `Sugestão: Reduza a largura da etiqueta para ${sugestaoLarguraEtiqueta}mm ou ` +
+              `aumente a largura da página/reduza as margens.`
+            );
+          }
+          
+          const areaUtilAltura = modeloCustom.alturaPagina - modeloCustom.margemSuperior - modeloCustom.margemInferior;
+          if (modeloCustom.altura > areaUtilAltura) {
+            console.error("Etiqueta maior que área útil:", {
+              alturaEtiqueta: modeloCustom.altura,
+              areaUtilAltura
+            });
+            
+            const sugestaoAlturaEtiqueta = Math.floor(areaUtilAltura * 0.9);
+            throw new Error(
+              `A altura da etiqueta (${modeloCustom.altura}mm) é maior que a área útil disponível (${areaUtilAltura}mm). ` +
+              `Sugestão: Reduza a altura da etiqueta para ${sugestaoAlturaEtiqueta}mm ou ` +
+              `aumente a altura da página/reduza as margens.`
+            );
+          }
         }
         
         // Validar se há campos definidos
@@ -72,7 +103,6 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
           throw new Error("O modelo de etiqueta não possui elementos para impressão. Adicione elementos ao modelo.");
         }
         
-        // Usamos o gerador de etiquetas personalizadas
         try {
           console.log("Iniciando geração de PDF com modelo personalizado");
           return await generateEtiquetaPDF(
@@ -103,7 +133,7 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
     // Configurações padrão da etiqueta (caso não tenha modelo personalizado)
     console.log("Usando configurações padrão para etiquetas");
     let labelWidth = 80;  // largura em mm
-    let labelHeight = 8;  // altura em mm (ajustado para 8mm conforme solicitado)
+    let labelHeight = 30;  // altura em mm
     let marginLeft = 10;   // margem esquerda em mm
     let marginTop = 10;    // margem superior em mm
     let spacing = 5;       // espaçamento entre etiquetas em mm
@@ -123,8 +153,8 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
     });
 
     // Calcular quantas etiquetas cabem por página
-    const pageWidth = doc.internal.pageSize.width;
-    const pageHeight = doc.internal.pageSize.height;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
     
     console.log("Dimensões da página:", pageWidth, "x", pageHeight, "mm");
     

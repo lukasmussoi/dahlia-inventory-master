@@ -16,6 +16,8 @@ import {
   FormMessage 
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle, WrenchIcon } from "lucide-react";
 
 type EtiquetaCustomFormProps = {
   modelo?: ModeloEtiqueta;
@@ -24,7 +26,7 @@ type EtiquetaCustomFormProps = {
 };
 
 export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCustomFormProps) {
-  const { form, isLoading, onSubmit } = useEtiquetaCustomForm(modelo, onClose, onSuccess);
+  const { form, isLoading, onSubmit, pageAreaWarning, corrigirDimensoesAutomaticamente } = useEtiquetaCustomForm(modelo, onClose, onSuccess);
 
   return (
     <Form {...form}>
@@ -64,6 +66,27 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
           <FormatoEtiquetaFields form={form} />
           <MargensEtiquetaFields form={form} />
           <EspacamentoEtiquetaFields form={form} />
+          
+          {pageAreaWarning && (
+            <Alert variant="destructive" className="mt-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Problema nas dimensões</AlertTitle>
+              <AlertDescription className="flex flex-col space-y-2">
+                <span>{pageAreaWarning}</span>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-fit flex gap-2 items-center"
+                  onClick={corrigirDimensoesAutomaticamente}
+                >
+                  <WrenchIcon className="h-4 w-4" />
+                  Corrigir automaticamente
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
+          
           <ElementosEtiquetaFields form={form} />
         </div>
 
@@ -71,7 +94,11 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
           <Button variant="outline" type="button" onClick={onClose}>
             Cancelar
           </Button>
-          <Button type="submit" disabled={isLoading}>
+          <Button 
+            type="submit" 
+            disabled={isLoading || !!pageAreaWarning}
+            className={pageAreaWarning ? "opacity-50 cursor-not-allowed" : ""}
+          >
             {isLoading ? "Salvando..." : (modelo?.id ? "Atualizar" : "Criar")}
           </Button>
         </div>

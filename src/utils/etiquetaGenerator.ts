@@ -40,13 +40,29 @@ export async function generateEtiquetaPDF(
       });
     }
     
+    // Verificar se as dimensões da etiqueta são válidas
+    if (modelo.largura <= 0 || modelo.altura <= 0) {
+      console.error("Dimensões de etiqueta inválidas:", 
+        { largura: modelo.largura, altura: modelo.altura });
+      throw new Error("Dimensões da etiqueta inválidas. A largura e altura devem ser maiores que zero.");
+    }
+    
     // Configurar formato da página
-    let formato: string | [number, number] = modelo.formatoPagina.toLowerCase();
+    let formato: any = modelo.formatoPagina.toLowerCase();
     
     // Se o formato for personalizado, usar as dimensões especificadas em mm
     if (modelo.formatoPagina === "Personalizado" && modelo.larguraPagina && modelo.alturaPagina) {
-      formato = [modelo.larguraPagina, modelo.alturaPagina];
-      console.log("Formato personalizado definido como:", formato);
+      const largura = Number(modelo.larguraPagina);
+      const altura = Number(modelo.alturaPagina);
+      
+      // Se a orientação for paisagem, inverter largura e altura
+      if (modelo.orientacao === "paisagem") {
+        formato = [altura, largura];
+        console.log("Formato personalizado em paisagem:", formato);
+      } else {
+        formato = [largura, altura];
+        console.log("Formato personalizado em retrato:", formato);
+      }
     }
     
     // Criar documento PDF com as configurações adequadas
@@ -57,8 +73,8 @@ export async function generateEtiquetaPDF(
     });
     
     // Dimensões da página (obtidas após a criação do documento para refletir quaisquer ajustes feitos pelo jsPDF)
-    const pageWidth = doc.internal.pageSize.width;
-    const pageHeight = doc.internal.pageSize.height;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
     
     console.log("Dimensões efetivas da página:", {
       pageWidth, 
@@ -73,14 +89,14 @@ export async function generateEtiquetaPDF(
     }
     
     // Configurações da etiqueta
-    const labelWidth = modelo.largura;
-    const labelHeight = modelo.altura;
-    const marginLeft = modelo.margemEsquerda;
-    const marginTop = modelo.margemSuperior;
-    const marginRight = modelo.margemDireita;
-    const marginBottom = modelo.margemInferior;
-    const spacingH = modelo.espacamentoHorizontal;
-    const spacingV = modelo.espacamentoVertical;
+    const labelWidth = Number(modelo.largura);
+    const labelHeight = Number(modelo.altura);
+    const marginLeft = Number(modelo.margemEsquerda);
+    const marginTop = Number(modelo.margemSuperior);
+    const marginRight = Number(modelo.margemDireita);
+    const marginBottom = Number(modelo.margemInferior);
+    const spacingH = Number(modelo.espacamentoHorizontal);
+    const spacingV = Number(modelo.espacamentoVertical);
     
     // Área útil da página (descontando margens)
     const usableWidth = pageWidth - marginLeft - marginRight;
@@ -101,16 +117,16 @@ export async function generateEtiquetaPDF(
     
     // Validação da área útil
     if (usableWidth <= 0 || usableHeight <= 0) {
-      throw new Error("Área útil da página inválida. As margens podem estar muito grandes para o tamanho da página.");
+      throw new Error(`Área útil da página inválida. As margens (L:${marginLeft}mm, R:${marginRight}mm, T:${marginTop}mm, B:${marginBottom}mm) são muito grandes para o tamanho da página (${pageWidth}mm x ${pageHeight}mm).`);
     }
     
     // Verificar se a etiqueta cabe na área útil
     if (labelWidth > usableWidth) {
-      throw new Error(`A largura da etiqueta (${labelWidth}mm) é maior que a área útil disponível (${usableWidth}mm).`);
+      throw new Error(`A largura da etiqueta (${labelWidth}mm) é maior que a área útil disponível (${usableWidth}mm). Reduza a largura da etiqueta ou aumente a largura da página.`);
     }
     
     if (labelHeight > usableHeight) {
-      throw new Error(`A altura da etiqueta (${labelHeight}mm) é maior que a área útil disponível (${usableHeight}mm).`);
+      throw new Error(`A altura da etiqueta (${labelHeight}mm) é maior que a área útil disponível (${usableHeight}mm). Reduza a altura da etiqueta ou aumente a altura da página.`);
     }
     
     // Calcular quantas etiquetas cabem na página
@@ -124,11 +140,11 @@ export async function generateEtiquetaPDF(
     
     // Validações
     if (labelsPerRow <= 0) {
-      throw new Error("Configuração inválida: nenhuma etiqueta cabe horizontalmente na página. Reduza a largura da etiqueta ou aumente o tamanho da página.");
+      throw new Error(`Configuração inválida: nenhuma etiqueta cabe horizontalmente na página. Reduza a largura da etiqueta (${labelWidth}mm) ou aumente o tamanho da página (${pageWidth}mm).`);
     }
     
     if (labelsPerColumn <= 0) {
-      throw new Error("Configuração inválida: nenhuma etiqueta cabe verticalmente na página. Reduza a altura da etiqueta ou aumente o tamanho da página.");
+      throw new Error(`Configuração inválida: nenhuma etiqueta cabe verticalmente na página. Reduza a altura da etiqueta (${labelHeight}mm) ou aumente o tamanho da página (${pageHeight}mm).`);
     }
     
     let currentRow = startRow - 1;
@@ -207,21 +223,14 @@ export async function generateEtiquetaPDF(
 // Função para adicionar um elemento na etiqueta
 async function adicionarElemento(doc: jsPDF, campo: CampoEtiqueta, item: any, xBase: number, yBase: number): Promise<void> {
   try {
-    const x = xBase + campo.x;
-    const y = yBase + campo.y;
+    const x = xBase + Number(campo.x);
+    const y = yBase + Number(campo.y);
     
     // Configurar fonte e tamanho
-    doc.setFontSize(campo.tamanhoFonte);
+    doc.setFontSize(Number(campo.tamanhoFonte) || 10);
     
     // Determinar o estilo da fonte
     let fontStyle = "normal";
-    if (campo.valor?.includes("negrito")) {
-      fontStyle = "bold";
-    } else if (campo.valor?.includes("italico")) {
-      fontStyle = "italic";
-    }
-    
-    doc.setFont("helvetica", fontStyle);
     
     // Adicionar o elemento conforme seu tipo
     switch (campo.tipo) {
@@ -235,7 +244,7 @@ async function adicionarElemento(doc: jsPDF, campo: CampoEtiqueta, item: any, xB
         try {
           const barcodeText = item.barcode || item.sku || "0000000000";
           const barcodeData = await generateBarcode(barcodeText);
-          doc.addImage(barcodeData, "PNG", x, y, campo.largura, campo.altura);
+          doc.addImage(barcodeData, "PNG", x, y, Number(campo.largura), Number(campo.altura));
           console.log(`Adicionado código de barras: "${barcodeText}" em (${x},${y})`);
         } catch (error) {
           console.error("Erro ao gerar código de barras:", error);
