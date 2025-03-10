@@ -103,6 +103,3 @@ export class EtiquetaCustomModel {
     }
   }
 }
-
-// Exportação explícita dos tipos para uso em outros módulos
-export type { ModeloEtiqueta, EtiquetaCustomDB } from "@/types/etiqueta";

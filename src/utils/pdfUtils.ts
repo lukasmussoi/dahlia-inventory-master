@@ -31,7 +31,7 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
     let marginTop = 10;    // margem superior em mm
     let spacing = 5;       // espaçamento entre etiquetas em mm
     let orientation = "landscape";
-    let format = "a4";
+    let format: string | [number, number] = "a4";
     let campos: CampoEtiqueta[] = [
       { tipo: 'nome', x: 2, y: 4, largura: 40, altura: 10, tamanhoFonte: 7 },
       { tipo: 'codigo', x: 20, y: 1, largura: 40, altura: 6, tamanhoFonte: 8 },
@@ -52,16 +52,13 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
         marginTop = modeloCustom.margemSuperior;
         spacing = Math.max(modeloCustom.espacamentoHorizontal, modeloCustom.espacamentoVertical);
         orientation = modeloCustom.orientacao === "retrato" ? "portrait" : "landscape";
-        format = modeloCustom.formatoPagina.toLowerCase();
         
         // Se o formato for personalizado, usar as dimensões especificadas
-        let pageWidth, pageHeight;
         if (modeloCustom.formatoPagina === "Personalizado" && modeloCustom.larguraPagina && modeloCustom.alturaPagina) {
-          pageWidth = modeloCustom.larguraPagina;
-          pageHeight = modeloCustom.alturaPagina;
-          
-          // Usar formato personalizado
-          format = [pageWidth, pageHeight];
+          console.log("Usando formato de página personalizado:", modeloCustom.larguraPagina, "x", modeloCustom.alturaPagina);
+          format = [modeloCustom.larguraPagina, modeloCustom.alturaPagina];
+        } else {
+          format = modeloCustom.formatoPagina.toLowerCase();
         }
         
         // Usar os campos personalizados se existirem
@@ -87,6 +84,19 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
     
     console.log("Dimensões da página:", pageWidth, "x", pageHeight, "mm");
     
+    // Verificar se as dimensões fazem sentido para uma página
+    if (pageWidth <= 0 || pageHeight <= 0) {
+      console.error("Dimensões da página inválidas:", pageWidth, "x", pageHeight);
+      throw new Error("Dimensões da página inválidas. Por favor, verifique as configurações do formato da página.");
+    }
+    
+    // Verificar se a etiqueta cabe na página
+    if (labelWidth > (pageWidth - 2 * marginLeft)) {
+      console.error("Largura da etiqueta maior que a largura útil da página");
+      throw new Error("A largura da etiqueta é maior que a largura útil da página. Por favor, ajuste as dimensões.");
+    }
+    
+    // Calcular quantas etiquetas cabem na página
     const labelsPerRow = Math.floor((pageWidth - 2 * marginLeft) / (labelWidth + spacing));
     const labelsPerColumn = Math.floor((pageHeight - 2 * marginTop) / (labelHeight + spacing));
 
@@ -96,14 +106,14 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
     });
 
     // Verificar se os valores calculados são válidos
-    if (isNaN(labelsPerRow) || labelsPerRow <= 0) {
+    if (labelsPerRow <= 0) {
       console.error("labelsPerRow inválido:", labelsPerRow);
-      throw new Error("Configuração inválida: não é possível calcular a quantidade de etiquetas por linha");
+      throw new Error("Configuração inválida: não é possível calcular a quantidade de etiquetas por linha. Verifique as dimensões da etiqueta e da página.");
     }
     
-    if (isNaN(labelsPerColumn) || labelsPerColumn <= 0) {
+    if (labelsPerColumn <= 0) {
       console.error("labelsPerColumn inválido:", labelsPerColumn);
-      throw new Error("Configuração inválida: não é possível calcular a quantidade de etiquetas por coluna");
+      throw new Error("Configuração inválida: não é possível calcular a quantidade de etiquetas por coluna. Verifique as dimensões da etiqueta e da página.");
     }
 
     let currentRow = startRow - 1;
@@ -136,9 +146,9 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
       const y = marginTop + currentRow * (labelHeight + spacing);
 
       // Buscar configurações dos campos
-      const campoNome = campos.find(c => c.tipo === 'nome') || { x: 2, y: 4, largura: 40, altura: 10, tamanhoFonte: 7 };
-      const campoCodigo = campos.find(c => c.tipo === 'codigo') || { x: 20, y: 1, largura: 40, altura: 6, tamanhoFonte: 8 };
-      const campoPreco = campos.find(c => c.tipo === 'preco') || { x: 70, y: 4, largura: 20, altura: 10, tamanhoFonte: 10 };
+      const campoNome = campos.find(c => c.tipo === 'nome') || { tipo: 'nome', x: 2, y: 4, largura: 40, altura: 10, tamanhoFonte: 7 };
+      const campoCodigo = campos.find(c => c.tipo === 'codigo') || { tipo: 'codigo', x: 20, y: 1, largura: 40, altura: 6, tamanhoFonte: 8 };
+      const campoPreco = campos.find(c => c.tipo === 'preco') || { tipo: 'preco', x: 70, y: 4, largura: 20, altura: 10, tamanhoFonte: 10 };
 
       // Adicionar nome do produto - usar try/catch para cada operação
       try {

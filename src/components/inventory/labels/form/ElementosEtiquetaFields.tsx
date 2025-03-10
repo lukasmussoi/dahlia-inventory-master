@@ -21,9 +21,9 @@ export function ElementosEtiquetaFields({ form }: ElementosEtiquetaFieldsProps) 
   // Inicializa os campos com os valores padrão se ainda não existirem
   useEffect(() => {
     const elementosIniciais: CampoEtiqueta[] = [
-      { tipo: 'nome' as const, x: 2, y: 4, largura: 40, altura: 10, tamanhoFonte: 7 },
-      { tipo: 'codigo' as const, x: 20, y: 1, largura: 40, altura: 6, tamanhoFonte: 8 },
-      { tipo: 'preco' as const, x: 70, y: 4, largura: 20, altura: 10, tamanhoFonte: 10 },
+      { tipo: 'nome', x: 2, y: 4, largura: 40, altura: 10, tamanhoFonte: 7 },
+      { tipo: 'codigo', x: 20, y: 1, largura: 40, altura: 6, tamanhoFonte: 8 },
+      { tipo: 'preco', x: 70, y: 4, largura: 20, altura: 10, tamanhoFonte: 10 },
     ];
     
     const camposAtuais = form.getValues('campos') || [];
