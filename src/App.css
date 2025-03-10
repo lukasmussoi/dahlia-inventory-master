@@ -32,3 +32,14 @@
 .text-gradient {
   @apply bg-gradient-to-br from-gold via-gold/90 to-gold/70 bg-clip-text text-transparent;
 }
+
+/* Estilos adicionais para diálogos grandes */
+.dialog-large {
+  max-width: 80vw !important;
+  width: 1024px !important;
+}
+
+.dialog-medium {
+  max-width: 70vw !important;
+  width: 900px !important;
+}

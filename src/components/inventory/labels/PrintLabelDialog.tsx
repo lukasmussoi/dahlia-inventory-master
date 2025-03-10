@@ -231,7 +231,7 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
   if (showModeloForm) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden">
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden">
           <DialogHeader>
             <DialogTitle>Criar Novo Modelo de Etiqueta</DialogTitle>
             <DialogDescription>
@@ -249,7 +249,7 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent>
+      <DialogContent className="max-w-4xl">
         <DialogHeader>
           <DialogTitle>Imprimir Etiquetas</DialogTitle>
           <DialogDescription>
