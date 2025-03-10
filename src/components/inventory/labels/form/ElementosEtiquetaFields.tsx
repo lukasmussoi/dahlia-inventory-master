@@ -8,36 +8,56 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { UseFormReturn } from "react-hook-form";
-import * as z from "zod";
+import { useState, useEffect } from "react";
 import type { CampoEtiqueta } from "@/types/etiqueta";
 
-const campoSchema = z.object({
-  tipo: z.enum(['nome', 'codigo', 'preco']),
-  x: z.number().min(0),
-  y: z.number().min(0),
-  largura: z.number().min(0),
-  altura: z.number().min(0),
-  tamanhoFonte: z.number().min(0),
-});
-
 type ElementosEtiquetaFieldsProps = {
-  form: UseFormReturn<{ campos: CampoEtiqueta[] }>;
+  form: UseFormReturn<any>;
 };
 
 export function ElementosEtiquetaFields({ form }: ElementosEtiquetaFieldsProps) {
+  const [camposAtuais, setCamposAtuais] = useState<CampoEtiqueta[]>([]);
+  
+  // Inicializa os campos com os valores padrão se ainda não existirem
+  useEffect(() => {
+    const elementosIniciais = [
+      { tipo: 'nome' as const, x: 2, y: 4, largura: 40, altura: 10, tamanhoFonte: 7 },
+      { tipo: 'codigo' as const, x: 20, y: 1, largura: 40, altura: 6, tamanhoFonte: 8 },
+      { tipo: 'preco' as const, x: 70, y: 4, largura: 20, altura: 10, tamanhoFonte: 10 },
+    ];
+    
+    const camposAtuais = form.getValues('campos') || [];
+    
+    // Se não houver campos ou a quantidade for diferente, inicializa com os valores padrão
+    if (!camposAtuais.length || camposAtuais.length !== elementosIniciais.length) {
+      form.setValue('campos', elementosIniciais);
+      setCamposAtuais(elementosIniciais);
+    } else {
+      setCamposAtuais(camposAtuais);
+    }
+  }, [form]);
+
   const elementos = [
-    { tipo: 'nome', label: 'Nome do Produto' },
-    { tipo: 'codigo', label: 'Código de Barras' },
-    { tipo: 'preco', label: 'Preço' },
+    { tipo: 'nome' as const, label: 'Nome do Produto' },
+    { tipo: 'codigo' as const, label: 'Código de Barras' },
+    { tipo: 'preco' as const, label: 'Preço' },
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 overflow-y-auto max-h-[400px] pr-2">
       <h3 className="text-lg font-medium">Posicionamento dos Elementos</h3>
       {elementos.map((elemento, index) => (
-        <div key={elemento.tipo} className="space-y-4">
+        <div key={elemento.tipo} className="space-y-4 pb-4 border-b">
           <h4 className="font-medium">{elemento.label}</h4>
           <div className="grid grid-cols-3 gap-4">
+            <FormField
+              control={form.control}
+              name={`campos.${index}.tipo`}
+              render={({ field }) => (
+                <input type="hidden" {...field} value={elemento.tipo} />
+              )}
+            />
+            
             <FormField
               control={form.control}
               name={`campos.${index}.x`}

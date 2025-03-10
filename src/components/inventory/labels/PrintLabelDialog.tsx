@@ -42,6 +42,7 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
   const [showModeloForm, setShowModeloForm] = useState(false);
   const [modelosCustom, setModelosCustom] = useState<ModeloEtiqueta[]>([]);
   const [selectedModeloId, setSelectedModeloId] = useState<string | undefined>(undefined);
+  const [selectedModelo, setSelectedModelo] = useState<ModeloEtiqueta | null>(null);
 
   // Load custom models when dialog opens
   useEffect(() => {
@@ -70,8 +71,28 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
       setStartColumn("1");
       setMultiplyByStock(false);
       setSelectedModeloId(undefined);
+      setSelectedModelo(null);
     }
   }, [isOpen]);
+
+  // Carregar detalhes do modelo selecionado
+  useEffect(() => {
+    if (selectedModeloId) {
+      const carregarModeloSelecionado = async () => {
+        try {
+          const modelo = await EtiquetaCustomModel.getById(selectedModeloId);
+          setSelectedModelo(modelo);
+          console.log("Detalhes do modelo selecionado:", modelo);
+        } catch (error) {
+          console.error("Erro ao carregar detalhes do modelo:", error);
+        }
+      };
+      
+      carregarModeloSelecionado();
+    } else {
+      setSelectedModelo(null);
+    }
+  }, [selectedModeloId]);
 
   const validateInput = (): boolean => {
     if (!item) {
@@ -107,6 +128,7 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
     try {
       setIsProcessing(true);
       console.log("Iniciando impressão com modelo:", selectedModeloId);
+      console.log("Detalhes do modelo para impressão:", selectedModelo);
 
       // Usar a interface correta para o generatePdfLabel
       const pdfUrl = await generatePdfLabel({
@@ -148,7 +170,7 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
   if (showModeloForm) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden">
           <DialogHeader>
             <DialogTitle>Criar Novo Modelo de Etiqueta</DialogTitle>
             <DialogDescription>

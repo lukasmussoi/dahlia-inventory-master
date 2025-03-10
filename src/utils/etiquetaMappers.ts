@@ -14,12 +14,40 @@ export function mapDatabaseToModel(item: EtiquetaCustomDB): ModeloEtiqueta {
       if (typeof item.campos === 'string') {
         campos = JSON.parse(item.campos as string);
       } else {
-        campos = item.campos as unknown as CampoEtiqueta[];
+        const camposArray = Array.isArray(item.campos) 
+          ? item.campos 
+          : Array.isArray((item.campos as any).data) 
+            ? (item.campos as any).data 
+            : [];
+            
+        campos = camposArray.map((campo: any) => ({
+          tipo: campo.tipo || 'nome',
+          x: Number(campo.x || 0),
+          y: Number(campo.y || 0),
+          largura: Number(campo.largura || 10),
+          altura: Number(campo.altura || 10),
+          tamanhoFonte: Number(campo.tamanhoFonte || 10),
+          valor: campo.valor
+        }));
       }
     } catch (error) {
       console.error('Erro ao converter campos da etiqueta:', error);
-      campos = [];
+      // Configurar valores padrão para os campos
+      campos = [
+        { tipo: 'nome', x: 2, y: 4, largura: 40, altura: 10, tamanhoFonte: 7 },
+        { tipo: 'codigo', x: 20, y: 1, largura: 40, altura: 6, tamanhoFonte: 8 },
+        { tipo: 'preco', x: 70, y: 4, largura: 20, altura: 10, tamanhoFonte: 10 }
+      ];
     }
+  }
+
+  // Se não houver campos, usar os valores padrão
+  if (campos.length === 0) {
+    campos = [
+      { tipo: 'nome', x: 2, y: 4, largura: 40, altura: 10, tamanhoFonte: 7 },
+      { tipo: 'codigo', x: 20, y: 1, largura: 40, altura: 6, tamanhoFonte: 8 },
+      { tipo: 'preco', x: 70, y: 4, largura: 20, altura: 10, tamanhoFonte: 10 }
+    ];
   }
 
   return {
@@ -49,6 +77,17 @@ export function mapDatabaseToModel(item: EtiquetaCustomDB): ModeloEtiqueta {
  * Prepara um modelo para inclusão no banco de dados
  */
 export function mapModelToDatabase(modelo: ModeloEtiqueta) {
+  // Garante que todos os campos tenham os valores obrigatórios
+  const camposValidados = modelo.campos.map(campo => ({
+    tipo: campo.tipo || 'nome',
+    x: Number(campo.x || 0),
+    y: Number(campo.y || 0),
+    largura: Number(campo.largura || 10),
+    altura: Number(campo.altura || 10),
+    tamanhoFonte: Number(campo.tamanhoFonte || 10),
+    valor: campo.valor
+  }));
+
   return {
     descricao: modelo.nome,
     tipo: 'padrao',
@@ -64,6 +103,6 @@ export function mapModelToDatabase(modelo: ModeloEtiqueta) {
     espacamento_vertical: modelo.espacamentoVertical,
     largura_pagina: modelo.larguraPagina,
     altura_pagina: modelo.alturaPagina,
-    campos: modelo.campos as unknown as Json
+    campos: camposValidados as unknown as Json
   };
 }

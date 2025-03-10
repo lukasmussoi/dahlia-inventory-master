@@ -3,6 +3,7 @@ import { jsPDF } from "jspdf";
 import { generateBarcode } from "./barcodeUtils";
 import { toast } from "sonner";
 import { EtiquetaCustomModel } from "@/models/etiquetaCustomModel";
+import type { CampoEtiqueta } from "@/types/etiqueta";
 
 interface GeneratePdfLabelOptions {
   item: any;
@@ -31,6 +32,11 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
     let spacing = 5;       // espaçamento entre etiquetas em mm
     let orientation = "landscape";
     let format = "a4";
+    let campos: CampoEtiqueta[] = [
+      { tipo: 'nome', x: 2, y: 4, largura: 40, altura: 10, tamanhoFonte: 7 },
+      { tipo: 'codigo', x: 20, y: 1, largura: 40, altura: 6, tamanhoFonte: 8 },
+      { tipo: 'preco', x: 70, y: 4, largura: 20, altura: 10, tamanhoFonte: 10 }
+    ];
 
     // Se um modelo personalizado foi selecionado, carrega suas configurações
     if (selectedModeloId) {
@@ -47,6 +53,19 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
         spacing = Math.max(modeloCustom.espacamentoHorizontal, modeloCustom.espacamentoVertical);
         orientation = modeloCustom.orientacao === "retrato" ? "portrait" : "landscape";
         format = modeloCustom.formatoPagina.toLowerCase();
+        
+        // Se o formato for personalizado, usar as dimensões especificadas
+        let pageWidth, pageHeight;
+        if (modeloCustom.formatoPagina === "Personalizado" && modeloCustom.larguraPagina && modeloCustom.alturaPagina) {
+          pageWidth = modeloCustom.larguraPagina;
+          pageHeight = modeloCustom.alturaPagina;
+        }
+        
+        // Usar os campos personalizados se existirem
+        if (modeloCustom.campos && modeloCustom.campos.length > 0) {
+          campos = modeloCustom.campos;
+          console.log("Usando campos personalizados:", campos);
+        }
       } else {
         console.warn("Modelo personalizado não encontrado, usando configurações padrão");
       }
@@ -60,12 +79,14 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
     });
 
     // Calcular quantas etiquetas cabem por página
-    const labelsPerRow = Math.floor((doc.internal.pageSize.width - 2 * marginLeft) / (labelWidth + spacing));
-    const labelsPerColumn = Math.floor((doc.internal.pageSize.height - 2 * marginTop) / (labelHeight + spacing));
+    const pageWidth = doc.internal.pageSize.width;
+    const pageHeight = doc.internal.pageSize.height;
+    const labelsPerRow = Math.floor((pageWidth - 2 * marginLeft) / (labelWidth + spacing));
+    const labelsPerColumn = Math.floor((pageHeight - 2 * marginTop) / (labelHeight + spacing));
 
     console.log("Configurações de etiqueta:", { 
       labelWidth, labelHeight, marginLeft, marginTop, spacing,
-      labelsPerRow, labelsPerColumn, totalCopies
+      labelsPerRow, labelsPerColumn, totalCopies, pageWidth, pageHeight
     });
 
     let currentRow = startRow - 1;
@@ -97,22 +118,25 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
       const x = marginLeft + currentColumn * (labelWidth + spacing);
       const y = marginTop + currentRow * (labelHeight + spacing);
 
-      // Adicionar nome do produto à esquerda da etiqueta
-      doc.setFontSize(7); // Tamanho 7 para o nome conforme solicitado
+      // Buscar configurações dos campos
+      const campoNome = campos.find(c => c.tipo === 'nome') || { x: 2, y: 4, largura: 40, altura: 10, tamanhoFonte: 7 };
+      const campoCodigo = campos.find(c => c.tipo === 'codigo') || { x: 20, y: 1, largura: 40, altura: 6, tamanhoFonte: 8 };
+      const campoPreco = campos.find(c => c.tipo === 'preco') || { x: 70, y: 4, largura: 20, altura: 10, tamanhoFonte: 10 };
+
+      // Adicionar nome do produto
+      doc.setFontSize(campoNome.tamanhoFonte);
       doc.setFont("helvetica", "normal");
-      doc.text(item.name || "Sem nome", x + 2, y + 4); // Posicionado à esquerda com pequena margem
+      doc.text(item.name || "Sem nome", x + campoNome.x, y + campoNome.y);
 
-      // Adicionar código de barras ao centro
-      const barcodeWidth = 40; // Largura reduzida do código de barras
-      const barcodeHeight = 6; // Altura reduzida do código de barras
-      doc.addImage(barcodeData, "PNG", x + 20, y + 1, barcodeWidth, barcodeHeight);
+      // Adicionar código de barras
+      doc.addImage(barcodeData, "PNG", x + campoCodigo.x, y + campoCodigo.y, campoCodigo.largura, campoCodigo.altura);
 
-      // Adicionar preço à direita alinhado com o código de barras
-      doc.setFontSize(10); // Tamanho 10 para o preço conforme solicitado
+      // Adicionar preço
+      doc.setFontSize(campoPreco.tamanhoFonte);
       doc.setFont("helvetica", "bold");
       const price = typeof item.price === 'number' ? item.price.toFixed(2) : '0.00';
       const priceText = `R$ ${price}`;
-      doc.text(priceText, x + labelWidth - 5, y + 4, { align: 'right' });
+      doc.text(priceText, x + campoPreco.x, y + campoPreco.y);
 
       currentRow++;
     }

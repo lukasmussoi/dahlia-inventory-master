@@ -67,6 +67,7 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
   async function onSubmit(data: FormValues) {
     try {
       setIsLoading(true);
+      console.log("Enviando dados do formulário:", data);
 
       // Garantir que todos os campos obrigatórios estejam preenchidos
       const modeloData: ModeloEtiqueta = {
@@ -82,7 +83,9 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
         margemDireita: data.margemDireita,
         espacamentoHorizontal: data.espacamentoHorizontal,
         espacamentoVertical: data.espacamentoVertical,
-        campos: modelo?.campos || [],
+        larguraPagina: data.larguraPagina,
+        alturaPagina: data.alturaPagina,
+        campos: data.campos,
       };
 
       console.log("Salvando modelo:", modeloData);
