@@ -59,6 +59,9 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
         if (modeloCustom.formatoPagina === "Personalizado" && modeloCustom.larguraPagina && modeloCustom.alturaPagina) {
           pageWidth = modeloCustom.larguraPagina;
           pageHeight = modeloCustom.alturaPagina;
+          
+          // Usar formato personalizado
+          format = [pageWidth, pageHeight];
         }
         
         // Usar os campos personalizados se existirem
@@ -81,6 +84,9 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
     // Calcular quantas etiquetas cabem por página
     const pageWidth = doc.internal.pageSize.width;
     const pageHeight = doc.internal.pageSize.height;
+    
+    console.log("Dimensões da página:", pageWidth, "x", pageHeight, "mm");
+    
     const labelsPerRow = Math.floor((pageWidth - 2 * marginLeft) / (labelWidth + spacing));
     const labelsPerColumn = Math.floor((pageHeight - 2 * marginTop) / (labelHeight + spacing));
 
@@ -88,6 +94,17 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
       labelWidth, labelHeight, marginLeft, marginTop, spacing,
       labelsPerRow, labelsPerColumn, totalCopies, pageWidth, pageHeight
     });
+
+    // Verificar se os valores calculados são válidos
+    if (isNaN(labelsPerRow) || labelsPerRow <= 0) {
+      console.error("labelsPerRow inválido:", labelsPerRow);
+      throw new Error("Configuração inválida: não é possível calcular a quantidade de etiquetas por linha");
+    }
+    
+    if (isNaN(labelsPerColumn) || labelsPerColumn <= 0) {
+      console.error("labelsPerColumn inválido:", labelsPerColumn);
+      throw new Error("Configuração inválida: não é possível calcular a quantidade de etiquetas por coluna");
+    }
 
     let currentRow = startRow - 1;
     let currentColumn = startColumn - 1;
@@ -123,20 +140,33 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
       const campoCodigo = campos.find(c => c.tipo === 'codigo') || { x: 20, y: 1, largura: 40, altura: 6, tamanhoFonte: 8 };
       const campoPreco = campos.find(c => c.tipo === 'preco') || { x: 70, y: 4, largura: 20, altura: 10, tamanhoFonte: 10 };
 
-      // Adicionar nome do produto
-      doc.setFontSize(campoNome.tamanhoFonte);
-      doc.setFont("helvetica", "normal");
-      doc.text(item.name || "Sem nome", x + campoNome.x, y + campoNome.y);
+      // Adicionar nome do produto - usar try/catch para cada operação
+      try {
+        doc.setFontSize(campoNome.tamanhoFonte);
+        doc.setFont("helvetica", "normal");
+        const nomeProduto = item.name || "Sem nome";
+        doc.text(nomeProduto, x + campoNome.x, y + campoNome.y);
+      } catch (error) {
+        console.error("Erro ao adicionar nome do produto:", error);
+      }
 
       // Adicionar código de barras
-      doc.addImage(barcodeData, "PNG", x + campoCodigo.x, y + campoCodigo.y, campoCodigo.largura, campoCodigo.altura);
+      try {
+        doc.addImage(barcodeData, "PNG", x + campoCodigo.x, y + campoCodigo.y, campoCodigo.largura, campoCodigo.altura);
+      } catch (error) {
+        console.error("Erro ao adicionar código de barras:", error);
+      }
 
       // Adicionar preço
-      doc.setFontSize(campoPreco.tamanhoFonte);
-      doc.setFont("helvetica", "bold");
-      const price = typeof item.price === 'number' ? item.price.toFixed(2) : '0.00';
-      const priceText = `R$ ${price}`;
-      doc.text(priceText, x + campoPreco.x, y + campoPreco.y);
+      try {
+        doc.setFontSize(campoPreco.tamanhoFonte);
+        doc.setFont("helvetica", "bold");
+        const price = typeof item.price === 'number' ? item.price.toFixed(2) : '0.00';
+        const priceText = `R$ ${price}`;
+        doc.text(priceText, x + campoPreco.x, y + campoPreco.y);
+      } catch (error) {
+        console.error("Erro ao adicionar preço:", error);
+      }
 
       currentRow++;
     }

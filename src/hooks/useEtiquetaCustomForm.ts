@@ -34,6 +34,7 @@ const formSchema = z.object({
 
 export type FormValues = z.infer<typeof formSchema>;
 
+// Define campos padrão com todos os valores obrigatórios
 const defaultCampos: CampoEtiqueta[] = [
   { tipo: 'nome', x: 2, y: 4, largura: 40, altura: 10, tamanhoFonte: 7 },
   { tipo: 'codigo', x: 20, y: 1, largura: 40, altura: 6, tamanhoFonte: 8 },
@@ -69,6 +70,16 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
       setIsLoading(true);
       console.log("Enviando dados do formulário:", data);
 
+      // Garantir que todos os campos obrigatórios estejam preenchidos e com o tipo correto
+      const camposValidados: CampoEtiqueta[] = data.campos.map(campo => ({
+        tipo: campo.tipo,
+        x: Number(campo.x),
+        y: Number(campo.y),
+        largura: Number(campo.largura),
+        altura: Number(campo.altura),
+        tamanhoFonte: Number(campo.tamanhoFonte),
+      }));
+
       // Garantir que todos os campos obrigatórios estejam preenchidos
       const modeloData: ModeloEtiqueta = {
         nome: data.nome,
@@ -85,7 +96,7 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
         espacamentoVertical: data.espacamentoVertical,
         larguraPagina: data.larguraPagina,
         alturaPagina: data.alturaPagina,
-        campos: data.campos,
+        campos: camposValidados,
       };
 
       console.log("Salvando modelo:", modeloData);

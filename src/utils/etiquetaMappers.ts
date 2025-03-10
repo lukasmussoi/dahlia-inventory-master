@@ -34,9 +34,9 @@ export function mapDatabaseToModel(item: EtiquetaCustomDB): ModeloEtiqueta {
       console.error('Erro ao converter campos da etiqueta:', error);
       // Configurar valores padrão para os campos
       campos = [
-        { tipo: 'nome', x: 2, y: 4, largura: 40, altura: 10, tamanhoFonte: 7 },
-        { tipo: 'codigo', x: 20, y: 1, largura: 40, altura: 6, tamanhoFonte: 8 },
-        { tipo: 'preco', x: 70, y: 4, largura: 20, altura: 10, tamanhoFonte: 10 }
+        { tipo: 'nome' as const, x: 2, y: 4, largura: 40, altura: 10, tamanhoFonte: 7 },
+        { tipo: 'codigo' as const, x: 20, y: 1, largura: 40, altura: 6, tamanhoFonte: 8 },
+        { tipo: 'preco' as const, x: 70, y: 4, largura: 20, altura: 10, tamanhoFonte: 10 }
       ];
     }
   }
@@ -44,11 +44,22 @@ export function mapDatabaseToModel(item: EtiquetaCustomDB): ModeloEtiqueta {
   // Se não houver campos, usar os valores padrão
   if (campos.length === 0) {
     campos = [
-      { tipo: 'nome', x: 2, y: 4, largura: 40, altura: 10, tamanhoFonte: 7 },
-      { tipo: 'codigo', x: 20, y: 1, largura: 40, altura: 6, tamanhoFonte: 8 },
-      { tipo: 'preco', x: 70, y: 4, largura: 20, altura: 10, tamanhoFonte: 10 }
+      { tipo: 'nome' as const, x: 2, y: 4, largura: 40, altura: 10, tamanhoFonte: 7 },
+      { tipo: 'codigo' as const, x: 20, y: 1, largura: 40, altura: 6, tamanhoFonte: 8 },
+      { tipo: 'preco' as const, x: 70, y: 4, largura: 20, altura: 10, tamanhoFonte: 10 }
     ];
   }
+
+  // Garantir que cada campo tenha todos os atributos necessários
+  campos = campos.map(campo => ({
+    tipo: campo.tipo as 'nome' | 'codigo' | 'preco',
+    x: Number(campo.x) || 0,
+    y: Number(campo.y) || 0,
+    largura: Number(campo.largura) || 10,
+    altura: Number(campo.altura) || 10,
+    tamanhoFonte: Number(campo.tamanhoFonte) || 10,
+    valor: campo.valor
+  }));
 
   return {
     id: item.id,

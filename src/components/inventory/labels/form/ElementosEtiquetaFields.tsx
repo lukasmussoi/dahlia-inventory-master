@@ -20,7 +20,7 @@ export function ElementosEtiquetaFields({ form }: ElementosEtiquetaFieldsProps) 
   
   // Inicializa os campos com os valores padrão se ainda não existirem
   useEffect(() => {
-    const elementosIniciais = [
+    const elementosIniciais: CampoEtiqueta[] = [
       { tipo: 'nome' as const, x: 2, y: 4, largura: 40, altura: 10, tamanhoFonte: 7 },
       { tipo: 'codigo' as const, x: 20, y: 1, largura: 40, altura: 6, tamanhoFonte: 8 },
       { tipo: 'preco' as const, x: 70, y: 4, largura: 20, altura: 10, tamanhoFonte: 10 },
@@ -30,10 +30,25 @@ export function ElementosEtiquetaFields({ form }: ElementosEtiquetaFieldsProps) 
     
     // Se não houver campos ou a quantidade for diferente, inicializa com os valores padrão
     if (!camposAtuais.length || camposAtuais.length !== elementosIniciais.length) {
+      console.log("Inicializando campos com valores padrão");
       form.setValue('campos', elementosIniciais);
       setCamposAtuais(elementosIniciais);
     } else {
-      setCamposAtuais(camposAtuais);
+      // Garantir que todos os campos tenham valores válidos
+      const camposCorrigidos = camposAtuais.map((campo, index) => {
+        const campoInicial = elementosIniciais[index];
+        return {
+          tipo: campo.tipo || campoInicial.tipo,
+          x: Number(campo.x) || campoInicial.x,
+          y: Number(campo.y) || campoInicial.y,
+          largura: Number(campo.largura) || campoInicial.largura, 
+          altura: Number(campo.altura) || campoInicial.altura,
+          tamanhoFonte: Number(campo.tamanhoFonte) || campoInicial.tamanhoFonte
+        };
+      });
+      
+      form.setValue('campos', camposCorrigidos);
+      setCamposAtuais(camposCorrigidos);
     }
   }, [form]);
 
@@ -68,7 +83,7 @@ export function ElementosEtiquetaFields({ form }: ElementosEtiquetaFieldsProps) 
                     <Input 
                       type="number" 
                       {...field} 
-                      onChange={e => field.onChange(Number(e.target.value))}
+                      onChange={e => field.onChange(Number(e.target.value) || 0)}
                     />
                   </FormControl>
                   <FormMessage />
@@ -86,7 +101,7 @@ export function ElementosEtiquetaFields({ form }: ElementosEtiquetaFieldsProps) 
                     <Input 
                       type="number" 
                       {...field} 
-                      onChange={e => field.onChange(Number(e.target.value))}
+                      onChange={e => field.onChange(Number(e.target.value) || 0)}
                     />
                   </FormControl>
                   <FormMessage />
@@ -104,7 +119,7 @@ export function ElementosEtiquetaFields({ form }: ElementosEtiquetaFieldsProps) 
                     <Input 
                       type="number" 
                       {...field} 
-                      onChange={e => field.onChange(Number(e.target.value))}
+                      onChange={e => field.onChange(Number(e.target.value) || 10)}
                     />
                   </FormControl>
                   <FormMessage />

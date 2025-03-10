@@ -28,7 +28,7 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[65vh] overflow-y-auto pr-2">
         <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
@@ -65,7 +65,7 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
         <EspacamentoEtiquetaFields form={form} />
         <ElementosEtiquetaFields form={form} />
 
-        <div className="flex justify-end gap-2 pt-4 sticky bottom-0 bg-background py-2">
+        <div className="flex justify-end gap-2 pt-4 sticky bottom-0 bg-background py-2 border-t mt-4">
           <Button variant="outline" type="button" onClick={onClose}>
             Cancelar
           </Button>
