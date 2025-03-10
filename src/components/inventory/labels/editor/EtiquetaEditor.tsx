@@ -10,7 +10,16 @@ import {
   Ruler,
   Settings,
   Copy,
-  LayoutGrid
+  LayoutGrid,
+  Maximize,
+  Minimize,
+  Save,
+  FileText,
+  Printer,
+  ChevronRight,
+  ChevronLeft,
+  Sliders,
+  AlignLeft
 } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
@@ -25,6 +34,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import type { CampoEtiqueta } from "@/types/etiqueta";
 
 interface EtiquetaEditorProps {
@@ -72,7 +87,7 @@ function DraggableCampo({ campo, index, onSelect, isSelected }: {
       ref={setNodeRef} 
       {...listeners} 
       {...attributes}
-      className={`cursor-move absolute border ${isSelected ? 'border-blue-500 bg-blue-50' : 'border-dashed border-gray-400'} p-1`}
+      className={`cursor-move absolute border ${isSelected ? 'border-blue-500 bg-blue-50/70' : 'border-dashed border-gray-400'} p-1`}
       style={{
         ...style,
         left: campo.x,
@@ -82,7 +97,7 @@ function DraggableCampo({ campo, index, onSelect, isSelected }: {
       }}
       onClick={handleClick}
     >
-      <div className="text-xs truncate">
+      <div className="text-xs truncate w-full h-full flex items-center justify-center">
         {campo.tipo === 'nome' ? 'Nome do Produto' :
         campo.tipo === 'codigo' ? 'Código de Barras' : 'Preço'}
       </div>
@@ -96,7 +111,7 @@ function ElementoPaleta({ tipo, onAdd }: {
 }) {
   return (
     <div 
-      className="cursor-pointer p-2 bg-white border rounded shadow-sm hover:bg-gray-50 flex items-center gap-2"
+      className="cursor-pointer p-2 bg-white border rounded shadow-sm hover:bg-gray-50 flex items-center gap-2 mb-2"
       onClick={() => onAdd(tipo)}
     >
       <GripVertical className="h-4 w-4 text-gray-400" />
@@ -131,7 +146,7 @@ export function EtiquetaEditor({
   const [localLargura, setLocalLargura] = useState(largura);
   const [localAltura, setLocalAltura] = useState(altura);
   const [isDragging, setIsDragging] = useState(false);
-  const [activeTab, setActiveTab] = useState<string>("etiqueta");
+  const [activeConfigPanel, setActiveConfigPanel] = useState<string>("page");
   
   // Valores locais para configurações de página
   const [localFormatoPagina, setLocalFormatoPagina] = useState(formatoPagina);
@@ -145,12 +160,32 @@ export function EtiquetaEditor({
   const [localLarguraPagina, setLocalLarguraPagina] = useState(larguraPagina || 210);
   const [localAlturaPagina, setLocalAlturaPagina] = useState(alturaPagina || 297);
   
-  // Estado para controle de visualização da página vs etiqueta individual
-  const [showPageView, setShowPageView] = useState(false);
+  // Estado para painéis laterais 
+  const [showSidebar, setShowSidebar] = useState(true);
+  const [sidebarWidth, setSidebarWidth] = useState(320);
+  
+  // Estado para modo de exibição: edição de etiqueta ou visualização da página
+  const [viewMode, setViewMode] = useState<"etiqueta" | "pagina">("etiqueta");
+  const [editScale, setEditScale] = useState(1.0); // Escala de visualização do editor
   
   const { setNodeRef } = useDroppable({
     id: 'etiqueta-area',
   });
+
+  // Função para calcular quantas etiquetas cabem na página
+  const calcularEtiquetasPorPagina = () => {
+    const areaUtilLargura = localLarguraPagina - localMargemEsquerda - localMargemDireita;
+    const areaUtilAltura = localAlturaPagina - localMargemSuperior - localMargemInferior;
+    
+    const etiquetasPorLinha = Math.floor((areaUtilLargura + localEspacamentoHorizontal) / (localLargura + localEspacamentoHorizontal));
+    const etiquetasPorColuna = Math.floor((areaUtilAltura + localEspacamentoVertical) / (localAltura + localEspacamentoVertical));
+    
+    return {
+      etiquetasPorLinha: Math.max(1, etiquetasPorLinha),
+      etiquetasPorColuna: Math.max(1, etiquetasPorColuna),
+      total: Math.max(1, etiquetasPorLinha * etiquetasPorColuna)
+    };
+  };
 
   // Sincronizar dimensões locais com props
   useEffect(() => {
@@ -180,6 +215,25 @@ export function EtiquetaEditor({
     larguraPagina,
     alturaPagina
   ]);
+
+  // Validar se a etiqueta cabe na página com as configurações atuais
+  const validarEtiquetaNaPagina = () => {
+    const areaUtilLargura = localLarguraPagina - localMargemEsquerda - localMargemDireita;
+    const areaUtilAltura = localAlturaPagina - localMargemSuperior - localMargemInferior;
+    
+    if (localLargura > areaUtilLargura) {
+      setWarning(`A largura da etiqueta (${localLargura}mm) excede a área útil da página (${areaUtilLargura}mm). Por favor, reduza a largura da etiqueta ou aumente a largura da página.`);
+      return false;
+    }
+    
+    if (localAltura > areaUtilAltura) {
+      setWarning(`A altura da etiqueta (${localAltura}mm) excede a área útil da página (${areaUtilAltura}mm). Por favor, reduza a altura da etiqueta ou aumente a altura da página.`);
+      return false;
+    }
+    
+    setWarning(null);
+    return true;
+  };
 
   // Atualizar as dimensões quando mudam localmente
   const handleDimensoesChange = () => {
@@ -219,6 +273,9 @@ export function EtiquetaEditor({
     });
     
     onCamposChange(camposAjustados);
+    
+    // Validar se a etiqueta cabe na página após a mudança
+    validarEtiquetaNaPagina();
   };
 
   // Atualizar configurações de página
@@ -248,27 +305,8 @@ export function EtiquetaEditor({
       );
     }
     
-    // Validar se a etiqueta cabe na página com as novas configurações
+    // Validar se a etiqueta cabe na página
     validarEtiquetaNaPagina();
-  };
-  
-  // Validar se a etiqueta cabe na página com as configurações atuais
-  const validarEtiquetaNaPagina = () => {
-    const areaUtilLargura = localLarguraPagina - localMargemEsquerda - localMargemDireita;
-    const areaUtilAltura = localAlturaPagina - localMargemSuperior - localMargemInferior;
-    
-    if (localLargura > areaUtilLargura) {
-      setWarning(`A largura da etiqueta (${localLargura}mm) excede a área útil da página (${areaUtilLargura}mm). Por favor, reduza a largura da etiqueta ou aumente a largura da página.`);
-      return false;
-    }
-    
-    if (localAltura > areaUtilAltura) {
-      setWarning(`A altura da etiqueta (${localAltura}mm) excede a área útil da página (${areaUtilAltura}mm). Por favor, reduza a altura da etiqueta ou aumente a altura da página.`);
-      return false;
-    }
-    
-    setWarning(null);
-    return true;
   };
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -438,25 +476,483 @@ export function EtiquetaEditor({
     }
   };
 
-  // Calcular quantas etiquetas cabem na página
-  const calcularEtiquetasPorPagina = () => {
-    const areaUtilLargura = localLarguraPagina - localMargemEsquerda - localMargemDireita;
-    const areaUtilAltura = localAlturaPagina - localMargemSuperior - localMargemInferior;
-    
-    const etiquetasPorLinha = Math.floor((areaUtilLargura + localEspacamentoHorizontal) / (localLargura + localEspacamentoHorizontal));
-    const etiquetasPorColuna = Math.floor((areaUtilAltura + localEspacamentoVertical) / (localAltura + localEspacamentoVertical));
-    
-    return {
-      etiquetasPorLinha,
-      etiquetasPorColuna,
-      total: etiquetasPorLinha * etiquetasPorColuna
-    };
+  // Renderizar a área de edição de etiqueta
+  const renderizarEditorEtiqueta = () => {
+    return (
+      <DndContext onDragEnd={handleDragEnd} onDragStart={handleDragStart}>
+        <div className="flex flex-1 overflow-hidden">
+          {/* Área principal de edição */}
+          <div className="flex-1 flex flex-col overflow-auto">
+            <div className="bg-white border rounded p-4 mb-4">
+              <div className="flex items-center justify-between gap-4 mb-2">
+                <h3 className="font-medium flex items-center gap-2">
+                  <MoveIcon className="h-4 w-4" />
+                  Editor de Etiqueta
+                </h3>
+                
+                <div className="flex items-center gap-3">
+                  {/* Controles de zoom */}
+                  <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="icon" onClick={() => setEditScale(prev => Math.max(0.5, prev - 0.1))} className="h-8 w-8">
+                      <Minimize className="h-4 w-4" />
+                    </Button>
+                    <span className="text-xs">{Math.round(editScale * 100)}%</span>
+                    <Button variant="ghost" size="icon" onClick={() => setEditScale(prev => Math.min(2, prev + 0.1))} className="h-8 w-8">
+                      <Maximize className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  
+                  {/* Botões de alternar visualização */}
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="h-8"
+                    onClick={() => setViewMode(viewMode === "etiqueta" ? "pagina" : "etiqueta")}
+                  >
+                    {viewMode === "etiqueta" ? (
+                      <div className="flex items-center gap-1">
+                        <FileText className="h-4 w-4" />
+                        <span>Ver Página</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1">
+                        <MoveIcon className="h-4 w-4" />
+                        <span>Editar Etiqueta</span>
+                      </div>
+                    )}
+                  </Button>
+                </div>
+              </div>
+              
+              {/* Controles de dimensão da etiqueta */}
+              <div className="flex items-center gap-4 mb-4 p-2 bg-slate-50 border rounded">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="largura-etiqueta" className="text-sm whitespace-nowrap">Largura:</Label>
+                  <Input
+                    id="largura-etiqueta"
+                    type="number"
+                    className="w-20 h-8"
+                    value={localLargura}
+                    onChange={(e) => setLocalLargura(Number(e.target.value))}
+                    onBlur={handleDimensoesChange}
+                    min={10}
+                    max={210}
+                  />
+                  <span className="text-xs text-gray-500">mm</span>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="altura-etiqueta" className="text-sm whitespace-nowrap">Altura:</Label>
+                  <Input
+                    id="altura-etiqueta"
+                    type="number"
+                    className="w-20 h-8"
+                    value={localAltura}
+                    onChange={(e) => setLocalAltura(Number(e.target.value))}
+                    onBlur={handleDimensoesChange}
+                    min={5}
+                    max={297}
+                  />
+                  <span className="text-xs text-gray-500">mm</span>
+                </div>
+                
+                <div className="text-xs text-gray-500 flex items-center">
+                  <span className="flex items-center gap-1">
+                    <LayoutGrid className="h-3 w-3" />
+                    {calcularEtiquetasPorPagina().total} etiquetas por página
+                  </span>
+                </div>
+              </div>
+              
+              {/* Área de edição da etiqueta */}
+              <div className="relative flex justify-center">
+                <div 
+                  ref={setNodeRef}
+                  className={`relative bg-white border rounded overflow-hidden ${isDragging ? 'border-blue-400' : 'border-gray-300'}`}
+                  style={{
+                    width: `${localLargura * editScale}px`,
+                    height: `${localAltura * editScale}px`,
+                    backgroundSize: `${10 * editScale}px ${10 * editScale}px`,
+                    backgroundImage: 'linear-gradient(to right, #f0f0f0 1px, transparent 1px), linear-gradient(to bottom, #f0f0f0 1px, transparent 1px)',
+                    transform: `scale(${editScale})`,
+                    transformOrigin: 'top left'
+                  }}
+                  onClick={handleEditorAreaClick}
+                >
+                  {campos.map((campo, index) => (
+                    <DraggableCampo
+                      key={`${campo.tipo}-${index}`}
+                      campo={campo}
+                      index={index}
+                      onSelect={handleCampoSelect}
+                      isSelected={selectedCampoIndex === index}
+                    />
+                  ))}
+                </div>
+              </div>
+              
+              <div className="text-xs text-gray-500 mt-2 flex justify-center">
+                Tamanho real da etiqueta: {localLargura}mm × {localAltura}mm
+              </div>
+            </div>
+          </div>
+          
+          {/* Barra lateral para configurações */}
+          {showSidebar && (
+            <div className={`w-${sidebarWidth}px flex-shrink-0 border-l bg-slate-50 ml-2 overflow-y-auto`} style={{ width: `${sidebarWidth}px` }}>
+              <div className="p-4 space-y-4">
+                <Accordion type="single" collapsible defaultValue="elementos">
+                  <AccordionItem value="elementos">
+                    <AccordionTrigger className="py-2">
+                      <div className="flex items-center gap-2">
+                        <PanelLeftIcon className="h-4 w-4" />
+                        <span>Elementos Disponíveis</span>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="space-y-1 my-2">
+                        {['nome', 'codigo', 'preco'].filter(tipo => 
+                          !campos.some(c => c.tipo === tipo)
+                        ).map(tipo => (
+                          <ElementoPaleta 
+                            key={tipo} 
+                            tipo={tipo as 'nome' | 'codigo' | 'preco'} 
+                            onAdd={handleAddElemento} 
+                          />
+                        ))}
+                        
+                        {campos.length > 0 && (
+                          <>
+                            <Separator className="my-3" />
+                            <h4 className="text-sm font-medium mb-2">Elementos na Etiqueta</h4>
+                            <div className="space-y-2">
+                              {campos.map((campo, index) => (
+                                <div 
+                                  key={`list-${campo.tipo}-${index}`}
+                                  className={`p-2 rounded cursor-pointer ${selectedCampoIndex === index ? 'bg-blue-50 border border-blue-200' : 'bg-white border'}`}
+                                  onClick={() => handleCampoSelect(index)}
+                                >
+                                  <div className="text-sm flex items-center gap-2">
+                                    <GripVertical className="h-4 w-4 text-gray-400" />
+                                    {campo.tipo === 'nome' ? 'Nome do Produto' :
+                                     campo.tipo === 'codigo' ? 'Código de Barras' : 'Preço'}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                  
+                  <AccordionItem value="configuracoes-pagina">
+                    <AccordionTrigger className="py-2">
+                      <div className="flex items-center gap-2">
+                        <Copy className="h-4 w-4" />
+                        <span>Configurações da Página</span>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="space-y-4 py-2">
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                          <div className="space-y-1">
+                            <Label htmlFor="formato-pagina" className="text-sm">Formato</Label>
+                            <Select 
+                              value={localFormatoPagina} 
+                              onValueChange={(valor) => {
+                                setLocalFormatoPagina(valor);
+                                
+                                // Se o formato mudar para um padrão, definir dimensões padrão
+                                if (valor === "A4") {
+                                  setLocalLarguraPagina(210);
+                                  setLocalAlturaPagina(297);
+                                } else if (valor === "Letter") {
+                                  setLocalLarguraPagina(216);
+                                  setLocalAlturaPagina(279);
+                                } else if (valor === "Legal") {
+                                  setLocalLarguraPagina(216);
+                                  setLocalAlturaPagina(356);
+                                }
+                                
+                                setTimeout(handlePaginaChange, 0);
+                              }}
+                            >
+                              <SelectTrigger id="formato-pagina" className="h-8">
+                                <SelectValue placeholder="Formato" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="A4">A4</SelectItem>
+                                <SelectItem value="Letter">Letter</SelectItem>
+                                <SelectItem value="Legal">Legal</SelectItem>
+                                <SelectItem value="Personalizado">Personalizado</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          
+                          <div className="space-y-1">
+                            <Label htmlFor="orientacao" className="text-sm">Orientação</Label>
+                            <Select 
+                              value={localOrientacao} 
+                              onValueChange={(valor) => {
+                                setLocalOrientacao(valor);
+                                
+                                // Se a orientação mudar, trocar largura e altura da página
+                                if (valor !== localOrientacao) {
+                                  const temp = localLarguraPagina;
+                                  setLocalLarguraPagina(localAlturaPagina);
+                                  setLocalAlturaPagina(temp);
+                                }
+                                
+                                setTimeout(handlePaginaChange, 0);
+                              }}
+                            >
+                              <SelectTrigger id="orientacao" className="h-8">
+                                <SelectValue placeholder="Orientação" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="retrato">Retrato</SelectItem>
+                                <SelectItem value="paisagem">Paisagem</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        
+                        {localFormatoPagina === "Personalizado" && (
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                            <div className="space-y-1">
+                              <Label htmlFor="largura-pagina" className="text-sm">Largura (mm)</Label>
+                              <Input
+                                id="largura-pagina"
+                                type="number"
+                                className="h-8"
+                                value={localLarguraPagina}
+                                onChange={(e) => setLocalLarguraPagina(Number(e.target.value))}
+                                onBlur={handlePaginaChange}
+                                min={50}
+                                max={420}
+                              />
+                            </div>
+                            
+                            <div className="space-y-1">
+                              <Label htmlFor="altura-pagina" className="text-sm">Altura (mm)</Label>
+                              <Input
+                                id="altura-pagina"
+                                type="number"
+                                className="h-8"
+                                value={localAlturaPagina}
+                                onChange={(e) => setLocalAlturaPagina(Number(e.target.value))}
+                                onBlur={handlePaginaChange}
+                                min={50}
+                                max={420}
+                              />
+                            </div>
+                          </div>
+                        )}
+                        
+                        <div>
+                          <h4 className="text-sm font-medium mb-2">Margens (mm)</h4>
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                            <div className="space-y-1">
+                              <Label htmlFor="margem-superior" className="text-xs">Superior</Label>
+                              <Input
+                                id="margem-superior"
+                                type="number"
+                                className="h-8"
+                                value={localMargemSuperior}
+                                onChange={(e) => setLocalMargemSuperior(Number(e.target.value))}
+                                onBlur={handlePaginaChange}
+                                min={0}
+                                max={50}
+                              />
+                            </div>
+                            
+                            <div className="space-y-1">
+                              <Label htmlFor="margem-inferior" className="text-xs">Inferior</Label>
+                              <Input
+                                id="margem-inferior"
+                                type="number"
+                                className="h-8"
+                                value={localMargemInferior}
+                                onChange={(e) => setLocalMargemInferior(Number(e.target.value))}
+                                onBlur={handlePaginaChange}
+                                min={0}
+                                max={50}
+                              />
+                            </div>
+                            
+                            <div className="space-y-1">
+                              <Label htmlFor="margem-esquerda" className="text-xs">Esquerda</Label>
+                              <Input
+                                id="margem-esquerda"
+                                type="number"
+                                className="h-8"
+                                value={localMargemEsquerda}
+                                onChange={(e) => setLocalMargemEsquerda(Number(e.target.value))}
+                                onBlur={handlePaginaChange}
+                                min={0}
+                                max={50}
+                              />
+                            </div>
+                            
+                            <div className="space-y-1">
+                              <Label htmlFor="margem-direita" className="text-xs">Direita</Label>
+                              <Input
+                                id="margem-direita"
+                                type="number"
+                                className="h-8"
+                                value={localMargemDireita}
+                                onChange={(e) => setLocalMargemDireita(Number(e.target.value))}
+                                onBlur={handlePaginaChange}
+                                min={0}
+                                max={50}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <h4 className="text-sm font-medium mb-2">Espaçamento entre etiquetas (mm)</h4>
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                            <div className="space-y-1">
+                              <Label htmlFor="espacamento-horizontal" className="text-xs">Horizontal</Label>
+                              <Input
+                                id="espacamento-horizontal"
+                                type="number"
+                                className="h-8"
+                                value={localEspacamentoHorizontal}
+                                onChange={(e) => setLocalEspacamentoHorizontal(Number(e.target.value))}
+                                onBlur={handlePaginaChange}
+                                min={0}
+                                max={20}
+                              />
+                            </div>
+                            
+                            <div className="space-y-1">
+                              <Label htmlFor="espacamento-vertical" className="text-xs">Vertical</Label>
+                              <Input
+                                id="espacamento-vertical"
+                                type="number"
+                                className="h-8"
+                                value={localEspacamentoVertical}
+                                onChange={(e) => setLocalEspacamentoVertical(Number(e.target.value))}
+                                onBlur={handlePaginaChange}
+                                min={0}
+                                max={20}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+                
+                {/* Propriedades do elemento selecionado */}
+                {selectedCampoIndex !== null && selectedCampoIndex >= 0 && selectedCampoIndex < campos.length && (
+                  <div className="bg-white border rounded p-4 mt-4">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="font-medium">Propriedades do Elemento</h3>
+                      <Button 
+                        variant="destructive" 
+                        size="sm" 
+                        onClick={removerElementoSelecionado}
+                        className="h-7 px-2"
+                      >
+                        Remover
+                      </Button>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs">Posição X (mm)</Label>
+                        <Input
+                          type="number"
+                          className="h-8"
+                          value={campos[selectedCampoIndex].x}
+                          onChange={(e) => handleUpdateCampo(selectedCampoIndex, 'x', Number(e.target.value))}
+                          min={0}
+                          max={localLargura - campos[selectedCampoIndex].largura}
+                          step={1}
+                        />
+                      </div>
+                      
+                      <div className="space-y-1">
+                        <Label className="text-xs">Posição Y (mm)</Label>
+                        <Input
+                          type="number"
+                          className="h-8"
+                          value={campos[selectedCampoIndex].y}
+                          onChange={(e) => handleUpdateCampo(selectedCampoIndex, 'y', Number(e.target.value))}
+                          min={0}
+                          max={localAltura - campos[selectedCampoIndex].altura}
+                          step={1}
+                        />
+                      </div>
+                      
+                      <div className="space-y-1">
+                        <Label className="text-xs">Largura (mm)</Label>
+                        <Input
+                          type="number"
+                          className="h-8"
+                          value={campos[selectedCampoIndex].largura}
+                          onChange={(e) => handleUpdateCampo(selectedCampoIndex, 'largura', Number(e.target.value))}
+                          min={1}
+                          max={localLargura - campos[selectedCampoIndex].x}
+                          step={1}
+                        />
+                      </div>
+                      
+                      <div className="space-y-1">
+                        <Label className="text-xs">Altura (mm)</Label>
+                        <Input
+                          type="number"
+                          className="h-8"
+                          value={campos[selectedCampoIndex].altura}
+                          onChange={(e) => handleUpdateCampo(selectedCampoIndex, 'altura', Number(e.target.value))}
+                          min={1}
+                          max={localAltura - campos[selectedCampoIndex].y}
+                          step={1}
+                        />
+                      </div>
+                      
+                      <div className="space-y-1 col-span-2">
+                        <Label className="text-xs">Tamanho da Fonte (pt)</Label>
+                        <Input
+                          type="number"
+                          className="h-8"
+                          value={campos[selectedCampoIndex].tamanhoFonte}
+                          onChange={(e) => handleUpdateCampo(selectedCampoIndex, 'tamanhoFonte', Number(e.target.value))}
+                          min={5}
+                          max={24}
+                          step={0.5}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Dicas de uso */}
+                <div className="p-3 bg-white border rounded mt-4">
+                  <h4 className="text-xs font-medium mb-2">Dicas de uso:</h4>
+                  <ul className="text-xs text-gray-600 space-y-1">
+                    <li>• Arraste os elementos para posicioná-los na etiqueta</li>
+                    <li>• Clique em um elemento para editar suas propriedades</li>
+                    <li>• Ajuste as dimensões da etiqueta conforme necessário</li>
+                    <li>• Configure a página para visualizar o layout completo</li>
+                    <li>• Utilize o zoom para trabalhar com mais detalhes</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </DndContext>
+    );
   };
 
-  // Desenhar a página com as etiquetas para visualização
-  const renderizarPaginaComEtiquetas = () => {
-    const { etiquetasPorLinha, etiquetasPorColuna } = calcularEtiquetasPorPagina();
-    
+  // Renderizar a visão de página com grade de etiquetas
+  const renderizarVisualizacaoPagina = () => {
     // Fator de escala para renderização na tela
     const escala = 0.5; // reduz o tamanho para caber na viewport
     
@@ -477,6 +973,9 @@ export function EtiquetaEditor({
     // Espaçamentos escalados
     const espacamentoHorizontalEscalado = localEspacamentoHorizontal * escala;
     const espacamentoVerticalEscalado = localEspacamentoVertical * escala;
+    
+    // Calcular quantas etiquetas cabem na página
+    const { etiquetasPorLinha, etiquetasPorColuna } = calcularEtiquetasPorPagina();
     
     // Criar grade de etiquetas
     const etiquetas = [];
@@ -513,7 +1012,7 @@ export function EtiquetaEditor({
                       overflow: 'hidden'
                     }}
                   >
-                    <div className="text-xs truncate">
+                    <div className="text-xs truncate w-full h-full flex items-center justify-center">
                       {campo.tipo === 'nome' ? 'Nome do Produto' :
                       campo.tipo === 'codigo' ? 'Código de Barras' : 'Preço'}
                     </div>
@@ -527,124 +1026,102 @@ export function EtiquetaEditor({
     }
     
     return (
-      <div className="bg-white border rounded p-4 mt-4">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="font-medium flex items-center gap-2">
-            <LayoutGrid className="h-4 w-4" />
-            Visualização da Página
-          </h3>
-          <div className="text-sm text-gray-500">
-            {etiquetasPorLinha} × {etiquetasPorColuna} = {etiquetasPorLinha * etiquetasPorColuna} etiquetas por página
-          </div>
-        </div>
-        
-        <div 
-          className="relative border border-gray-800 mx-auto"
-          style={{
-            width: `${larguraPaginaEscalada}px`,
-            height: `${alturaPaginaEscalada}px`,
-            backgroundColor: 'white'
-          }}
-        >
-          {/* Área útil de impressão */}
-          <div
-            className="absolute border-2 border-gray-300 border-dashed"
-            style={{
-              left: `${margemEsquerdaEscalada}px`,
-              top: `${margemSuperiorEscalada}px`,
-              width: `${larguraPaginaEscalada - margemEsquerdaEscalada - margemDireitaEscalada}px`,
-              height: `${alturaPaginaEscalada - margemSuperiorEscalada - margemInferiorEscalada}px`,
-            }}
-          />
-          
-          {/* Etiquetas */}
-          {etiquetas}
-        </div>
-        
-        <div className="text-sm text-gray-500 mt-2">
-          A primeira etiqueta (destacada em azul) mostra o conteúdo conforme configurado no editor.
-        </div>
-      </div>
-    );
-  };
-
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-4">
-        <div className="bg-white border rounded p-4">
-          <div className="flex justify-between items-center mb-3">
-            <h3 className="font-medium flex items-center gap-2">
-              <Ruler className="h-4 w-4" />
-              Dimensões da Etiqueta
-            </h3>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
-                <Label htmlFor="largura-etiqueta" className="text-sm whitespace-nowrap">Largura (mm):</Label>
-                <Input
-                  id="largura-etiqueta"
-                  type="number"
-                  className="w-20 h-8"
-                  value={localLargura}
-                  onChange={(e) => setLocalLargura(Number(e.target.value))}
-                  onBlur={handleDimensoesChange}
-                  min={10}
-                  max={210}
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <Label htmlFor="altura-etiqueta" className="text-sm whitespace-nowrap">Altura (mm):</Label>
-                <Input
-                  id="altura-etiqueta"
-                  type="number"
-                  className="w-20 h-8"
-                  value={localAltura}
-                  onChange={(e) => setLocalAltura(Number(e.target.value))}
-                  onBlur={handleDimensoesChange}
-                  min={5}
-                  max={297}
-                />
-              </div>
-              <Button
-                variant="outline"
+      <div className="flex flex-1 overflow-hidden">
+        {/* Área principal de visualização da página */}
+        <div className="flex-1 flex flex-col overflow-auto">
+          <div className="bg-white border rounded p-4 mb-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-medium flex items-center gap-2">
+                <LayoutGrid className="h-4 w-4" />
+                Visualização da Página
+              </h3>
+              
+              <Button 
+                variant="outline" 
                 size="sm"
-                className="h-8"
-                onClick={() => setShowPageView(!showPageView)}
+                onClick={() => setViewMode("etiqueta")}
+                className="flex items-center gap-2"
               >
-                {showPageView ? "Mostrar Editor" : "Visualizar Página"}
+                <MoveIcon className="h-4 w-4" />
+                Voltar ao Editor
               </Button>
+            </div>
+            
+            <div className="flex justify-center">
+              <div 
+                className="relative border border-gray-800 mx-auto"
+                style={{
+                  width: `${larguraPaginaEscalada}px`,
+                  height: `${alturaPaginaEscalada}px`,
+                  backgroundColor: 'white'
+                }}
+              >
+                {/* Área útil de impressão */}
+                <div
+                  className="absolute border-2 border-gray-300 border-dashed"
+                  style={{
+                    left: `${margemEsquerdaEscalada}px`,
+                    top: `${margemSuperiorEscalada}px`,
+                    width: `${larguraPaginaEscalada - margemEsquerdaEscalada - margemDireitaEscalada}px`,
+                    height: `${alturaPaginaEscalada - margemSuperiorEscalada - margemInferiorEscalada}px`,
+                  }}
+                />
+                
+                {/* Etiquetas */}
+                {etiquetas}
+              </div>
+            </div>
+            
+            <div className="text-sm text-gray-500 mt-4 flex justify-center items-center gap-2">
+              <span className="font-medium">{etiquetasPorLinha} × {etiquetasPorColuna} = {etiquetasPorLinha * etiquetasPorColuna} etiquetas por página</span>
+              <Separator orientation="vertical" className="h-4" />
+              <span className="text-xs">A primeira etiqueta (destacada em azul) mostra o conteúdo conforme configurado no editor.</span>
+            </div>
+          </div>
+          
+          {/* Resumo das configurações */}
+          <div className="bg-white border rounded p-4">
+            <h3 className="font-medium mb-3">Resumo das Configurações</h3>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <h4 className="font-medium text-xs mb-2">Página</h4>
+                <ul className="space-y-1 text-xs">
+                  <li><span className="font-medium">Formato:</span> {localFormatoPagina}</li>
+                  <li><span className="font-medium">Orientação:</span> {localOrientacao === "retrato" ? "Retrato" : "Paisagem"}</li>
+                  <li><span className="font-medium">Dimensões:</span> {localLarguraPagina}mm × {localAlturaPagina}mm</li>
+                  <li>
+                    <span className="font-medium">Margens:</span> 
+                    S:{localMargemSuperior}mm, I:{localMargemInferior}mm, E:{localMargemEsquerda}mm, D:{localMargemDireita}mm
+                  </li>
+                </ul>
+              </div>
+              
+              <div>
+                <h4 className="font-medium text-xs mb-2">Etiqueta</h4>
+                <ul className="space-y-1 text-xs">
+                  <li><span className="font-medium">Dimensões:</span> {localLargura}mm × {localAltura}mm</li>
+                  <li><span className="font-medium">Espaçamento:</span> H:{localEspacamentoHorizontal}mm, V:{localEspacamentoVertical}mm</li>
+                  <li><span className="font-medium">Elementos:</span> {campos.length} elementos configurados</li>
+                  <li><span className="font-medium">Etiquetas por página:</span> {calcularEtiquetasPorPagina().total}</li>
+                </ul>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-
-      {showPageView ? (
-        <div className="space-y-4">
-          <Tabs defaultValue="formato" className="w-full">
-            <TabsList className="grid grid-cols-3 mb-4">
-              <TabsTrigger value="formato" className="flex items-center gap-2">
-                <Copy className="h-4 w-4" />
-                Formato da Página
-              </TabsTrigger>
-              <TabsTrigger value="margens" className="flex items-center gap-2">
-                <Settings className="h-4 w-4" />
-                Margens e Espaçamentos
-              </TabsTrigger>
-              <TabsTrigger value="visualizacao" className="flex items-center gap-2">
-                <LayoutGrid className="h-4 w-4" />
-                Visualização
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="formato" className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+        
+        {/* Mantenha sidebar ao visualizar página também */}
+        {showSidebar && (
+          <div className={`w-${sidebarWidth}px flex-shrink-0 border-l bg-slate-50 ml-2 overflow-y-auto`} style={{ width: `${sidebarWidth}px` }}>
+            <div className="p-4">
+              <h3 className="font-medium mb-3">Ajustes Rápidos</h3>
+              
+              <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="formato-pagina">Formato da Página</Label>
+                  <h4 className="text-sm font-medium">Formato da Página</h4>
                   <Select 
                     value={localFormatoPagina} 
                     onValueChange={(valor) => {
                       setLocalFormatoPagina(valor);
-                      
-                      // Se o formato mudar para um padrão, definir dimensões padrão
                       if (valor === "A4") {
                         setLocalLarguraPagina(210);
                         setLocalAlturaPagina(297);
@@ -655,12 +1132,11 @@ export function EtiquetaEditor({
                         setLocalLarguraPagina(216);
                         setLocalAlturaPagina(356);
                       }
-                      
                       setTimeout(handlePaginaChange, 0);
                     }}
                   >
-                    <SelectTrigger id="formato-pagina">
-                      <SelectValue placeholder="Selecione o formato" />
+                    <SelectTrigger className="h-8">
+                      <SelectValue placeholder="Formato" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="A4">A4</SelectItem>
@@ -672,342 +1148,102 @@ export function EtiquetaEditor({
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="orientacao">Orientação</Label>
-                  <Select 
-                    value={localOrientacao} 
-                    onValueChange={(valor) => {
-                      setLocalOrientacao(valor);
-                      
-                      // Se a orientação mudar, trocar largura e altura da página
-                      if (valor !== localOrientacao) {
-                        const temp = localLarguraPagina;
-                        setLocalLarguraPagina(localAlturaPagina);
-                        setLocalAlturaPagina(temp);
-                      }
-                      
-                      setTimeout(handlePaginaChange, 0);
-                    }}
-                  >
-                    <SelectTrigger id="orientacao">
-                      <SelectValue placeholder="Selecione a orientação" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="retrato">Retrato</SelectItem>
-                      <SelectItem value="paisagem">Paisagem</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              
-              {localFormatoPagina === "Personalizado" && (
-                <div className="grid grid-cols-2 gap-4 mt-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="largura-pagina">Largura da Página (mm)</Label>
-                    <Input
-                      id="largura-pagina"
-                      type="number"
-                      value={localLarguraPagina}
-                      onChange={(e) => setLocalLarguraPagina(Number(e.target.value))}
-                      onBlur={handlePaginaChange}
-                      min={50}
-                      max={420}
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="altura-pagina">Altura da Página (mm)</Label>
-                    <Input
-                      id="altura-pagina"
-                      type="number"
-                      value={localAlturaPagina}
-                      onChange={(e) => setLocalAlturaPagina(Number(e.target.value))}
-                      onBlur={handlePaginaChange}
-                      min={50}
-                      max={420}
-                    />
+                  <h4 className="text-sm font-medium">Dimensões da Etiqueta</h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Largura (mm)</Label>
+                      <Input
+                        type="number"
+                        className="h-8"
+                        value={localLargura}
+                        onChange={(e) => setLocalLargura(Number(e.target.value))}
+                        onBlur={handleDimensoesChange}
+                        min={10}
+                        max={210}
+                      />
+                    </div>
+                    
+                    <div className="space-y-1">
+                      <Label className="text-xs">Altura (mm)</Label>
+                      <Input
+                        type="number"
+                        className="h-8"
+                        value={localAltura}
+                        onChange={(e) => setLocalAltura(Number(e.target.value))}
+                        onBlur={handleDimensoesChange}
+                        min={5}
+                        max={297}
+                      />
+                    </div>
                   </div>
                 </div>
-              )}
-            </TabsContent>
-            
-            <TabsContent value="margens" className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="margem-superior">Margem Superior (mm)</Label>
-                  <Input
-                    id="margem-superior"
-                    type="number"
-                    value={localMargemSuperior}
-                    onChange={(e) => setLocalMargemSuperior(Number(e.target.value))}
-                    onBlur={handlePaginaChange}
-                    min={0}
-                    max={50}
-                  />
-                </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="margem-inferior">Margem Inferior (mm)</Label>
-                  <Input
-                    id="margem-inferior"
-                    type="number"
-                    value={localMargemInferior}
-                    onChange={(e) => setLocalMargemInferior(Number(e.target.value))}
-                    onBlur={handlePaginaChange}
-                    min={0}
-                    max={50}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="margem-esquerda">Margem Esquerda (mm)</Label>
-                  <Input
-                    id="margem-esquerda"
-                    type="number"
-                    value={localMargemEsquerda}
-                    onChange={(e) => setLocalMargemEsquerda(Number(e.target.value))}
-                    onBlur={handlePaginaChange}
-                    min={0}
-                    max={50}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="margem-direita">Margem Direita (mm)</Label>
-                  <Input
-                    id="margem-direita"
-                    type="number"
-                    value={localMargemDireita}
-                    onChange={(e) => setLocalMargemDireita(Number(e.target.value))}
-                    onBlur={handlePaginaChange}
-                    min={0}
-                    max={50}
-                  />
-                </div>
-              </div>
-              
-              <Separator className="my-4" />
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="espacamento-horizontal">Espaçamento Horizontal (mm)</Label>
-                  <Input
-                    id="espacamento-horizontal"
-                    type="number"
-                    value={localEspacamentoHorizontal}
-                    onChange={(e) => setLocalEspacamentoHorizontal(Number(e.target.value))}
-                    onBlur={handlePaginaChange}
-                    min={0}
-                    max={20}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="espacamento-vertical">Espaçamento Vertical (mm)</Label>
-                  <Input
-                    id="espacamento-vertical"
-                    type="number"
-                    value={localEspacamentoVertical}
-                    onChange={(e) => setLocalEspacamentoVertical(Number(e.target.value))}
-                    onBlur={handlePaginaChange}
-                    min={0}
-                    max={20}
-                  />
-                </div>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="visualizacao">
-              {renderizarPaginaComEtiquetas()}
-            </TabsContent>
-          </Tabs>
-          
-          <div className="text-center mt-4">
-            <Button 
-              variant="outline" 
-              onClick={() => setShowPageView(false)}
-            >
-              Voltar ao Editor de Etiqueta
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <DndContext onDragEnd={handleDragEnd} onDragStart={handleDragStart}>
-          <div className="flex gap-4">
-            <div className="w-48 space-y-4 p-4 bg-gray-50 rounded border">
-              <div className="flex items-center gap-2 font-medium mb-2">
-                <PanelLeftIcon className="h-4 w-4" />
-                <h3>Elementos Disponíveis</h3>
-              </div>
-              <div className="space-y-2">
-                {['nome', 'codigo', 'preco'].filter(tipo => 
-                  !campos.some(c => c.tipo === tipo)
-                ).map(tipo => (
-                  <ElementoPaleta 
-                    key={tipo} 
-                    tipo={tipo as 'nome' | 'codigo' | 'preco'} 
-                    onAdd={handleAddElemento} 
-                  />
-                ))}
-              </div>
-              
-              {campos.length > 0 && (
-                <>
-                  <div className="border-t my-3"></div>
-                  <div className="font-medium mb-2">Elementos na Etiqueta</div>
-                  <div className="space-y-2">
-                    {campos.map((campo, index) => (
-                      <div 
-                        key={`list-${campo.tipo}-${index}`}
-                        className={`p-2 rounded cursor-pointer ${selectedCampoIndex === index ? 'bg-blue-50 border border-blue-200' : 'bg-white border'}`}
-                        onClick={() => handleCampoSelect(index)}
-                      >
-                        <div className="text-sm flex items-center gap-2">
-                          <GripVertical className="h-4 w-4 text-gray-400" />
-                          {campo.tipo === 'nome' ? 'Nome do Produto' :
-                           campo.tipo === 'codigo' ? 'Código de Barras' : 'Preço'}
-                        </div>
-                      </div>
-                    ))}
+                  <h4 className="text-sm font-medium">Espaçamento entre Etiquetas</h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Horizontal (mm)</Label>
+                      <Input
+                        type="number"
+                        className="h-8"
+                        value={localEspacamentoHorizontal}
+                        onChange={(e) => setLocalEspacamentoHorizontal(Number(e.target.value))}
+                        onBlur={handlePaginaChange}
+                        min={0}
+                        max={20}
+                      />
+                    </div>
+                    
+                    <div className="space-y-1">
+                      <Label className="text-xs">Vertical (mm)</Label>
+                      <Input
+                        type="number"
+                        className="h-8"
+                        value={localEspacamentoVertical}
+                        onChange={(e) => setLocalEspacamentoVertical(Number(e.target.value))}
+                        onBlur={handlePaginaChange}
+                        min={0}
+                        max={20}
+                      />
+                    </div>
                   </div>
-                </>
-              )}
+                </div>
+              </div>
               
-              <div className="border-t my-3"></div>
               <Button 
                 variant="outline" 
-                size="sm" 
-                className="w-full flex items-center justify-center gap-2"
-                onClick={() => setShowPageView(true)}
+                size="sm"
+                className="w-full mt-4"
+                onClick={() => setViewMode("etiqueta")}
               >
-                <LayoutGrid className="h-4 w-4" />
-                Visualizar Página
+                <MoveIcon className="h-4 w-4 mr-2" />
+                Voltar ao Editor
               </Button>
             </div>
-            
-            <div className="flex-1 flex flex-col">
-              <div className="bg-white border rounded p-4 mb-4">
-                <h3 className="font-medium mb-2 flex items-center gap-2">
-                  <MoveIcon className="h-4 w-4" />
-                  Área de Edição
-                </h3>
-                <div 
-                  ref={setNodeRef}
-                  className={`relative bg-white border rounded overflow-hidden ${isDragging ? 'border-blue-400' : 'border-gray-300'}`}
-                  style={{
-                    width: `${localLargura}px`,
-                    height: `${localAltura}px`,
-                    backgroundSize: '10px 10px',
-                    backgroundImage: 'linear-gradient(to right, #f0f0f0 1px, transparent 1px), linear-gradient(to bottom, #f0f0f0 1px, transparent 1px)'
-                  }}
-                  onClick={handleEditorAreaClick}
-                >
-                  {campos.map((campo, index) => (
-                    <DraggableCampo
-                      key={`${campo.tipo}-${index}`}
-                      campo={campo}
-                      index={index}
-                      onSelect={handleCampoSelect}
-                      isSelected={selectedCampoIndex === index}
-                    />
-                  ))}
-                </div>
-                <div className="text-xs text-gray-500 mt-2">
-                  Tamanho real da etiqueta: {localLargura}mm × {localAltura}mm
-                </div>
-              </div>
-              
-              {selectedCampoIndex !== null && selectedCampoIndex >= 0 && selectedCampoIndex < campos.length && (
-                <div className="bg-white border rounded p-4">
-                  <div className="flex justify-between items-center">
-                    <h3 className="font-medium mb-4">Propriedades do Elemento</h3>
-                    <Button 
-                      variant="destructive" 
-                      size="sm" 
-                      onClick={removerElementoSelecionado}
-                      className="h-7 px-2"
-                    >
-                      Remover
-                    </Button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Posição X (mm)
-                      </label>
-                      <input
-                        type="number"
-                        className="w-full px-3 py-1.5 border rounded"
-                        value={campos[selectedCampoIndex].x}
-                        onChange={(e) => handleUpdateCampo(selectedCampoIndex, 'x', Number(e.target.value))}
-                        min={0}
-                        max={localLargura - campos[selectedCampoIndex].largura}
-                        step={1}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Posição Y (mm)
-                      </label>
-                      <input
-                        type="number"
-                        className="w-full px-3 py-1.5 border rounded"
-                        value={campos[selectedCampoIndex].y}
-                        onChange={(e) => handleUpdateCampo(selectedCampoIndex, 'y', Number(e.target.value))}
-                        min={0}
-                        max={localAltura - campos[selectedCampoIndex].altura}
-                        step={1}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Largura (mm)
-                      </label>
-                      <input
-                        type="number"
-                        className="w-full px-3 py-1.5 border rounded"
-                        value={campos[selectedCampoIndex].largura}
-                        onChange={(e) => handleUpdateCampo(selectedCampoIndex, 'largura', Number(e.target.value))}
-                        min={1}
-                        max={localLargura - campos[selectedCampoIndex].x}
-                        step={1}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Altura (mm)
-                      </label>
-                      <input
-                        type="number"
-                        className="w-full px-3 py-1.5 border rounded"
-                        value={campos[selectedCampoIndex].altura}
-                        onChange={(e) => handleUpdateCampo(selectedCampoIndex, 'altura', Number(e.target.value))}
-                        min={1}
-                        max={localAltura - campos[selectedCampoIndex].y}
-                        step={1}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Tamanho da Fonte (pt)
-                      </label>
-                      <input
-                        type="number"
-                        className="w-full px-3 py-1.5 border rounded"
-                        value={campos[selectedCampoIndex].tamanhoFonte}
-                        onChange={(e) => handleUpdateCampo(selectedCampoIndex, 'tamanhoFonte', Number(e.target.value))}
-                        min={5}
-                        max={24}
-                        step={0.5}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
           </div>
-        </DndContext>
-      )}
+        )}
+      </div>
+    );
+  };
 
+  return (
+    <div className="space-y-4">
+      {/* Botão de alternância da barra lateral */}
+      <div className="flex justify-end">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={() => setShowSidebar(!showSidebar)}
+          className="h-8 w-8 p-0"
+        >
+          {showSidebar ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+        </Button>
+      </div>
+      
+      {/* Conteúdo principal do editor */}
+      {viewMode === "etiqueta" ? renderizarEditorEtiqueta() : renderizarVisualizacaoPagina()}
+      
+      {/* Avisos */}
       {warning && (
         <Alert variant="warning" className="mt-4">
           <AlertCircle className="h-4 w-4" />
@@ -1015,17 +1251,6 @@ export function EtiquetaEditor({
           <AlertDescription>{warning}</AlertDescription>
         </Alert>
       )}
-
-      <div className="p-3 bg-gray-50 border rounded mt-4">
-        <h4 className="text-sm font-medium mb-2">Dicas de uso:</h4>
-        <ul className="text-xs text-gray-600 space-y-1">
-          <li>• Arraste os elementos da paleta para adicionar à etiqueta</li>
-          <li>• Clique em um elemento para editar suas propriedades</li>
-          <li>• Utilize o botão "Visualizar Página" para ver como as etiquetas serão distribuídas na página</li>
-          <li>• Todos os elementos devem estar dentro dos limites da etiqueta</li>
-          <li>• Configure as margens da página e os espaçamentos entre etiquetas para otimizar a impressão</li>
-        </ul>
-      </div>
     </div>
   );
 }
