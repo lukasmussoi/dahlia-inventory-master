@@ -238,17 +238,19 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
   if (showModeloForm) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-3xl max-h-[90vh]">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>Criar Novo Modelo de Etiqueta</DialogTitle>
             <DialogDescription>
-              Preencha os campos abaixo para criar um novo modelo de etiqueta personalizada.
+              Configure o modelo de etiqueta personalizada para impressão.
             </DialogDescription>
           </DialogHeader>
-          <EtiquetaCustomForm
-            onClose={() => setShowModeloForm(false)}
-            onSuccess={handleModeloSuccess}
-          />
+          <div className="flex-grow overflow-auto">
+            <EtiquetaCustomForm
+              onClose={() => setShowModeloForm(false)}
+              onSuccess={handleModeloSuccess}
+            />
+          </div>
         </DialogContent>
       </Dialog>
     );
