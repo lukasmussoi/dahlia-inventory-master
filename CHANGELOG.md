@@ -10,6 +10,7 @@
 ### Melhorado
 - Limpeza de código para maior modularidade e robustez
 - Remoção de dependências não utilizadas para melhorar a manutenção
+- Corrigido erro que ocorria ao remover o módulo de etiquetas customizadas
 
 ## [1.0.1] - 2025-03-10
 
