@@ -20,7 +20,7 @@ export default function LabelCustomViewerRoute() {
           navigate('/');
           return;
         }
-        console.log("Usuário autenticado:", session.user);
+        console.log("Usuário autenticado na visualização de etiqueta:", session.user);
       } catch (error) {
         console.error("Erro ao verificar autenticação:", error);
         toast.error("Erro ao verificar autenticação");
@@ -49,7 +49,7 @@ export default function LabelCustomViewerRoute() {
     queryFn: async () => {
       try {
         const profile = await AuthModel.getCurrentUserProfile();
-        console.log("Perfil carregado:", profile);
+        console.log("Perfil carregado (visualizador de etiqueta):", profile);
         return profile;
       } catch (error) {
         console.error("Erro ao carregar perfil:", error);
@@ -70,7 +70,7 @@ export default function LabelCustomViewerRoute() {
   }
 
   // Verificar se o usuário é administrador
-  if (!userProfile?.isAdmin) {
+  if (userProfile && !userProfile.isAdmin) {
     toast.error("Você não tem permissão para acessar esta página");
     navigate('/dashboard');
     return null;

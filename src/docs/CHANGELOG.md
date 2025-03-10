@@ -3,6 +3,20 @@
 
 Este documento mantém um registro de todas as alterações significativas feitas no sistema, incluindo correções de bugs, novas funcionalidades e melhorias.
 
+## [Versão 1.0.2] - 2025-03-11
+
+### Correções
+- Corrigido problema crítico que causava tela em branco nas rotas de categorias, fornecedores e etiquetas customizadas
+- Adicionada verificação correta de permissões de administrador em todas as rotas protegidas
+- Adicionada verificação de autenticação consistente em todas as rotas
+- Adicionados indicadores de carregamento nas tabelas de categorias e fornecedores
+- Corrigido problema de execução das queries que impediam o carregamento de dados nas tabelas
+
+### Melhorias
+- Implementado controle mais seguro de acesso baseado em perfil de administrador
+- Adicionada restrição para que queries sejam executadas apenas quando o perfil for carregado e for administrador
+- Otimizado código para melhor tratamento de erros de autenticação e autorização
+
 ## [Versão 1.0.1] - 2025-03-10
 
 ### Correções

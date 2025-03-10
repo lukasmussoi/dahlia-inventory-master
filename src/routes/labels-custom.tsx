@@ -20,7 +20,7 @@ export default function LabelsCustomRoute() {
           navigate('/');
           return;
         }
-        console.log("Usuário autenticado:", session.user);
+        console.log("Usuário autenticado na rota de etiquetas customizadas:", session.user);
       } catch (error) {
         console.error("Erro ao verificar autenticação:", error);
         toast.error("Erro ao verificar autenticação");
@@ -45,11 +45,11 @@ export default function LabelsCustomRoute() {
 
   // Buscar perfil e permissões do usuário para garantir acesso total para administradores
   const { data: userProfile, isLoading: isLoadingProfile } = useQuery({
-    queryKey: ['user-profile-labels'],
+    queryKey: ['user-profile-labels-custom'],
     queryFn: async () => {
       try {
         const profile = await AuthModel.getCurrentUserProfile();
-        console.log("Perfil carregado:", profile);
+        console.log("Perfil carregado (etiquetas customizadas):", profile);
         return profile;
       } catch (error) {
         console.error("Erro ao carregar perfil:", error);
@@ -70,7 +70,7 @@ export default function LabelsCustomRoute() {
   }
 
   // Verificar se o usuário é administrador
-  if (!userProfile?.isAdmin) {
+  if (userProfile && !userProfile.isAdmin) {
     toast.error("Você não tem permissão para acessar esta página");
     navigate('/dashboard');
     return null;

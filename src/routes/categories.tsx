@@ -73,18 +73,11 @@ const Categories = () => {
     },
   });
 
-  // Verificar se o usuário é administrador
-  if (userProfile && !userProfile.isAdmin) {
-    toast.error("Você não tem permissão para acessar esta página");
-    navigate('/dashboard');
-    return null;
-  }
-
   // Buscar categorias
   const { data: categories = [], isLoading: isLoadingCategories, refetch } = useQuery({
     queryKey: ['categories'],
     queryFn: InventoryModel.getAllCategories,
-    enabled: !isLoadingUserProfile, // Só busca categorias quando o perfil estiver carregado
+    enabled: userProfile?.isAdmin === true, // Busca somente se for admin
   });
 
   // Função para abrir o modal de edição
@@ -111,12 +104,19 @@ const Categories = () => {
   };
 
   // Se estiver carregando, mostrar loading
-  if (isLoadingUserProfile || isLoadingCategories) {
+  if (isLoadingUserProfile) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-primary"></div>
       </div>
     );
+  }
+
+  // Verificar se o usuário é administrador
+  if (userProfile && !userProfile.isAdmin) {
+    toast.error("Você não tem permissão para acessar esta página");
+    navigate('/dashboard');
+    return null;
   }
 
   return (
@@ -144,7 +144,13 @@ const Categories = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {categories.length > 0 ? (
+            {isLoadingCategories ? (
+              <TableRow>
+                <TableCell colSpan={3} className="text-center py-4">
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary mx-auto"></div>
+                </TableCell>
+              </TableRow>
+            ) : categories.length > 0 ? (
               categories.map((category) => (
                 <TableRow key={category.id}>
                   <TableCell>{category.name}</TableCell>
