@@ -1,13 +1,12 @@
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { InventoryCategory, InventoryModel } from "@/models/inventoryModel";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { AuthModel } from "@/models/authModel";
 import {
   Table,
   TableBody,
@@ -17,6 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { CategoryForm } from "@/components/inventory/CategoryForm";
+import { useState } from "react";
 
 const Categories = () => {
   const navigate = useNavigate();
@@ -25,30 +25,17 @@ const Categories = () => {
 
   // Verificar autenticação ao carregar a página
   useEffect(() => {
-    console.log("Verificando autenticação em categorias...");
     const checkAuth = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          console.log("Usuário não autenticado, redirecionando para login");
-          toast.error("Você precisa estar autenticado para acessar esta página");
-          navigate('/');
-          return;
-        }
-        console.log("Usuário autenticado em categorias:", session.user.id);
-      } catch (error) {
-        console.error("Erro ao verificar autenticação:", error);
-        toast.error("Erro ao verificar autenticação");
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
         navigate('/');
       }
     };
 
     checkAuth();
 
-    // Monitorar mudanças no estado da autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT' || !session) {
-        toast.error("Sessão encerrada");
         navigate('/');
       }
     });
@@ -58,28 +45,10 @@ const Categories = () => {
     };
   }, [navigate]);
 
-  // Buscar perfil e permissões do usuário para garantir acesso total para administradores
-  const { data: userProfile, isLoading: isLoadingUserProfile } = useQuery({
-    queryKey: ['user-profile-categories'],
-    queryFn: async () => {
-      try {
-        const profile = await AuthModel.getCurrentUserProfile();
-        console.log("Perfil carregado (categorias):", profile);
-        return profile;
-      } catch (error) {
-        console.error("Erro ao carregar perfil:", error);
-        toast.error("Erro ao verificar permissões. Redirecionando...");
-        navigate('/dashboard');
-        return { profile: null, isAdmin: false };
-      }
-    },
-  });
-
-  // Buscar categorias somente se usuário for admin
-  const { data: categories = [], isLoading: isLoadingCategories, refetch } = useQuery({
+  // Buscar categorias
+  const { data: categories = [], isLoading, refetch } = useQuery({
     queryKey: ['categories'],
     queryFn: InventoryModel.getAllCategories,
-    enabled: !!userProfile && userProfile.isAdmin === true, // Só executa a query se isAdmin for true
   });
 
   // Função para abrir o modal de edição
@@ -91,11 +60,9 @@ const Categories = () => {
   // Função para deletar categoria
   const handleDelete = async (id: string) => {
     try {
-      if (window.confirm("Tem certeza que deseja excluir esta categoria?")) {
-        await InventoryModel.deleteCategory(id);
-        toast.success("Categoria removida com sucesso!");
-        refetch();
-      }
+      await InventoryModel.deleteCategory(id);
+      toast.success("Categoria removida com sucesso!");
+      refetch();
     } catch (error) {
       if (error instanceof Error) {
         toast.error(error.message);
@@ -106,59 +73,41 @@ const Categories = () => {
   };
 
   // Se estiver carregando, mostrar loading
-  if (isLoadingUserProfile) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-          <p className="text-gray-600">Carregando perfil do usuário...</p>
-        </div>
+        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-gold"></div>
       </div>
     );
   }
 
-  // Verificar se o usuário é administrador
-  if (userProfile && !userProfile.isAdmin) {
-    toast.error("Você não tem permissão para acessar esta página");
-    navigate('/dashboard');
-    return null;
-  }
-
   return (
-    <div className="h-full p-6">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Categorias</h1>
-          <p className="text-muted-foreground">
-            Gerencie as categorias dos produtos do seu estoque
-          </p>
+    <div className="h-full min-h-screen bg-background">
+      <main className="flex-1 space-y-4 p-4 pt-20">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Categorias</h1>
+            <p className="text-muted-foreground">
+              Gerencie as categorias dos produtos do seu estoque
+            </p>
+          </div>
+          <Button onClick={() => setIsFormOpen(true)} className="bg-gold hover:bg-gold/90">
+            <Plus className="h-5 w-5 mr-2" />
+            Nova Categoria
+          </Button>
         </div>
-        <Button onClick={() => setIsFormOpen(true)} className="bg-primary hover:bg-primary/90">
-          <Plus className="h-5 w-5 mr-2" />
-          Nova Categoria
-        </Button>
-      </div>
 
-      <div className="bg-white rounded-lg border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nome</TableHead>
-              <TableHead>Data de Criação</TableHead>
-              <TableHead className="w-[100px]">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoadingCategories ? (
+        <div className="bg-white rounded-lg border">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={3} className="text-center py-4">
-                  <div className="flex justify-center items-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary mx-auto"></div>
-                  </div>
-                </TableCell>
+                <TableHead>Nome</TableHead>
+                <TableHead>Data de Criação</TableHead>
+                <TableHead className="w-[100px]">Ações</TableHead>
               </TableRow>
-            ) : categories.length > 0 ? (
-              categories.map((category) => (
+            </TableHeader>
+            <TableBody>
+              {categories.map((category) => (
                 <TableRow key={category.id}>
                   <TableCell>{category.name}</TableCell>
                   <TableCell>
@@ -170,7 +119,6 @@ const Categories = () => {
                       size="sm"
                       onClick={() => handleEdit(category)}
                     >
-                      <Pencil className="h-4 w-4 mr-2" />
                       Editar
                     </Button>
                     <Button
@@ -178,39 +126,32 @@ const Categories = () => {
                       size="sm"
                       onClick={() => handleDelete(category.id)}
                     >
-                      <Trash2 className="h-4 w-4 mr-2" />
                       Excluir
                     </Button>
                   </TableCell>
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={3} className="text-center py-4">
-                  Nenhuma categoria cadastrada
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
 
-      {/* Modal de Categoria */}
-      {isFormOpen && (
-        <CategoryForm
-          category={selectedCategory}
-          isOpen={isFormOpen}
-          onClose={() => {
-            setIsFormOpen(false);
-            setSelectedCategory(null);
-          }}
-          onSuccess={() => {
-            setIsFormOpen(false);
-            setSelectedCategory(null);
-            refetch();
-          }}
-        />
-      )}
+        {/* Modal de Categoria */}
+        {isFormOpen && (
+          <CategoryForm
+            category={selectedCategory}
+            isOpen={isFormOpen}
+            onClose={() => {
+              setIsFormOpen(false);
+              setSelectedCategory(null);
+            }}
+            onSuccess={() => {
+              setIsFormOpen(false);
+              setSelectedCategory(null);
+              refetch();
+            }}
+          />
+        )}
+      </main>
     </div>
   );
 };

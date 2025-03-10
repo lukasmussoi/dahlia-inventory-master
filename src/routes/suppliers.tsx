@@ -1,6 +1,6 @@
 
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { AuthController } from "@/controllers/authController";
 import { SupplierModel } from "@/models/supplierModel";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -23,8 +23,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { AuthModel } from "@/models/authModel";
 
 interface Supplier {
   id: string;
@@ -39,7 +37,6 @@ interface SupplierFormData {
 }
 
 const Suppliers = () => {
-  const navigate = useNavigate();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
   const [formData, setFormData] = useState<SupplierFormData>({
@@ -47,63 +44,13 @@ const Suppliers = () => {
     contactInfo: "",
   });
 
-  // Verificar autenticação ao carregar a página
   useEffect(() => {
-    console.log("Verificando autenticação em fornecedores...");
-    const checkAuth = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          console.log("Usuário não autenticado, redirecionando para login");
-          toast.error("Você precisa estar autenticado para acessar esta página");
-          navigate('/');
-          return;
-        }
-        console.log("Usuário autenticado em fornecedores:", session.user.id);
-      } catch (error) {
-        console.error("Erro ao verificar autenticação:", error);
-        toast.error("Erro ao verificar autenticação");
-        navigate('/');
-      }
-    };
+    AuthController.checkAuth();
+  }, []);
 
-    checkAuth();
-
-    // Monitorar mudanças no estado da autenticação
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT' || !session) {
-        toast.error("Sessão encerrada");
-        navigate('/');
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [navigate]);
-
-  // Buscar perfil e permissões do usuário para garantir acesso total para administradores
-  const { data: userProfile, isLoading: isLoadingProfile } = useQuery({
-    queryKey: ['user-profile-suppliers'],
-    queryFn: async () => {
-      try {
-        const profile = await AuthModel.getCurrentUserProfile();
-        console.log("Perfil carregado (fornecedores):", profile);
-        return profile;
-      } catch (error) {
-        console.error("Erro ao carregar perfil:", error);
-        toast.error("Erro ao verificar permissões. Redirecionando...");
-        navigate('/dashboard');
-        return { profile: null, isAdmin: false };
-      }
-    },
-  });
-
-  // Somente buscar fornecedores se o usuário for admin
-  const { data: suppliers = [], refetch, isLoading: isLoadingSuppliers } = useQuery({
+  const { data: suppliers = [], refetch } = useQuery({
     queryKey: ['suppliers'],
     queryFn: () => SupplierModel.getSuppliers(),
-    enabled: !!userProfile && userProfile.isAdmin === true, // Só executa a query se isAdmin for true
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -115,17 +62,14 @@ const Suppliers = () => {
           formData.name,
           formData.contactInfo
         );
-        toast.success("Fornecedor atualizado com sucesso!");
       } else {
         await SupplierModel.createSupplier(formData.name, formData.contactInfo);
-        toast.success("Fornecedor criado com sucesso!");
       }
       setIsDialogOpen(false);
       refetch();
       resetForm();
     } catch (error) {
       console.error('Erro ao salvar fornecedor:', error);
-      toast.error("Erro ao salvar fornecedor");
     }
   };
 
@@ -142,11 +86,9 @@ const Suppliers = () => {
     if (window.confirm('Tem certeza que deseja excluir este fornecedor?')) {
       try {
         await SupplierModel.deleteSupplier(id);
-        toast.success("Fornecedor excluído com sucesso!");
         refetch();
       } catch (error) {
         console.error('Erro ao deletar fornecedor:', error);
-        toast.error("Erro ao deletar fornecedor");
       }
     }
   };
@@ -160,25 +102,6 @@ const Suppliers = () => {
     setIsDialogOpen(false);
     resetForm();
   };
-
-  // Se estiver carregando, mostrar loading
-  if (isLoadingProfile) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-          <p className="text-gray-600">Carregando perfil do usuário...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Verificar se o usuário é administrador
-  if (userProfile && !userProfile.isAdmin) {
-    toast.error("Você não tem permissão para acessar esta página");
-    navigate('/dashboard');
-    return null;
-  }
 
   return (
     <div className="p-6">
@@ -252,43 +175,34 @@ const Suppliers = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoadingSuppliers ? (
-              <TableRow>
-                <TableCell colSpan={4} className="text-center py-4">
-                  <div className="flex justify-center items-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary mx-auto"></div>
+            {suppliers.map((supplier: Supplier) => (
+              <TableRow key={supplier.id}>
+                <TableCell>{supplier.name}</TableCell>
+                <TableCell>{supplier.contact_info || "-"}</TableCell>
+                <TableCell>
+                  {new Date(supplier.created_at).toLocaleDateString("pt-BR")}
+                </TableCell>
+                <TableCell>
+                  <div className="flex space-x-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleEdit(supplier)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDelete(supplier.id)}
+                    >
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </Button>
                   </div>
                 </TableCell>
               </TableRow>
-            ) : suppliers.length > 0 ? (
-              suppliers.map((supplier: Supplier) => (
-                <TableRow key={supplier.id}>
-                  <TableCell>{supplier.name}</TableCell>
-                  <TableCell>{supplier.contact_info || "-"}</TableCell>
-                  <TableCell>
-                    {new Date(supplier.created_at).toLocaleDateString("pt-BR")}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex space-x-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEdit(supplier)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(supplier.id)}
-                      >
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
+            ))}
+            {suppliers.length === 0 && (
               <TableRow>
                 <TableCell colSpan={4} className="text-center py-4">
                   Nenhum fornecedor cadastrado

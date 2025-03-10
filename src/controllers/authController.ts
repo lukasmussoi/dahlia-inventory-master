@@ -25,6 +25,21 @@ export class AuthController {
   static async getUserProfileWithRoles() {
     try {
       const data = await AuthModel.getCurrentUserProfile();
+      
+      // Verificar permissões do usuário
+      if (data) {
+        try {
+          const isAdmin = await AuthModel.checkIsUserAdmin();
+          return {
+            ...data,
+            isAdmin
+          };
+        } catch (error) {
+          console.error('Erro ao verificar permissões:', error);
+          return data;
+        }
+      }
+      
       return data;
     } catch (error) {
       console.error('Erro ao buscar perfil do usuário:', error);

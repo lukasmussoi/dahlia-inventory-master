@@ -12,7 +12,6 @@ import {
   Droplet,
   LineChart,
   Tag,
-  Pen,
 } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
@@ -64,18 +63,6 @@ export function TopNavbar({ isAdmin }: TopNavbarProps) {
           title: "Etiquetas",
           url: "/dashboard/inventory/labels",
           icon: Tag,
-          subItems: [
-            {
-              title: "Etiquetas de Produtos",
-              url: "/dashboard/inventory/labels",
-              icon: Tag,
-            },
-            {
-              title: "Etiquetas Customizadas",
-              url: "/dashboard/inventory/labels/custom",
-              icon: Pen,
-            },
-          ],
         },
         {
           title: "Relatórios",
@@ -147,35 +134,13 @@ export function TopNavbar({ isAdmin }: TopNavbarProps) {
                         <ul className="grid w-[400px] gap-3 p-4">
                           {item.subItems.map((subItem) => (
                             <li key={subItem.title}>
-                              {subItem.subItems ? (
-                                <div className="w-full">
-                                  <p className="flex items-center gap-2 p-2 font-medium">
-                                    <subItem.icon className="h-5 w-5" />
-                                    <span>{subItem.title}</span>
-                                  </p>
-                                  <ul className="ml-7 space-y-1 mt-1">
-                                    {subItem.subItems.map((nestedItem) => (
-                                      <li key={nestedItem.title}>
-                                        <Link
-                                          to={nestedItem.url}
-                                          className="flex items-center gap-2 p-2 text-sm hover:bg-gold/10 rounded-md transition-colors"
-                                        >
-                                          <nestedItem.icon className="h-4 w-4" />
-                                          <span>{nestedItem.title}</span>
-                                        </Link>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              ) : (
-                                <Link
-                                  to={subItem.url}
-                                  className="flex items-center gap-2 p-2 hover:bg-gold/10 rounded-md transition-colors"
-                                >
-                                  <subItem.icon className="h-5 w-5" />
-                                  <span>{subItem.title}</span>
-                                </Link>
-                              )}
+                              <Link
+                                to={subItem.url}
+                                className="flex items-center gap-2 p-2 hover:bg-gold/10 rounded-md transition-colors"
+                              >
+                                <subItem.icon className="h-5 w-5" />
+                                <span>{subItem.title}</span>
+                              </Link>
                             </li>
                           ))}
                         </ul>
@@ -220,8 +185,9 @@ export function TopNavbar({ isAdmin }: TopNavbarProps) {
         <div className="md:hidden animate-slideIn">
           <div className="px-2 pt-2 pb-3 space-y-1 bg-white/80 backdrop-blur-lg">
             {menuItems.map((item) => (
-              <div key={item.title}>
+              <>
                 <Link
+                  key={item.title}
                   to={item.url}
                   className="flex items-center gap-2 px-3 py-2 text-gray-700 hover:bg-gold/10 rounded-md transition-colors"
                   onClick={() => setIsMobileMenuOpen(false)}
@@ -232,42 +198,19 @@ export function TopNavbar({ isAdmin }: TopNavbarProps) {
                 {item.subItems && (
                   <div className="pl-4 space-y-1">
                     {item.subItems.map((subItem) => (
-                      <div key={subItem.title}>
-                        {subItem.subItems ? (
-                          <>
-                            <p className="flex items-center gap-2 px-3 py-2 text-gray-700 font-medium">
-                              <subItem.icon className="h-4 w-4" />
-                              <span>{subItem.title}</span>
-                            </p>
-                            <div className="pl-4 space-y-1">
-                              {subItem.subItems.map((nestedItem) => (
-                                <Link
-                                  key={nestedItem.title}
-                                  to={nestedItem.url}
-                                  className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:bg-gold/10 rounded-md transition-colors"
-                                  onClick={() => setIsMobileMenuOpen(false)}
-                                >
-                                  <nestedItem.icon className="h-4 w-4" />
-                                  <span>{nestedItem.title}</span>
-                                </Link>
-                              ))}
-                            </div>
-                          </>
-                        ) : (
-                          <Link
-                            to={subItem.url}
-                            className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:bg-gold/10 rounded-md transition-colors"
-                            onClick={() => setIsMobileMenuOpen(false)}
-                          >
-                            <subItem.icon className="h-4 w-4" />
-                            <span>{subItem.title}</span>
-                          </Link>
-                        )}
-                      </div>
+                      <Link
+                        key={subItem.title}
+                        to={subItem.url}
+                        className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:bg-gold/10 rounded-md transition-colors"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        <subItem.icon className="h-4 w-4" />
+                        <span>{subItem.title}</span>
+                      </Link>
                     ))}
                   </div>
                 )}
-              </div>
+              </>
             ))}
             <button
               onClick={handleLogout}
@@ -282,3 +225,4 @@ export function TopNavbar({ isAdmin }: TopNavbarProps) {
     </nav>
   );
 }
+
