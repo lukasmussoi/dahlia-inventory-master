@@ -1,6 +1,16 @@
 
 # CHANGELOG
 
+## [1.0.2] - 2025-03-15
+
+### Removido
+- Removido módulo de etiquetas customizadas que não estava em uso
+- Eliminados componentes, controladores e modelos relacionados a etiquetas customizadas para manter o código limpo
+
+### Melhorado
+- Limpeza de código para maior modularidade e robustez
+- Remoção de dependências não utilizadas para melhorar a manutenção
+
 ## [1.0.1] - 2025-03-10
 
 ### Corrigido
