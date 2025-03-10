@@ -2,9 +2,8 @@
 import { Form } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DimensoesEtiquetaFields } from "./form/DimensoesEtiquetaFields";
-import { FormatoEtiquetaFields } from "./form/FormatoEtiquetaFields";
 import { MargensEtiquetaFields } from "./form/MargensEtiquetaFields";
+import { FormatoEtiquetaFields } from "./form/FormatoEtiquetaFields";
 import { EspacamentoEtiquetaFields } from "./form/EspacamentoEtiquetaFields";
 import { useEtiquetaCustomForm } from "@/hooks/useEtiquetaCustomForm";
 import type { ModeloEtiqueta } from "@/types/etiqueta";
@@ -64,14 +63,10 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
           </div>
 
           <Tabs defaultValue="editor" className="w-full">
-            <TabsList className="grid grid-cols-3 mb-4">
+            <TabsList className="grid grid-cols-2 mb-4">
               <TabsTrigger value="editor" className="flex items-center gap-2">
                 <Layout className="h-4 w-4" />
                 Editor Visual
-              </TabsTrigger>
-              <TabsTrigger value="config" className="flex items-center gap-2">
-                <Settings className="h-4 w-4" />
-                Configurações da Página
               </TabsTrigger>
               <TabsTrigger value="preview" className="flex items-center gap-2">
                 <File className="h-4 w-4" />
@@ -79,11 +74,7 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="editor" className="space-y-4">
-              <div className="grid grid-cols-3 gap-4 mb-4">
-                <DimensoesEtiquetaFields form={form} />
-              </div>
-              
+            <TabsContent value="editor" className="space-y-6">
               <FormField
                 control={form.control}
                 name="campos"
@@ -94,10 +85,36 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
                         campos={field.value}
                         largura={form.getValues('largura')}
                         altura={form.getValues('altura')}
+                        formatoPagina={form.getValues('formatoPagina')}
+                        orientacao={form.getValues('orientacao')}
+                        margemSuperior={form.getValues('margemSuperior')}
+                        margemInferior={form.getValues('margemInferior')}
+                        margemEsquerda={form.getValues('margemEsquerda')}
+                        margemDireita={form.getValues('margemDireita')}
+                        espacamentoHorizontal={form.getValues('espacamentoHorizontal')}
+                        espacamentoVertical={form.getValues('espacamentoVertical')}
+                        larguraPagina={form.getValues('larguraPagina')}
+                        alturaPagina={form.getValues('alturaPagina')}
                         onCamposChange={field.onChange}
                         onDimensoesChange={(largura, altura) => {
                           form.setValue('largura', largura);
                           form.setValue('altura', altura);
+                        }}
+                        onMargensChange={(margemSuperior, margemInferior, margemEsquerda, margemDireita) => {
+                          form.setValue('margemSuperior', margemSuperior);
+                          form.setValue('margemInferior', margemInferior);
+                          form.setValue('margemEsquerda', margemEsquerda);
+                          form.setValue('margemDireita', margemDireita);
+                        }}
+                        onEspacamentoChange={(espacamentoHorizontal, espacamentoVertical) => {
+                          form.setValue('espacamentoHorizontal', espacamentoHorizontal);
+                          form.setValue('espacamentoVertical', espacamentoVertical);
+                        }}
+                        onFormatoChange={(formatoPagina, orientacao, larguraPagina, alturaPagina) => {
+                          form.setValue('formatoPagina', formatoPagina);
+                          form.setValue('orientacao', orientacao);
+                          if (larguraPagina) form.setValue('larguraPagina', larguraPagina);
+                          if (alturaPagina) form.setValue('alturaPagina', alturaPagina);
                         }}
                       />
                     </FormControl>
@@ -105,12 +122,6 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
                   </FormItem>
                 )}
               />
-            </TabsContent>
-
-            <TabsContent value="config" className="space-y-6">
-              <FormatoEtiquetaFields form={form} />
-              <MargensEtiquetaFields form={form} />
-              <EspacamentoEtiquetaFields form={form} />
               
               {pageAreaWarning && (
                 <Alert variant="destructive">
