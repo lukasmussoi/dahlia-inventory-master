@@ -1,13 +1,14 @@
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { generatePdfLabel } from "@/utils/pdfUtils";
 import { toast } from "sonner";
+import { LabelModel } from "@/models/labelModel";
 
 interface PrintLabelDialogProps {
   isOpen: boolean;
@@ -21,13 +22,51 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
   const [startRow, setStartRow] = useState("1");
   const [startColumn, setStartColumn] = useState("1");
   const [multiplyByStock, setMultiplyByStock] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  // Resetar estado quando o modal é aberto/fechado
+  useEffect(() => {
+    if (isOpen) {
+      setCopies("1");
+      setStartRow("1");
+      setStartColumn("1");
+      setMultiplyByStock(false);
+    }
+  }, [isOpen]);
+
+  const validateInput = (): boolean => {
+    if (!item) {
+      toast.error("Nenhum item selecionado para impressão");
+      return false;
+    }
+
+    const copiesNum = parseInt(copies);
+    const startRowNum = parseInt(startRow);
+    const startColNum = parseInt(startColumn);
+
+    if (isNaN(copiesNum) || copiesNum < 1) {
+      toast.error("Número de cópias deve ser pelo menos 1");
+      return false;
+    }
+
+    if (isNaN(startRowNum) || startRowNum < 1) {
+      toast.error("Linha de início deve ser pelo menos 1");
+      return false;
+    }
+
+    if (isNaN(startColNum) || startColNum < 1) {
+      toast.error("Coluna de início deve ser pelo menos 1");
+      return false;
+    }
+
+    return true;
+  };
 
   const handlePrint = async () => {
+    if (!validateInput()) return;
+
     try {
-      if (!item) {
-        toast.error("Nenhum item selecionado para impressão");
-        return;
-      }
+      setIsProcessing(true);
 
       // Gerar PDF temporário
       const pdfUrl = await generatePdfLabel({
@@ -38,6 +77,9 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
         multiplyByStock,
       });
 
+      // Registrar impressão no histórico
+      await LabelModel.registerLabelPrint(item.id, parseInt(copies));
+
       // Abrir PDF em nova aba
       window.open(pdfUrl, '_blank');
       
@@ -46,14 +88,19 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
     } catch (error) {
       console.error("Erro ao gerar PDF:", error);
       toast.error("Erro ao gerar etiquetas. Por favor, tente novamente.");
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Impressão de etiquetas</DialogTitle>
+          <DialogDescription>
+            Configure as opções de impressão para o item: {item?.name || ''}
+          </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-2 gap-4">
@@ -111,11 +158,11 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
           </div>
         </div>
         <div className="flex justify-end space-x-2">
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={onClose} disabled={isProcessing}>
             Cancelar
           </Button>
-          <Button onClick={handlePrint}>
-            Imprimir
+          <Button onClick={handlePrint} disabled={isProcessing}>
+            {isProcessing ? "Processando..." : "Imprimir"}
           </Button>
         </div>
       </DialogContent>

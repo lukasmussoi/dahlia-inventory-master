@@ -33,4 +33,12 @@ export class AuthModel {
       isAdmin
     };
   }
+
+  // Função para verificar se o usuário atual é admin
+  static async checkIsUserAdmin(): Promise<boolean> {
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error || !user) return false;
+    
+    return await UserRoleModel.isUserAdmin(user.id);
+  }
 }

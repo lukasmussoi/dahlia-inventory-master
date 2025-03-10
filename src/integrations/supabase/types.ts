@@ -9,6 +9,72 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      etiquetas_custom: {
+        Row: {
+          altura: number
+          altura_pagina: number | null
+          atualizado_em: string
+          campos: Json
+          criado_em: string
+          criado_por: string
+          descricao: string
+          espacamento_horizontal: number
+          espacamento_vertical: number
+          formato_pagina: string
+          id: string
+          largura: number
+          largura_pagina: number | null
+          margem_direita: number
+          margem_esquerda: number
+          margem_inferior: number
+          margem_superior: number
+          orientacao: string
+          tipo: string
+        }
+        Insert: {
+          altura: number
+          altura_pagina?: number | null
+          atualizado_em?: string
+          campos?: Json
+          criado_em?: string
+          criado_por: string
+          descricao: string
+          espacamento_horizontal?: number
+          espacamento_vertical?: number
+          formato_pagina: string
+          id?: string
+          largura: number
+          largura_pagina?: number | null
+          margem_direita?: number
+          margem_esquerda?: number
+          margem_inferior?: number
+          margem_superior?: number
+          orientacao: string
+          tipo: string
+        }
+        Update: {
+          altura?: number
+          altura_pagina?: number | null
+          atualizado_em?: string
+          campos?: Json
+          criado_em?: string
+          criado_por?: string
+          descricao?: string
+          espacamento_horizontal?: number
+          espacamento_vertical?: number
+          formato_pagina?: string
+          id?: string
+          largura?: number
+          largura_pagina?: number | null
+          margem_direita?: number
+          margem_esquerda?: number
+          margem_inferior?: number
+          margem_superior?: number
+          orientacao?: string
+          tipo?: string
+        }
+        Relationships: []
+      }
       inventory: {
         Row: {
           barcode: string | null
@@ -447,18 +513,30 @@ export type Database = {
         }
         Returns: boolean
       }
-      has_role: {
-        Args: {
-          role: Database["public"]["Enums"]["user_role"]
-        }
-        Returns: boolean
-      }
-      is_admin: {
-        Args: {
-          user_id: string
-        }
-        Returns: boolean
-      }
+      has_role:
+        | {
+            Args: {
+              role: Database["public"]["Enums"]["user_role"]
+            }
+            Returns: boolean
+          }
+        | {
+            Args: {
+              role_name: string
+            }
+            Returns: boolean
+          }
+      is_admin:
+        | {
+            Args: Record<PropertyKey, never>
+            Returns: boolean
+          }
+        | {
+            Args: {
+              user_id: string
+            }
+            Returns: boolean
+          }
     }
     Enums: {
       plating_type: "ouro" | "prata" | "rose" | "rhodium" | "sem_banho"
