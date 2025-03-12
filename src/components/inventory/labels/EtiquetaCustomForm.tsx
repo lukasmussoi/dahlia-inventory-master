@@ -1,3 +1,4 @@
+
 import { Form } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -27,7 +28,7 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <div className="max-h-[75vh] overflow-y-auto pr-2 space-y-6">
+        <div className="max-h-[80vh] overflow-y-auto pr-2 space-y-6">
           <div className="grid grid-cols-2 gap-6">
             <FormField
               control={form.control}

@@ -35,11 +35,69 @@
 
 /* Estilos adicionais para diálogos grandes */
 .dialog-large {
-  max-width: 80vw !important;
-  width: 1024px !important;
+  max-width: 90vw !important;
+  width: 1200px !important;
 }
 
 .dialog-medium {
-  max-width: 70vw !important;
+  max-width: 80vw !important;
   width: 900px !important;
+}
+
+/* Estilos para o editor de etiquetas */
+.etiqueta-editor-container {
+  max-height: 75vh;
+  overflow: hidden;
+}
+
+.etiqueta-page-background {
+  position: relative;
+  background-color: #f8f8f8;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border: 1px solid #e0e0e0;
+}
+
+.etiqueta-grid {
+  background-image: linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+                    linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+}
+
+.etiqueta-item {
+  border: 1px dashed rgba(0, 0, 0, 0.2);
+  background-color: rgba(255, 255, 255, 0.7);
+}
+
+.etiqueta-item.selected {
+  border: 1px solid #3b82f6;
+  background-color: rgba(219, 234, 254, 0.7);
+}
+
+/* Controles de zoom */
+.zoom-controls {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  display: flex;
+  flex-direction: column;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.zoom-controls button {
+  padding: 6px;
+  cursor: pointer;
+  background: white;
+  border: none;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.zoom-controls button:last-child {
+  border-bottom: none;
+}
+
+.zoom-controls button:hover {
+  background: #f5f5f5;
 }
