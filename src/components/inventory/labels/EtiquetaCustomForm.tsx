@@ -14,7 +14,17 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, WrenchIcon, ArrowLeft, ArrowRight, Layout, File, LayoutGrid } from "lucide-react";
+import { 
+  AlertCircle, 
+  WrenchIcon, 
+  ArrowLeft, 
+  ArrowRight, 
+  Layout, 
+  File, 
+  LayoutGrid, 
+  Copy,
+  InfoIcon
+} from "lucide-react";
 
 type EtiquetaCustomFormProps = {
   modelo?: ModeloEtiqueta;
@@ -23,7 +33,16 @@ type EtiquetaCustomFormProps = {
 };
 
 export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCustomFormProps) {
-  const { form, isLoading, onSubmit, pageAreaWarning, corrigirDimensoesAutomaticamente } = useEtiquetaCustomForm(modelo, onClose, onSuccess);
+  const { 
+    form, 
+    isLoading, 
+    onSubmit, 
+    pageAreaWarning, 
+    paginaDefinida,
+    etiquetaDefinida,
+    corrigirDimensoesAutomaticamente,
+    duplicarModelo
+  } = useEtiquetaCustomForm(modelo, onClose, onSuccess);
 
   return (
     <Form {...form}>
@@ -67,7 +86,20 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
             />
           </div>
 
-          <Tabs defaultValue="editor" className="w-full">
+          <Alert variant="info" className="bg-blue-50 border-blue-200">
+            <InfoIcon className="h-4 w-4 text-blue-700" />
+            <AlertTitle className="text-blue-800">Dica de uso</AlertTitle>
+            <AlertDescription className="text-blue-700">
+              <p>Para uma configuração ideal, siga esta ordem:</p>
+              <ol className="list-decimal ml-5 space-y-1 mt-2">
+                <li>Primeiro, defina o formato e as dimensões da <strong>página</strong> na guia "Layout da Página"</li>
+                <li>Em seguida, configure o tamanho e conteúdo da <strong>etiqueta</strong> na guia "Editor Visual"</li>
+                <li>Por fim, verifique a visualização completa antes de salvar</li>
+              </ol>
+            </AlertDescription>
+          </Alert>
+
+          <Tabs defaultValue="page-preview" className="w-full">
             <TabsList className="grid grid-cols-3 mb-6">
               <TabsTrigger value="editor" className="flex items-center gap-2">
                 <Layout className="h-4 w-4" />
@@ -84,6 +116,17 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
             </TabsList>
 
             <TabsContent value="editor" className="space-y-6">
+              {!paginaDefinida && (
+                <Alert variant="warning" className="bg-yellow-50 border-yellow-200">
+                  <AlertCircle className="h-4 w-4 text-yellow-700" />
+                  <AlertTitle className="text-yellow-800">Defina a página primeiro</AlertTitle>
+                  <AlertDescription className="text-yellow-700">
+                    É importante definir primeiro as dimensões da página na aba "Layout da Página" antes de criar a etiqueta.
+                    Isso garantirá que a etiqueta seja compatível com a página de impressão.
+                  </AlertDescription>
+                </Alert>
+              )}
+            
               <FormField
                 control={form.control}
                 name="campos"
@@ -247,19 +290,34 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
           </Tabs>
         </div>
 
-        <div className="flex justify-end gap-2 pt-4 sticky bottom-0 bg-background border-t mt-4">
-          <Button 
-            variant="outline" 
-            type="button" 
-            onClick={onClose} 
-            className="flex items-center gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Cancelar
-          </Button>
+        <div className="flex justify-between gap-2 pt-4 sticky bottom-0 bg-background border-t mt-4">
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              type="button" 
+              onClick={onClose} 
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Cancelar
+            </Button>
+            
+            {modelo?.id && (
+              <Button 
+                variant="outline" 
+                type="button" 
+                onClick={duplicarModelo}
+                className="flex items-center gap-2"
+              >
+                <Copy className="h-4 w-4" />
+                Duplicar Modelo
+              </Button>
+            )}
+          </div>
+          
           <Button 
             type="submit"
-            disabled={isLoading || !!pageAreaWarning}
+            disabled={isLoading || !!pageAreaWarning || (!etiquetaDefinida && !modelo?.id)}
             className="flex items-center gap-2 submit-button"
           >
             {isLoading ? "Salvando..." : (modelo?.id ? "Atualizar" : "Criar")}

@@ -82,3 +82,82 @@
   min-width: 4rem;
   justify-content: center;
 }
+
+/* Mensagens de aviso com melhor visibilidade */
+.etiqueta-warning {
+  background-color: rgba(254, 240, 138, 0.3);
+  border: 1px solid rgba(254, 240, 138, 0.8);
+  border-radius: 0.375rem;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+  color: #854d0e;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.etiqueta-warning-icon {
+  color: #f59e0b;
+  flex-shrink: 0;
+}
+
+/* Melhoria dos botões e controles */
+.etiqueta-editor-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.etiqueta-editor-button:focus-visible {
+  outline: 2px solid rgba(59, 130, 246, 0.5);
+  outline-offset: 2px;
+}
+
+/* Destaque para a área de página personalizada */
+.custom-page-section {
+  border: 1px solid #e5e7eb;
+  background-color: #f9fafb;
+  padding: 1rem;
+  margin-top: 1rem;
+  border-radius: 0.375rem;
+  transition: all 0.3s ease;
+}
+
+.custom-page-section.active {
+  border-color: #60a5fa;
+  background-color: #eff6ff;
+}
+
+/* Melhorias na visualização da etiqueta */
+.etiqueta-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  background-color: white;
+  padding: 1.5rem;
+  border-radius: 0.375rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.etiqueta-preview-title {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #1f2937;
+  margin-bottom: 0.5rem;
+}
+
+/* Transições suaves entre tabs */
+.etiqueta-tab-content {
+  transition: opacity 0.3s ease;
+}
+
+.etiqueta-tab-content.hidden {
+  opacity: 0;
+}
+
+.etiqueta-tab-content.visible {
+  opacity: 1;
+}
