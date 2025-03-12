@@ -1,4 +1,3 @@
-
 import { Form } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -27,7 +26,14 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={(e) => {
+        const submitButton = e.nativeEvent.submitter;
+        if (!submitButton || !submitButton.classList.contains('submit-button')) {
+          e.preventDefault();
+          return;
+        }
+        form.handleSubmit(onSubmit)(e);
+      }} className="space-y-4">
         <div className="max-h-[80vh] overflow-y-auto pr-2 space-y-6">
           <div className="grid grid-cols-2 gap-6">
             <FormField
@@ -240,14 +246,19 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
         </div>
 
         <div className="flex justify-end gap-2 pt-4 sticky bottom-0 bg-background border-t mt-4">
-          <Button variant="outline" type="button" onClick={onClose} className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            type="button" 
+            onClick={onClose} 
+            className="flex items-center gap-2"
+          >
             <ArrowLeft className="h-4 w-4" />
             Cancelar
           </Button>
           <Button 
-            type="submit" 
+            type="submit"
             disabled={isLoading || !!pageAreaWarning}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 submit-button"
           >
             {isLoading ? "Salvando..." : (modelo?.id ? "Atualizar" : "Criar")}
             <ArrowRight className="h-4 w-4" />
