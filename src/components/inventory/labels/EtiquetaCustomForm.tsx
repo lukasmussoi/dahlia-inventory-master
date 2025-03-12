@@ -1,3 +1,4 @@
+
 import { Form } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -27,7 +28,8 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
   return (
     <Form {...form}>
       <form onSubmit={(e) => {
-        const submitButton = e.nativeEvent.submitter;
+        const submitButton = document.activeElement;
+        // Só submete o form se o botão de submissão for clicado
         if (!submitButton || !submitButton.classList.contains('submit-button')) {
           e.preventDefault();
           return;

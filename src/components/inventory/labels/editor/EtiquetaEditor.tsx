@@ -1,5 +1,4 @@
-
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { DndContext, DragEndEvent, DragStartEvent, useDraggable, useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { 
@@ -29,6 +28,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { CampoEtiqueta } from "@/types/etiqueta";
+
+const MAX_ZOOM = 5; // 500%
+const MIN_ZOOM = 0.3; // 30%
 
 interface EtiquetaEditorProps {
   campos: CampoEtiqueta[];
@@ -140,7 +142,6 @@ export function EtiquetaEditor({
   const [zoomLevel, setZoomLevel] = useState(1);
   const [showGrid, setShowGrid] = useState(true);
   
-  // Valores locais para configurações de página
   const [localFormatoPagina, setLocalFormatoPagina] = useState(formatoPagina);
   const [localOrientacao, setLocalOrientacao] = useState(orientacao);
   const [localMargemSuperior, setLocalMargemSuperior] = useState(margemSuperior);
@@ -152,14 +153,13 @@ export function EtiquetaEditor({
   const [localLarguraPagina, setLocalLarguraPagina] = useState(larguraPagina || 210);
   const [localAlturaPagina, setLocalAlturaPagina] = useState(alturaPagina || 297);
   
-  // Referência ao contêiner de visualização da página
   const pageViewRef = useRef<HTMLDivElement>(null);
+  const editorContainerRef = useRef<HTMLDivElement>(null);
   
   const { setNodeRef } = useDroppable({
     id: 'etiqueta-area',
   });
 
-  // Sincronizar dimensões locais com props
   useEffect(() => {
     setLocalLargura(largura);
     setLocalAltura(altura);
@@ -188,36 +188,49 @@ export function EtiquetaEditor({
     alturaPagina
   ]);
 
-  // Atualizar as dimensões quando mudam localmente
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey) {
+        if (e.key === '+' || e.key === '=') {
+          e.preventDefault();
+          handleZoomIn();
+        } else if (e.key === '-') {
+          e.preventDefault();
+          handleZoomOut();
+        } else if (e.key === '0') {
+          e.preventDefault();
+          handleResetZoom();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [zoomLevel]);
+
   const handleDimensoesChange = () => {
     if (onDimensoesChange) {
       onDimensoesChange(localLargura, localAltura);
     }
     
-    // Verificar se os elementos estão dentro dos limites da nova dimensão
     const camposAjustados = campos.map(campo => {
       let ajustado = { ...campo };
       
-      // Se a posição X + largura ultrapassa a largura da etiqueta
       if (campo.x + campo.largura > localLargura) {
-        // Se apenas a posição X está dentro da etiqueta, ajustar a largura
         if (campo.x < localLargura) {
           ajustado.largura = localLargura - campo.x;
-        } 
-        // Se a posição X já está fora, mover para dentro
-        else {
+        } else {
           ajustado.x = Math.max(0, localLargura - campo.largura);
         }
       }
       
-      // Se a posição Y + altura ultrapassa a altura da etiqueta
       if (campo.y + campo.altura > localAltura) {
-        // Se apenas a posição Y está dentro da etiqueta, ajustar a altura
         if (campo.y < localAltura) {
           ajustado.altura = localAltura - campo.y;
-        } 
-        // Se a posição Y já está fora, mover para dentro
-        else {
+        } else {
           ajustado.y = Math.max(0, localAltura - campo.altura);
         }
       }
@@ -228,7 +241,6 @@ export function EtiquetaEditor({
     onCamposChange(camposAjustados);
   };
 
-  // Atualizar configurações de página
   const handlePaginaChange = () => {
     if (onFormatoChange) {
       onFormatoChange(
@@ -255,11 +267,9 @@ export function EtiquetaEditor({
       );
     }
     
-    // Validar se a etiqueta cabe na página com as novas configurações
     validarEtiquetaNaPagina();
   };
-  
-  // Validar se a etiqueta cabe na página com as configurações atuais
+
   const validarEtiquetaNaPagina = () => {
     const areaUtilLargura = localLarguraPagina - localMargemEsquerda - localMargemDireita;
     const areaUtilAltura = localAlturaPagina - localMargemSuperior - localMargemInferior;
@@ -301,15 +311,12 @@ export function EtiquetaEditor({
     const novosCampos = [...campos];
     const campo = novosCampos[index];
     
-    // Calcular nova posição - considerando o nível de zoom
     const novoX = campo.x + delta.x / zoomLevel;
     const novoY = campo.y + delta.y / zoomLevel;
     
-    // Validar limites
     if (novoX < 0 || novoX + campo.largura > localLargura || 
         novoY < 0 || novoY + campo.altura > localAltura) {
       
-      // Calcular posição ajustada dentro dos limites
       const xAjustado = Math.max(0, Math.min(novoX, localLargura - campo.largura));
       const yAjustado = Math.max(0, Math.min(novoY, localAltura - campo.altura));
       
@@ -322,7 +329,6 @@ export function EtiquetaEditor({
       setWarning("O elemento foi ajustado para ficar dentro dos limites da etiqueta");
       setTimeout(() => setWarning(null), 3000);
     } else {
-      // Atualizar posição normalmente
       novosCampos[index] = {
         ...campo,
         x: novoX,
@@ -348,7 +354,6 @@ export function EtiquetaEditor({
     const novosCampos = [...campos];
     const campo = { ...novosCampos[campoIndex] };
 
-    // Atualizar a propriedade
     switch (propriedade) {
       case 'x':
         if (valor < 0 || valor + campo.largura > localLargura) {
@@ -407,7 +412,6 @@ export function EtiquetaEditor({
   };
 
   const handleAddElemento = (tipo: 'nome' | 'codigo' | 'preco') => {
-    // Verificar se o elemento já existe
     const existente = campos.find(c => c.tipo === tipo);
     if (existente) {
       setWarning("Este elemento já existe na etiqueta");
@@ -415,7 +419,6 @@ export function EtiquetaEditor({
       return;
     }
     
-    // Valores padrão para cada tipo de elemento
     let novoCampo: CampoEtiqueta;
     switch (tipo) {
       case 'nome':
@@ -429,7 +432,6 @@ export function EtiquetaEditor({
         break;
     }
     
-    // Adicionar o novo campo
     const novosCampos = [...campos, novoCampo];
     setWarning(null);
     onCamposChange(novosCampos);
@@ -445,20 +447,24 @@ export function EtiquetaEditor({
     }
   };
 
-  // Controles de zoom
-  const handleZoomIn = () => {
-    setZoomLevel(prev => Math.min(prev + 0.1, 2));
-  };
+  const handleZoomIn = useCallback(() => {
+    setZoomLevel(prev => {
+      const newZoom = Math.min(prev + 0.2, MAX_ZOOM);
+      return parseFloat(newZoom.toFixed(1));
+    });
+  }, []);
 
-  const handleZoomOut = () => {
-    setZoomLevel(prev => Math.max(prev - 0.1, 0.3));
-  };
+  const handleZoomOut = useCallback(() => {
+    setZoomLevel(prev => {
+      const newZoom = Math.max(prev - 0.2, MIN_ZOOM);
+      return parseFloat(newZoom.toFixed(1));
+    });
+  }, []);
 
-  const handleResetZoom = () => {
+  const handleResetZoom = useCallback(() => {
     setZoomLevel(1);
-  };
+  }, []);
 
-  // Calcular quantas etiquetas cabem na página
   const calcularEtiquetasPorPagina = () => {
     const areaUtilLargura = localLarguraPagina - localMargemEsquerda - localMargemDireita;
     const areaUtilAltura = localAlturaPagina - localMargemSuperior - localMargemInferior;
@@ -473,32 +479,24 @@ export function EtiquetaEditor({
     };
   };
 
-  // Renderizar a página inteira com as etiquetas
   const renderizarPaginaCompleta = () => {
     const { etiquetasPorLinha, etiquetasPorColuna } = calcularEtiquetasPorPagina();
     
-    // Fator de escala para renderização na tela
-    const escala = 0.7 * zoomLevel; // reduz o tamanho para caber na viewport
-    
-    // Dimensões da página escalada
+    const escala = 0.7 * zoomLevel;
     const larguraPaginaEscalada = localLarguraPagina * escala;
     const alturaPaginaEscalada = localAlturaPagina * escala;
     
-    // Margens escaladas
     const margemSuperiorEscalada = localMargemSuperior * escala;
     const margemInferiorEscalada = localMargemInferior * escala;
     const margemEsquerdaEscalada = localMargemEsquerda * escala;
     const margemDireitaEscalada = localMargemDireita * escala;
     
-    // Dimensões da etiqueta escalada
     const larguraEtiquetaEscalada = localLargura * escala;
     const alturaEtiquetaEscalada = localAltura * escala;
     
-    // Espaçamentos escalados
     const espacamentoHorizontalEscalado = localEspacamentoHorizontal * escala;
     const espacamentoVerticalEscalado = localEspacamentoVertical * escala;
     
-    // Verificar se a página tem pelo menos uma etiqueta
     if (etiquetasPorLinha <= 0 || etiquetasPorColuna <= 0) {
       return (
         <div className="bg-white p-4 rounded border">
@@ -514,7 +512,6 @@ export function EtiquetaEditor({
       );
     }
     
-    // Criar grade de etiquetas
     const etiquetas = [];
     
     for (let linha = 0; linha < etiquetasPorColuna; linha++) {
@@ -585,7 +582,6 @@ export function EtiquetaEditor({
               height: `${alturaPaginaEscalada}px`,
             }}
           >
-            {/* Área útil de impressão */}
             <div
               className="absolute border-2 border-gray-300 border-dashed"
               style={{
@@ -596,7 +592,6 @@ export function EtiquetaEditor({
               }}
             />
             
-            {/* Etiquetas */}
             {etiquetas}
           </div>
         </div>
@@ -618,7 +613,6 @@ export function EtiquetaEditor({
           </div>
         </div>
         
-        {/* Controles de zoom */}
         <div className="zoom-controls">
           <button onClick={handleZoomIn} title="Aproximar">
             <ZoomIn className="h-4 w-4" />
@@ -634,7 +628,6 @@ export function EtiquetaEditor({
     );
   };
 
-  // Renderizar o editor de etiqueta individual
   const renderizarEditorEtiqueta = () => {
     return (
       <DndContext onDragEnd={handleDragEnd} onDragStart={handleDragStart}>
@@ -716,7 +709,7 @@ export function EtiquetaEditor({
                 </div>
               </div>
               
-              <div className="relative mx-auto">
+              <div className="relative mx-auto" ref={editorContainerRef}>
                 <div 
                   ref={setNodeRef}
                   className={`relative ${showGrid ? 'etiqueta-grid' : ''} border rounded overflow-hidden ${isDragging ? 'border-blue-400' : 'border-gray-300'}`}
@@ -744,15 +737,32 @@ export function EtiquetaEditor({
                   ))}
                 </div>
                 
-                {/* Controles de zoom */}
                 <div className="zoom-controls">
-                  <button onClick={handleZoomIn} title="Aproximar">
-                    <ZoomIn className="h-4 w-4" />
-                  </button>
-                  <button onClick={handleZoomOut} title="Afastar">
+                  <button 
+                    onClick={handleZoomOut} 
+                    title="Diminuir Zoom (Ctrl -)"
+                    type="button"
+                  >
                     <ZoomOut className="h-4 w-4" />
                   </button>
-                  <button onClick={handleResetZoom} title="Redefinir Zoom">
+                  
+                  <div className="zoom-level">
+                    {Math.round(zoomLevel * 100)}%
+                  </div>
+                  
+                  <button 
+                    onClick={handleZoomIn} 
+                    title="Aumentar Zoom (Ctrl +)"
+                    type="button"
+                  >
+                    <ZoomIn className="h-4 w-4" />
+                  </button>
+                  
+                  <button 
+                    onClick={handleResetZoom} 
+                    title="Redefinir Zoom (Ctrl 0)"
+                    type="button"
+                  >
                     <Maximize2 className="h-4 w-4" />
                   </button>
                 </div>
@@ -857,7 +867,6 @@ export function EtiquetaEditor({
     );
   };
 
-  // Renderizar configurações de página (formatos, margens, etc)
   const renderizarConfigPagina = () => {
     return (
       <div className="space-y-4">
@@ -886,7 +895,6 @@ export function EtiquetaEditor({
                   onValueChange={(valor) => {
                     setLocalFormatoPagina(valor);
                     
-                    // Se o formato mudar para um padrão, definir dimensões padrão
                     if (valor === "A4") {
                       setLocalLarguraPagina(210);
                       setLocalAlturaPagina(297);
@@ -920,7 +928,6 @@ export function EtiquetaEditor({
                   onValueChange={(valor) => {
                     setLocalOrientacao(valor);
                     
-                    // Se a orientação mudar, trocar largura e altura da página
                     if (valor !== localOrientacao) {
                       const temp = localLarguraPagina;
                       setLocalLarguraPagina(localAlturaPagina);
@@ -1090,7 +1097,8 @@ export function EtiquetaEditor({
         <ul className="text-xs text-gray-600 space-y-1">
           <li>• Arraste os elementos para posicioná-los na etiqueta</li>
           <li>• Clique em um elemento para editar suas propriedades</li>
-          <li>• Use os controles de zoom para ajustar a visualização</li>
+          <li>• Use os controles de zoom (até 500%) para ajustar a visualização</li>
+          <li>• Utilize Ctrl + (+) para aumentar, Ctrl + (-) para diminuir e Ctrl + 0 para redefinir o zoom</li>
           <li>• Configure a página e as margens para optimizar a impressão</li>
           <li>• Visualize a disposição das etiquetas na página antes de salvar</li>
         </ul>
@@ -1098,3 +1106,4 @@ export function EtiquetaEditor({
     </div>
   );
 }
+
