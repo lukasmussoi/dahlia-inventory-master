@@ -23,7 +23,8 @@ import {
   File, 
   LayoutGrid, 
   Copy,
-  InfoIcon
+  InfoIcon,
+  Maximize
 } from "lucide-react";
 
 type EtiquetaCustomFormProps = {
@@ -41,7 +42,8 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
     paginaDefinida,
     etiquetaDefinida,
     corrigirDimensoesAutomaticamente,
-    duplicarModelo
+    duplicarModelo,
+    otimizarLayout
   } = useEtiquetaCustomForm(modelo, onClose, onSuccess);
 
   return (
@@ -86,7 +88,7 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
             />
           </div>
 
-          <Alert variant="info" className="bg-blue-50 border-blue-200">
+          <Alert className="bg-blue-50 border-blue-200">
             <InfoIcon className="h-4 w-4 text-blue-700" />
             <AlertTitle className="text-blue-800">Dica de uso</AlertTitle>
             <AlertDescription className="text-blue-700">
@@ -100,7 +102,7 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
           </Alert>
 
           <Tabs defaultValue="page-preview" className="w-full">
-            <TabsList className="grid grid-cols-3 mb-6">
+            <TabsList className="grid grid-cols-4 mb-6">
               <TabsTrigger value="editor" className="flex items-center gap-2">
                 <Layout className="h-4 w-4" />
                 Editor Visual
@@ -112,6 +114,10 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
               <TabsTrigger value="preview" className="flex items-center gap-2">
                 <File className="h-4 w-4" />
                 Pré-visualização
+              </TabsTrigger>
+              <TabsTrigger value="otimizar" className="flex items-center gap-2">
+                <Maximize className="h-4 w-4" />
+                Otimizar
               </TabsTrigger>
             </TabsList>
 
@@ -177,7 +183,7 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
               />
               
               {pageAreaWarning && (
-                <Alert variant="destructive">
+                <Alert variant="warning">
                   <AlertCircle className="h-4 w-4" />
                   <AlertTitle>Problema nas dimensões</AlertTitle>
                   <AlertDescription className="flex flex-col space-y-2">
@@ -284,6 +290,57 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
                 </div>
                 <div className="mt-4 text-sm text-gray-500">
                   Esta é uma prévia aproximada de como sua etiqueta aparecerá quando impressa.
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="otimizar" className="space-y-4">
+              <div className="bg-white p-6 border rounded">
+                <h3 className="text-lg font-medium mb-4">Otimização Automática</h3>
+                
+                <div className="space-y-4">
+                  <Alert className="bg-blue-50 border-blue-200">
+                    <InfoIcon className="h-4 w-4 text-blue-700" />
+                    <AlertTitle className="text-blue-800">Como funciona</AlertTitle>
+                    <AlertDescription className="text-blue-700">
+                      O sistema calculará automaticamente o melhor tamanho para suas etiquetas com base na 
+                      página selecionada, maximizando a quantidade de etiquetas por página e respeitando as margens.
+                    </AlertDescription>
+                  </Alert>
+                  
+                  <div className="p-4 border rounded-md bg-gray-50">
+                    <h4 className="font-medium mb-3">Configuração atual</h4>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <span className="font-medium">Formato da página:</span> {form.getValues('formatoPagina')}
+                      </div>
+                      <div>
+                        <span className="font-medium">Orientação:</span> {form.getValues('orientacao')}
+                      </div>
+                      <div>
+                        <span className="font-medium">Tamanho da etiqueta:</span> {form.getValues('largura')}mm x {form.getValues('altura')}mm
+                      </div>
+                      <div>
+                        <span className="font-medium">Margens:</span> {form.getValues('margemSuperior')}mm, {form.getValues('margemInferior')}mm, {form.getValues('margemEsquerda')}mm, {form.getValues('margemDireita')}mm
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-col gap-3">
+                    <Button 
+                      type="button" 
+                      onClick={otimizarLayout} 
+                      className="w-full"
+                    >
+                      <Maximize className="h-4 w-4 mr-2" />
+                      Otimizar Layout Automaticamente
+                    </Button>
+                    
+                    <div className="text-sm text-gray-500 italic">
+                      Isso ajustará automaticamente o tamanho da etiqueta para maximizar o uso do espaço da página.
+                      As margens da página serão respeitadas e os elementos serão reposicionados proporcionalmente.
+                    </div>
+                  </div>
                 </div>
               </div>
             </TabsContent>
