@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, WrenchIcon, ArrowLeft, ArrowRight, Layout, File } from "lucide-react";
+import { AlertCircle, WrenchIcon, ArrowLeft, ArrowRight, Layout, File, LayoutGrid } from "lucide-react";
 
 type EtiquetaCustomFormProps = {
   modelo?: ModeloEtiqueta;
@@ -60,10 +60,14 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
           </div>
 
           <Tabs defaultValue="editor" className="w-full">
-            <TabsList className="grid grid-cols-2 mb-6">
+            <TabsList className="grid grid-cols-3 mb-6">
               <TabsTrigger value="editor" className="flex items-center gap-2">
                 <Layout className="h-4 w-4" />
                 Editor Visual
+              </TabsTrigger>
+              <TabsTrigger value="page-preview" className="flex items-center gap-2">
+                <LayoutGrid className="h-4 w-4" />
+                Layout da Página
               </TabsTrigger>
               <TabsTrigger value="preview" className="flex items-center gap-2">
                 <File className="h-4 w-4" />
@@ -113,6 +117,7 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
                           if (larguraPagina) form.setValue('larguraPagina', larguraPagina);
                           if (alturaPagina) form.setValue('alturaPagina', alturaPagina);
                         }}
+                        showPageView={false}
                       />
                     </FormControl>
                     <FormMessage />
@@ -139,6 +144,57 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
                   </AlertDescription>
                 </Alert>
               )}
+            </TabsContent>
+            
+            <TabsContent value="page-preview" className="space-y-6">
+              <FormField
+                control={form.control}
+                name="campos"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <EtiquetaEditor
+                        campos={field.value as CampoEtiqueta[]}
+                        largura={form.getValues('largura')}
+                        altura={form.getValues('altura')}
+                        formatoPagina={form.getValues('formatoPagina')}
+                        orientacao={form.getValues('orientacao')}
+                        margemSuperior={form.getValues('margemSuperior')}
+                        margemInferior={form.getValues('margemInferior')}
+                        margemEsquerda={form.getValues('margemEsquerda')}
+                        margemDireita={form.getValues('margemDireita')}
+                        espacamentoHorizontal={form.getValues('espacamentoHorizontal')}
+                        espacamentoVertical={form.getValues('espacamentoVertical')}
+                        larguraPagina={form.getValues('larguraPagina')}
+                        alturaPagina={form.getValues('alturaPagina')}
+                        onCamposChange={(campos: CampoEtiqueta[]) => field.onChange(campos)}
+                        onDimensoesChange={(largura, altura) => {
+                          form.setValue('largura', largura);
+                          form.setValue('altura', altura);
+                        }}
+                        onMargensChange={(margemSuperior, margemInferior, margemEsquerda, margemDireita) => {
+                          form.setValue('margemSuperior', margemSuperior);
+                          form.setValue('margemInferior', margemInferior);
+                          form.setValue('margemEsquerda', margemEsquerda);
+                          form.setValue('margemDireita', margemDireita);
+                        }}
+                        onEspacamentoChange={(espacamentoHorizontal, espacamentoVertical) => {
+                          form.setValue('espacamentoHorizontal', espacamentoHorizontal);
+                          form.setValue('espacamentoVertical', espacamentoVertical);
+                        }}
+                        onFormatoChange={(formatoPagina, orientacao, larguraPagina, alturaPagina) => {
+                          form.setValue('formatoPagina', formatoPagina);
+                          form.setValue('orientacao', orientacao);
+                          if (larguraPagina) form.setValue('larguraPagina', larguraPagina);
+                          if (alturaPagina) form.setValue('alturaPagina', alturaPagina);
+                        }}
+                        showPageView={true}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </TabsContent>
 
             <TabsContent value="preview" className="space-y-4">
