@@ -96,6 +96,22 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
       }))
     : defaultCampos;
 
+  // Verificar se há campos nulos ou undefined nos campos do modelo
+  if (modeloCampos) {
+    modeloCampos.forEach((campo, index) => {
+      if (campo.x === null || campo.y === null || campo.largura === null || 
+          campo.altura === null || campo.tamanhoFonte === null) {
+        console.warn(`Campo ${index} tem valores nulos:`, campo);
+        // Corrigir valores nulos com padrões
+        if (campo.x === null) campo.x = 0;
+        if (campo.y === null) campo.y = 0;
+        if (campo.largura === null) campo.largura = 40;
+        if (campo.altura === null) campo.altura = 10;
+        if (campo.tamanhoFonte === null) campo.tamanhoFonte = 8;
+      }
+    });
+  }
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {

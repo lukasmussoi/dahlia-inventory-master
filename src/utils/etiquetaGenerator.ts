@@ -232,6 +232,28 @@ export function createModeloFromCreator(
   // Usar a primeira etiqueta como referência principal
   const primaryLabel = labels[0];
   
+  // Garantir que há elementos na etiqueta
+  if (!primaryLabel || !primaryLabel.elements || primaryLabel.elements.length === 0) {
+    console.warn("Criando modelo sem elementos");
+    return {
+      nome: modelName || "Modelo sem nome",
+      descricao: modelName || "Modelo sem nome",
+      largura: primaryLabel?.width || 80,
+      altura: primaryLabel?.height || 30,
+      formatoPagina: pageFormat,
+      orientacao: "retrato",
+      margemSuperior: margins.top,
+      margemInferior: margins.bottom,
+      margemEsquerda: margins.left,
+      margemDireita: margins.right,
+      espacamentoHorizontal: spacing.horizontal,
+      espacamentoVertical: spacing.vertical,
+      larguraPagina: pageSize.width,
+      alturaPagina: pageSize.height,
+      campos: []
+    };
+  }
+  
   return {
     nome: modelName || "Modelo sem nome",
     descricao: modelName || "Modelo sem nome",
@@ -253,8 +275,8 @@ export function createModeloFromCreator(
       y: el.y,
       largura: el.width,
       altura: el.height,
-      tamanhoFonte: el.fontSize,
-      alinhamento: el.align
+      tamanhoFonte: el.fontSize || 10,
+      alinhamento: el.align || 'left'
     }))
   };
 }
@@ -264,21 +286,57 @@ export async function generatePreviewPDF(
   modelName: string,
   labels: any[],
   pageFormat: string, 
-  pageSize: { width: number, height: number }
+  pageSize: { width: number, height: number },
+  margins: { top: number, right: number, bottom: number, left: number } = { top: 10, right: 10, bottom: 10, left: 10 },
+  spacing: { horizontal: number, vertical: number } = { horizontal: 2, vertical: 2 }
 ): Promise<string> {
-  if (labels.length === 0) {
+  console.log("Iniciando geração de pré-visualização para:", modelName);
+  console.log("Labels recebidas:", labels);
+  console.log("Formato da página:", pageFormat, pageSize);
+  
+  if (!labels || labels.length === 0) {
+    console.error("Não há etiquetas para gerar a pré-visualização");
     toast.error("Não há etiquetas para gerar a pré-visualização");
     throw new Error("Não há etiquetas para gerar a pré-visualização");
   }
 
   try {
+    // Verificar se a primeira etiqueta tem as propriedades necessárias
+    const firstLabel = labels[0];
+    if (!firstLabel || !firstLabel.width || !firstLabel.height) {
+      console.error("Primeira etiqueta inválida:", firstLabel);
+      toast.error("Configuração de etiqueta inválida");
+      throw new Error("Configuração de etiqueta inválida. Verifique as dimensões.");
+    }
+    
+    if (!firstLabel.elements || firstLabel.elements.length === 0) {
+      console.warn("Etiqueta sem elementos. Criando etiqueta com elementos padrão para pré-visualização.");
+      // Se não houver elementos, criar elementos padrão para visualização
+      firstLabel.elements = [
+        { type: 'nome', x: 2, y: 2, width: 40, height: 10, fontSize: 7 },
+        { type: 'codigo', x: 2, y: 10, width: 40, height: 6, fontSize: 8 },
+        { type: 'preco', x: 50, y: 5, width: 20, height: 10, fontSize: 10 }
+      ];
+    }
+    
+    // Garantir que o pageSize seja válido
+    if (!pageSize.width || !pageSize.height || pageSize.width <= 0 || pageSize.height <= 0) {
+      console.error("Tamanho de página inválido:", pageSize);
+      toast.error("Tamanho de página inválido");
+      throw new Error("Tamanho de página inválido. Verifique as dimensões.");
+    }
+    
     // Criar um modelo temporário com os dados atuais
     const modelo = createModeloFromCreator(
       modelName,
       labels,
       pageFormat,
-      pageSize
+      pageSize,
+      margins,
+      spacing
     );
+    
+    console.log("Modelo criado para pré-visualização:", modelo);
     
     // Dados de exemplo para visualização
     const dadosExemplo = [
@@ -330,6 +388,8 @@ async function adicionarElemento(doc: jsPDF, campo: CampoEtiqueta, item: any, xB
           console.log(`Adicionado código de barras: "${barcodeText}" em (${x},${y})`);
         } catch (error) {
           console.error("Erro ao gerar código de barras:", error);
+          // Fallback: Adicionar texto do código se a imagem falhar
+          doc.text(item.barcode || item.sku || "0000000000", x, y);
         }
         break;
         
