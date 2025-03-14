@@ -1,4 +1,3 @@
-
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -241,9 +240,20 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
       
       // Criar uma cópia do modelo com um nome indicando que é uma cópia
       const modeloCopia: ModeloEtiqueta = {
-        ...data,
         nome: `${data.nome} (Cópia)`,
         descricao: `${data.descricao} (Cópia)`,
+        largura: Number(data.largura),
+        altura: Number(data.altura),
+        formatoPagina: data.formatoPagina,
+        orientacao: data.orientacao,
+        margemSuperior: Number(data.margemSuperior),
+        margemInferior: Number(data.margemInferior),
+        margemEsquerda: Number(data.margemEsquerda),
+        margemDireita: Number(data.margemDireita),
+        espacamentoHorizontal: Number(data.espacamentoHorizontal),
+        espacamentoVertical: Number(data.espacamentoVertical),
+        larguraPagina: data.larguraPagina,
+        alturaPagina: data.alturaPagina,
         campos: data.campos.map(campo => ({
           tipo: campo.tipo,
           x: Number(campo.x),
