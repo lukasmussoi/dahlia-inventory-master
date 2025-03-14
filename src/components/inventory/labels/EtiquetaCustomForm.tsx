@@ -67,7 +67,8 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
         onClose={onClose}
         onSave={handleSave}
         initialData={modelo}
-        ajustarDimensoesAutomaticamente={ajustarDimensoesAutomaticamente}
+        autoAdjustDimensions={ajustarDimensoesAutomaticamente}
+        onToggleAutoAdjust={toggleAjusteAutomatico}
       />
     );
   }

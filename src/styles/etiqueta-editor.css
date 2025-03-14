@@ -109,3 +109,31 @@
   border-color: rgb(239, 68, 68) !important;
   background-color: rgba(239, 68, 68, 0.05);
 }
+
+/* Estilo para alertas de erro na pré-visualização */
+.pdf-error-alert {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90%;
+  max-width: 500px;
+  z-index: 100;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Estilos para o toggle de ajuste automático */
+.auto-adjust-toggle {
+  display: flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  background-color: rgba(0, 0, 0, 0.05);
+  margin-bottom: 8px;
+}

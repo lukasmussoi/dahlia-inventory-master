@@ -50,18 +50,19 @@ export async function generateEtiquetaPDF(
     
     // Configurar formato da página
     let formato: any = modelo.formatoPagina.toLowerCase();
+    let pageWidth, pageHeight;
     
     // Se o formato for personalizado, usar as dimensões especificadas em mm
     if (modelo.formatoPagina === "Personalizado" && modelo.larguraPagina && modelo.alturaPagina) {
-      const largura = Number(modelo.larguraPagina);
-      const altura = Number(modelo.alturaPagina);
+      pageWidth = Number(modelo.larguraPagina);
+      pageHeight = Number(modelo.alturaPagina);
       
       // Se a orientação for paisagem, inverter largura e altura
       if (modelo.orientacao === "paisagem") {
-        formato = [altura, largura];
+        formato = [pageHeight, pageWidth];
         console.log("Formato personalizado em paisagem:", formato);
       } else {
-        formato = [largura, altura];
+        formato = [pageWidth, pageHeight];
         console.log("Formato personalizado em retrato:", formato);
       }
     }
@@ -73,9 +74,11 @@ export async function generateEtiquetaPDF(
       format: formato,
     });
     
-    // Dimensões da página (obtidas após a criação do documento para refletir quaisquer ajustes feitos pelo jsPDF)
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
+    // Dimensões da página (obtidas após a criação do documento)
+    if (!pageWidth || !pageHeight) {
+      pageWidth = doc.internal.pageSize.getWidth();
+      pageHeight = doc.internal.pageSize.getHeight();
+    }
     
     console.log("Dimensões efetivas da página:", {
       pageWidth, 
@@ -127,7 +130,7 @@ export async function generateEtiquetaPDF(
     if (labelWidth > usableWidth) {
       if (ajustarAutomaticamente) {
         const larguraOriginal = labelWidth;
-        labelWidth = Math.floor(usableWidth * 0.98); // 98% da largura útil para garantir que caiba
+        labelWidth = Math.floor(usableWidth * 0.95); // 95% da largura útil para garantir que caiba
         dimensoesAjustadas = true;
         console.log(`Largura da etiqueta ajustada automaticamente de ${larguraOriginal}mm para ${labelWidth}mm`);
       } else {
@@ -138,7 +141,7 @@ export async function generateEtiquetaPDF(
     if (labelHeight > usableHeight) {
       if (ajustarAutomaticamente) {
         const alturaOriginal = labelHeight;
-        labelHeight = Math.floor(usableHeight * 0.98); // 98% da altura útil para garantir que caiba
+        labelHeight = Math.floor(usableHeight * 0.95); // 95% da altura útil para garantir que caiba
         dimensoesAjustadas = true;
         console.log(`Altura da etiqueta ajustada automaticamente de ${alturaOriginal}mm para ${labelHeight}mm`);
       } else {
@@ -214,8 +217,14 @@ export async function generateEtiquetaPDF(
         }
         
         // Adicionar os elementos conforme definido no modelo
-        for (const campo of modelo.campos) {
-          await adicionarElemento(doc, campo, item, x, y);
+        if (modelo.campos && modelo.campos.length > 0) {
+          for (const campo of modelo.campos) {
+            if (campo) {
+              await adicionarElemento(doc, campo, item, x, y);
+            }
+          }
+        } else {
+          console.warn("Modelo sem campos definidos");
         }
         
         currentRow++;
@@ -276,11 +285,15 @@ export function createModeloFromCreator(
     };
   }
   
+  // Garantir que as propriedades das etiquetas são números
+  const width = parseFloat(primaryLabel.width) || 80;
+  const height = parseFloat(primaryLabel.height) || 30;
+  
   return {
     nome: modelName || "Modelo sem nome",
     descricao: modelName || "Modelo sem nome",
-    largura: primaryLabel.width,
-    altura: primaryLabel.height,
+    largura: width,
+    altura: height,
     formatoPagina: pageFormat,
     orientacao: "retrato", // Pode ser dinâmico no futuro
     margemSuperior: margins.top,
@@ -291,13 +304,13 @@ export function createModeloFromCreator(
     espacamentoVertical: spacing.vertical,
     larguraPagina: pageSize.width,
     alturaPagina: pageSize.height,
-    campos: primaryLabel.elements.map((el: any) => ({
+    campos: (primaryLabel.elements || []).map((el: any) => ({
       tipo: el.type,
-      x: el.x,
-      y: el.y,
-      largura: el.width,
-      altura: el.height,
-      tamanhoFonte: el.fontSize || 10,
+      x: parseFloat(el.x) || 0,
+      y: parseFloat(el.y) || 0,
+      largura: parseFloat(el.width) || 40,
+      altura: parseFloat(el.height) || 10,
+      tamanhoFonte: parseFloat(el.fontSize) || 10,
       alinhamento: el.align || 'left'
     }))
   };
@@ -327,54 +340,75 @@ export async function generatePreviewPDF(
   try {
     // Verificar se a primeira etiqueta tem as propriedades necessárias
     const firstLabel = labels[0];
-    if (!firstLabel || !firstLabel.width || !firstLabel.height) {
-      console.error("Primeira etiqueta inválida:", firstLabel);
+    if (!firstLabel) {
+      console.error("Configuração de etiqueta inválida: etiqueta não definida");
       toast.error("Configuração de etiqueta inválida");
-      throw new Error("Configuração de etiqueta inválida. Verifique as dimensões.");
+      throw new Error("Configuração de etiqueta inválida. Nenhuma etiqueta definida.");
+    }
+    
+    // Garantir que as dimensões são números válidos
+    const labelWidth = parseFloat(firstLabel.width) || 80;
+    const labelHeight = parseFloat(firstLabel.height) || 30;
+    
+    if (isNaN(labelWidth) || isNaN(labelHeight) || labelWidth <= 0 || labelHeight <= 0) {
+      console.error("Dimensões da etiqueta inválidas:", { width: firstLabel.width, height: firstLabel.height });
+      toast.error("Dimensões da etiqueta inválidas");
+      throw new Error("Dimensões da etiqueta inválidas. Verifique os valores de largura e altura.");
+    }
+    
+    // Garantir que as dimensões da página são números válidos
+    const pageWidthNum = parseFloat(pageSize.width) || 210;
+    const pageHeightNum = parseFloat(pageSize.height) || 297;
+    
+    if (isNaN(pageWidthNum) || isNaN(pageHeightNum) || pageWidthNum <= 0 || pageHeightNum <= 0) {
+      console.error("Dimensões da página inválidas:", pageSize);
+      toast.error("Dimensões da página inválidas");
+      throw new Error("Dimensões da página inválidas. Verifique os valores de largura e altura.");
     }
     
     // Verificar se a etiqueta cabe na área útil da página
-    const usableWidth = pageSize.width - margins.left - margins.right;
-    const usableHeight = pageSize.height - margins.top - margins.bottom;
+    const usableWidth = pageWidthNum - margins.left - margins.right;
+    const usableHeight = pageHeightNum - margins.top - margins.bottom;
     
     console.log("Área útil calculada:", { 
       usableWidth, 
       usableHeight, 
-      etiquetaWidth: firstLabel.width, 
-      etiquetaHeight: firstLabel.height 
+      etiquetaWidth: labelWidth, 
+      etiquetaHeight: labelHeight 
     });
     
-    if (firstLabel.width > usableWidth && !ajustarAutomaticamente) {
-      console.error("Largura da etiqueta excede área útil:", { 
-        larguraEtiqueta: firstLabel.width, 
-        areaUtilLargura: usableWidth 
+    // Verificar se há avisos sobre as dimensões, mas não interromper se o ajuste automático estiver ativado
+    if (labelWidth > usableWidth) {
+      console.warn("Largura da etiqueta maior que a área útil:", {
+        larguraEtiqueta: labelWidth,
+        areaUtilLargura: usableWidth
       });
-      throw new Error(`A largura da etiqueta (${firstLabel.width}mm) é maior que a área útil disponível (${usableWidth}mm). Reduza a largura da etiqueta ou aumente a largura da página.`);
+      
+      if (!ajustarAutomaticamente) {
+        throw new Error(`A largura da etiqueta (${labelWidth}mm) é maior que a área útil disponível (${usableWidth}mm). Reduza a largura da etiqueta ou aumente a largura da página.`);
+      }
     }
     
-    if (firstLabel.height > usableHeight && !ajustarAutomaticamente) {
-      console.error("Altura da etiqueta excede área útil:", { 
-        alturaEtiqueta: firstLabel.height, 
-        areaUtilAltura: usableHeight 
+    if (labelHeight > usableHeight) {
+      console.warn("Altura da etiqueta maior que a área útil:", {
+        alturaEtiqueta: labelHeight,
+        areaUtilAltura: usableHeight
       });
-      throw new Error(`A altura da etiqueta (${firstLabel.height}mm) é maior que a área útil disponível (${usableHeight}mm). Reduza a altura da etiqueta ou aumente a altura da página.`);
+      
+      if (!ajustarAutomaticamente) {
+        throw new Error(`A altura da etiqueta (${labelHeight}mm) é maior que a área útil disponível (${usableHeight}mm). Reduza a altura da etiqueta ou aumente a altura da página.`);
+      }
     }
     
+    // Garantir que há elementos na etiqueta ou criar elementos padrão para a visualização
     if (!firstLabel.elements || firstLabel.elements.length === 0) {
       console.warn("Etiqueta sem elementos. Criando elementos padrão para pré-visualização.");
       // Se não houver elementos, criar elementos padrão para visualização
       firstLabel.elements = [
-        { type: 'nome', x: 2, y: 2, width: 40, height: 10, fontSize: 7 },
-        { type: 'codigo', x: 2, y: 10, width: 40, height: 6, fontSize: 8 },
-        { type: 'preco', x: 50, y: 5, width: 20, height: 10, fontSize: 10 }
+        { type: 'nome', x: 2, y: 2, width: Math.min(labelWidth * 0.6, 40), height: Math.min(labelHeight * 0.4, 10), fontSize: 7 },
+        { type: 'codigo', x: 2, y: Math.min(labelHeight * 0.5, 10), width: Math.min(labelWidth * 0.6, 40), height: Math.min(labelHeight * 0.3, 6), fontSize: 8 },
+        { type: 'preco', x: Math.min(labelWidth * 0.7, 50), y: 2, width: Math.min(labelWidth * 0.25, 20), height: Math.min(labelHeight * 0.4, 10), fontSize: 10 }
       ];
-    }
-    
-    // Garantir que o pageSize seja válido
-    if (!pageSize.width || !pageSize.height || pageSize.width <= 0 || pageSize.height <= 0) {
-      console.error("Tamanho de página inválido:", pageSize);
-      toast.error("Tamanho de página inválido");
-      throw new Error("Tamanho de página inválido. Verifique as dimensões.");
     }
     
     // Criar um modelo temporário com os dados atuais
@@ -382,7 +416,10 @@ export async function generatePreviewPDF(
       modelName,
       labels,
       pageFormat,
-      pageSize,
+      { 
+        width: pageWidthNum, 
+        height: pageHeightNum 
+      },
       margins,
       spacing
     );
@@ -417,11 +454,19 @@ export async function generatePreviewPDF(
 // Função para adicionar um elemento na etiqueta
 async function adicionarElemento(doc: jsPDF, campo: CampoEtiqueta, item: any, xBase: number, yBase: number): Promise<void> {
   try {
-    const x = xBase + Number(campo.x);
-    const y = yBase + Number(campo.y);
+    if (!campo || !campo.tipo) {
+      console.warn("Campo inválido ou tipo de campo não definido:", campo);
+      return;
+    }
+    
+    const x = xBase + Number(campo.x || 0);
+    const y = yBase + Number(campo.y || 0);
+    const largura = Number(campo.largura || 40);
+    const altura = Number(campo.altura || 10);
+    const tamanhoFonte = Number(campo.tamanhoFonte || 10);
     
     // Configurar fonte e tamanho
-    doc.setFontSize(Number(campo.tamanhoFonte) || 10);
+    doc.setFontSize(tamanhoFonte);
     
     // Determinar o estilo da fonte
     let fontStyle = "normal";
@@ -438,7 +483,7 @@ async function adicionarElemento(doc: jsPDF, campo: CampoEtiqueta, item: any, xB
         try {
           const barcodeText = item.barcode || item.sku || "0000000000";
           const barcodeData = await generateBarcode(barcodeText);
-          doc.addImage(barcodeData, "PNG", x, y, Number(campo.largura), Number(campo.altura));
+          doc.addImage(barcodeData, "PNG", x, y, largura, altura);
           console.log(`Adicionado código de barras: "${barcodeText}" em (${x},${y})`);
         } catch (error) {
           console.error("Erro ao gerar código de barras:", error);
@@ -459,6 +504,6 @@ async function adicionarElemento(doc: jsPDF, campo: CampoEtiqueta, item: any, xB
         console.warn(`Tipo de campo não reconhecido: ${campo.tipo}`);
     }
   } catch (error) {
-    console.error(`Erro ao adicionar elemento tipo ${campo.tipo}:`, error);
+    console.error(`Erro ao adicionar elemento tipo ${campo?.tipo || 'desconhecido'}:`, error);
   }
 }
