@@ -18,14 +18,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { Plus, AlertTriangle, MoreVertical, Pencil } from "lucide-react";
+import { Plus, AlertTriangle } from "lucide-react";
 import { LabelModel } from "@/models/labelModel";
 import { generatePdfLabel } from "@/utils/pdfUtils";
 import { EtiquetaCustomModel } from "@/models/etiquetaCustomModel";
@@ -51,7 +45,6 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
   const [selectedModeloId, setSelectedModeloId] = useState<string | undefined>(undefined);
   const [selectedModelo, setSelectedModelo] = useState<ModeloEtiqueta | null>(null);
   const [modeloWarning, setModeloWarning] = useState<string | null>(null);
-  const [modeloParaEditar, setModeloParaEditar] = useState<ModeloEtiqueta | null>(null);
 
   // Load custom models when dialog opens
   useEffect(() => {
@@ -82,7 +75,6 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
       setSelectedModeloId(undefined);
       setSelectedModelo(null);
       setModeloWarning(null);
-      setModeloParaEditar(null);
     }
   }, [isOpen]);
 
@@ -218,87 +210,36 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
 
   const handleModeloSuccess = async () => {
     setShowModeloForm(false);
-    setModeloParaEditar(null);
     try {
       const modelos = await EtiquetaCustomModel.getAll();
       setModelosCustom(modelos);
-      toast.success("Modelo de etiqueta salvo com sucesso!");
+      toast.success("Modelo de etiqueta adicionado com sucesso!");
     } catch (error) {
       console.error("Erro ao recarregar modelos:", error);
     }
   };
 
-  const editarModeloSelecionado = async () => {
-    if (selectedModeloId) {
-      try {
-        const modelo = await EtiquetaCustomModel.getById(selectedModeloId);
-        if (modelo) {
-          setModeloParaEditar(modelo);
-          setShowModeloForm(true);
-        } else {
-          toast.error("Erro ao carregar modelo para edição");
-        }
-      } catch (error) {
-        console.error("Erro ao carregar modelo para edição:", error);
-        toast.error("Erro ao carregar modelo para edição");
-      }
+  const editarModeloSelecionado = () => {
+    if (selectedModelo && selectedModelo.id) {
+      // Funcionalidade futura: implementar edição do modelo
+      toast.info("Funcionalidade de edição de modelo será implementada em breve");
     } else {
       toast.error("Nenhum modelo selecionado para editar");
     }
   };
 
-  const duplicarModeloSelecionado = async () => {
-    if (selectedModeloId) {
-      try {
-        const modelo = await EtiquetaCustomModel.getById(selectedModeloId);
-        if (modelo) {
-          // Criar uma cópia do modelo com um nome indicando que é uma cópia
-          const modeloCopia: ModeloEtiqueta = {
-            ...modelo,
-            nome: `${modelo.nome} (Cópia)`,
-            descricao: modelo.descricao ? `${modelo.descricao} (Cópia)` : "Cópia",
-          };
-          delete modeloCopia.id; // Remover o ID para criar um novo registro
-          
-          const novoModeloId = await EtiquetaCustomModel.create(modeloCopia);
-          
-          if (novoModeloId) {
-            toast.success("Modelo duplicado com sucesso!");
-            const modelos = await EtiquetaCustomModel.getAll();
-            setModelosCustom(modelos);
-          } else {
-            toast.error("Erro ao duplicar modelo");
-          }
-        } else {
-          toast.error("Erro ao carregar modelo para duplicação");
-        }
-      } catch (error) {
-        console.error("Erro ao duplicar modelo:", error);
-        toast.error("Erro ao duplicar modelo");
-      }
-    } else {
-      toast.error("Nenhum modelo selecionado para duplicar");
-    }
-  };
-
-  if (showModeloForm || modeloParaEditar) {
+  if (showModeloForm) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden">
           <DialogHeader>
-            <DialogTitle>{modeloParaEditar ? 'Editar Modelo de Etiqueta' : 'Criar Novo Modelo de Etiqueta'}</DialogTitle>
+            <DialogTitle>Criar Novo Modelo de Etiqueta</DialogTitle>
             <DialogDescription>
-              {modeloParaEditar 
-                ? 'Modifique as configurações do modelo de etiqueta existente.'
-                : 'Preencha os campos abaixo para criar um novo modelo de etiqueta personalizada.'}
+              Preencha os campos abaixo para criar um novo modelo de etiqueta personalizada.
             </DialogDescription>
           </DialogHeader>
           <EtiquetaCustomForm
-            modelo={modeloParaEditar ?? undefined}
-            onClose={() => {
-              setShowModeloForm(false);
-              setModeloParaEditar(null);
-            }}
+            onClose={() => setShowModeloForm(false)}
             onSuccess={handleModeloSuccess}
           />
         </DialogContent>
@@ -376,10 +317,7 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
             <Button
               variant="outline"
               size="sm"
-              onClick={() => {
-                setModeloParaEditar(null);
-                setShowModeloForm(true);
-              }}
+              onClick={() => setShowModeloForm(true)}
               className="flex items-center gap-2"
             >
               <Plus className="h-4 w-4" />
@@ -411,32 +349,6 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
                 </SelectContent>
               </Select>
             </div>
-            
-            {selectedModeloId && (
-              <div className="flex items-end">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="ml-auto">
-                      <MoreVertical className="h-4 w-4" />
-                      Opções
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={editarModeloSelecionado}>
-                      <Pencil className="h-4 w-4 mr-2" />
-                      Editar Modelo
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={duplicarModeloSelecionado}>
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
-                        <rect x="8" y="8" width="12" height="12" rx="2" />
-                        <path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" />
-                      </svg>
-                      Duplicar Modelo
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            )}
           </div>
           
           {selectedModelo && (

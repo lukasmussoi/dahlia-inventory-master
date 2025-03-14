@@ -1,3 +1,4 @@
+
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -28,13 +29,13 @@ const formSchema = z.object({
   margemDireita: z.number().min(0, "Margem direita deve ser positiva").max(50, "Margem direita muito grande"),
   espacamentoHorizontal: z.number().min(0, "Espaçamento horizontal deve ser positivo").max(20, "Espaçamento horizontal muito grande"),
   espacamentoVertical: z.number().min(0, "Espaçamento vertical deve ser positivo").max(20, "Espaçamento vertical muito grande"),
-  larguraPagina: z.number().optional().refine(value => !value || value >= 20, {
-    message: "Largura da página deve ser pelo menos 20mm"
+  larguraPagina: z.number().optional().refine(value => !value || value >= 50, {
+    message: "Largura da página deve ser pelo menos 50mm"
   }).refine(value => !value || value <= 300, {
     message: "Largura da página não deve exceder 300mm"
   }),
-  alturaPagina: z.number().optional().refine(value => !value || value >= 20, {
-    message: "Altura da página deve ser pelo menos 20mm"
+  alturaPagina: z.number().optional().refine(value => !value || value >= 50, {
+    message: "Altura da página deve ser pelo menos 50mm"
   }).refine(value => !value || value <= 420, {
     message: "Altura da página não deve exceder 420mm"
   }),
@@ -82,8 +83,6 @@ const defaultCampos: CampoEtiqueta[] = [
 export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => void, onSuccess?: () => void) {
   const [isLoading, setIsLoading] = useState(false);
   const [pageAreaWarning, setPageAreaWarning] = useState<string | null>(null);
-  const [etiquetaDefinida, setEtiquetaDefinida] = useState(!!modelo?.campos?.length);
-  const [paginaDefinida, setPaginaDefinida] = useState(!!modelo?.formatoPagina);
 
   // Certifique-se de que os campos do modelo, se fornecidos, estejam no formato correto
   const modeloCampos = modelo?.campos 
@@ -122,32 +121,10 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
   // Observar alterações nos campos relevantes para validação em tempo real
   useEffect(() => {
     const subscription = form.watch((value, { name }) => {
-      // Verificar se a página foi definida
-      if (['formatoPagina', 'larguraPagina', 'alturaPagina', 
-           'margemEsquerda', 'margemDireita', 'margemSuperior', 'margemInferior'].includes(name as string)) {
-        const values = form.getValues();
-        if (values.formatoPagina === "Personalizado") {
-          setPaginaDefinida(!!values.larguraPagina && !!values.alturaPagina);
-        } else {
-          setPaginaDefinida(true);
-        }
-      }
-      
       // Verificar apenas quando os campos relacionados às dimensões mudarem
       if (['formatoPagina', 'largura', 'altura', 'larguraPagina', 'alturaPagina', 
            'margemEsquerda', 'margemDireita', 'margemSuperior', 'margemInferior'].includes(name as string)) {
         validarDimensoes();
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [form.watch]);
-
-  // Verificar quando alterações são feitas nos campos da etiqueta
-  useEffect(() => {
-    const subscription = form.watch((value, { name }) => {
-      if (name?.startsWith('campos')) {
-        const campos = form.getValues('campos');
-        setEtiquetaDefinida(campos.length > 0);
       }
     });
     return () => subscription.unsubscribe();
@@ -230,56 +207,6 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
     }
   };
 
-  // Duplicar o modelo atual (criar uma cópia com nome diferente)
-  const duplicarModelo = async () => {
-    if (!modelo) return;
-    
-    try {
-      setIsLoading(true);
-      const data = form.getValues();
-      
-      // Criar uma cópia do modelo com um nome indicando que é uma cópia
-      const modeloCopia: ModeloEtiqueta = {
-        nome: `${data.nome} (Cópia)`,
-        descricao: `${data.descricao} (Cópia)`,
-        largura: Number(data.largura),
-        altura: Number(data.altura),
-        formatoPagina: data.formatoPagina,
-        orientacao: data.orientacao,
-        margemSuperior: Number(data.margemSuperior),
-        margemInferior: Number(data.margemInferior),
-        margemEsquerda: Number(data.margemEsquerda),
-        margemDireita: Number(data.margemDireita),
-        espacamentoHorizontal: Number(data.espacamentoHorizontal),
-        espacamentoVertical: Number(data.espacamentoVertical),
-        larguraPagina: data.larguraPagina,
-        alturaPagina: data.alturaPagina,
-        campos: data.campos.map(campo => ({
-          tipo: campo.tipo,
-          x: Number(campo.x),
-          y: Number(campo.y),
-          largura: Number(campo.largura),
-          altura: Number(campo.altura),
-          tamanhoFonte: Number(campo.tamanhoFonte),
-        })),
-      };
-      
-      const novoModeloId = await EtiquetaCustomModel.create(modeloCopia);
-      
-      if (novoModeloId) {
-        toast.success("Modelo duplicado com sucesso!");
-        onSuccess?.();
-      } else {
-        toast.error("Erro ao duplicar modelo");
-      }
-    } catch (error) {
-      console.error("Erro ao duplicar modelo:", error);
-      toast.error("Erro ao duplicar modelo de etiqueta");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   async function onSubmit(data: FormValues) {
     try {
       // Validar novamente antes de salvar
@@ -348,9 +275,6 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
     isLoading,
     onSubmit,
     pageAreaWarning,
-    etiquetaDefinida,
-    paginaDefinida,
-    corrigirDimensoesAutomaticamente,
-    duplicarModelo
+    corrigirDimensoesAutomaticamente
   };
 }
