@@ -53,11 +53,13 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
   // Usar o novo editor de etiquetas
   if (useNewEditor) {
     return (
-      <EtiquetaCreator 
-        onClose={onClose}
-        onSave={handleSave}
-        initialData={modelo}
-      />
+      <div className="dialog-large">
+        <EtiquetaCreator 
+          onClose={onClose}
+          onSave={handleSave}
+          initialData={modelo}
+        />
+      </div>
     );
   }
 
