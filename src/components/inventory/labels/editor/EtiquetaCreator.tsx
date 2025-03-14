@@ -1,3 +1,4 @@
+
 "use client"
 import { useState, useRef, useEffect } from "react"
 import { 
@@ -851,4 +852,433 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
                               <AlignCenter className="h-4 w-4" />
                             </Button>
                             <Button 
-                              variant={getSelectedElementDetails()?.align
+                              variant={getSelectedElementDetails()?.align === "right" ? "default" : "outline"}
+                              size="sm"
+                              className="flex-1 h-9"
+                              onClick={() => handleSetAlignment("right")}
+                            >
+                              <AlignRight className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                        
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          className="w-full"
+                          onClick={handleDeleteElement}
+                        >
+                          <Trash className="h-4 w-4 mr-1" />
+                          <span className="text-xs">Remover Elemento</span>
+                        </Button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+            
+            {activeTab === "etiquetas" && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-medium text-sm">Etiquetas</h3>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 px-2"
+                    onClick={handleAddLabel}
+                  >
+                    <Plus className="h-3.5 w-3.5 mr-1" />
+                    <span className="text-xs">Nova</span>
+                  </Button>
+                </div>
+                
+                <div className="space-y-2">
+                  {labels.map((label) => (
+                    <div 
+                      key={label.id}
+                      className={cn(
+                        "flex items-center justify-between p-2 border rounded cursor-pointer",
+                        selectedLabelId === label.id ? "border-primary bg-primary/10" : "hover:bg-muted/50"
+                      )}
+                      onClick={() => {
+                        setSelectedLabelId(label.id);
+                        setSelectedElement(null);
+                      }}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <div className="w-4 h-4 bg-primary/20 border border-primary/30 rounded-sm flex-shrink-0"></div>
+                        <span className="text-sm truncate">{label.name}</span>
+                      </div>
+                      <div className="flex items-center">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDuplicateLabel(label.id);
+                          }}
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 text-destructive"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteLabel(label.id);
+                          }}
+                          disabled={labels.length <= 1}
+                        >
+                          <Trash className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
+                {selectedLabelId !== null && (
+                  <div className="pt-4 border-t mt-4">
+                    <h3 className="font-medium text-sm mb-2">Propriedades da Etiqueta</h3>
+                    
+                    <div className="space-y-4">
+                      <div className="space-y-1">
+                        <Label htmlFor="label-name" className="text-xs">Nome</Label>
+                        <Input
+                          id="label-name"
+                          className="h-8"
+                          value={getSelectedLabel()?.name || ""}
+                          onChange={(e) => handleUpdateLabelName(selectedLabelId, e.target.value)}
+                        />
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <Label htmlFor="label-x" className="text-xs">X (mm)</Label>
+                          <Input
+                            id="label-x"
+                            type="number"
+                            className="h-8"
+                            value={getSelectedLabel()?.x || 0}
+                            onChange={(e) => {
+                              const updatedLabels = [...labels];
+                              const labelIndex = updatedLabels.findIndex(l => l.id === selectedLabelId);
+                              if (labelIndex === -1) return;
+                              
+                              updatedLabels[labelIndex] = {
+                                ...updatedLabels[labelIndex],
+                                x: Math.max(0, Math.min(Number(e.target.value), pageSize.width - updatedLabels[labelIndex].width))
+                              };
+                              
+                              setLabels(updatedLabels);
+                            }}
+                            min={0}
+                            max={pageSize.width - (getSelectedLabel()?.width || 0)}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor="label-y" className="text-xs">Y (mm)</Label>
+                          <Input
+                            id="label-y"
+                            type="number"
+                            className="h-8"
+                            value={getSelectedLabel()?.y || 0}
+                            onChange={(e) => {
+                              const updatedLabels = [...labels];
+                              const labelIndex = updatedLabels.findIndex(l => l.id === selectedLabelId);
+                              if (labelIndex === -1) return;
+                              
+                              updatedLabels[labelIndex] = {
+                                ...updatedLabels[labelIndex],
+                                y: Math.max(0, Math.min(Number(e.target.value), pageSize.height - updatedLabels[labelIndex].height))
+                              };
+                              
+                              setLabels(updatedLabels);
+                            }}
+                            min={0}
+                            max={pageSize.height - (getSelectedLabel()?.height || 0)}
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <Label htmlFor="label-width" className="text-xs">Largura (mm)</Label>
+                          <Input
+                            id="label-width"
+                            type="number"
+                            className="h-8"
+                            value={getSelectedLabel()?.width || 0}
+                            onChange={(e) => handleUpdateLabelSize("width", Number(e.target.value))}
+                            min={10}
+                            max={pageSize.width}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor="label-height" className="text-xs">Altura (mm)</Label>
+                          <Input
+                            id="label-height"
+                            type="number"
+                            className="h-8"
+                            value={getSelectedLabel()?.height || 0}
+                            onChange={(e) => handleUpdateLabelSize("height", Number(e.target.value))}
+                            min={10}
+                            max={pageSize.height}
+                          />
+                        </div>
+                      </div>
+                      
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        onClick={handleOptimizeLayout}
+                      >
+                        <LayoutGrid className="h-4 w-4 mr-1" />
+                        <span className="text-xs">Otimizar Layout</span>
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {activeTab === "config" && (
+              <div className="space-y-4">
+                <h3 className="font-medium text-sm">Configurações da Página</h3>
+                
+                <div className="space-y-1">
+                  <Label htmlFor="page-format" className="text-xs">Formato</Label>
+                  <Select
+                    value={pageFormat}
+                    onValueChange={handleUpdatePageFormat}
+                  >
+                    <SelectTrigger id="page-format" className="h-8">
+                      <SelectValue placeholder="Selecione o formato" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="A4">A4 (210 x 297 mm)</SelectItem>
+                      <SelectItem value="A5">A5 (148 x 210 mm)</SelectItem>
+                      <SelectItem value="Letter">Carta (216 x 279 mm)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <Label htmlFor="page-width" className="text-xs">Largura (mm)</Label>
+                    <Input
+                      id="page-width"
+                      type="number"
+                      className="h-8"
+                      value={pageSize.width}
+                      onChange={(e) => setPageSize({ ...pageSize, width: Number(e.target.value) })}
+                      min={50}
+                      max={500}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="page-height" className="text-xs">Altura (mm)</Label>
+                    <Input
+                      id="page-height"
+                      type="number"
+                      className="h-8"
+                      value={pageSize.height}
+                      onChange={(e) => setPageSize({ ...pageSize, height: Number(e.target.value) })}
+                      min={50}
+                      max={800}
+                    />
+                  </div>
+                </div>
+                
+                <div className="space-y-1 pt-4 border-t mt-4">
+                  <Label htmlFor="grid-size" className="text-xs">Tamanho da Grade (mm)</Label>
+                  <Input
+                    id="grid-size"
+                    type="number"
+                    className="h-8"
+                    value={gridSize}
+                    onChange={(e) => setGridSize(Number(e.target.value))}
+                    min={1}
+                    max={20}
+                  />
+                </div>
+              </div>
+            )}
+            
+            {activeTab === "preview" && (
+              <div className="space-y-4">
+                <h3 className="font-medium text-sm">Pré-visualização</h3>
+                
+                <div className="border rounded p-2">
+                  <p className="text-xs text-muted-foreground mb-2">Aqui você pode visualizar como a etiqueta ficará depois de impressa:</p>
+                  
+                  {labels.map((label) => (
+                    <div 
+                      key={label.id}
+                      className="border p-2 rounded mb-2"
+                      style={{
+                        width: `${label.width}mm`, 
+                        height: `${label.height}mm`,
+                        position: 'relative',
+                        transform: 'scale(1.5)',
+                        transformOrigin: 'top left',
+                        margin: '0 0 20px 0'
+                      }}
+                    >
+                      <div className="text-xs font-medium text-muted-foreground mb-1">{label.name}</div>
+                      
+                      {label.elements.map((element) => (
+                        <div
+                          key={element.id}
+                          style={{
+                            position: 'absolute',
+                            left: `${element.x}mm`,
+                            top: `${element.y}mm`,
+                            width: `${element.width}mm`,
+                            height: `${element.height}mm`,
+                            fontSize: `${element.fontSize}pt`,
+                            textAlign: element.align as any,
+                            overflow: 'hidden',
+                            whiteSpace: 'nowrap',
+                            textOverflow: 'ellipsis'
+                          }}
+                        >
+                          {getElementPreview(element.type)}
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          
+          {/* Botões de ação */}
+          <div className="bg-background p-4 border-t space-x-2 flex justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onClose}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={handleSave}
+            >
+              <Save className="h-4 w-4 mr-1" />
+              Criar
+            </Button>
+          </div>
+        </div>
+        
+        {/* Área de edição principal */}
+        <div className="flex-1 relative overflow-hidden">
+          <div 
+            className="flex items-center justify-center h-full p-8 overflow-auto"
+            onMouseMove={handleDrag}
+            onMouseUp={handleEndDrag}
+            onMouseLeave={handleEndDrag}
+            ref={editorRef}
+          >
+            <div 
+              className={cn(
+                "etiqueta-page-background",
+                showGrid && "etiqueta-grid"
+              )}
+              style={{
+                width: `${pageSize.width}mm`,
+                height: `${pageSize.height}mm`,
+                transform: `scale(${zoom / 100})`,
+                transformOrigin: 'center',
+                backgroundSize: showGrid ? `${gridSize}mm ${gridSize}mm` : 'auto'
+              }}
+            >
+              {labels.map((label) => (
+                <div 
+                  key={label.id}
+                  className={cn(
+                    "absolute border border-gray-400 bg-white cursor-move",
+                    selectedLabelId === label.id && "border-primary border-2"
+                  )}
+                  style={{
+                    left: `${label.x}mm`,
+                    top: `${label.y}mm`,
+                    width: `${label.width}mm`,
+                    height: `${label.height}mm`
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedLabelId(label.id);
+                    setSelectedElement(null);
+                  }}
+                  onMouseDown={(e) => handleStartDrag(e, "label", label.id, label.x, label.y)}
+                >
+                  {label.elements.map((element) => (
+                    <div
+                      key={element.id}
+                      className={cn(
+                        "absolute border cursor-move", 
+                        selectedElement === element.id 
+                          ? "border-primary border-dashed bg-primary/5" 
+                          : "border-gray-300 hover:border-gray-500"
+                      )}
+                      style={{
+                        left: `${element.x}mm`,
+                        top: `${element.y}mm`,
+                        width: `${element.width}mm`,
+                        height: `${element.height}mm`,
+                        fontSize: `${element.fontSize}pt`,
+                        textAlign: element.align as any,
+                        display: 'flex',
+                        alignItems: 'center',
+                        overflow: 'hidden'
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedElement(element.id);
+                      }}
+                      onMouseDown={(e) => handleStartDrag(e, "element", element.id, element.x, element.y)}
+                    >
+                      <div className="w-full text-ellipsis overflow-hidden whitespace-nowrap px-1">
+                        {getElementPreview(element.type)}
+                      </div>
+                    </div>
+                  ))}
+                  
+                  <div className="absolute -top-5 left-0 text-xs bg-background border px-1 rounded-t opacity-60">
+                    {label.name}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          {/* Controles de zoom */}
+          <div className="zoom-controls">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0"
+              onClick={() => setZoom(Math.min(zoom + 25, 500))}
+            >
+              <ZoomIn className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0"
+              onClick={() => setZoom(Math.max(zoom - 25, 25))}
+            >
+              <ZoomOut className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
