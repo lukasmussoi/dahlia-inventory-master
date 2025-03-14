@@ -25,13 +25,13 @@ export class ResellerModel {
         promoterId: reseller.promoter_id,
         promoterName: reseller.promoters?.name,
         address: reseller.address ? {
-          street: reseller.address.street || '',
-          number: reseller.address.number || '',
-          complement: reseller.address.complement || '',
-          neighborhood: reseller.address.neighborhood || '',
-          city: reseller.address.city || '',
-          state: reseller.address.state || '',
-          zipCode: reseller.address.zipCode || ''
+          street: typeof reseller.address === 'object' ? reseller.address.street || '' : '',
+          number: typeof reseller.address === 'object' ? reseller.address.number || '' : '',
+          complement: typeof reseller.address === 'object' ? reseller.address.complement || '' : '',
+          neighborhood: typeof reseller.address === 'object' ? reseller.address.neighborhood || '' : '',
+          city: typeof reseller.address === 'object' ? reseller.address.city || '' : '',
+          state: typeof reseller.address === 'object' ? reseller.address.state || '' : '',
+          zipCode: typeof reseller.address === 'object' ? reseller.address.zipCode || '' : ''
         } : undefined,
         createdAt: reseller.created_at,
         updatedAt: reseller.updated_at
@@ -64,7 +64,7 @@ export class ResellerModel {
         status: data.status as ResellerStatus,
         promoterId: data.promoter_id,
         promoterName: data.promoters?.name,
-        address: data.address ? {
+        address: data.address && typeof data.address === 'object' ? {
           street: data.address.street || '',
           number: data.address.number || '',
           complement: data.address.complement || '',
@@ -84,6 +84,18 @@ export class ResellerModel {
 
   static async create(resellerData: ResellerInput): Promise<string | null> {
     try {
+      const addressData = resellerData.address 
+        ? {
+            street: resellerData.address.street,
+            number: resellerData.address.number,
+            complement: resellerData.address.complement,
+            neighborhood: resellerData.address.neighborhood,
+            city: resellerData.address.city,
+            state: resellerData.address.state,
+            zipCode: resellerData.address.zipCode
+          }
+        : null;
+
       const { data, error } = await supabase
         .from('resellers')
         .insert({
@@ -93,15 +105,7 @@ export class ResellerModel {
           email: resellerData.email,
           status: resellerData.status,
           promoter_id: resellerData.promoterId,
-          address: resellerData.address ? {
-            street: resellerData.address.street,
-            number: resellerData.address.number,
-            complement: resellerData.address.complement,
-            neighborhood: resellerData.address.neighborhood,
-            city: resellerData.address.city,
-            state: resellerData.address.state,
-            zipCode: resellerData.address.zipCode
-          } : null
+          address: addressData
         })
         .select('id')
         .single();
