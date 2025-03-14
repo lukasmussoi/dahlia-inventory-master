@@ -370,6 +370,83 @@ export type Database = {
         }
         Relationships: []
       }
+      promoters: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          phone: string | null
+          status: Database["public"]["Enums"]["reseller_status"] | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          phone?: string | null
+          status?: Database["public"]["Enums"]["reseller_status"] | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          phone?: string | null
+          status?: Database["public"]["Enums"]["reseller_status"] | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      resellers: {
+        Row: {
+          address: Json | null
+          cpf_cnpj: string
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          phone: string
+          promoter_id: string
+          status: Database["public"]["Enums"]["reseller_status"] | null
+          updated_at: string
+        }
+        Insert: {
+          address?: Json | null
+          cpf_cnpj: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          phone: string
+          promoter_id: string
+          status?: Database["public"]["Enums"]["reseller_status"] | null
+          updated_at?: string
+        }
+        Update: {
+          address?: Json | null
+          cpf_cnpj?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          phone?: string
+          promoter_id?: string
+          status?: Database["public"]["Enums"]["reseller_status"] | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resellers_promoter_id_fkey"
+            columns: ["promoter_id"]
+            isOneToOne: false
+            referencedRelation: "promoters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       suitcase_items: {
         Row: {
           created_at: string
@@ -537,9 +614,16 @@ export type Database = {
             }
             Returns: boolean
           }
+      validate_cpf_cnpj: {
+        Args: {
+          cpf_cnpj: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       plating_type: "ouro" | "prata" | "rose" | "rhodium" | "sem_banho"
+      reseller_status: "Ativa" | "Inativa"
       suitcase_item_status: "in_possession" | "sold" | "returned" | "lost"
       suitcase_status: "in_use" | "returned" | "in_audit" | "lost"
       user_role: "admin" | "promoter" | "seller"

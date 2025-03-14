@@ -1,6 +1,8 @@
 
 import { ResellerModel } from "@/models/resellerModel";
 import { Reseller, ResellerInput } from "@/types/reseller";
+import { PromoterModel } from "@/models/promoterModel";
+import { Promoter } from "@/types/promoter";
 
 export class ResellerController {
   static async getAllResellers(): Promise<Reseller[]> {
@@ -21,18 +23,18 @@ export class ResellerController {
     }
   }
 
-  static async createReseller(reseller: ResellerInput): Promise<any> {
+  static async createReseller(resellerData: ResellerInput): Promise<string | null> {
     try {
-      return await ResellerModel.create(reseller);
+      return await ResellerModel.create(resellerData);
     } catch (error) {
       console.error('Erro ao criar revendedora:', error);
       throw error;
     }
   }
 
-  static async updateReseller(id: string, reseller: ResellerInput): Promise<any> {
+  static async updateReseller(id: string, resellerData: Partial<ResellerInput>): Promise<boolean> {
     try {
-      return await ResellerModel.update(id, reseller);
+      return await ResellerModel.update(id, resellerData);
     } catch (error) {
       console.error(`Erro ao atualizar revendedora ${id}:`, error);
       throw error;
@@ -48,11 +50,11 @@ export class ResellerController {
     }
   }
 
-  static async searchResellers(query: string, status?: string, promoterId?: string): Promise<Reseller[]> {
+  static async getAllPromoters(): Promise<Promoter[]> {
     try {
-      return await ResellerModel.searchResellers(query, status, promoterId);
+      return await PromoterModel.getAll();
     } catch (error) {
-      console.error('Erro ao buscar revendedoras:', error);
+      console.error('Erro ao buscar promotoras:', error);
       throw error;
     }
   }

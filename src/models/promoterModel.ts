@@ -12,7 +12,11 @@ export class PromoterModel {
     if (error) throw error;
 
     return data.map((promoter: any) => ({
-      ...promoter,
+      id: promoter.id,
+      name: promoter.name,
+      phone: promoter.phone,
+      email: promoter.email,
+      status: promoter.status,
       createdAt: promoter.created_at,
       updatedAt: promoter.updated_at,
     })) as Promoter[];
@@ -28,7 +32,11 @@ export class PromoterModel {
     if (error) throw error;
 
     return {
-      ...data,
+      id: data.id,
+      name: data.name,
+      phone: data.phone,
+      email: data.email,
+      status: data.status,
       createdAt: data.created_at,
       updatedAt: data.updated_at,
     } as Promoter;
