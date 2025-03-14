@@ -20,7 +20,8 @@ import {
   ZoomOut,
   LayoutGrid,
   CheckSquare,
-  Minus
+  Minus,
+  FileText
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -62,6 +63,7 @@ export interface LabelElement {
 
 export interface LabelType {
   id: number;
+  name: string;
   x: number;
   y: number;
   width: number;
@@ -90,8 +92,11 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
     width: initialData?.largura || 80, 
     height: initialData?.altura || 40 
   })
+  const [nextLabelId, setNextLabelId] = useState(1)
+  const [selectedLabelId, setSelectedLabelId] = useState<number | null>(0)
   const [labels, setLabels] = useState<LabelType[]>([{ 
     id: 0, 
+    name: "Etiqueta 1",
     x: 20, 
     y: 20, 
     width: initialData?.largura || 80,
@@ -158,13 +163,19 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
   }, []);
   
   // Funções auxiliares
+  const getSelectedLabel = () => {
+    if (selectedLabelId === null) return null;
+    return labels.find(label => label.id === selectedLabelId) || null;
+  }
+
   const getSelectedElementDetails = () => {
-    if (!selectedElement) return null;
-    const label = labels[0]; // Sempre usamos apenas a primeira etiqueta no array
+    if (!selectedElement || selectedLabelId === null) return null;
+    const label = labels.find(l => l.id === selectedLabelId);
+    if (!label) return null;
     return label.elements.find(e => e.id === selectedElement);
   }
 
-  const handleStartDrag = (e: React.MouseEvent, type: "element", id: string, x: number, y: number) => {
+  const handleStartDrag = (e: React.MouseEvent, type: "element" | "label", id: string | number, x: number, y: number) => {
     if (!editorRef.current) return;
     e.stopPropagation();
     const rect = editorRef.current.getBoundingClientRect();
@@ -192,9 +203,12 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
     const y = snapToGridValue((e.clientY - rect.top - dragRef.current.offsetY) / zoomFactor);
     
     const updatedLabels = [...labels];
-    const label = updatedLabels[0]; // Sempre usamos apenas a primeira etiqueta
     
     if (dragRef.current.type === "element") {
+      const labelIndex = updatedLabels.findIndex(l => l.id === selectedLabelId);
+      if (labelIndex === -1) return;
+      
+      const label = updatedLabels[labelIndex];
       const elementIndex = label.elements.findIndex(el => el.id === dragRef.current.id);
       if (elementIndex === -1) return;
       
@@ -209,9 +223,23 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
         x: newX,
         y: newY
       };
+    } else if (dragRef.current.type === "label") {
+      const labelIndex = updatedLabels.findIndex(l => l.id === dragRef.current.id);
+      if (labelIndex === -1) return;
       
-      setLabels(updatedLabels);
+      // Limitar a etiqueta dentro dos limites da página
+      const label = updatedLabels[labelIndex];
+      const newX = Math.max(0, Math.min(x, pageSize.width - label.width));
+      const newY = Math.max(0, Math.min(y, pageSize.height - label.height));
+      
+      updatedLabels[labelIndex] = {
+        ...label,
+        x: newX,
+        y: newY
+      };
     }
+    
+    setLabels(updatedLabels);
   }
 
   const handleEndDrag = () => {
@@ -219,8 +247,16 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
   }
   
   const handleAddElement = (elementType: string) => {
+    if (selectedLabelId === null) {
+      toast.error("Selecione uma etiqueta primeiro");
+      return;
+    }
+    
+    const labelIndex = labels.findIndex(l => l.id === selectedLabelId);
+    if (labelIndex === -1) return;
+    
     // Verificar se o elemento já existe
-    const elementExists = labels[0].elements.some(el => el.type === elementType);
+    const elementExists = labels[labelIndex].elements.some(el => el.type === elementType);
     if (elementExists) {
       toast.error(`Este elemento já foi adicionado na etiqueta`);
       return;
@@ -241,7 +277,7 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
     };
     
     const updatedLabels = [...labels];
-    updatedLabels[0].elements.push(newElement);
+    updatedLabels[labelIndex].elements.push(newElement);
     setLabels(updatedLabels);
     setSelectedElement(newElement.id);
     
@@ -249,15 +285,16 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
   }
   
   const handleDeleteElement = () => {
-    if (!selectedElement) return;
+    if (!selectedElement || selectedLabelId === null) return;
     
     const updatedLabels = [...labels];
-    const label = updatedLabels[0];
+    const labelIndex = updatedLabels.findIndex(l => l.id === selectedLabelId);
+    if (labelIndex === -1) return;
     
-    const elementIndex = label.elements.findIndex(el => el.id === selectedElement);
+    const elementIndex = updatedLabels[labelIndex].elements.findIndex(el => el.id === selectedElement);
     if (elementIndex === -1) return;
     
-    label.elements.splice(elementIndex, 1);
+    updatedLabels[labelIndex].elements.splice(elementIndex, 1);
     setLabels(updatedLabels);
     setSelectedElement(null);
     
@@ -265,11 +302,13 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
   }
   
   const handleUpdateElement = (property: string, value: any) => {
-    if (!selectedElement) return;
+    if (!selectedElement || selectedLabelId === null) return;
     
     const updatedLabels = [...labels];
-    const label = updatedLabels[0];
+    const labelIndex = updatedLabels.findIndex(l => l.id === selectedLabelId);
+    if (labelIndex === -1) return;
     
+    const label = updatedLabels[labelIndex];
     const elementIndex = label.elements.findIndex(el => el.id === selectedElement);
     if (elementIndex === -1) return;
     
@@ -320,21 +359,26 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
   }
   
   const handleUpdateLabelSize = (dimension: "width" | "height", value: number) => {
+    if (selectedLabelId === null) return;
+    
     // Validar que o tamanho da etiqueta não seja maior que a página
     value = Math.max(10, Math.min(value, dimension === "width" ? pageSize.width : pageSize.height));
     
     const newLabelSize = { ...labelSize, [dimension]: value };
     setLabelSize(newLabelSize);
     
-    // Atualizar também o tamanho da etiqueta no array
+    // Atualizar também o tamanho da etiqueta selecionada no array
     const updatedLabels = [...labels];
-    updatedLabels[0] = {
-      ...updatedLabels[0],
+    const labelIndex = updatedLabels.findIndex(l => l.id === selectedLabelId);
+    if (labelIndex === -1) return;
+    
+    updatedLabels[labelIndex] = {
+      ...updatedLabels[labelIndex],
       [dimension]: value
     };
     
     // Verificar se algum elemento está fora dos limites e ajustar se necessário
-    updatedLabels[0].elements = updatedLabels[0].elements.map(element => {
+    updatedLabels[labelIndex].elements = updatedLabels[labelIndex].elements.map(element => {
       let updatedElement = { ...element };
       
       if (dimension === "width" && element.x + element.width > value) {
@@ -363,6 +407,83 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
     setLabels(updatedLabels);
   }
   
+  const handleAddLabel = () => {
+    const newLabelId = nextLabelId;
+    setNextLabelId(prevId => prevId + 1);
+    
+    // Criar uma nova etiqueta com base na configuração atual
+    const newLabel: LabelType = {
+      id: newLabelId,
+      name: `Etiqueta ${newLabelId + 1}`,
+      x: 20,
+      y: 20 + (labels.length * 10), // Posicionar abaixo das etiquetas existentes
+      width: labelSize.width,
+      height: labelSize.height,
+      elements: [] // Começar sem elementos
+    };
+    
+    setLabels(prevLabels => [...prevLabels, newLabel]);
+    setSelectedLabelId(newLabelId); // Selecionar a nova etiqueta
+    setSelectedElement(null); // Limpar seleção de elemento
+    
+    toast.success(`Nova etiqueta adicionada`);
+  }
+  
+  const handleDuplicateLabel = (labelId: number) => {
+    const labelToDuplicate = labels.find(l => l.id === labelId);
+    if (!labelToDuplicate) return;
+    
+    const newLabelId = nextLabelId;
+    setNextLabelId(prevId => prevId + 1);
+    
+    // Criar uma cópia da etiqueta
+    const newLabel: LabelType = {
+      ...labelToDuplicate,
+      id: newLabelId,
+      name: `${labelToDuplicate.name} (Cópia)`,
+      x: labelToDuplicate.x + 10, // Posicionar ligeiramente deslocada
+      y: labelToDuplicate.y + 10,
+      // Copiar todos os elementos da etiqueta
+      elements: labelToDuplicate.elements.map(element => ({
+        ...element,
+        id: `${element.id}-copy-${Date.now()}`
+      }))
+    };
+    
+    setLabels(prevLabels => [...prevLabels, newLabel]);
+    setSelectedLabelId(newLabelId); // Selecionar a nova etiqueta
+    setSelectedElement(null); // Limpar seleção de elemento
+    
+    toast.success(`Etiqueta duplicada`);
+  }
+  
+  const handleDeleteLabel = (labelId: number) => {
+    // Impedir que todas as etiquetas sejam excluídas
+    if (labels.length === 1) {
+      toast.error("Deve haver pelo menos uma etiqueta");
+      return;
+    }
+    
+    setLabels(prevLabels => prevLabels.filter(l => l.id !== labelId));
+    
+    // Se a etiqueta excluída era a selecionada, selecionar a primeira etiqueta restante
+    if (selectedLabelId === labelId) {
+      const remainingLabels = labels.filter(l => l.id !== labelId);
+      setSelectedLabelId(remainingLabels[0]?.id || null);
+      setSelectedElement(null);
+    }
+    
+    toast.success(`Etiqueta removida`);
+  }
+  
+  const handleUpdateLabelName = (labelId: number, name: string) => {
+    setLabels(prevLabels => 
+      prevLabels.map(label => 
+        label.id === labelId ? { ...label, name } : label
+      )
+    );
+  }
+  
   const handleSave = () => {
     if (!modelName.trim()) {
       toast.error("Por favor, informe um nome para o modelo");
@@ -370,16 +491,28 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
       return;
     }
     
-    if (labels[0].elements.length === 0) {
-      toast.error("Por favor, adicione pelo menos um elemento à etiqueta");
+    // Verificar se existe ao menos uma etiqueta
+    if (labels.length === 0) {
+      toast.error("Por favor, adicione pelo menos uma etiqueta");
       return;
     }
+    
+    // Verificar se todas as etiquetas têm pelo menos um elemento
+    const emptyLabels = labels.filter(label => label.elements.length === 0);
+    if (emptyLabels.length > 0) {
+      toast.error(`A etiqueta "${emptyLabels[0].name}" não possui elementos. Adicione pelo menos um elemento em cada etiqueta.`);
+      setSelectedLabelId(emptyLabels[0].id);
+      return;
+    }
+    
+    // Se tiver múltiplas etiquetas, usar a primeira como referência principal
+    const primaryLabel = labels[0];
     
     // Mapear para o formato esperado pelo backend
     const modelData = {
       nome: modelName,
       descricao: modelName,
-      campos: labels[0].elements.map(el => ({
+      campos: primaryLabel.elements.map(el => ({
         tipo: el.type,
         x: el.x,
         y: el.y,
@@ -388,8 +521,8 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
         tamanhoFonte: el.fontSize,
         alinhamento: el.align
       })),
-      largura: labelSize.width,
-      altura: labelSize.height,
+      largura: primaryLabel.width,
+      altura: primaryLabel.height,
       formatoPagina: pageFormat,
       orientacao: "retrato", // Pode ser dinâmico no futuro
       margemSuperior: 10,
@@ -424,9 +557,14 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
   }
   
   const handleOptimizeLayout = () => {
+    if (selectedLabelId === null) return;
+    
     // Implementação básica de otimização: centralizar todos os elementos
     const updatedLabels = [...labels];
-    const label = updatedLabels[0];
+    const labelIndex = updatedLabels.findIndex(l => l.id === selectedLabelId);
+    if (labelIndex === -1) return;
+    
+    const label = updatedLabels[labelIndex];
     
     // Organizar elementos em uma grade lógica
     const totalElements = label.elements.length;
@@ -502,43 +640,93 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
         </div>
       </div>
       
+      {/* Toolbar */}
+      <div className="flex items-center border-b p-2 gap-2 bg-muted/30">
+        <Button 
+          variant={activeTab === "elementos" ? "default" : "outline"} 
+          size="sm" 
+          className="h-8 px-3" 
+          onClick={() => setActiveTab("elementos")}
+        >
+          <Plus className="h-4 w-4 mr-1" />
+          <span className="text-xs">Elementos</span>
+        </Button>
+        
+        <Button 
+          variant={activeTab === "etiquetas" ? "default" : "outline"} 
+          size="sm" 
+          className="h-8 px-3" 
+          onClick={() => setActiveTab("etiquetas")}
+        >
+          <Layers className="h-4 w-4 mr-1" />
+          <span className="text-xs">Etiquetas</span>
+        </Button>
+        
+        <Button 
+          variant={activeTab === "config" ? "default" : "outline"} 
+          size="sm" 
+          className="h-8 px-3" 
+          onClick={() => setActiveTab("config")}
+        >
+          <Settings className="h-4 w-4 mr-1" />
+          <span className="text-xs">Config</span>
+        </Button>
+        
+        <div className="ml-auto flex items-center gap-2">
+          <Select
+            value={String(zoom)}
+            onValueChange={(value) => setZoom(Number(value))}
+          >
+            <SelectTrigger className="h-8 w-20">
+              <SelectValue placeholder={`${zoom}%`} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="50">50%</SelectItem>
+              <SelectItem value="75">75%</SelectItem>
+              <SelectItem value="100">100%</SelectItem>
+              <SelectItem value="150">150%</SelectItem>
+              <SelectItem value="200">200%</SelectItem>
+              <SelectItem value="300">300%</SelectItem>
+              <SelectItem value="500">500%</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          <Button
+            variant={showGrid ? "default" : "outline"}
+            size="sm"
+            className="h-8 px-3"
+            onClick={() => setShowGrid(!showGrid)}
+          >
+            <Grid className="h-4 w-4 mr-1" />
+            <span className="text-xs">Grade</span>
+          </Button>
+          
+          <Button
+            variant={snapToGrid ? "default" : "outline"}
+            size="sm"
+            className="h-8 px-3"
+            onClick={() => setSnapToGrid(!snapToGrid)}
+          >
+            <CheckSquare className="h-4 w-4 mr-1" />
+            <span className="text-xs">Snap</span>
+          </Button>
+          
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 px-3"
+            onClick={() => setActiveTab("preview")}
+          >
+            <FileText className="h-4 w-4 mr-1" />
+            <span className="text-xs">Pré-visualizar</span>
+          </Button>
+        </div>
+      </div>
+      
       {/* Conteúdo principal */}
       <div className="flex h-[calc(100vh-8rem)] max-h-[700px]">
         {/* Barra lateral */}
         <div className="border-r w-64 flex flex-col">
-          {/* Navegação da barra lateral */}
-          <div className="flex border-b p-1 items-center justify-between">
-            <div className="flex space-x-1">
-              <Button 
-                variant={activeTab === "elementos" ? "default" : "ghost"} 
-                size="sm" 
-                className="h-8 px-2" 
-                onClick={() => setActiveTab("elementos")}
-              >
-                <Plus className="h-4 w-4 mr-1" />
-                <span className="text-xs">Elementos</span>
-              </Button>
-              <Button 
-                variant={activeTab === "pagina" ? "default" : "ghost"} 
-                size="sm" 
-                className="h-8 px-2" 
-                onClick={() => setActiveTab("pagina")}
-              >
-                <Copy className="h-4 w-4 mr-1" />
-                <span className="text-xs">Página</span>
-              </Button>
-              <Button 
-                variant={activeTab === "config" ? "default" : "ghost"} 
-                size="sm" 
-                className="h-8 px-2" 
-                onClick={() => setActiveTab("config")}
-              >
-                <Settings className="h-4 w-4 mr-1" />
-                <span className="text-xs">Config</span>
-              </Button>
-            </div>
-          </div>
-          
           {/* Conteúdo da barra lateral */}
           <div className="flex-1 overflow-y-auto p-4">
             {activeTab === "elementos" && (
@@ -546,8 +734,9 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
                 <h3 className="font-medium text-sm">Adicionar Elementos</h3>
                 <div className="space-y-2">
                   {elements.map((element) => {
-                    // Verificar se este elemento já foi adicionado
-                    const isAdded = labels[0].elements.some(el => el.type === element.id);
+                    const selectedLabel = getSelectedLabel();
+                    // Verificar se este elemento já foi adicionado na etiqueta selecionada
+                    const isAdded = selectedLabel?.elements.some(el => el.type === element.id) || false;
                     
                     return (
                       <div 
@@ -560,7 +749,7 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
                           size="sm"
                           className="h-6 w-6 p-0"
                           onClick={() => handleAddElement(element.id)}
-                          disabled={isAdded}
+                          disabled={isAdded || selectedLabelId === null}
                         >
                           <Plus className="h-4 w-4" />
                         </Button>
@@ -585,7 +774,7 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
                               value={getSelectedElementDetails()?.x || 0}
                               onChange={(e) => handleUpdateElement('x', Number(e.target.value))}
                               min={0}
-                              max={labels[0].width}
+                              max={getSelectedLabel()?.width || 0}
                             />
                           </div>
                           <div className="space-y-1">
@@ -597,7 +786,7 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
                               value={getSelectedElementDetails()?.y || 0}
                               onChange={(e) => handleUpdateElement('y', Number(e.target.value))}
                               min={0}
-                              max={labels[0].height}
+                              max={getSelectedLabel()?.height || 0}
                             />
                           </div>
                         </div>
@@ -612,7 +801,7 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
                               value={getSelectedElementDetails()?.width || 0}
                               onChange={(e) => handleUpdateElement('width', Number(e.target.value))}
                               min={10}
-                              max={labels[0].width}
+                              max={getSelectedLabel()?.width || 0}
                             />
                           </div>
                           <div className="space-y-1">
@@ -624,7 +813,7 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
                               value={getSelectedElementDetails()?.height || 0}
                               onChange={(e) => handleUpdateElement('height', Number(e.target.value))}
                               min={5}
-                              max={labels[0].height}
+                              max={getSelectedLabel()?.height || 0}
                             />
                           </div>
                         </div>
@@ -693,9 +882,136 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
               </div>
             )}
             
-            {activeTab === "pagina" && (
+            {activeTab === "etiquetas" && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-medium text-sm">Etiquetas</h3>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="h-7"
+                    onClick={handleAddLabel}
+                  >
+                    <Plus className="h-3.5 w-3.5 mr-1" />
+                    <span className="text-xs">Nova</span>
+                  </Button>
+                </div>
+                
+                <div className="space-y-2">
+                  {labels.map((label) => (
+                    <div 
+                      key={label.id}
+                      className={cn(
+                        "flex items-center justify-between p-2 border rounded cursor-pointer",
+                        selectedLabelId === label.id ? "bg-primary/10 border-primary" : "hover:bg-muted"
+                      )}
+                      onClick={() => {
+                        setSelectedLabelId(label.id);
+                        setSelectedElement(null);
+                      }}
+                    >
+                      <Input 
+                        className="h-6 border-none focus-visible:ring-0 bg-transparent p-0 text-sm"
+                        value={label.name}
+                        onChange={(e) => handleUpdateLabelName(label.id, e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <div className="flex space-x-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDuplicateLabel(label.id);
+                          }}
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 text-destructive"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteLabel(label.id);
+                          }}
+                          disabled={labels.length <= 1}
+                        >
+                          <Trash className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
+                <div className="pt-4 border-t mt-4">
+                  <h3 className="font-medium text-sm mb-2">Tamanho da Etiqueta</h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label htmlFor="label-width" className="text-xs">Largura (mm)</Label>
+                      <Input
+                        id="label-width"
+                        type="number"
+                        className="h-8"
+                        value={getSelectedLabel()?.width || labelSize.width}
+                        onChange={(e) => handleUpdateLabelSize("width", Number(e.target.value))}
+                        min={10}
+                        max={pageSize.width}
+                        disabled={selectedLabelId === null}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="label-height" className="text-xs">Altura (mm)</Label>
+                      <Input
+                        id="label-height"
+                        type="number"
+                        className="h-8"
+                        value={getSelectedLabel()?.height || labelSize.height}
+                        onChange={(e) => handleUpdateLabelSize("height", Number(e.target.value))}
+                        min={10}
+                        max={pageSize.height}
+                        disabled={selectedLabelId === null}
+                      />
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="pt-4 mt-2">
+                  <Button 
+                    variant="secondary"
+                    className="w-full"
+                    onClick={handleOptimizeLayout}
+                    disabled={selectedLabelId === null}
+                  >
+                    <Settings className="h-4 w-4 mr-1" />
+                    Otimizar Layout
+                  </Button>
+                </div>
+              </div>
+            )}
+            
+            {activeTab === "config" && (
               <div className="space-y-4">
                 <h3 className="font-medium text-sm">Tamanho da Página</h3>
+                <div className="space-y-1">
+                  <Label htmlFor="page-format" className="text-xs">Modelo de Página</Label>
+                  <Select
+                    value={pageFormat}
+                    onValueChange={handleUpdatePageFormat}
+                  >
+                    <SelectTrigger id="page-format" className="h-8">
+                      <SelectValue placeholder="Selecione o formato" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="A4">A4 (210 × 297 mm)</SelectItem>
+                      <SelectItem value="A5">A5 (148 × 210 mm)</SelectItem>
+                      <SelectItem value="Letter">Letter (216 × 279 mm)</SelectItem>
+                      <SelectItem value="Personalizado">Personalizado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-1">
                     <Label htmlFor="page-width" className="text-xs">Largura (mm)</Label>
@@ -723,113 +1039,39 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
                   </div>
                 </div>
                 
-                <div className="space-y-1">
-                  <Label htmlFor="page-format" className="text-xs">Modelo de Página</Label>
-                  <Select
-                    value={pageFormat}
-                    onValueChange={handleUpdatePageFormat}
-                  >
-                    <SelectTrigger id="page-format" className="h-8">
-                      <SelectValue placeholder="Selecione o formato" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="A4">A4 (210 × 297 mm)</SelectItem>
-                      <SelectItem value="A5">A5 (148 × 210 mm)</SelectItem>
-                      <SelectItem value="Letter">Letter (216 × 279 mm)</SelectItem>
-                      <SelectItem value="Personalizado">Personalizado</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
                 <div className="pt-4 border-t mt-4">
-                  <h3 className="font-medium text-sm mb-2">Tamanho da Etiqueta</h3>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-1">
-                      <Label htmlFor="label-width" className="text-xs">Largura (mm)</Label>
-                      <Input
-                        id="label-width"
-                        type="number"
-                        className="h-8"
-                        value={labelSize.width}
-                        onChange={(e) => handleUpdateLabelSize("width", Number(e.target.value))}
-                        min={10}
-                        max={pageSize.width}
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label htmlFor="label-height" className="text-xs">Altura (mm)</Label>
-                      <Input
-                        id="label-height"
-                        type="number"
-                        className="h-8"
-                        value={labelSize.height}
-                        onChange={(e) => handleUpdateLabelSize("height", Number(e.target.value))}
-                        min={10}
-                        max={pageSize.height}
-                      />
-                    </div>
+                  <h3 className="font-medium text-sm mb-2">Grade e Alinhamento</h3>
+                  
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="snap-to-grid" className="text-sm cursor-pointer">Snap to Grid</Label>
+                    <Button
+                      variant={snapToGrid ? "default" : "outline"}
+                      size="sm"
+                      className="h-7"
+                      onClick={() => setSnapToGrid(!snapToGrid)}
+                    >
+                      <CheckSquare className="h-4 w-4 mr-1" />
+                      <span className="text-xs">{snapToGrid ? "Desativar" : "Ativar"}</span>
+                    </Button>
                   </div>
-                </div>
-                
-                <div className="pt-4 mt-2">
-                  <Button 
-                    variant="secondary"
-                    className="w-full"
-                    onClick={handleOptimizeLayout}
-                  >
-                    <Settings className="h-4 w-4 mr-1" />
-                    Otimizar Layout
-                  </Button>
-                </div>
-              </div>
-            )}
-            
-            {activeTab === "config" && (
-              <div className="space-y-4">
-                <h3 className="font-medium text-sm">Grade e Alinhamento</h3>
-                
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="show-grid" className="text-sm cursor-pointer">Mostrar Grade</Label>
-                  <Button
-                    variant={showGrid ? "default" : "outline"}
-                    size="sm"
-                    className="h-7"
-                    onClick={() => setShowGrid(!showGrid)}
-                  >
-                    <Grid className="h-4 w-4 mr-1" />
-                    <span className="text-xs">{showGrid ? "Ocultar" : "Mostrar"}</span>
-                  </Button>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="snap-to-grid" className="text-sm cursor-pointer">Snap to Grid</Label>
-                  <Button
-                    variant={snapToGrid ? "default" : "outline"}
-                    size="sm"
-                    className="h-7"
-                    onClick={() => setSnapToGrid(!snapToGrid)}
-                  >
-                    <CheckSquare className="h-4 w-4 mr-1" />
-                    <span className="text-xs">{snapToGrid ? "Desativar" : "Ativar"}</span>
-                  </Button>
-                </div>
-                
-                <div className="space-y-1">
-                  <Label htmlFor="grid-size" className="text-xs">Tamanho da Grade (mm)</Label>
-                  <Select
-                    value={String(gridSize)}
-                    onValueChange={(value) => setGridSize(Number(value))}
-                  >
-                    <SelectTrigger id="grid-size" className="h-8">
-                      <SelectValue placeholder="Selecione o tamanho" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">1 mm</SelectItem>
-                      <SelectItem value="2">2 mm</SelectItem>
-                      <SelectItem value="5">5 mm</SelectItem>
-                      <SelectItem value="10">10 mm</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  
+                  <div className="space-y-1 mt-4">
+                    <Label htmlFor="grid-size" className="text-xs">Tamanho da Grade (mm)</Label>
+                    <Select
+                      value={String(gridSize)}
+                      onValueChange={(value) => setGridSize(Number(value))}
+                    >
+                      <SelectTrigger id="grid-size" className="h-8">
+                        <SelectValue placeholder="Selecione o tamanho" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">1 mm</SelectItem>
+                        <SelectItem value="2">2 mm</SelectItem>
+                        <SelectItem value="5">5 mm</SelectItem>
+                        <SelectItem value="10">10 mm</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 
                 <div className="pt-4 border-t mt-4">
@@ -874,6 +1116,70 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
                 </div>
               </div>
             )}
+            
+            {activeTab === "preview" && (
+              <div className="space-y-4">
+                <h3 className="font-medium text-sm">Pré-visualização</h3>
+                <div className="p-2 border rounded bg-white">
+                  <div className="text-xs text-center font-medium mb-2">
+                    Modelo: {modelName || "Sem nome"}
+                  </div>
+                  
+                  {labels.map((label, index) => (
+                    <div 
+                      key={label.id}
+                      className="border border-dashed border-gray-300 relative bg-white mb-2 mx-auto"
+                      style={{
+                        width: `${label.width}px`,
+                        height: `${label.height}px`,
+                      }}
+                    >
+                      <div className="text-xs absolute -top-5 left-0 text-gray-500">
+                        {label.name}
+                      </div>
+                      
+                      {label.elements.map((element) => (
+                        <div
+                          key={element.id}
+                          className="absolute border border-gray-200"
+                          style={{
+                            left: element.x,
+                            top: element.y,
+                            width: element.width,
+                            height: element.height,
+                          }}
+                        >
+                          <div 
+                            className="w-full h-full flex items-center overflow-hidden p-1"
+                            style={{ 
+                              fontSize: element.fontSize,
+                              textAlign: element.align as any
+                            }}
+                          >
+                            {getElementPreview(element.type)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                  
+                  {labels.length === 0 && (
+                    <div className="text-sm text-gray-500 text-center p-4">
+                      Nenhuma etiqueta criada.
+                    </div>
+                  )}
+                </div>
+                
+                <Button 
+                  className="w-full mt-4"
+                  onClick={handleSave}
+                  disabled={!modelName.trim() || labels.length === 0}
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  Criar Modelo
+                </Button>
+              </div>
+            )}
           </div>
         </div>
         
@@ -888,55 +1194,73 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
                 height: `${pageSize.height * zoom / 100}px`,
               }}
             >
-              {/* Etiqueta */}
-              <div 
-                className={cn(
-                  "absolute border-2 border-blue-400 bg-blue-50/50", 
-                  showGrid && "etiqueta-grid"
-                )}
-                style={{
-                  left: `${labels[0].x * zoom / 100}px`,
-                  top: `${labels[0].y * zoom / 100}px`,
-                  width: `${labels[0].width * zoom / 100}px`,
-                  height: `${labels[0].height * zoom / 100}px`,
-                  backgroundSize: `${gridSize * zoom / 100}px ${gridSize * zoom / 100}px`
-                }}
-                onClick={() => setSelectedElement(null)}
-              >
-                {/* Elementos dentro da etiqueta */}
-                {labels[0].elements.map((element) => (
-                  <div
-                    key={element.id}
-                    className={cn(
-                      "absolute border cursor-move transition-all",
-                      selectedElement === element.id 
-                        ? "border-blue-500 bg-blue-100/70" 
-                        : "border-dashed border-gray-400 bg-white/70 hover:border-blue-300 hover:bg-blue-50/50"
-                    )}
-                    style={{
-                      left: `${element.x * zoom / 100}px`,
-                      top: `${element.y * zoom / 100}px`,
-                      width: `${element.width * zoom / 100}px`,
-                      height: `${element.height * zoom / 100}px`,
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedElement(element.id);
-                    }}
-                    onMouseDown={(e) => handleStartDrag(e, "element", element.id, element.x, element.y)}
-                  >
-                    <div 
-                      className="w-full h-full flex items-center overflow-hidden p-1"
+              {/* Etiquetas */}
+              {labels.map(label => (
+                <div 
+                  key={label.id}
+                  className={cn(
+                    "absolute border-2 border-blue-400 bg-blue-50/50 cursor-move", 
+                    showGrid && "etiqueta-grid",
+                    selectedLabelId === label.id && "ring-2 ring-primary ring-offset-2"
+                  )}
+                  style={{
+                    left: `${label.x * zoom / 100}px`,
+                    top: `${label.y * zoom / 100}px`,
+                    width: `${label.width * zoom / 100}px`,
+                    height: `${label.height * zoom / 100}px`,
+                    backgroundSize: `${gridSize * zoom / 100}px ${gridSize * zoom / 100}px`
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedLabelId(label.id);
+                    setSelectedElement(null);
+                  }}
+                  onMouseDown={(e) => handleStartDrag(e, "label", label.id, label.x, label.y)}
+                >
+                  {/* Nome da etiqueta */}
+                  <div className="absolute -top-6 left-0 text-xs font-medium">
+                    {label.name}
+                  </div>
+                  
+                  {/* Elementos dentro da etiqueta */}
+                  {label.elements.map((element) => (
+                    <div
+                      key={element.id}
+                      className={cn(
+                        "absolute border cursor-move transition-all",
+                        selectedElement === element.id && selectedLabelId === label.id
+                          ? "border-blue-500 bg-blue-100/70" 
+                          : "border-dashed border-gray-400 bg-white/70 hover:border-blue-300 hover:bg-blue-50/50"
+                      )}
                       style={{
-                        fontSize: `${element.fontSize * zoom / 100}px`,
-                        textAlign: element.align as any
+                        left: `${element.x * zoom / 100}px`,
+                        top: `${element.y * zoom / 100}px`,
+                        width: `${element.width * zoom / 100}px`,
+                        height: `${element.height * zoom / 100}px`,
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedLabelId(label.id);
+                        setSelectedElement(element.id);
+                      }}
+                      onMouseDown={(e) => {
+                        setSelectedLabelId(label.id);
+                        handleStartDrag(e, "element", element.id, element.x, element.y);
                       }}
                     >
-                      {getElementPreview(element.type)}
+                      <div 
+                        className="w-full h-full flex items-center overflow-hidden p-1"
+                        style={{
+                          fontSize: `${element.fontSize * zoom / 100}px`,
+                          textAlign: element.align as any
+                        }}
+                      >
+                        {getElementPreview(element.type)}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ))}
             </div>
           </div>
           
@@ -969,7 +1293,7 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
         <Button 
           size="sm" 
           onClick={handleSave}
-          disabled={!modelName.trim() || labels[0].elements.length === 0}
+          disabled={!modelName.trim() || labels.length === 0}
         >
           <Save className="h-4 w-4 mr-2" />
           Criar
@@ -978,3 +1302,4 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
     </div>
   )
 }
+
