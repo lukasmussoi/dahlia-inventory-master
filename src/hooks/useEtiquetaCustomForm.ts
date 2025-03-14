@@ -193,35 +193,6 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
       }
     }
     
-    // Verificar formato A4 padrão
-    else if (values.formatoPagina === "A4") {
-      const larguraPaginaA4 = values.orientacao === "retrato" ? 210 : 297;
-      const alturaPaginaA4 = values.orientacao === "retrato" ? 297 : 210;
-      
-      const areaUtilLargura = larguraPaginaA4 - values.margemEsquerda - values.margemDireita;
-      const areaUtilAltura = alturaPaginaA4 - values.margemSuperior - values.margemInferior;
-      
-      if (values.largura > areaUtilLargura) {
-        const sugestaoLarguraEtiqueta = Math.floor(areaUtilLargura * 0.9);
-        
-        setPageAreaWarning(
-          `A largura da etiqueta (${values.largura}mm) excede a área útil (${areaUtilLargura}mm). ` +
-          `Sugestão: Reduza a largura da etiqueta para ${sugestaoLarguraEtiqueta}mm.`
-        );
-        return;
-      }
-      
-      if (values.altura > areaUtilAltura) {
-        const sugestaoAlturaEtiqueta = Math.floor(areaUtilAltura * 0.9);
-        
-        setPageAreaWarning(
-          `A altura da etiqueta (${values.altura}mm) excede a área útil (${areaUtilAltura}mm). ` +
-          `Sugestão: Reduza a altura da etiqueta para ${sugestaoAlturaEtiqueta}mm.`
-        );
-        return;
-      }
-    }
-    
     // Se chegou aqui, não há problemas
     setPageAreaWarning(null);
   };
@@ -229,167 +200,35 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
   // Função para corrigir automaticamente as dimensões
   const corrigirDimensoesAutomaticamente = () => {
     const values = form.getValues();
-    let larguraPagina = values.larguraPagina;
-    let alturaPagina = values.alturaPagina;
     
-    // Definir dimensões da página com base no formato selecionado
-    if (values.formatoPagina === "A4") {
-      larguraPagina = values.orientacao === "retrato" ? 210 : 297;
-      alturaPagina = values.orientacao === "retrato" ? 297 : 210;
-    } else if (values.formatoPagina === "A5") {
-      larguraPagina = values.orientacao === "retrato" ? 148 : 210;
-      alturaPagina = values.orientacao === "retrato" ? 210 : 148;
-    } else if (values.formatoPagina === "Personalizado") {
-      if (!larguraPagina || !alturaPagina) {
+    if (values.formatoPagina === "Personalizado") {
+      // Se a página for personalizada
+      if (!values.larguraPagina || !values.alturaPagina) {
         // Definir dimensões padrão
-        larguraPagina = 210;
-        alturaPagina = 297;
-        form.setValue("larguraPagina", larguraPagina);
-        form.setValue("alturaPagina", alturaPagina);
+        form.setValue("larguraPagina", 210);
+        form.setValue("alturaPagina", 297);
       }
-    }
-    
-    if (!larguraPagina || !alturaPagina) {
-      toast.error("Não foi possível determinar as dimensões da página");
-      return;
-    }
-    
-    const areaUtilLargura = larguraPagina - values.margemEsquerda - values.margemDireita;
-    const areaUtilAltura = alturaPagina - values.margemSuperior - values.margemInferior;
-    
-    // Corrigir largura da etiqueta se necessário
-    if (values.largura > areaUtilLargura) {
-      const novaLargura = Math.floor(areaUtilLargura * 0.9);
-      form.setValue("largura", novaLargura);
-    }
-    
-    // Corrigir altura da etiqueta se necessário
-    if (values.altura > areaUtilAltura) {
-      const novaAltura = Math.floor(areaUtilAltura * 0.9);
-      form.setValue("altura", novaAltura);
-    }
-    
-    // Recalcular depois das correções
-    validarDimensoes();
-    
-    toast.success("Dimensões ajustadas automaticamente.");
-  };
-
-  // Otimizar layout para maximizar uso da página
-  const otimizarLayout = () => {
-    const values = form.getValues();
-    let larguraPagina = values.larguraPagina;
-    let alturaPagina = values.alturaPagina;
-    
-    // Definir dimensões da página com base no formato selecionado
-    if (values.formatoPagina === "A4") {
-      larguraPagina = values.orientacao === "retrato" ? 210 : 297;
-      alturaPagina = values.orientacao === "retrato" ? 297 : 210;
-    } else if (values.formatoPagina === "A5") {
-      larguraPagina = values.orientacao === "retrato" ? 148 : 210;
-      alturaPagina = values.orientacao === "retrato" ? 210 : 148;
-    } else if (values.formatoPagina === "Personalizado") {
-      if (!larguraPagina || !alturaPagina) {
-        // Definir dimensões padrão se não forem fornecidas
-        larguraPagina = 210;
-        alturaPagina = 297;
-        form.setValue("larguraPagina", larguraPagina);
-        form.setValue("alturaPagina", alturaPagina);
+      
+      const areaUtilLargura = values.larguraPagina - values.margemEsquerda - values.margemDireita;
+      const areaUtilAltura = values.alturaPagina - values.margemSuperior - values.margemInferior;
+      
+      // Corrigir largura da etiqueta se necessário
+      if (values.largura > areaUtilLargura) {
+        const novaLargura = Math.floor(areaUtilLargura * 0.9);
+        form.setValue("largura", novaLargura);
       }
-    }
-    
-    if (!larguraPagina || !alturaPagina) {
-      toast.error("Não foi possível determinar as dimensões da página");
-      return;
-    }
-    
-    // Calcular área útil
-    const areaUtilLargura = larguraPagina - values.margemEsquerda - values.margemDireita;
-    const areaUtilAltura = alturaPagina - values.margemSuperior - values.margemInferior;
-    
-    // Calcular número ótimo de etiquetas na horizontal e vertical
-    // Considerando algum espaçamento entre elas
-    const espacamento = values.espacamentoHorizontal || 2;
-    const espacamentoV = values.espacamentoVertical || 2;
-    
-    // Estimativa inicial: quantas etiquetas cabem na área útil
-    // Começamos testando com 2 colunas e 2 linhas e vamos ajustando
-    let numColunas = 2;
-    let numLinhas = 2;
-    
-    // Calcular largura máxima baseada no número de colunas
-    let larguraMaxima = Math.floor((areaUtilLargura - (espacamento * (numColunas - 1))) / numColunas);
-    
-    // Teste de várias configurações para encontrar a melhor
-    const configuracoes = [];
-    
-    // Testar diferentes combinações de linhas e colunas
-    for (let cols = 1; cols <= 10; cols++) {
-      for (let rows = 1; rows <= 15; rows++) {
-        const larguraEtiqueta = Math.floor((areaUtilLargura - (espacamento * (cols - 1))) / cols);
-        const alturaEtiqueta = Math.floor((areaUtilAltura - (espacamentoV * (rows - 1))) / rows);
-        
-        // Verificar se a etiqueta tem dimensões mínimas aceitáveis
-        if (larguraEtiqueta >= 10 && alturaEtiqueta >= 5) {
-          configuracoes.push({
-            colunas: cols,
-            linhas: rows,
-            largura: larguraEtiqueta,
-            altura: alturaEtiqueta,
-            area: larguraEtiqueta * alturaEtiqueta,
-            total: cols * rows
-          });
-        }
+      
+      // Corrigir altura da etiqueta se necessário
+      if (values.altura > areaUtilAltura) {
+        const novaAltura = Math.floor(areaUtilAltura * 0.9);
+        form.setValue("altura", novaAltura);
       }
+      
+      // Recalcular depois das correções
+      validarDimensoes();
+      
+      toast.success("Dimensões ajustadas automaticamente.");
     }
-    
-    // Ordenar por total de etiquetas (decrescente) e depois por área (decrescente)
-    configuracoes.sort((a, b) => {
-      if (a.total !== b.total) return b.total - a.total;
-      return b.area - a.area;
-    });
-    
-    if (configuracoes.length === 0) {
-      toast.error("Não foi possível encontrar um layout ótimo para as dimensões e margens fornecidas");
-      return;
-    }
-    
-    // Usar a melhor configuração encontrada
-    const melhorConfig = configuracoes[0];
-    
-    // Atualizar dimensões da etiqueta
-    form.setValue("largura", melhorConfig.largura);
-    form.setValue("altura", melhorConfig.altura);
-    
-    // Atualizar espaçamento
-    form.setValue("espacamentoHorizontal", espacamento);
-    form.setValue("espacamentoVertical", espacamentoV);
-    
-    // Recalcular a posição dos campos na etiqueta
-    const campos = form.getValues("campos");
-    
-    // Fator de escala em relação à etiqueta original
-    const fatorEscalaLargura = melhorConfig.largura / values.largura;
-    const fatorEscalaAltura = melhorConfig.altura / values.altura;
-    
-    // Ajustar a posição e tamanho de cada campo proporcionalmente
-    const camposAjustados = campos.map(campo => ({
-      ...campo,
-      x: Math.round(campo.x * fatorEscalaLargura),
-      y: Math.round(campo.y * fatorEscalaAltura),
-      largura: Math.round(campo.largura * fatorEscalaLargura),
-      altura: Math.round(campo.altura * fatorEscalaAltura)
-    }));
-    
-    form.setValue("campos", camposAjustados);
-    
-    // Limpar avisos após otimização
-    setPageAreaWarning(null);
-    
-    toast.success(
-      `Layout otimizado! ${melhorConfig.total} etiquetas (${melhorConfig.colunas}x${melhorConfig.linhas}) ` +
-      `com dimensões ${melhorConfig.largura}mm x ${melhorConfig.altura}mm.`
-    );
   };
 
   // Duplicar o modelo atual (criar uma cópia com nome diferente)
@@ -402,20 +241,9 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
       
       // Criar uma cópia do modelo com um nome indicando que é uma cópia
       const modeloCopia: ModeloEtiqueta = {
+        ...data,
         nome: `${data.nome} (Cópia)`,
         descricao: `${data.descricao} (Cópia)`,
-        largura: data.largura,
-        altura: data.altura,
-        formatoPagina: data.formatoPagina,
-        orientacao: data.orientacao,
-        margemSuperior: data.margemSuperior,
-        margemInferior: data.margemInferior,
-        margemEsquerda: data.margemEsquerda,
-        margemDireita: data.margemDireita,
-        espacamentoHorizontal: data.espacamentoHorizontal,
-        espacamentoVertical: data.espacamentoVertical,
-        larguraPagina: data.larguraPagina,
-        alturaPagina: data.alturaPagina,
         campos: data.campos.map(campo => ({
           tipo: campo.tipo,
           x: Number(campo.x),
@@ -447,10 +275,8 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
       // Validar novamente antes de salvar
       validarDimensoes();
       if (pageAreaWarning) {
-        // Em vez de mostrar erro, vamos corrigir automaticamente
-        corrigirDimensoesAutomaticamente();
-        // Obter os valores atualizados após a correção
-        data = form.getValues();
+        toast.error("Há problemas com as dimensões da etiqueta. Por favor, corrija antes de salvar.");
+        return;
       }
       
       setIsLoading(true);
@@ -515,7 +341,6 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
     etiquetaDefinida,
     paginaDefinida,
     corrigirDimensoesAutomaticamente,
-    duplicarModelo,
-    otimizarLayout
+    duplicarModelo
   };
 }
