@@ -220,6 +220,88 @@ export async function generateEtiquetaPDF(
   }
 }
 
+// Função auxiliar para criar um modelo de etiqueta a partir dos dados do EtiquetaCreator
+export function createModeloFromCreator(
+  modelName: string,
+  labels: any[],
+  pageFormat: string, 
+  pageSize: { width: number, height: number },
+  margins: { top: number, right: number, bottom: number, left: number } = { top: 10, right: 10, bottom: 10, left: 10 },
+  spacing: { horizontal: number, vertical: number } = { horizontal: 2, vertical: 2 }
+): ModeloEtiqueta {
+  // Usar a primeira etiqueta como referência principal
+  const primaryLabel = labels[0];
+  
+  return {
+    nome: modelName || "Modelo sem nome",
+    descricao: modelName || "Modelo sem nome",
+    largura: primaryLabel.width,
+    altura: primaryLabel.height,
+    formatoPagina: pageFormat,
+    orientacao: "retrato", // Pode ser dinâmico no futuro
+    margemSuperior: margins.top,
+    margemInferior: margins.bottom,
+    margemEsquerda: margins.left,
+    margemDireita: margins.right,
+    espacamentoHorizontal: spacing.horizontal,
+    espacamentoVertical: spacing.vertical,
+    larguraPagina: pageSize.width,
+    alturaPagina: pageSize.height,
+    campos: primaryLabel.elements.map((el: any) => ({
+      tipo: el.type,
+      x: el.x,
+      y: el.y,
+      largura: el.width,
+      altura: el.height,
+      tamanhoFonte: el.fontSize,
+      alinhamento: el.align
+    }))
+  };
+}
+
+// Função para gerar um PDF de pré-visualização a partir dos dados do EtiquetaCreator
+export async function generatePreviewPDF(
+  modelName: string,
+  labels: any[],
+  pageFormat: string, 
+  pageSize: { width: number, height: number }
+): Promise<string> {
+  if (labels.length === 0) {
+    toast.error("Não há etiquetas para gerar a pré-visualização");
+    throw new Error("Não há etiquetas para gerar a pré-visualização");
+  }
+
+  try {
+    // Criar um modelo temporário com os dados atuais
+    const modelo = createModeloFromCreator(
+      modelName,
+      labels,
+      pageFormat,
+      pageSize
+    );
+    
+    // Dados de exemplo para visualização
+    const dadosExemplo = [
+      { name: "Pingente Cristal", barcode: "123456789", price: 99.90 }
+    ];
+    
+    // Gerar o PDF
+    return await generateEtiquetaPDF(
+      modelo,
+      dadosExemplo,
+      { copias: 1 }
+    );
+  } catch (error) {
+    console.error("Erro ao gerar PDF de pré-visualização:", error);
+    if (error instanceof Error) {
+      toast.error(`Erro na pré-visualização: ${error.message}`);
+    } else {
+      toast.error("Erro ao gerar pré-visualização");
+    }
+    throw error;
+  }
+}
+
 // Função para adicionar um elemento na etiqueta
 async function adicionarElemento(doc: jsPDF, campo: CampoEtiqueta, item: any, xBase: number, yBase: number): Promise<void> {
   try {

@@ -1,17 +1,13 @@
-
 "use client"
 import { useState, useRef, useEffect } from "react"
 import { 
   AlignCenter, 
   AlignLeft, 
   AlignRight, 
-  ChevronLeft, 
-  ChevronRight, 
   Copy, 
   Grid, 
   Layers, 
   Plus, 
-  PlusCircle, 
   Save, 
   Settings, 
   Trash, 
@@ -21,7 +17,8 @@ import {
   LayoutGrid,
   CheckSquare,
   Minus,
-  FileText
+  FileText,
+  Download
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -32,9 +29,11 @@ import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuLabel, Con
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import "@/styles/etiqueta-editor.css"
+import { generatePreviewPDF } from "@/utils/etiquetaGenerator"
 
 export interface ElementType {
   id: string;
@@ -43,12 +42,6 @@ export interface ElementType {
   defaultHeight: number;
   defaultFontSize: number;
   defaultAlign?: "left" | "center" | "right";
-  x?: number;
-  y?: number;
-  width?: number;
-  height?: number;
-  fontSize?: number;
-  align?: "left" | "center" | "right";
 }
 
 export interface LabelElement {
@@ -79,7 +72,6 @@ export interface EtiquetaCreatorProps {
 }
 
 export default function EtiquetaCreator({ onClose, onSave, initialData }: EtiquetaCreatorProps) {
-  // Estado principal
   const [activeTab, setActiveTab] = useState("elementos")
   const [modelName, setModelName] = useState(initialData?.nome || "")
   const [selectedElement, setSelectedElement] = useState<string | null>(null)
@@ -110,11 +102,14 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
       width: campo.largura,
       height: campo.altura,
       fontSize: campo.tamanhoFonte,
-      align: campo.alinhamento || "left"
+      align: campo.alinhamento as "left" | "center" | "right" || "left"
     })) || []
-  }])
+  }]);
   
-  // Refs
+  const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null)
+  const [showPreviewDialog, setShowPreviewDialog] = useState(false)
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false)
+  
   const editorRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef({ 
     isDragging: false, 
@@ -124,9 +119,8 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
     startY: 0, 
     offsetX: 0, 
     offsetY: 0 
-  })
+  });
   
-  // Elementos disponíveis
   const elements: ElementType[] = [
     { 
       id: "nome", 
@@ -152,9 +146,8 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
       defaultFontSize: 12, 
       defaultAlign: "center" 
     }
-  ]
+  ];
   
-  // Quando a página carrega, definir o foco no input de nome
   useEffect(() => {
     const timer = setTimeout(() => {
       document.getElementById("model-name-input")?.focus();
@@ -163,7 +156,17 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
     return () => clearTimeout(timer);
   }, []);
   
-  // Funções auxiliares
+  useEffect(() => {
+    if (!showPreviewDialog && previewPdfUrl) {
+      URL.revokeObjectURL(previewPdfUrl);
+    }
+    return () => {
+      if (previewPdfUrl) {
+        URL.revokeObjectURL(previewPdfUrl);
+      }
+    };
+  }, [showPreviewDialog, previewPdfUrl]);
+  
   const getSelectedLabel = () => {
     if (selectedLabelId === null) return null;
     return labels.find(label => label.id === selectedLabelId) || null;
@@ -215,7 +218,6 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
       
       const element = label.elements[elementIndex];
       
-      // Limitar o elemento dentro dos limites da etiqueta
       const newX = Math.max(0, Math.min(x, label.width - element.width));
       const newY = Math.max(0, Math.min(y, label.height - element.height));
       
@@ -228,7 +230,6 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
       const labelIndex = updatedLabels.findIndex(l => l.id === dragRef.current.id);
       if (labelIndex === -1) return;
       
-      // Limitar a etiqueta dentro dos limites da página
       const label = updatedLabels[labelIndex];
       const newX = Math.max(0, Math.min(x, pageSize.width - label.width));
       const newY = Math.max(0, Math.min(y, pageSize.height - label.height));
@@ -256,7 +257,6 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
     const labelIndex = labels.findIndex(l => l.id === selectedLabelId);
     if (labelIndex === -1) return;
     
-    // Verificar se o elemento já existe
     const elementExists = labels[labelIndex].elements.some(el => el.type === elementType);
     if (elementExists) {
       toast.error(`Este elemento já foi adicionado na etiqueta`);
@@ -313,11 +313,9 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
     const elementIndex = label.elements.findIndex(el => el.id === selectedElement);
     if (elementIndex === -1) return;
     
-    // Garantir que os valores estão dentro dos limites
     if (property === 'x' || property === 'y' || property === 'width' || property === 'height') {
       value = Number(value);
       
-      // Limites para x e width
       if (property === 'x') {
         value = Math.max(0, Math.min(value, label.width - label.elements[elementIndex].width));
       }
@@ -325,7 +323,6 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
         value = Math.max(10, Math.min(value, label.width - label.elements[elementIndex].x));
       }
       
-      // Limites para y e height
       if (property === 'y') {
         value = Math.max(0, Math.min(value, label.height - label.elements[elementIndex].height));
       }
@@ -356,19 +353,16 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
     } else if (value === "Letter") {
       setPageSize({ width: 216, height: 279 });
     }
-    // Outros formatos podem ser adicionados conforme necessário
   }
   
   const handleUpdateLabelSize = (dimension: "width" | "height", value: number) => {
     if (selectedLabelId === null) return;
     
-    // Validar que o tamanho da etiqueta não seja maior que a página
     value = Math.max(10, Math.min(value, dimension === "width" ? pageSize.width : pageSize.height));
     
     const newLabelSize = { ...labelSize, [dimension]: value };
     setLabelSize(newLabelSize);
     
-    // Atualizar também o tamanho da etiqueta selecionada no array
     const updatedLabels = [...labels];
     const labelIndex = updatedLabels.findIndex(l => l.id === selectedLabelId);
     if (labelIndex === -1) return;
@@ -378,26 +372,21 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
       [dimension]: value
     };
     
-    // Verificar se algum elemento está fora dos limites e ajustar se necessário
     updatedLabels[labelIndex].elements = updatedLabels[labelIndex].elements.map(element => {
       let updatedElement = { ...element };
       
       if (dimension === "width" && element.x + element.width > value) {
         if (element.x < value) {
-          // Elemento está parcialmente dentro, ajustar apenas a largura
           updatedElement.width = value - element.x;
         } else {
-          // Elemento está totalmente fora, reposicionar
           updatedElement.x = Math.max(0, value - element.width);
         }
       }
       
       if (dimension === "height" && element.y + element.height > value) {
         if (element.y < value) {
-          // Elemento está parcialmente dentro, ajustar apenas a altura
           updatedElement.height = value - element.y;
         } else {
-          // Elemento está totalmente fora, reposicionar
           updatedElement.y = Math.max(0, value - element.height);
         }
       }
@@ -412,20 +401,19 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
     const newLabelId = nextLabelId;
     setNextLabelId(prevId => prevId + 1);
     
-    // Criar uma nova etiqueta com base na configuração atual
     const newLabel: LabelType = {
       id: newLabelId,
       name: `Etiqueta ${newLabelId + 1}`,
       x: 20,
-      y: 20 + (labels.length * 10), // Posicionar abaixo das etiquetas existentes
+      y: 20 + (labels.length * 10),
       width: labelSize.width,
       height: labelSize.height,
-      elements: [] // Começar sem elementos
+      elements: []
     };
     
     setLabels(prevLabels => [...prevLabels, newLabel]);
-    setSelectedLabelId(newLabelId); // Selecionar a nova etiqueta
-    setSelectedElement(null); // Limpar seleção de elemento
+    setSelectedLabelId(newLabelId);
+    setSelectedElement(null);
     
     toast.success(`Nova etiqueta adicionada`);
   }
@@ -437,14 +425,12 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
     const newLabelId = nextLabelId;
     setNextLabelId(prevId => prevId + 1);
     
-    // Criar uma cópia da etiqueta
     const newLabel: LabelType = {
       ...labelToDuplicate,
       id: newLabelId,
       name: `${labelToDuplicate.name} (Cópia)`,
-      x: labelToDuplicate.x + 10, // Posicionar ligeiramente deslocada
+      x: labelToDuplicate.x + 10,
       y: labelToDuplicate.y + 10,
-      // Copiar todos os elementos da etiqueta
       elements: labelToDuplicate.elements.map(element => ({
         ...element,
         id: `${element.id}-copy-${Date.now()}`
@@ -452,14 +438,13 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
     };
     
     setLabels(prevLabels => [...prevLabels, newLabel]);
-    setSelectedLabelId(newLabelId); // Selecionar a nova etiqueta
-    setSelectedElement(null); // Limpar seleção de elemento
+    setSelectedLabelId(newLabelId);
+    setSelectedElement(null);
     
     toast.success(`Etiqueta duplicada`);
   }
   
   const handleDeleteLabel = (labelId: number) => {
-    // Impedir que todas as etiquetas sejam excluídas
     if (labels.length === 1) {
       toast.error("Deve haver pelo menos uma etiqueta");
       return;
@@ -467,7 +452,6 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
     
     setLabels(prevLabels => prevLabels.filter(l => l.id !== labelId));
     
-    // Se a etiqueta excluída era a selecionada, selecionar a primeira etiqueta restante
     if (selectedLabelId === labelId) {
       const remainingLabels = labels.filter(l => l.id !== labelId);
       setSelectedLabelId(remainingLabels[0]?.id || null);
@@ -492,13 +476,11 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
       return;
     }
     
-    // Verificar se existe ao menos uma etiqueta
     if (labels.length === 0) {
       toast.error("Por favor, adicione pelo menos uma etiqueta");
       return;
     }
     
-    // Verificar se todas as etiquetas têm pelo menos um elemento
     const emptyLabels = labels.filter(label => label.elements.length === 0);
     if (emptyLabels.length > 0) {
       toast.error(`A etiqueta "${emptyLabels[0].name}" não possui elementos. Adicione pelo menos um elemento em cada etiqueta.`);
@@ -506,10 +488,8 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
       return;
     }
     
-    // Se tiver múltiplas etiquetas, usar a primeira como referência principal
     const primaryLabel = labels[0];
     
-    // Mapear para o formato esperado pelo backend
     const modelData = {
       nome: modelName,
       descricao: modelName,
@@ -525,7 +505,7 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
       largura: primaryLabel.width,
       altura: primaryLabel.height,
       formatoPagina: pageFormat,
-      orientacao: "retrato", // Pode ser dinâmico no futuro
+      orientacao: "retrato",
       margemSuperior: 10,
       margemInferior: 10,
       margemEsquerda: 10,
@@ -560,24 +540,19 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
   const handleOptimizeLayout = () => {
     if (selectedLabelId === null) return;
     
-    // Implementação básica de otimização: centralizar todos os elementos
     const updatedLabels = [...labels];
     const labelIndex = updatedLabels.findIndex(l => l.id === selectedLabelId);
     if (labelIndex === -1) return;
     
     const label = updatedLabels[labelIndex];
     
-    // Organizar elementos em uma grade lógica
-    const totalElements = label.elements.length;
     if (totalElements === 0) return;
     
     if (totalElements === 1) {
-      // Centralizar o único elemento
       const element = label.elements[0];
       element.x = Math.floor((label.width - element.width) / 2);
       element.y = Math.floor((label.height - element.height) / 2);
     } else if (totalElements === 2) {
-      // Organizar dois elementos um acima do outro
       const gap = 5;
       const totalHeight = label.elements.reduce((sum, el) => sum + el.height, 0) + gap;
       let currentY = Math.floor((label.height - totalHeight) / 2);
@@ -588,21 +563,17 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
         currentY += element.height + gap;
       }
     } else if (totalElements === 3) {
-      // Organizar três elementos em uma configuração adequada
       const nomeElement = label.elements.find(el => el.type === "nome");
       const codigoElement = label.elements.find(el => el.type === "codigo");
       const precoElement = label.elements.find(el => el.type === "preco");
       
       if (nomeElement && codigoElement && precoElement) {
-        // Nome no topo
         nomeElement.x = Math.floor((label.width - nomeElement.width) / 2);
         nomeElement.y = 2;
         
-        // Código no meio
         codigoElement.x = Math.floor((label.width - codigoElement.width) / 2);
         codigoElement.y = nomeElement.y + nomeElement.height + 2;
         
-        // Preço na parte inferior
         precoElement.x = Math.floor((label.width - precoElement.width) / 2);
         precoElement.y = codigoElement.y + codigoElement.height + 2;
       }
@@ -617,9 +588,49 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
     handleUpdateElement('align', alignment);
   }
   
+  const handlePreview = async () => {
+    try {
+      if (labels.length === 0) {
+        toast.error("Não há etiquetas para pré-visualizar");
+        return;
+      }
+      
+      if (!modelName.trim()) {
+        toast.error("Por favor, informe um nome para o modelo antes de gerar a pré-visualização");
+        document.getElementById("model-name-input")?.focus();
+        return;
+      }
+      
+      setIsGeneratingPdf(true);
+      
+      const pdfUrl = await generatePreviewPDF(modelName, labels, pageFormat, pageSize);
+      
+      setPreviewPdfUrl(pdfUrl);
+      
+      setShowPreviewDialog(true);
+    } catch (error) {
+      console.error("Erro ao gerar pré-visualização:", error);
+      if (error instanceof Error) {
+        toast.error(`Erro na pré-visualização: ${error.message}`);
+      } else {
+        toast.error("Erro ao gerar pré-visualização");
+      }
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+  
+  const handleDownloadPdf = () => {
+    if (!previewPdfUrl) return;
+    
+    const a = document.createElement('a');
+    a.href = previewPdfUrl;
+    a.download = `${modelName || 'etiqueta'}.pdf`;
+    a.click();
+  };
+  
   return (
     <div className="bg-background rounded-lg shadow-lg w-full max-w-5xl mx-auto overflow-hidden">
-      {/* Cabeçalho */}
       <div className="flex items-center justify-between p-3 border-b">
         <h2 className="text-lg font-semibold">Criar Novo Modelo de Etiqueta</h2>
         <div className="flex items-center space-x-2">
@@ -632,16 +643,15 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
           />
           <Button 
             variant="ghost" 
-            size="icon" 
+            size="sm" 
+            className="h-8 w-8 p-0" 
             onClick={onClose}
           >
             <X className="h-4 w-4" />
-            <span className="sr-only">Fechar</span>
           </Button>
         </div>
       </div>
       
-      {/* Toolbar */}
       <div className="flex items-center border-b p-2 gap-2 bg-muted/30">
         <Button 
           variant={activeTab === "elementos" ? "default" : "outline"} 
@@ -716,7 +726,8 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
             variant="outline"
             size="sm"
             className="h-8 px-3"
-            onClick={() => setActiveTab("preview")}
+            onClick={handlePreview}
+            disabled={isGeneratingPdf}
           >
             <FileText className="h-4 w-4 mr-1" />
             <span className="text-xs">Pré-visualizar</span>
@@ -724,11 +735,8 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
         </div>
       </div>
       
-      {/* Conteúdo principal */}
       <div className="flex h-[calc(100vh-8rem)] max-h-[700px]">
-        {/* Barra lateral */}
         <div className="border-r w-64 flex flex-col">
-          {/* Conteúdo da barra lateral */}
           <div className="flex-1 overflow-y-auto p-4">
             {activeTab === "elementos" && (
               <div className="space-y-4">
@@ -736,7 +744,6 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
                 <div className="space-y-2">
                   {elements.map((element) => {
                     const selectedLabel = getSelectedLabel();
-                    // Verificar se este elemento já foi adicionado na etiqueta selecionada
                     const isAdded = selectedLabel?.elements.some(el => el.type === element.id) || false;
                     
                     return (
@@ -1180,7 +1187,6 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
             )}
           </div>
           
-          {/* Botões de ação */}
           <div className="p-4 border-t">
             <div className="flex space-x-2">
               <Button 
@@ -1203,7 +1209,6 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
           </div>
         </div>
         
-        {/* Área do editor */}
         <div 
           className="flex-1 overflow-auto bg-neutral-100 relative"
           onMouseMove={handleDrag}
@@ -1224,7 +1229,6 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
                 transformOrigin: "top left",
               }}
             >
-              {/* Renderizar etiquetas */}
               {labels.map((label) => (
                 <div
                   key={label.id}
@@ -1247,12 +1251,10 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
                   }}
                   onMouseDown={(e) => handleStartDrag(e, "label", label.id, label.x, label.y)}
                 >
-                  {/* Nome da etiqueta */}
                   <div className="absolute -top-5 left-0 text-xs font-medium bg-white px-1 border border-neutral-200 rounded">
                     {label.name}
                   </div>
                   
-                  {/* Elementos dentro da etiqueta */}
                   {label.elements.map((element) => (
                     <div
                       key={element.id}
@@ -1292,7 +1294,6 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
                         </span>
                       </div>
                       
-                      {/* Indicador do tipo de elemento */}
                       <div className="absolute -top-5 left-0 text-xs bg-white px-1 border border-neutral-200 rounded">
                         {getElementName(element.type)}
                       </div>
@@ -1303,7 +1304,6 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
             </div>
           </div>
           
-          {/* Controles de zoom */}
           <div className="absolute bottom-4 right-4 bg-white rounded-md shadow border flex">
             <Button
               variant="ghost"
@@ -1329,6 +1329,48 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
           </div>
         </div>
       </div>
+      
+      <Dialog open={showPreviewDialog} onOpenChange={setShowPreviewDialog}>
+        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Pré-visualização do Modelo de Etiqueta</DialogTitle>
+            <DialogDescription>
+              Visualização de como ficarão as etiquetas quando impressas
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex-1 overflow-auto my-4">
+            {previewPdfUrl && (
+              <iframe 
+                src={previewPdfUrl} 
+                width="100%" 
+                height="500" 
+                style={{ border: "1px solid #ddd" }}
+                title="Pré-visualização do PDF"
+              />
+            )}
+          </div>
+          
+          <DialogFooter className="flex items-center justify-between">
+            <Button
+              variant="outline"
+              onClick={() => setShowPreviewDialog(false)}
+            >
+              Fechar
+            </Button>
+            
+            <Button
+              variant="default"
+              onClick={handleDownloadPdf}
+              disabled={!previewPdfUrl}
+              className="flex items-center gap-2"
+            >
+              <Download className="h-4 w-4" />
+              Baixar PDF
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
