@@ -34,6 +34,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
+import "@/styles/etiqueta-editor.css"
 
 export interface ElementType {
   id: string;
@@ -41,13 +42,13 @@ export interface ElementType {
   defaultWidth: number;
   defaultHeight: number;
   defaultFontSize: number;
-  defaultAlign?: string;
+  defaultAlign?: "left" | "center" | "right";
   x?: number;
   y?: number;
   width?: number;
   height?: number;
   fontSize?: number;
-  align?: string;
+  align?: "left" | "center" | "right";
 }
 
 export interface LabelElement {
@@ -58,7 +59,7 @@ export interface LabelElement {
   width: number;
   height: number;
   fontSize: number;
-  align: string;
+  align: "left" | "center" | "right";
 }
 
 export interface LabelType {
@@ -126,7 +127,7 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
   })
   
   // Elementos disponíveis
-  const elements = [
+  const elements: ElementType[] = [
     { 
       id: "nome", 
       name: "Nome do Produto", 
@@ -611,7 +612,7 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
     toast.success("Layout otimizado!");
   }
   
-  const handleSetAlignment = (alignment: string) => {
+  const handleSetAlignment = (alignment: "left" | "center" | "right") => {
     if (!selectedElement) return;
     handleUpdateElement('align', alignment);
   }
@@ -861,20 +862,15 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
                           </div>
                         </div>
                         
-                        <div className="flex justify-between pt-2">
-                          <div className="text-xs text-muted-foreground">
-                            {getElementName(getSelectedElementDetails()?.type || "")}
-                          </div>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            className="h-7"
-                            onClick={handleDeleteElement}
-                          >
-                            <Trash className="h-3.5 w-3.5 mr-1" />
-                            <span className="text-xs">Remover</span>
-                          </Button>
-                        </div>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          className="w-full"
+                          onClick={handleDeleteElement}
+                        >
+                          <Trash className="h-4 w-4 mr-2" />
+                          Remover Elemento
+                        </Button>
                       </div>
                     </div>
                   </>
@@ -886,13 +882,13 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="font-medium text-sm">Etiquetas</h3>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     size="sm"
-                    className="h-7"
+                    className="h-7 px-2"
                     onClick={handleAddLabel}
                   >
-                    <Plus className="h-3.5 w-3.5 mr-1" />
+                    <PlusCircle className="h-3.5 w-3.5 mr-1" />
                     <span className="text-xs">Nova</span>
                   </Button>
                 </div>
@@ -901,22 +897,16 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
                   {labels.map((label) => (
                     <div 
                       key={label.id}
-                      className={cn(
-                        "flex items-center justify-between p-2 border rounded cursor-pointer",
-                        selectedLabelId === label.id ? "bg-primary/10 border-primary" : "hover:bg-muted"
-                      )}
-                      onClick={() => {
-                        setSelectedLabelId(label.id);
-                        setSelectedElement(null);
-                      }}
+                      className={`flex items-center justify-between p-2 border rounded cursor-pointer ${selectedLabelId === label.id ? 'bg-muted border-primary' : ''}`}
+                      onClick={() => setSelectedLabelId(label.id)}
                     >
-                      <Input 
-                        className="h-6 border-none focus-visible:ring-0 bg-transparent p-0 text-sm"
-                        value={label.name}
-                        onChange={(e) => handleUpdateLabelName(label.id, e.target.value)}
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                      <div className="flex space-x-1">
+                      <div className="truncate flex-1 pr-2">
+                        <span className="text-sm">{label.name}</span>
+                        <div className="text-xs text-muted-foreground">
+                          {label.width} × {label.height} mm
+                        </div>
+                      </div>
+                      <div className="flex space-x-1 shrink-0">
                         <Button
                           variant="ghost"
                           size="sm"
@@ -945,173 +935,194 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
                   ))}
                 </div>
                 
-                <div className="pt-4 border-t mt-4">
-                  <h3 className="font-medium text-sm mb-2">Tamanho da Etiqueta</h3>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-1">
-                      <Label htmlFor="label-width" className="text-xs">Largura (mm)</Label>
-                      <Input
-                        id="label-width"
-                        type="number"
-                        className="h-8"
-                        value={getSelectedLabel()?.width || labelSize.width}
-                        onChange={(e) => handleUpdateLabelSize("width", Number(e.target.value))}
-                        min={10}
-                        max={pageSize.width}
-                        disabled={selectedLabelId === null}
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label htmlFor="label-height" className="text-xs">Altura (mm)</Label>
-                      <Input
-                        id="label-height"
-                        type="number"
-                        className="h-8"
-                        value={getSelectedLabel()?.height || labelSize.height}
-                        onChange={(e) => handleUpdateLabelSize("height", Number(e.target.value))}
-                        min={10}
-                        max={pageSize.height}
-                        disabled={selectedLabelId === null}
-                      />
+                {selectedLabelId !== null && (
+                  <div className="pt-4 border-t mt-4">
+                    <h3 className="font-medium text-sm mb-2">Propriedades da Etiqueta</h3>
+                    
+                    <div className="space-y-4">
+                      <div className="space-y-1">
+                        <Label htmlFor="label-name" className="text-xs">Nome</Label>
+                        <Input
+                          id="label-name"
+                          className="h-8"
+                          value={getSelectedLabel()?.name || ""}
+                          onChange={(e) => handleUpdateLabelName(selectedLabelId, e.target.value)}
+                        />
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <Label htmlFor="label-width" className="text-xs">Largura (mm)</Label>
+                          <Input
+                            id="label-width"
+                            type="number"
+                            className="h-8"
+                            value={getSelectedLabel()?.width || 0}
+                            onChange={(e) => handleUpdateLabelSize("width", Number(e.target.value))}
+                            min={10}
+                            max={pageSize.width}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor="label-height" className="text-xs">Altura (mm)</Label>
+                          <Input
+                            id="label-height"
+                            type="number"
+                            className="h-8"
+                            value={getSelectedLabel()?.height || 0}
+                            onChange={(e) => handleUpdateLabelSize("height", Number(e.target.value))}
+                            min={5}
+                            max={pageSize.height}
+                          />
+                        </div>
+                      </div>
+                      
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        onClick={handleOptimizeLayout}
+                      >
+                        <LayoutGrid className="h-4 w-4 mr-2" />
+                        Otimizar Layout
+                      </Button>
                     </div>
                   </div>
-                </div>
-                
-                <div className="pt-4 mt-2">
-                  <Button 
-                    variant="secondary"
-                    className="w-full"
-                    onClick={handleOptimizeLayout}
-                    disabled={selectedLabelId === null}
-                  >
-                    <Settings className="h-4 w-4 mr-1" />
-                    Otimizar Layout
-                  </Button>
-                </div>
+                )}
               </div>
             )}
             
             {activeTab === "config" && (
               <div className="space-y-4">
-                <h3 className="font-medium text-sm">Tamanho da Página</h3>
-                <div className="space-y-1">
-                  <Label htmlFor="page-format" className="text-xs">Modelo de Página</Label>
-                  <Select
-                    value={pageFormat}
-                    onValueChange={handleUpdatePageFormat}
-                  >
-                    <SelectTrigger id="page-format" className="h-8">
-                      <SelectValue placeholder="Selecione o formato" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="A4">A4 (210 × 297 mm)</SelectItem>
-                      <SelectItem value="A5">A5 (148 × 210 mm)</SelectItem>
-                      <SelectItem value="Letter">Letter (216 × 279 mm)</SelectItem>
-                      <SelectItem value="Personalizado">Personalizado</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                <h3 className="font-medium text-sm">Configurações da Página</h3>
                 
-                <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-4">
                   <div className="space-y-1">
-                    <Label htmlFor="page-width" className="text-xs">Largura (mm)</Label>
-                    <Input
-                      id="page-width"
-                      type="number"
-                      className="h-8"
-                      value={pageSize.width}
-                      onChange={(e) => setPageSize({...pageSize, width: Number(e.target.value)})}
-                      min={100}
-                      max={500}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="page-height" className="text-xs">Altura (mm)</Label>
-                    <Input
-                      id="page-height"
-                      type="number"
-                      className="h-8"
-                      value={pageSize.height}
-                      onChange={(e) => setPageSize({...pageSize, height: Number(e.target.value)})}
-                      min={100}
-                      max={500}
-                    />
-                  </div>
-                </div>
-                
-                <div className="pt-4 border-t mt-4">
-                  <h3 className="font-medium text-sm mb-2">Grade e Alinhamento</h3>
-                  
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="snap-to-grid" className="text-sm cursor-pointer">Snap to Grid</Label>
-                    <Button
-                      variant={snapToGrid ? "default" : "outline"}
-                      size="sm"
-                      className="h-7"
-                      onClick={() => setSnapToGrid(!snapToGrid)}
-                    >
-                      <CheckSquare className="h-4 w-4 mr-1" />
-                      <span className="text-xs">{snapToGrid ? "Desativar" : "Ativar"}</span>
-                    </Button>
-                  </div>
-                  
-                  <div className="space-y-1 mt-4">
-                    <Label htmlFor="grid-size" className="text-xs">Tamanho da Grade (mm)</Label>
+                    <Label htmlFor="page-format" className="text-xs">Formato da Página</Label>
                     <Select
-                      value={String(gridSize)}
-                      onValueChange={(value) => setGridSize(Number(value))}
+                      value={pageFormat}
+                      onValueChange={handleUpdatePageFormat}
                     >
-                      <SelectTrigger id="grid-size" className="h-8">
-                        <SelectValue placeholder="Selecione o tamanho" />
+                      <SelectTrigger id="page-format" className="h-8">
+                        <SelectValue placeholder="Selecione o formato" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="1">1 mm</SelectItem>
-                        <SelectItem value="2">2 mm</SelectItem>
-                        <SelectItem value="5">5 mm</SelectItem>
-                        <SelectItem value="10">10 mm</SelectItem>
+                        <SelectItem value="A4">A4 (210×297mm)</SelectItem>
+                        <SelectItem value="A5">A5 (148×210mm)</SelectItem>
+                        <SelectItem value="Letter">Carta (216×279mm)</SelectItem>
+                        <SelectItem value="Personalizado">Personalizado</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
+                  
+                  {pageFormat === "Personalizado" && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label htmlFor="page-width" className="text-xs">Largura da Página (mm)</Label>
+                        <Input
+                          id="page-width"
+                          type="number"
+                          className="h-8"
+                          value={pageSize.width}
+                          onChange={(e) => setPageSize(prev => ({ ...prev, width: Number(e.target.value) }))}
+                          min={50}
+                          max={500}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="page-height" className="text-xs">Altura da Página (mm)</Label>
+                        <Input
+                          id="page-height"
+                          type="number"
+                          className="h-8"
+                          value={pageSize.height}
+                          onChange={(e) => setPageSize(prev => ({ ...prev, height: Number(e.target.value) }))}
+                          min={50}
+                          max={500}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
                 
                 <div className="pt-4 border-t mt-4">
-                  <h3 className="font-medium text-sm mb-2">Zoom</h3>
-                  <div className="flex items-center space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      onClick={() => setZoom(Math.max(50, zoom - 25))}
-                    >
-                      <Minus className="h-4 w-4" />
-                    </Button>
+                  <h3 className="font-medium text-sm mb-2">Margens e Espaçamento</h3>
+                  
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label htmlFor="margin-top" className="text-xs">Margem Superior (mm)</Label>
+                        <Input
+                          id="margin-top"
+                          type="number"
+                          className="h-8"
+                          defaultValue={10}
+                          min={0}
+                          max={50}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="margin-bottom" className="text-xs">Margem Inferior (mm)</Label>
+                        <Input
+                          id="margin-bottom"
+                          type="number"
+                          className="h-8"
+                          defaultValue={10}
+                          min={0}
+                          max={50}
+                        />
+                      </div>
+                    </div>
                     
-                    <Select
-                      value={String(zoom)}
-                      onValueChange={(value) => setZoom(Number(value))}
-                    >
-                      <SelectTrigger className="h-8">
-                        <SelectValue placeholder={`${zoom}%`} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="50">50%</SelectItem>
-                        <SelectItem value="75">75%</SelectItem>
-                        <SelectItem value="100">100%</SelectItem>
-                        <SelectItem value="150">150%</SelectItem>
-                        <SelectItem value="200">200%</SelectItem>
-                        <SelectItem value="300">300%</SelectItem>
-                        <SelectItem value="500">500%</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label htmlFor="margin-left" className="text-xs">Margem Esquerda (mm)</Label>
+                        <Input
+                          id="margin-left"
+                          type="number"
+                          className="h-8"
+                          defaultValue={10}
+                          min={0}
+                          max={50}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="margin-right" className="text-xs">Margem Direita (mm)</Label>
+                        <Input
+                          id="margin-right"
+                          type="number"
+                          className="h-8"
+                          defaultValue={10}
+                          min={0}
+                          max={50}
+                        />
+                      </div>
+                    </div>
                     
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      onClick={() => setZoom(Math.min(500, zoom + 25))}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label htmlFor="spacing-h" className="text-xs">Espaçamento Horizontal (mm)</Label>
+                        <Input
+                          id="spacing-h"
+                          type="number"
+                          className="h-8"
+                          defaultValue={2}
+                          min={0}
+                          max={20}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="spacing-v" className="text-xs">Espaçamento Vertical (mm)</Label>
+                        <Input
+                          id="spacing-v"
+                          type="number"
+                          className="h-8"
+                          defaultValue={2}
+                          min={0}
+                          max={20}
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1120,28 +1131,27 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
             {activeTab === "preview" && (
               <div className="space-y-4">
                 <h3 className="font-medium text-sm">Pré-visualização</h3>
-                <div className="p-2 border rounded bg-white">
-                  <div className="text-xs text-center font-medium mb-2">
-                    Modelo: {modelName || "Sem nome"}
+                
+                <div className="border rounded p-3 bg-white">
+                  <div className="text-xs text-muted-foreground mb-2">
+                    Etiqueta: {getSelectedLabel()?.name || "Nenhuma selecionada"}
                   </div>
                   
-                  {labels.map((label, index) => (
+                  {getSelectedLabel() && (
                     <div 
-                      key={label.id}
-                      className="border border-dashed border-gray-300 relative bg-white mb-2 mx-auto"
+                      className="border border-dashed border-gray-300 relative bg-white"
                       style={{
-                        width: `${label.width}px`,
-                        height: `${label.height}px`,
+                        width: `${getSelectedLabel()?.width || 0}px`,
+                        height: `${getSelectedLabel()?.height || 0}px`,
+                        transform: "scale(2)",
+                        transformOrigin: "top left",
+                        margin: "0 0 32px 0"
                       }}
                     >
-                      <div className="text-xs absolute -top-5 left-0 text-gray-500">
-                        {label.name}
-                      </div>
-                      
-                      {label.elements.map((element) => (
+                      {getSelectedLabel()?.elements.map((element) => (
                         <div
                           key={element.id}
-                          className="absolute border border-gray-200"
+                          className="absolute border border-transparent hover:border-blue-400"
                           style={{
                             left: element.x,
                             top: element.y,
@@ -1150,65 +1160,85 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
                           }}
                         >
                           <div 
-                            className="w-full h-full flex items-center overflow-hidden p-1"
+                            className="w-full h-full flex items-center p-0.5 overflow-hidden"
                             style={{ 
-                              fontSize: element.fontSize,
-                              textAlign: element.align as any
+                              fontSize: element.fontSize / 2,
+                              justifyContent: element.align === "left" ? "flex-start" : 
+                                             element.align === "right" ? "flex-end" : "center"
                             }}
                           >
-                            {getElementPreview(element.type)}
+                            <span className="truncate">
+                              {getElementPreview(element.type)}
+                            </span>
                           </div>
                         </div>
                       ))}
                     </div>
-                  ))}
-                  
-                  {labels.length === 0 && (
-                    <div className="text-sm text-gray-500 text-center p-4">
-                      Nenhuma etiqueta criada.
-                    </div>
                   )}
                 </div>
-                
-                <Button 
-                  className="w-full mt-4"
-                  onClick={handleSave}
-                  disabled={!modelName.trim() || labels.length === 0}
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  Criar Modelo
-                </Button>
               </div>
             )}
           </div>
+          
+          {/* Botões de ação */}
+          <div className="p-4 border-t">
+            <div className="flex space-x-2">
+              <Button 
+                variant="default" 
+                className="flex-1" 
+                onClick={handleSave}
+              >
+                <Save className="h-4 w-4 mr-2" />
+                Salvar
+              </Button>
+              <Button 
+                variant="outline" 
+                className="flex-1" 
+                onClick={onClose}
+              >
+                <X className="h-4 w-4 mr-2" />
+                Cancelar
+              </Button>
+            </div>
+          </div>
         </div>
         
-        {/* Área principal de edição */}
-        <div className="flex-1 p-4 relative overflow-hidden" ref={editorRef}>
-          <div className="overflow-auto h-full" onMouseMove={handleDrag} onMouseUp={handleEndDrag} onMouseLeave={handleEndDrag}>
-            {/* Container da página */}
-            <div 
-              className="relative mx-auto bg-yellow-50/80 border border-yellow-200 shadow-md"
+        {/* Área do editor */}
+        <div 
+          className="flex-1 overflow-auto bg-neutral-100 relative"
+          onMouseMove={handleDrag}
+          onMouseUp={handleEndDrag}
+          onMouseLeave={handleEndDrag}
+        >
+          <div className="p-4 h-full">
+            <div
+              ref={editorRef}
+              className={cn(
+                "bg-white relative mx-auto border shadow-sm transition-all",
+                showGrid && "etiqueta-grid"
+              )}
               style={{
-                width: `${pageSize.width * zoom / 100}px`,
-                height: `${pageSize.height * zoom / 100}px`,
+                width: pageSize.width,
+                height: pageSize.height,
+                transform: `scale(${zoom / 100})`,
+                transformOrigin: "top left",
               }}
             >
-              {/* Etiquetas */}
-              {labels.map(label => (
-                <div 
+              {/* Renderizar etiquetas */}
+              {labels.map((label) => (
+                <div
                   key={label.id}
                   className={cn(
-                    "absolute border-2 border-blue-400 bg-blue-50/50 cursor-move", 
-                    showGrid && "etiqueta-grid",
-                    selectedLabelId === label.id && "ring-2 ring-primary ring-offset-2"
+                    "absolute border-2 cursor-move transition-all",
+                    selectedLabelId === label.id 
+                      ? "border-primary" 
+                      : "border-neutral-300 hover:border-neutral-400"
                   )}
                   style={{
-                    left: `${label.x * zoom / 100}px`,
-                    top: `${label.y * zoom / 100}px`,
-                    width: `${label.width * zoom / 100}px`,
-                    height: `${label.height * zoom / 100}px`,
-                    backgroundSize: `${gridSize * zoom / 100}px ${gridSize * zoom / 100}px`
+                    left: label.x,
+                    top: label.y,
+                    width: label.width,
+                    height: label.height,
                   }}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -1218,7 +1248,7 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
                   onMouseDown={(e) => handleStartDrag(e, "label", label.id, label.x, label.y)}
                 >
                   {/* Nome da etiqueta */}
-                  <div className="absolute -top-6 left-0 text-xs font-medium">
+                  <div className="absolute -top-5 left-0 text-xs font-medium bg-white px-1 border border-neutral-200 rounded">
                     {label.name}
                   </div>
                   
@@ -1229,14 +1259,14 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
                       className={cn(
                         "absolute border cursor-move transition-all",
                         selectedElement === element.id && selectedLabelId === label.id
-                          ? "border-blue-500 bg-blue-100/70" 
-                          : "border-dashed border-gray-400 bg-white/70 hover:border-blue-300 hover:bg-blue-50/50"
+                          ? "border-primary bg-primary/5"
+                          : "border-dashed border-neutral-400 hover:border-neutral-600 hover:bg-neutral-50"
                       )}
                       style={{
-                        left: `${element.x * zoom / 100}px`,
-                        top: `${element.y * zoom / 100}px`,
-                        width: `${element.width * zoom / 100}px`,
-                        height: `${element.height * zoom / 100}px`,
+                        left: element.x,
+                        top: element.y,
+                        width: element.width,
+                        height: element.height,
                       }}
                       onClick={(e) => {
                         e.stopPropagation();
@@ -1244,18 +1274,27 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
                         setSelectedElement(element.id);
                       }}
                       onMouseDown={(e) => {
-                        setSelectedLabelId(label.id);
-                        handleStartDrag(e, "element", element.id, element.x, element.y);
+                        if (selectedLabelId === label.id) {
+                          handleStartDrag(e, "element", element.id, element.x, element.y);
+                        }
                       }}
                     >
                       <div 
-                        className="w-full h-full flex items-center overflow-hidden p-1"
-                        style={{
-                          fontSize: `${element.fontSize * zoom / 100}px`,
-                          textAlign: element.align as any
+                        className="w-full h-full flex items-center p-1 overflow-hidden"
+                        style={{ 
+                          fontSize: element.fontSize,
+                          justifyContent: element.align === "left" ? "flex-start" : 
+                                        element.align === "right" ? "flex-end" : "center"
                         }}
                       >
-                        {getElementPreview(element.type)}
+                        <span className="truncate">
+                          {getElementPreview(element.type)}
+                        </span>
+                      </div>
+                      
+                      {/* Indicador do tipo de elemento */}
+                      <div className="absolute -top-5 left-0 text-xs bg-white px-1 border border-neutral-200 rounded">
+                        {getElementName(element.type)}
                       </div>
                     </div>
                   ))}
@@ -1264,42 +1303,32 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
             </div>
           </div>
           
-          {/* Controle de zoom flutuante */}
-          <div className="absolute bottom-4 right-4 flex items-center space-x-1 bg-white/90 rounded-md p-1 shadow-md border">
+          {/* Controles de zoom */}
+          <div className="absolute bottom-4 right-4 bg-white rounded-md shadow border flex">
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 w-8 p-0"
+              className="h-8 w-8 rounded-none rounded-l-md"
               onClick={() => setZoom(Math.max(50, zoom - 25))}
+              disabled={zoom <= 50}
             >
-              <ZoomOut className="h-4 w-4" />
+              <Minus className="h-4 w-4" />
             </Button>
-            <span className="text-sm font-medium px-2">{zoom}%</span>
+            <div className="flex items-center justify-center px-2 text-xs font-medium border-l border-r">
+              {zoom}%
+            </div>
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 w-8 p-0"
+              className="h-8 w-8 rounded-none rounded-r-md"
               onClick={() => setZoom(Math.min(500, zoom + 25))}
+              disabled={zoom >= 500}
             >
-              <ZoomIn className="h-4 w-4" />
+              <Plus className="h-4 w-4" />
             </Button>
           </div>
         </div>
       </div>
-      
-      {/* Rodapé */}
-      <div className="flex items-center justify-between p-3 border-t bg-muted/50">
-        <Button variant="outline" size="sm" onClick={onClose}>Cancelar</Button>
-        <Button 
-          size="sm" 
-          onClick={handleSave}
-          disabled={!modelName.trim() || labels.length === 0}
-        >
-          <Save className="h-4 w-4 mr-2" />
-          Criar
-        </Button>
-      </div>
     </div>
-  )
+  );
 }
-
