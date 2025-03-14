@@ -27,7 +27,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -38,7 +37,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
   Pagination,
@@ -173,13 +171,15 @@ export function ResellerList() {
         
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           <div className="flex items-center gap-2 w-full sm:w-64">
-            <Input
-              placeholder="Pesquisar revendedora..."
-              value={searchQuery}
-              onChange={handleSearchChange}
-              className="w-full"
-              icon={Search}
-            />
+            <div className="relative w-full">
+              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Pesquisar revendedora..."
+                value={searchQuery}
+                onChange={handleSearchChange}
+                className="w-full pl-8"
+              />
+            </div>
           </div>
           
           <Select
@@ -289,8 +289,12 @@ export function ResellerList() {
           <PaginationContent>
             <PaginationItem>
               <PaginationPrevious 
-                onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
+                href="#" 
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (currentPage > 1) handlePageChange(currentPage - 1);
+                }}
+                className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
               />
             </PaginationItem>
             
@@ -309,8 +313,12 @@ export function ResellerList() {
               return (
                 <PaginationItem key={i}>
                   <PaginationLink
+                    href="#"
                     isActive={pageNumber === currentPage}
-                    onClick={() => handlePageChange(pageNumber)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handlePageChange(pageNumber);
+                    }}
                   >
                     {pageNumber}
                   </PaginationLink>
@@ -324,7 +332,13 @@ export function ResellerList() {
                   <PaginationEllipsis />
                 </PaginationItem>
                 <PaginationItem>
-                  <PaginationLink onClick={() => handlePageChange(totalPages)}>
+                  <PaginationLink 
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handlePageChange(totalPages);
+                    }}
+                  >
                     {totalPages}
                   </PaginationLink>
                 </PaginationItem>
@@ -333,8 +347,12 @@ export function ResellerList() {
             
             <PaginationItem>
               <PaginationNext 
-                onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-                disabled={currentPage === totalPages}
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (currentPage < totalPages) handlePageChange(currentPage + 1);
+                }}
+                className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
               />
             </PaginationItem>
           </PaginationContent>

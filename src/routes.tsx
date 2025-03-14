@@ -23,7 +23,7 @@ const Router = () => {
       <Routes>
         <Route index element={<Index />} />
         <Route path="/auth/*" element={<AuthRoutes />} />
-        <Route path="/dashboard/*" element={<Dashboard />}>
+        <Route path="/dashboard" element={<Dashboard />}>
           <Route index element={<DashboardContent />} />
           <Route path="inventory" element={<Inventory />} />
           <Route path="inventory/labels" element={<InventoryLabelsRoute />} />

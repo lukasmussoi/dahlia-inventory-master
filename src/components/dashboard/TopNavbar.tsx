@@ -198,9 +198,8 @@ export function TopNavbar({ isAdmin }: TopNavbarProps) {
         <div className="md:hidden animate-slideIn">
           <div className="px-2 pt-2 pb-3 space-y-1 bg-white/80 backdrop-blur-lg">
             {menuItems.map((item) => (
-              <>
+              <div key={item.title}>
                 <Link
-                  key={item.title}
                   to={item.url}
                   className="flex items-center gap-2 px-3 py-2 text-gray-700 hover:bg-gold/10 rounded-md transition-colors"
                   onClick={() => setIsMobileMenuOpen(false)}
@@ -223,7 +222,7 @@ export function TopNavbar({ isAdmin }: TopNavbarProps) {
                     ))}
                   </div>
                 )}
-              </>
+              </div>
             ))}
             <button
               onClick={handleLogout}

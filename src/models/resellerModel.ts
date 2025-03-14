@@ -25,15 +25,17 @@ export class ResellerModel {
       createdAt: reseller.created_at,
       updatedAt: reseller.updated_at,
       // Converter o endereço de JSON para objeto, com verificação de tipo
-      address: reseller.address && typeof reseller.address === 'object' ? {
-        street: reseller.address.street || '',
-        number: reseller.address.number || '',
-        complement: reseller.address.complement || '',
-        neighborhood: reseller.address.neighborhood || '',
-        city: reseller.address.city || '',
-        state: reseller.address.state || '',
-        zipCode: reseller.address.zipCode || '',
-      } : undefined
+      address: reseller.address && typeof reseller.address === 'object' 
+        ? {
+            street: typeof reseller.address === 'object' && 'street' in reseller.address ? String(reseller.address.street || '') : '',
+            number: typeof reseller.address === 'object' && 'number' in reseller.address ? String(reseller.address.number || '') : '',
+            complement: typeof reseller.address === 'object' && 'complement' in reseller.address ? String(reseller.address.complement || '') : '',
+            neighborhood: typeof reseller.address === 'object' && 'neighborhood' in reseller.address ? String(reseller.address.neighborhood || '') : '',
+            city: typeof reseller.address === 'object' && 'city' in reseller.address ? String(reseller.address.city || '') : '',
+            state: typeof reseller.address === 'object' && 'state' in reseller.address ? String(reseller.address.state || '') : '',
+            zipCode: typeof reseller.address === 'object' && 'zipCode' in reseller.address ? String(reseller.address.zipCode || '') : ''
+          } 
+        : undefined
     })) as Reseller[];
   }
 
@@ -58,15 +60,17 @@ export class ResellerModel {
       promoterId: data.promoter_id,
       createdAt: data.created_at,
       updatedAt: data.updated_at,
-      address: data.address && typeof data.address === 'object' ? {
-        street: data.address.street || '',
-        number: data.address.number || '',
-        complement: data.address.complement || '',
-        neighborhood: data.address.neighborhood || '',
-        city: data.address.city || '',
-        state: data.address.state || '',
-        zipCode: data.address.zipCode || '',
-      } : undefined
+      address: data.address && typeof data.address === 'object'
+        ? {
+            street: typeof data.address === 'object' && 'street' in data.address ? String(data.address.street || '') : '',
+            number: typeof data.address === 'object' && 'number' in data.address ? String(data.address.number || '') : '',
+            complement: typeof data.address === 'object' && 'complement' in data.address ? String(data.address.complement || '') : '',
+            neighborhood: typeof data.address === 'object' && 'neighborhood' in data.address ? String(data.address.neighborhood || '') : '',
+            city: typeof data.address === 'object' && 'city' in data.address ? String(data.address.city || '') : '',
+            state: typeof data.address === 'object' && 'state' in data.address ? String(data.address.state || '') : '',
+            zipCode: typeof data.address === 'object' && 'zipCode' in data.address ? String(data.address.zipCode || '') : ''
+          } 
+        : undefined
     } as Reseller;
   }
 
@@ -78,7 +82,7 @@ export class ResellerModel {
         cpf_cnpj: reseller.cpfCnpj,
         phone: reseller.phone,
         email: reseller.email,
-        address: reseller.address as any, // Utilizamos any para contornar a tipagem do supabase
+        address: reseller.address, 
         status: reseller.status,
         promoter_id: reseller.promoterId
       })
@@ -103,7 +107,7 @@ export class ResellerModel {
         cpf_cnpj: reseller.cpfCnpj,
         phone: reseller.phone,
         email: reseller.email,
-        address: reseller.address as any, // Utilizamos any para contornar a tipagem do supabase
+        address: reseller.address,
         status: reseller.status,
         promoter_id: reseller.promoterId
       })
@@ -148,7 +152,7 @@ export class ResellerModel {
       request = request.ilike('name', `%${query}%`);
     }
 
-    if (status) {
+    if (status && (status === 'Ativa' || status === 'Inativa')) {
       request = request.eq('status', status);
     }
 
@@ -168,15 +172,17 @@ export class ResellerModel {
       promoterId: reseller.promoter_id,
       createdAt: reseller.created_at,
       updatedAt: reseller.updated_at,
-      address: reseller.address && typeof reseller.address === 'object' ? {
-        street: reseller.address.street || '',
-        number: reseller.address.number || '',
-        complement: reseller.address.complement || '',
-        neighborhood: reseller.address.neighborhood || '',
-        city: reseller.address.city || '',
-        state: reseller.address.state || '',
-        zipCode: reseller.address.zipCode || '',
-      } : undefined
+      address: reseller.address && typeof reseller.address === 'object'
+        ? {
+            street: typeof reseller.address === 'object' && 'street' in reseller.address ? String(reseller.address.street || '') : '',
+            number: typeof reseller.address === 'object' && 'number' in reseller.address ? String(reseller.address.number || '') : '',
+            complement: typeof reseller.address === 'object' && 'complement' in reseller.address ? String(reseller.address.complement || '') : '',
+            neighborhood: typeof reseller.address === 'object' && 'neighborhood' in reseller.address ? String(reseller.address.neighborhood || '') : '',
+            city: typeof reseller.address === 'object' && 'city' in reseller.address ? String(reseller.address.city || '') : '',
+            state: typeof reseller.address === 'object' && 'state' in reseller.address ? String(reseller.address.state || '') : '',
+            zipCode: typeof reseller.address === 'object' && 'zipCode' in reseller.address ? String(reseller.address.zipCode || '') : ''
+          } 
+        : undefined
     })) as Reseller[];
   }
 }
