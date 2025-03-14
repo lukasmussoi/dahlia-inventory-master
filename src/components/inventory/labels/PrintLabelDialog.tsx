@@ -198,9 +198,7 @@ export function PrintLabelDialog({
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden">
           <DialogHeader>
             
-            <DialogDescription>
-              Preencha os campos abaixo para criar um novo modelo de etiqueta personalizada.
-            </DialogDescription>
+            
           </DialogHeader>
           <EtiquetaCustomForm onClose={() => setShowModeloForm(false)} onSuccess={handleModeloSuccess} />
         </DialogContent>
