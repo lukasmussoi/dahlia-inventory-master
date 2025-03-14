@@ -1,4 +1,3 @@
-
 import { jsPDF } from "jspdf";
 import { generateBarcode } from "./barcodeUtils";
 import { toast } from "sonner";
@@ -488,7 +487,8 @@ async function adicionarElemento(doc: jsPDF, campo: CampoEtiqueta, item: any, xB
         } catch (error) {
           console.error("Erro ao gerar código de barras:", error);
           // Fallback: Adicionar texto do código se a imagem falhar
-          doc.text(item.barcode || item.sku || "0000000000", x, y);
+          const fallbackText = item.barcode || item.sku || "0000000000";
+          doc.text(fallbackText, x, y);
         }
         break;
         
@@ -507,3 +507,4 @@ async function adicionarElemento(doc: jsPDF, campo: CampoEtiqueta, item: any, xB
     console.error(`Erro ao adicionar elemento tipo ${campo?.tipo || 'desconhecido'}:`, error);
   }
 }
+
