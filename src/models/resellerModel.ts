@@ -25,13 +25,13 @@ export class ResellerModel {
         promoterId: reseller.promoter_id,
         promoterName: reseller.promoters?.name,
         address: reseller.address ? {
-          street: reseller.address.street,
-          number: reseller.address.number,
-          complement: reseller.address.complement,
-          neighborhood: reseller.address.neighborhood,
-          city: reseller.address.city,
-          state: reseller.address.state,
-          zipCode: reseller.address.zipCode
+          street: reseller.address.street || '',
+          number: reseller.address.number || '',
+          complement: reseller.address.complement || '',
+          neighborhood: reseller.address.neighborhood || '',
+          city: reseller.address.city || '',
+          state: reseller.address.state || '',
+          zipCode: reseller.address.zipCode || ''
         } : undefined,
         createdAt: reseller.created_at,
         updatedAt: reseller.updated_at
@@ -65,13 +65,13 @@ export class ResellerModel {
         promoterId: data.promoter_id,
         promoterName: data.promoters?.name,
         address: data.address ? {
-          street: data.address.street,
-          number: data.address.number,
-          complement: data.address.complement,
-          neighborhood: data.address.neighborhood,
-          city: data.address.city,
-          state: data.address.state,
-          zipCode: data.address.zipCode
+          street: data.address.street || '',
+          number: data.address.number || '',
+          complement: data.address.complement || '',
+          neighborhood: data.address.neighborhood || '',
+          city: data.address.city || '',
+          state: data.address.state || '',
+          zipCode: data.address.zipCode || ''
         } : undefined,
         createdAt: data.created_at,
         updatedAt: data.updated_at
@@ -93,7 +93,15 @@ export class ResellerModel {
           email: resellerData.email,
           status: resellerData.status,
           promoter_id: resellerData.promoterId,
-          address: resellerData.address
+          address: resellerData.address ? {
+            street: resellerData.address.street,
+            number: resellerData.address.number,
+            complement: resellerData.address.complement,
+            neighborhood: resellerData.address.neighborhood,
+            city: resellerData.address.city,
+            state: resellerData.address.state,
+            zipCode: resellerData.address.zipCode
+          } : null
         })
         .select('id')
         .single();
@@ -123,7 +131,17 @@ export class ResellerModel {
       if (resellerData.email !== undefined) updateData.email = resellerData.email;
       if (resellerData.status !== undefined) updateData.status = resellerData.status;
       if (resellerData.promoterId !== undefined) updateData.promoter_id = resellerData.promoterId;
-      if (resellerData.address !== undefined) updateData.address = resellerData.address;
+      if (resellerData.address !== undefined) {
+        updateData.address = {
+          street: resellerData.address.street,
+          number: resellerData.address.number,
+          complement: resellerData.address.complement,
+          neighborhood: resellerData.address.neighborhood,
+          city: resellerData.address.city,
+          state: resellerData.address.state,
+          zipCode: resellerData.address.zipCode
+        };
+      }
 
       const { error } = await supabase
         .from('resellers')
