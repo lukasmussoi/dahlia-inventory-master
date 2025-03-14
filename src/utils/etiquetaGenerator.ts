@@ -120,7 +120,6 @@ const renderLabelElements = (pdf: JsPDF, elements: LabelElement[], offsetX: numb
       textAlign = 'right';
     }
     
-    // Definir o alinhamento do texto (usando a opção do método text)
     // Centralizar verticalmente
     const y = offsetY + element.y + (element.height / 2) + (element.fontSize / 4);
 
@@ -201,6 +200,12 @@ export const generateEtiquetaPDF = async (
       }
     }
     
+    // Verificar e corrigir dimensões inválidas
+    if (!pageWidth || pageWidth <= 0) pageWidth = 210;
+    if (!pageHeight || pageHeight <= 0) pageHeight = 297;
+    
+    console.log("Dimensões da página:", pageWidth, "x", pageHeight);
+    
     // Criar documento PDF
     const pdf = new JsPDF({
       orientation: orientacao === "retrato" ? "portrait" : "landscape",
@@ -209,16 +214,36 @@ export const generateEtiquetaPDF = async (
     });
     
     // Calcular quantas etiquetas cabem na página
-    const labelsPerRow = Math.floor((pageWidth - margemEsquerda - margemDireita) / (largura + espacamentoHorizontal));
-    const labelsPerColumn = Math.floor((pageHeight - margemSuperior - margemInferior) / (altura + espacamentoVertical));
+    const margensValidas = {
+      superior: margemSuperior > 0 ? margemSuperior : 10,
+      inferior: margemInferior > 0 ? margemInferior : 10,
+      esquerda: margemEsquerda > 0 ? margemEsquerda : 10,
+      direita: margemDireita > 0 ? margemDireita : 10
+    };
+    
+    const espacamentosValidos = {
+      horizontal: espacamentoHorizontal >= 0 ? espacamentoHorizontal : 0,
+      vertical: espacamentoVertical >= 0 ? espacamentoVertical : 0
+    };
+    
+    // Garantir que as dimensões da etiqueta são válidas
+    const etiquetaLargura = largura > 0 ? largura : 50;
+    const etiquetaAltura = altura > 0 ? altura : 30;
+    
+    const labelsPerRow = Math.floor((pageWidth - margensValidas.esquerda - margensValidas.direita) / (etiquetaLargura + espacamentosValidos.horizontal));
+    const labelsPerColumn = Math.floor((pageHeight - margensValidas.superior - margensValidas.inferior) / (etiquetaAltura + espacamentosValidos.vertical));
+    
+    // Verificar se os cálculos resultaram em valores válidos
+    const etiquetasPorLinha = labelsPerRow > 0 ? labelsPerRow : 1;
+    const etiquetasPorColuna = labelsPerColumn > 0 ? labelsPerColumn : 1;
     
     console.log("Configurações da página:", {
       pageWidth,
       pageHeight,
-      labelsPerRow,
-      labelsPerColumn,
-      margens: [margemSuperior, margemDireita, margemInferior, margemEsquerda],
-      espacamento: [espacamentoHorizontal, espacamentoVertical]
+      etiquetasPorLinha,
+      etiquetasPorColuna,
+      margens: [margensValidas.superior, margensValidas.direita, margensValidas.inferior, margensValidas.esquerda],
+      espacamento: [espacamentosValidos.horizontal, espacamentosValidos.vertical]
     });
     
     // Inicializar posição
@@ -243,11 +268,11 @@ export const generateEtiquetaPDF = async (
     for (const item of items) {
       for (let i = 0; i < options.copias; i++) {
         // Verificar se precisa de nova página
-        if (currentRow >= labelsPerColumn) {
+        if (currentRow >= etiquetasPorColuna) {
           currentRow = 0;
           currentColumn++;
           
-          if (currentColumn >= labelsPerRow) {
+          if (currentColumn >= etiquetasPorLinha) {
             currentColumn = 0;
             pdf.addPage();
             currentPage++;
@@ -255,37 +280,45 @@ export const generateEtiquetaPDF = async (
         }
         
         // Calcular posição da etiqueta
-        const x = margemEsquerda + currentColumn * (largura + espacamentoHorizontal);
-        const y = margemSuperior + currentRow * (altura + espacamentoVertical);
+        const x = margensValidas.esquerda + currentColumn * (etiquetaLargura + espacamentosValidos.horizontal);
+        const y = margensValidas.superior + currentRow * (etiquetaAltura + espacamentosValidos.vertical);
         
         // Desenhar borda da etiqueta (opcional, pode ser comentado para produção)
         pdf.setDrawColor(200, 200, 200);
-        pdf.rect(x, y, largura, altura);
+        pdf.rect(x, y, etiquetaLargura, etiquetaAltura);
         
         // Renderizar os campos da etiqueta
-        campos.forEach(campo => {
-          if (!campo.tipo) return;
-          
-          // Configurar fonte
-          pdf.setFontSize(campo.tamanhoFonte);
-          
-          // Determinar o conteúdo com base no tipo de campo
-          let conteudo = "";
-          if (campo.tipo === "nome") {
-            conteudo = item.name || "Sem nome";
-          } else if (campo.tipo === "codigo") {
-            conteudo = item.sku || item.barcode || "000000";
-          } else if (campo.tipo === "preco") {
-            const preco = typeof item.price === "number" ? item.price.toFixed(2) : "0.00";
-            conteudo = `R$ ${preco}`;
-          }
-          
-          // Posicionar e desenhar o texto
-          const posX = x + campo.x;
-          const posY = y + campo.y;
-          
-          pdf.text(conteudo, posX, posY);
-        });
+        if (campos && Array.isArray(campos)) {
+          campos.forEach(campo => {
+            if (!campo.tipo) return;
+            
+            // Configurar fonte
+            pdf.setFontSize(campo.tamanhoFonte);
+            
+            // Determinar o conteúdo com base no tipo de campo
+            let conteudo = "";
+            if (campo.tipo === "nome") {
+              conteudo = item.name || "Sem nome";
+            } else if (campo.tipo === "codigo") {
+              conteudo = item.sku || item.barcode || "000000";
+            } else if (campo.tipo === "preco") {
+              const preco = typeof item.price === "number" ? item.price.toFixed(2) : "0.00";
+              conteudo = `R$ ${preco}`;
+            }
+            
+            // Posicionar e desenhar o texto (convertendo números para string)
+            const posX = x + campo.x;
+            const posY = y + campo.y;
+            
+            // Converter coordenadas para string conforme esperado pelo jsPDF
+            pdf.text(conteudo, posX, posY);
+          });
+        } else {
+          console.warn("Modelo sem campos definidos ou campos inválidos");
+          // Adicionar texto padrão se não houver campos definidos
+          pdf.setFontSize(10);
+          pdf.text("Etiqueta sem elementos", x + 5, y + 15);
+        }
         
         currentRow++;
         labelCounter++;
