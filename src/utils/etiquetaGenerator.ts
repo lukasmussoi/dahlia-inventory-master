@@ -2,6 +2,7 @@
 import JsPDF from 'jspdf';
 import { toast } from 'sonner';
 import type { LabelType, LabelElement } from '@/components/inventory/labels/editor/EtiquetaCreator';
+import type { ModeloEtiqueta } from '@/types/etiqueta';
 
 // Função para gerar um PDF de pré-visualização
 export const generatePreviewPDF = async (
@@ -109,21 +110,22 @@ const renderLabelElements = (pdf: JsPDF, elements: LabelElement[], offsetX: numb
 
     // Calcular a posição do texto baseado no alinhamento
     let x = offsetX + element.x;
+    let textAlign: 'left' | 'center' | 'right' = 'left';
+    
     if (element.align === 'center') {
       x = offsetX + element.x + (element.width / 2);
-      pdf.setTextAlign('center');
+      textAlign = 'center';
     } else if (element.align === 'right') {
       x = offsetX + element.x + element.width;
-      pdf.setTextAlign('right');
-    } else {
-      pdf.setTextAlign('left');
+      textAlign = 'right';
     }
-
+    
+    // Definir o alinhamento do texto (usando a opção do método text)
     // Centralizar verticalmente
     const y = offsetY + element.y + (element.height / 2) + (element.fontSize / 4);
 
-    // Desenhar o texto
-    pdf.text(text, x, y);
+    // Desenhar o texto com o alinhamento especificado
+    pdf.text(text, x, y, { align: textAlign });
   });
 };
 
@@ -138,5 +140,174 @@ const getElementPreviewText = (type: string): string => {
       return 'R$ 99,90';
     default:
       return 'Exemplo';
+  }
+};
+
+// Função para gerar PDF de etiquetas para impressão
+export const generateEtiquetaPDF = async (
+  modelo: ModeloEtiqueta,
+  items: any[],
+  options: {
+    startRow: number;
+    startColumn: number;
+    copias: number;
+  }
+): Promise<string> => {
+  try {
+    console.log("Gerando PDF para etiquetas com modelo:", modelo.nome);
+    
+    // Verificar se há itens para gerar etiquetas
+    if (!items || items.length === 0) {
+      throw new Error("Nenhum item fornecido para gerar etiquetas");
+    }
+    
+    // Obter configurações do modelo
+    const {
+      largura,
+      altura,
+      formatoPagina,
+      orientacao,
+      margemSuperior,
+      margemInferior,
+      margemEsquerda,
+      margemDireita,
+      espacamentoHorizontal,
+      espacamentoVertical,
+      larguraPagina,
+      alturaPagina,
+      campos
+    } = modelo;
+    
+    // Configurar tamanho da página
+    let pageWidth, pageHeight;
+    if (formatoPagina === "Personalizado" && larguraPagina && alturaPagina) {
+      pageWidth = larguraPagina;
+      pageHeight = alturaPagina;
+    } else {
+      // Tamanhos padrão (em mm)
+      if (formatoPagina === "A4") {
+        pageWidth = orientacao === "retrato" ? 210 : 297;
+        pageHeight = orientacao === "retrato" ? 297 : 210;
+      } else if (formatoPagina === "A5") {
+        pageWidth = orientacao === "retrato" ? 148 : 210;
+        pageHeight = orientacao === "retrato" ? 210 : 148;
+      } else if (formatoPagina === "Letter") {
+        pageWidth = orientacao === "retrato" ? 216 : 279;
+        pageHeight = orientacao === "retrato" ? 279 : 216;
+      } else {
+        // Formato padrão (A4 retrato)
+        pageWidth = 210;
+        pageHeight = 297;
+      }
+    }
+    
+    // Criar documento PDF
+    const pdf = new JsPDF({
+      orientation: orientacao === "retrato" ? "portrait" : "landscape",
+      unit: "mm",
+      format: formatoPagina === "Personalizado" ? [pageWidth, pageHeight] : formatoPagina
+    });
+    
+    // Calcular quantas etiquetas cabem na página
+    const labelsPerRow = Math.floor((pageWidth - margemEsquerda - margemDireita) / (largura + espacamentoHorizontal));
+    const labelsPerColumn = Math.floor((pageHeight - margemSuperior - margemInferior) / (altura + espacamentoVertical));
+    
+    console.log("Configurações da página:", {
+      pageWidth,
+      pageHeight,
+      labelsPerRow,
+      labelsPerColumn,
+      margens: [margemSuperior, margemDireita, margemInferior, margemEsquerda],
+      espacamento: [espacamentoHorizontal, espacamentoVertical]
+    });
+    
+    // Inicializar posição
+    let currentRow = options.startRow - 1;
+    let currentColumn = options.startColumn - 1;
+    let currentPage = 0;
+    
+    // Garantir valores válidos
+    if (currentRow < 0) currentRow = 0;
+    if (currentColumn < 0) currentColumn = 0;
+    
+    // Calcular número total de etiquetas a serem geradas
+    const totalLabels = items.reduce((total, item) => {
+      return total + options.copias;
+    }, 0);
+    
+    console.log(`Gerando ${totalLabels} etiquetas no total`);
+    
+    let labelCounter = 0;
+    
+    // Para cada item, gerar as etiquetas solicitadas
+    for (const item of items) {
+      for (let i = 0; i < options.copias; i++) {
+        // Verificar se precisa de nova página
+        if (currentRow >= labelsPerColumn) {
+          currentRow = 0;
+          currentColumn++;
+          
+          if (currentColumn >= labelsPerRow) {
+            currentColumn = 0;
+            pdf.addPage();
+            currentPage++;
+          }
+        }
+        
+        // Calcular posição da etiqueta
+        const x = margemEsquerda + currentColumn * (largura + espacamentoHorizontal);
+        const y = margemSuperior + currentRow * (altura + espacamentoVertical);
+        
+        // Desenhar borda da etiqueta (opcional, pode ser comentado para produção)
+        pdf.setDrawColor(200, 200, 200);
+        pdf.rect(x, y, largura, altura);
+        
+        // Renderizar os campos da etiqueta
+        campos.forEach(campo => {
+          if (!campo.tipo) return;
+          
+          // Configurar fonte
+          pdf.setFontSize(campo.tamanhoFonte);
+          
+          // Determinar o conteúdo com base no tipo de campo
+          let conteudo = "";
+          if (campo.tipo === "nome") {
+            conteudo = item.name || "Sem nome";
+          } else if (campo.tipo === "codigo") {
+            conteudo = item.sku || item.barcode || "000000";
+          } else if (campo.tipo === "preco") {
+            const preco = typeof item.price === "number" ? item.price.toFixed(2) : "0.00";
+            conteudo = `R$ ${preco}`;
+          }
+          
+          // Posicionar e desenhar o texto
+          const posX = x + campo.x;
+          const posY = y + campo.y;
+          
+          pdf.text(conteudo, posX, posY);
+        });
+        
+        currentRow++;
+        labelCounter++;
+        
+        if (labelCounter % 10 === 0) {
+          console.log(`Geradas ${labelCounter} etiquetas de ${totalLabels}`);
+        }
+      }
+    }
+    
+    console.log(`Geração de PDF concluída com ${labelCounter} etiquetas em ${currentPage + 1} páginas`);
+    
+    // Gerar URL do arquivo
+    const pdfBlob = pdf.output("blob");
+    return URL.createObjectURL(pdfBlob);
+  } catch (error) {
+    console.error("Erro ao gerar PDF de etiquetas:", error);
+    if (error instanceof Error) {
+      toast.error(`Erro ao gerar etiquetas: ${error.message}`);
+    } else {
+      toast.error("Erro desconhecido ao gerar etiquetas");
+    }
+    throw error;
   }
 };
