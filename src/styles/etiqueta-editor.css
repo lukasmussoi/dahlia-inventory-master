@@ -4,3 +4,23 @@
   background-image: linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
                     linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
 }
+
+/* Garantir que o rodapé do modal fique sempre visível */
+.etiqueta-footer {
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: var(--background, white);
+  border-top: 1px solid var(--border, #e5e7eb);
+  padding: 12px;
+  display: flex;
+  justify-content: space-between;
+  z-index: 10;
+}
+
+/* Ajuste para garantir que o conteúdo principal não cubra o rodapé */
+.etiqueta-content {
+  max-height: calc(80vh - 130px);
+  overflow-y: auto;
+}
