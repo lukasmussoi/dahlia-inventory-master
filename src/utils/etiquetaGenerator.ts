@@ -12,13 +12,14 @@ export async function generateEtiquetaPDF(
     startRow?: number;
     startColumn?: number;
     copias?: number;
+    ajustarAutomaticamente?: boolean;
   } = {}
 ): Promise<string> {
   console.log("Gerando etiqueta com modelo:", modelo);
   console.log("Campos do modelo:", modelo.campos);
 
   try {
-    const { startRow = 1, startColumn = 1, copias = 1 } = options;
+    const { startRow = 1, startColumn = 1, copias = 1, ajustarAutomaticamente = false } = options;
     
     // Configurações da página
     const orientacao = modelo.orientacao === "retrato" ? "portrait" : "landscape";
@@ -89,8 +90,8 @@ export async function generateEtiquetaPDF(
     }
     
     // Configurações da etiqueta
-    const labelWidth = Number(modelo.largura);
-    const labelHeight = Number(modelo.altura);
+    let labelWidth = Number(modelo.largura);
+    let labelHeight = Number(modelo.altura);
     const marginLeft = Number(modelo.margemEsquerda);
     const marginTop = Number(modelo.margemSuperior);
     const marginRight = Number(modelo.margemDireita);
@@ -120,13 +121,29 @@ export async function generateEtiquetaPDF(
       throw new Error(`Área útil da página inválida. As margens (L:${marginLeft}mm, R:${marginRight}mm, T:${marginTop}mm, B:${marginBottom}mm) são muito grandes para o tamanho da página (${pageWidth}mm x ${pageHeight}mm).`);
     }
     
-    // Verificar se a etiqueta cabe na área útil
+    // Verificar se a etiqueta cabe na área útil e ajustar se necessário
+    let dimensoesAjustadas = false;
+    
     if (labelWidth > usableWidth) {
-      throw new Error(`A largura da etiqueta (${labelWidth}mm) é maior que a área útil disponível (${usableWidth}mm). Reduza a largura da etiqueta ou aumente a largura da página.`);
+      if (ajustarAutomaticamente) {
+        const larguraOriginal = labelWidth;
+        labelWidth = Math.floor(usableWidth * 0.98); // 98% da largura útil para garantir que caiba
+        dimensoesAjustadas = true;
+        console.log(`Largura da etiqueta ajustada automaticamente de ${larguraOriginal}mm para ${labelWidth}mm`);
+      } else {
+        throw new Error(`A largura da etiqueta (${labelWidth}mm) é maior que a área útil disponível (${usableWidth}mm). Reduza a largura da etiqueta ou aumente a largura da página.`);
+      }
     }
     
     if (labelHeight > usableHeight) {
-      throw new Error(`A altura da etiqueta (${labelHeight}mm) é maior que a área útil disponível (${usableHeight}mm). Reduza a altura da etiqueta ou aumente a altura da página.`);
+      if (ajustarAutomaticamente) {
+        const alturaOriginal = labelHeight;
+        labelHeight = Math.floor(usableHeight * 0.98); // 98% da altura útil para garantir que caiba
+        dimensoesAjustadas = true;
+        console.log(`Altura da etiqueta ajustada automaticamente de ${alturaOriginal}mm para ${labelHeight}mm`);
+      } else {
+        throw new Error(`A altura da etiqueta (${labelHeight}mm) é maior que a área útil disponível (${usableHeight}mm). Reduza a altura da etiqueta ou aumente a altura da página.`);
+      }
     }
     
     // Calcular quantas etiquetas cabem na página
@@ -203,6 +220,11 @@ export async function generateEtiquetaPDF(
         
         currentRow++;
       }
+    }
+    
+    // Se houve ajuste de dimensões, avisar ao usuário
+    if (dimensoesAjustadas) {
+      toast.info(`As dimensões da etiqueta foram ajustadas automaticamente para caber na página.`);
     }
     
     // Retornar URL do PDF gerado
@@ -288,11 +310,13 @@ export async function generatePreviewPDF(
   pageFormat: string, 
   pageSize: { width: number, height: number },
   margins: { top: number, right: number, bottom: number, left: number } = { top: 10, right: 10, bottom: 10, left: 10 },
-  spacing: { horizontal: number, vertical: number } = { horizontal: 2, vertical: 2 }
+  spacing: { horizontal: number, vertical: number } = { horizontal: 2, vertical: 2 },
+  ajustarAutomaticamente: boolean = false
 ): Promise<string> {
   console.log("Iniciando geração de pré-visualização para:", modelName);
   console.log("Labels recebidas:", labels);
   console.log("Formato da página:", pageFormat, pageSize);
+  console.log("Ajuste automático:", ajustarAutomaticamente);
   
   if (!labels || labels.length === 0) {
     console.error("Não há etiquetas para gerar a pré-visualização");
@@ -309,8 +333,35 @@ export async function generatePreviewPDF(
       throw new Error("Configuração de etiqueta inválida. Verifique as dimensões.");
     }
     
+    // Verificar se a etiqueta cabe na área útil da página
+    const usableWidth = pageSize.width - margins.left - margins.right;
+    const usableHeight = pageSize.height - margins.top - margins.bottom;
+    
+    console.log("Área útil calculada:", { 
+      usableWidth, 
+      usableHeight, 
+      etiquetaWidth: firstLabel.width, 
+      etiquetaHeight: firstLabel.height 
+    });
+    
+    if (firstLabel.width > usableWidth && !ajustarAutomaticamente) {
+      console.error("Largura da etiqueta excede área útil:", { 
+        larguraEtiqueta: firstLabel.width, 
+        areaUtilLargura: usableWidth 
+      });
+      throw new Error(`A largura da etiqueta (${firstLabel.width}mm) é maior que a área útil disponível (${usableWidth}mm). Reduza a largura da etiqueta ou aumente a largura da página.`);
+    }
+    
+    if (firstLabel.height > usableHeight && !ajustarAutomaticamente) {
+      console.error("Altura da etiqueta excede área útil:", { 
+        alturaEtiqueta: firstLabel.height, 
+        areaUtilAltura: usableHeight 
+      });
+      throw new Error(`A altura da etiqueta (${firstLabel.height}mm) é maior que a área útil disponível (${usableHeight}mm). Reduza a altura da etiqueta ou aumente a altura da página.`);
+    }
+    
     if (!firstLabel.elements || firstLabel.elements.length === 0) {
-      console.warn("Etiqueta sem elementos. Criando etiqueta com elementos padrão para pré-visualização.");
+      console.warn("Etiqueta sem elementos. Criando elementos padrão para pré-visualização.");
       // Se não houver elementos, criar elementos padrão para visualização
       firstLabel.elements = [
         { type: 'nome', x: 2, y: 2, width: 40, height: 10, fontSize: 7 },
@@ -343,11 +394,14 @@ export async function generatePreviewPDF(
       { name: "Pingente Cristal", barcode: "123456789", price: 99.90 }
     ];
     
-    // Gerar o PDF
+    // Gerar o PDF com opção de ajuste automático
     return await generateEtiquetaPDF(
       modelo,
       dadosExemplo,
-      { copias: 1 }
+      { 
+        copias: 1,
+        ajustarAutomaticamente: ajustarAutomaticamente 
+      }
     );
   } catch (error) {
     console.error("Erro ao gerar PDF de pré-visualização:", error);

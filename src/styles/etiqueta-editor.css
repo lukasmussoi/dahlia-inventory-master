@@ -78,3 +78,34 @@
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
   overflow: hidden;
 }
+
+/* Estilos para alertas e mensagens de erro */
+.error-message {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: rgb(185, 28, 28);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  padding: 0.75rem;
+  border-radius: 0.375rem;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Estilos para aviso de validação dimensional */
+.dimension-warning {
+  background-color: rgba(250, 204, 21, 0.1);
+  color: rgb(161, 98, 7);
+  border: 1px solid rgba(250, 204, 21, 0.2);
+  border-radius: 0.375rem;
+  padding: 0.5rem;
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+}
+
+/* Estilo para destaque de campos com problemas */
+.dimension-invalid {
+  border-color: rgb(239, 68, 68) !important;
+  background-color: rgba(239, 68, 68, 0.05);
+}
