@@ -13,6 +13,9 @@ import PlatingTypes from "@/routes/plating-types";
 import { DashboardContent } from "@/components/dashboard/DashboardContent";
 import InventoryReports from "@/routes/inventory-reports";
 import InventoryLabelsRoute from "@/routes/inventory-labels";
+import ResellersPage from "@/routes/sales/resellers";
+import ResellerFormPage from "@/routes/sales/reseller-form";
+import SettingsPage from "@/routes/settings";
 
 const Router = () => {
   return (
@@ -29,9 +32,11 @@ const Router = () => {
           <Route path="suppliers" element={<Suppliers />} />
           <Route path="plating-types" element={<PlatingTypes />} />
           <Route path="categories" element={<Categories />} />
-          <Route path="settings">
-            <Route path="users" element={<Users />} />
-          </Route>
+          <Route path="sales/resellers" element={<ResellersPage />} />
+          <Route path="sales/resellers/new" element={<ResellerFormPage />} />
+          <Route path="sales/resellers/:id" element={<ResellerFormPage />} />
+          <Route path="settings" element={<SettingsPage />} />
+          <Route path="settings/users" element={<Users />} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>

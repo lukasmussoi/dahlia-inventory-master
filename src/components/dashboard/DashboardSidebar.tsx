@@ -1,3 +1,4 @@
+
 import {
   Home,
   Package,
@@ -10,6 +11,8 @@ import {
   Settings,
   BarChart,
   Printer,
+  ShoppingCart,
+  UserCircle,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
@@ -71,6 +74,18 @@ const menuItems = [
         title: "Relatórios",
         href: "/dashboard/inventory-reports",
         icon: BarChart,
+      },
+    ],
+  },
+  {
+    title: "Vendas",
+    href: "/dashboard/sales",
+    icon: ShoppingCart,
+    submenu: [
+      {
+        title: "Revendedoras",
+        href: "/dashboard/sales/resellers",
+        icon: UserCircle,
       },
     ],
   },
