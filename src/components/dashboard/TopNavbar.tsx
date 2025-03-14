@@ -12,6 +12,7 @@ import {
   Droplet,
   LineChart,
   Tag,
+  UserCircle
 } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
@@ -94,6 +95,18 @@ export function TopNavbar({ isAdmin }: TopNavbarProps) {
       url: "/dashboard/suitcases",
     },
     ...(isAdmin ? [
+      {
+        title: "Vendas",
+        icon: UserCircle,
+        url: "/dashboard/sales",
+        subItems: [
+          {
+            title: "Revendedoras",
+            url: "/dashboard/sales/resellers",
+            icon: Users,
+          },
+        ],
+      },
       {
         title: "Configurações",
         icon: Settings,
@@ -225,4 +238,3 @@ export function TopNavbar({ isAdmin }: TopNavbarProps) {
     </nav>
   );
 }
-

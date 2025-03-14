@@ -24,8 +24,8 @@ export class ResellerModel {
       promoterId: reseller.promoter_id,
       createdAt: reseller.created_at,
       updatedAt: reseller.updated_at,
-      // Converter o endereço de JSON para objeto
-      address: reseller.address ? {
+      // Converter o endereço de JSON para objeto, com verificação de tipo
+      address: reseller.address && typeof reseller.address === 'object' ? {
         street: reseller.address.street || '',
         number: reseller.address.number || '',
         complement: reseller.address.complement || '',
@@ -58,7 +58,7 @@ export class ResellerModel {
       promoterId: data.promoter_id,
       createdAt: data.created_at,
       updatedAt: data.updated_at,
-      address: data.address ? {
+      address: data.address && typeof data.address === 'object' ? {
         street: data.address.street || '',
         number: data.address.number || '',
         complement: data.address.complement || '',
@@ -78,7 +78,7 @@ export class ResellerModel {
         cpf_cnpj: reseller.cpfCnpj,
         phone: reseller.phone,
         email: reseller.email,
-        address: reseller.address,
+        address: reseller.address as any, // Utilizamos any para contornar a tipagem do supabase
         status: reseller.status,
         promoter_id: reseller.promoterId
       })
@@ -103,7 +103,7 @@ export class ResellerModel {
         cpf_cnpj: reseller.cpfCnpj,
         phone: reseller.phone,
         email: reseller.email,
-        address: reseller.address,
+        address: reseller.address as any, // Utilizamos any para contornar a tipagem do supabase
         status: reseller.status,
         promoter_id: reseller.promoterId
       })
@@ -168,7 +168,7 @@ export class ResellerModel {
       promoterId: reseller.promoter_id,
       createdAt: reseller.created_at,
       updatedAt: reseller.updated_at,
-      address: reseller.address ? {
+      address: reseller.address && typeof reseller.address === 'object' ? {
         street: reseller.address.street || '',
         number: reseller.address.number || '',
         complement: reseller.address.complement || '',
