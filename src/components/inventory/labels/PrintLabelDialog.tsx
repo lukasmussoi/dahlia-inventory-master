@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -6,18 +7,20 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, AlertTriangle } from "lucide-react";
+import { Plus, AlertTriangle, Copy } from "lucide-react";
 import { LabelModel } from "@/models/labelModel";
 import { generatePdfLabel } from "@/utils/pdfUtils";
 import { EtiquetaCustomModel } from "@/models/etiquetaCustomModel";
 import { EtiquetaCustomForm } from "./EtiquetaCustomForm";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import type { ModeloEtiqueta } from "@/types/etiqueta";
+
 interface PrintLabelDialogProps {
   isOpen: boolean;
   onClose: () => void;
   item: any; // Tipo do item a ser impresso
 }
+
 export function PrintLabelDialog({
   isOpen,
   onClose,
@@ -34,6 +37,7 @@ export function PrintLabelDialog({
   const [selectedModeloId, setSelectedModeloId] = useState<string | undefined>(undefined);
   const [selectedModelo, setSelectedModelo] = useState<ModeloEtiqueta | null>(null);
   const [modeloWarning, setModeloWarning] = useState<string | null>(null);
+  const [etiquetaParaDuplicar, setEtiquetaParaDuplicar] = useState<ModeloEtiqueta | null>(null);
 
   // Load custom models when dialog opens
   useEffect(() => {
@@ -63,6 +67,7 @@ export function PrintLabelDialog({
       setSelectedModeloId(undefined);
       setSelectedModelo(null);
       setModeloWarning(null);
+      setEtiquetaParaDuplicar(null);
     }
   }, [isOpen]);
 
@@ -112,6 +117,7 @@ export function PrintLabelDialog({
       setSelectedModelo(null);
     }
   }, [selectedModeloId]);
+
   const validateInput = (): boolean => {
     if (!item) {
       toast.error("Nenhum item selecionado para impressão");
@@ -139,6 +145,7 @@ export function PrintLabelDialog({
     }
     return true;
   };
+
   const handlePrint = async () => {
     if (!validateInput()) return;
     try {
@@ -175,8 +182,10 @@ export function PrintLabelDialog({
       setIsProcessing(false);
     }
   };
+
   const handleModeloSuccess = async () => {
     setShowModeloForm(false);
+    setEtiquetaParaDuplicar(null);
     try {
       const modelos = await EtiquetaCustomModel.getAll();
       setModelosCustom(modelos);
@@ -185,6 +194,7 @@ export function PrintLabelDialog({
       console.error("Erro ao recarregar modelos:", error);
     }
   };
+
   const editarModeloSelecionado = () => {
     if (selectedModelo && selectedModelo.id) {
       // Funcionalidade futura: implementar edição do modelo
@@ -193,17 +203,46 @@ export function PrintLabelDialog({
       toast.error("Nenhum modelo selecionado para editar");
     }
   };
+
+  const duplicarModelo = async () => {
+    if (!selectedModelo) {
+      toast.error("Selecione um modelo para duplicar");
+      return;
+    }
+
+    try {
+      // Criar cópia do modelo selecionado
+      const modeloDuplicado = { ...selectedModelo };
+      
+      // Remover ID para criar um novo registro
+      delete modeloDuplicado.id;
+      
+      // Adicionar indicação de que é uma cópia no nome
+      modeloDuplicado.nome = `${modeloDuplicado.nome} (Cópia)`;
+      
+      // Abrir formulário com o modelo duplicado para edição
+      setEtiquetaParaDuplicar(modeloDuplicado);
+      setShowModeloForm(true);
+    } catch (error) {
+      console.error("Erro ao duplicar modelo:", error);
+      toast.error("Erro ao duplicar modelo de etiqueta");
+    }
+  };
+
   if (showModeloForm) {
     return <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden">
           <DialogHeader>
-            
-            
           </DialogHeader>
-          <EtiquetaCustomForm onClose={() => setShowModeloForm(false)} onSuccess={handleModeloSuccess} />
+          <EtiquetaCustomForm 
+            onClose={() => setShowModeloForm(false)} 
+            onSuccess={handleModeloSuccess} 
+            modelo={etiquetaParaDuplicar || undefined}
+          />
         </DialogContent>
       </Dialog>;
   }
+
   return <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl">
         <DialogHeader>
@@ -248,10 +287,22 @@ export function PrintLabelDialog({
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <h3 className="text-sm font-medium">Modelo de Etiqueta</h3>
-            <Button variant="outline" size="sm" onClick={() => setShowModeloForm(true)} className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              Novo Modelo
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={duplicarModelo} 
+                disabled={!selectedModelo}
+                className="flex items-center gap-2"
+              >
+                <Copy className="h-4 w-4" />
+                Duplicar
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setShowModeloForm(true)} className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                Novo Modelo
+              </Button>
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
