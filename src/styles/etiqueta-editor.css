@@ -122,30 +122,73 @@
   outline-offset: 2px;
 }
 
-/* Destaque para a área de página personalizada */
-.custom-page-section {
-  border: 1px solid #e5e7eb;
-  background-color: #f9fafb;
-  padding: 1rem;
-  margin-top: 1rem;
-  border-radius: 0.375rem;
-  transition: all 0.3s ease;
+/* Novo layout de duas colunas */
+.etiqueta-editor-2col {
+  display: grid;
+  grid-template-columns: 60% 40%;
+  gap: 1.5rem;
+  max-width: 100%;
+  margin: 0 auto;
 }
 
-.custom-page-section.active {
-  border-color: #60a5fa;
-  background-color: #eff6ff;
+@media (max-width: 768px) {
+  .etiqueta-editor-2col {
+    grid-template-columns: 1fr;
+  }
 }
 
-/* Melhorias na visualização da etiqueta */
-.etiqueta-preview {
+/* Card de configuração */
+.etiqueta-config-card {
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Etapa visual */
+.etiqueta-step {
+  position: relative;
+  padding-left: 2.5rem;
+}
+
+.etiqueta-step-number {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background-color: #9b87f5;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+}
+
+.etiqueta-step-content {
+  margin-top: 0.25rem;
+}
+
+/* Pré-visualização interativa */
+.etiqueta-preview-container {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  height: 100%;
+}
+
+.etiqueta-preview-card {
   background-color: white;
-  padding: 1.5rem;
-  border-radius: 0.375rem;
+  border-radius: 0.5rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 1rem;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .etiqueta-preview-title {
@@ -153,157 +196,262 @@
   font-weight: 500;
   color: #1f2937;
   margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-/* Transições suaves entre tabs */
-.etiqueta-tab-content {
-  transition: opacity 0.3s ease;
+.etiqueta-preview-title svg {
+  color: #9b87f5;
 }
 
-.etiqueta-tab-content.hidden {
+.etiqueta-preview-content {
+  flex-grow: 1;
+  min-height: 400px;
+  position: relative;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.25rem;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f9fafb;
+}
+
+/* Controles de dimensão */
+.etiqueta-dimension-control {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.etiqueta-dimension-control button {
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.25rem;
+}
+
+/* Estilos para o slider */
+.etiqueta-slider-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.etiqueta-slider-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.etiqueta-slider-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #4b5563;
+}
+
+.etiqueta-slider-value {
+  font-size: 0.875rem;
+  font-weight: 400;
+  color: #6b7280;
+  background-color: #f3f4f6;
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+}
+
+/* Tooltips */
+.etiqueta-tooltip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.etiqueta-tooltip-icon {
+  cursor: help;
+  color: #9ca3af;
+  margin-left: 0.25rem;
+}
+
+.etiqueta-tooltip-text {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.5rem;
+  background-color: #1f2937;
+  color: white;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  z-index: 10;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
 }
 
-.etiqueta-tab-content.visible {
+.etiqueta-tooltip:hover .etiqueta-tooltip-text {
   opacity: 1;
 }
 
-/* Estilização para etiquetas na grade */
-.etiqueta-page-grid {
-  position: relative;
-  background-color: #FFFFD0; /* Amarelo claro para a página */
-  border: 1px dashed #e2e8f0;
-}
-
-.etiqueta-page-grid-cell {
-  position: absolute;
-  border: 1px solid rgba(59, 130, 246, 0.5);
-  background-color: rgba(59, 130, 246, 0.2); /* Azul mais visível para as etiquetas */
+/* Otimizar layout */
+.etiqueta-optimize-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  background-color: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  padding: 0.75rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  color: #4b5563;
   transition: all 0.2s ease;
 }
 
-.etiqueta-page-grid-cell:hover {
-  background-color: rgba(59, 130, 246, 0.3);
-  border-color: rgba(59, 130, 246, 0.8);
+.etiqueta-optimize-button:hover {
+  background-color: #e5e7eb;
+  color: #1f2937;
 }
 
-/* Indicador visual para área útil e limites */
-.etiqueta-page-usable-area {
+.etiqueta-optimize-button svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+/* Estilos para a página e etiquetas */
+.etiqueta-visual-page {
+  position: relative;
+  background-color: #FFFFD0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin: 0 auto;
+  transition: transform 0.3s ease;
+}
+
+.etiqueta-visual-label {
   position: absolute;
-  border: 2px dashed rgba(99, 102, 241, 0.4);
-  background-color: rgba(99, 102, 241, 0.05);
-  pointer-events: none;
-}
-
-.etiqueta-warnings-reset {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-  margin-top: 0.5rem;
-}
-
-/* Animação de zoom suave */
-.etiqueta-page-background {
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Teclado de atalhos */
-.etiqueta-keyboard-shortcuts {
-  margin-top: 0.5rem;
-  font-size: 0.75rem;
-  color: #64748b;
-}
-
-.etiqueta-keyboard-shortcuts kbd {
-  display: inline-block;
-  padding: 0.1rem 0.3rem;
-  font-family: ui-monospace, monospace;
-  font-size: 0.7rem;
-  line-height: 1;
-  color: #1e293b;
-  background-color: #f1f5f9;
-  border: 1px solid #cbd5e1;
-  border-radius: 0.25rem;
-  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
-}
-
-/* Novas classes para a visualização melhorada */
-.etiqueta-editor-unified {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  padding: 1rem;
-  background-color: #f8fafc;
-  border-radius: 0.5rem;
-  border: 1px solid #e2e8f0;
-}
-
-.etiqueta-page-container {
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  overflow: auto;
-  padding: 1rem;
-  background-color: #f1f5f9;
-  border-radius: 0.5rem;
-  min-height: 400px;
-  max-height: 70vh;
-}
-
-.etiqueta-controls-panel {
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-  padding: 1rem;
-  background-color: white;
-  border-radius: 0.5rem;
-  border: 1px solid #e2e8f0;
-}
-
-.etiqueta-controls-section {
-  flex: 1;
-  min-width: 250px;
-}
-
-.etiqueta-editor-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #1e293b;
-  margin-bottom: 0.5rem;
-}
-
-.etiqueta-controls-divider {
-  width: 100%;
-  height: 1px;
-  background-color: #e2e8f0;
-  margin: 1rem 0;
-}
-
-/* Estilo para a visualização das etiquetas na grade */
-.etiqueta-grid-labels {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-  gap: 0.5rem;
-  padding: 1rem;
-}
-
-.etiqueta-grid-label {
   background-color: rgba(59, 130, 246, 0.2);
   border: 1px solid rgba(59, 130, 246, 0.5);
-  border-radius: 0.25rem;
-  padding: 0.5rem;
-  position: relative;
+  border-radius: 0.125rem;
+  transition: all 0.2s ease;
 }
 
-.etiqueta-grid-placeholder {
-  background-color: rgba(255, 255, 255, 0.8);
-  border: 2px dashed #cbd5e1;
-  border-radius: 0.25rem;
+/* Passos do assistente */
+.etiqueta-wizard {
+  display: flex;
+  margin-bottom: 1.5rem;
+}
+
+.etiqueta-wizard-step {
+  flex: 1;
+  text-align: center;
+  padding: 0.75rem 0;
+  position: relative;
+  font-size: 0.875rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.etiqueta-wizard-step::before {
+  content: "";
+  position: absolute;
+  top: 1.5rem;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background-color: #e5e7eb;
+  z-index: 1;
+}
+
+.etiqueta-wizard-step:first-child::before {
+  left: 50%;
+  width: 50%;
+}
+
+.etiqueta-wizard-step:last-child::before {
+  width: 50%;
+}
+
+.etiqueta-wizard-step.active {
+  color: #0ea5e9;
+}
+
+.etiqueta-wizard-step.completed {
+  color: #10b981;
+}
+
+.etiqueta-wizard-step.active::before,
+.etiqueta-wizard-step.completed::before {
+  background-color: #0ea5e9;
+}
+
+.etiqueta-wizard-step-icon {
+  width: 2rem;
+  height: 2rem;
+  background-color: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1rem;
-  text-align: center;
-  color: #64748b;
-  font-size: 0.875rem;
+  margin: 0 auto 0.5rem;
+  position: relative;
+  z-index: 2;
+}
+
+.etiqueta-wizard-step.active .etiqueta-wizard-step-icon {
+  border-color: #0ea5e9;
+  background-color: #e0f2fe;
+}
+
+.etiqueta-wizard-step.completed .etiqueta-wizard-step-icon {
+  border-color: #10b981;
+  background-color: #d1fae5;
+}
+
+/* Botões de ação principal */
+.etiqueta-action-buttons {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 1.5rem;
+}
+
+.etiqueta-primary-button {
+  background-color: #0ea5e9;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.etiqueta-primary-button:hover {
+  background-color: #0284c7;
+}
+
+.etiqueta-secondary-button {
+  background-color: white;
+  color: #4b5563;
+  border: 1px solid #e5e7eb;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.etiqueta-secondary-button:hover {
+  background-color: #f9fafb;
+  color: #1f2937;
 }
