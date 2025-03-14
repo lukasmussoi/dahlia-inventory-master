@@ -1,23 +1,10 @@
-
 import { useState, useEffect } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Plus, AlertTriangle } from "lucide-react";
 import { LabelModel } from "@/models/labelModel";
@@ -26,14 +13,16 @@ import { EtiquetaCustomModel } from "@/models/etiquetaCustomModel";
 import { EtiquetaCustomForm } from "./EtiquetaCustomForm";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import type { ModeloEtiqueta } from "@/types/etiqueta";
-
 interface PrintLabelDialogProps {
   isOpen: boolean;
   onClose: () => void;
   item: any; // Tipo do item a ser impresso
 }
-
-export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProps) {
+export function PrintLabelDialog({
+  isOpen,
+  onClose,
+  item
+}: PrintLabelDialogProps) {
   const [labelModel, setLabelModel] = useState("Padrão");
   const [copies, setCopies] = useState("1");
   const [startRow, setStartRow] = useState("1");
@@ -59,7 +48,6 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
         toast.error("Erro ao carregar modelos de etiquetas");
       }
     };
-    
     if (isOpen) {
       loadModelosCustom();
     }
@@ -81,41 +69,32 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
   // Carregar detalhes do modelo selecionado
   useEffect(() => {
     setModeloWarning(null);
-    
     if (selectedModeloId) {
       const carregarModeloSelecionado = async () => {
         try {
           console.log("Carregando detalhes do modelo:", selectedModeloId);
           const modelo = await EtiquetaCustomModel.getById(selectedModeloId);
           console.log("Detalhes do modelo carregado:", modelo);
-          
           if (modelo) {
             setSelectedModelo(modelo);
             console.log("Campos do modelo carregado:", modelo.campos);
-            
+
             // Verificar se as dimensões são válidas
             if (modelo.formatoPagina === "Personalizado") {
               if (!modelo.larguraPagina || !modelo.alturaPagina) {
                 setModeloWarning("Este modelo tem formato personalizado, mas as dimensões da página não estão definidas.");
                 return;
               }
-              
+
               // Verificar se a etiqueta cabe na página
               const areaUtilLargura = modelo.larguraPagina - modelo.margemEsquerda - modelo.margemDireita;
               if (modelo.largura > areaUtilLargura) {
-                setModeloWarning(
-                  `A largura da etiqueta (${modelo.largura}mm) é maior que a área útil disponível (${areaUtilLargura}mm). ` +
-                  `Isso pode causar problemas na impressão. Considere editar o modelo.`
-                );
+                setModeloWarning(`A largura da etiqueta (${modelo.largura}mm) é maior que a área útil disponível (${areaUtilLargura}mm). ` + `Isso pode causar problemas na impressão. Considere editar o modelo.`);
                 return;
               }
-              
               const areaUtilAltura = modelo.alturaPagina - modelo.margemSuperior - modelo.margemInferior;
               if (modelo.altura > areaUtilAltura) {
-                setModeloWarning(
-                  `A altura da etiqueta (${modelo.altura}mm) é maior que a área útil disponível (${areaUtilAltura}mm). ` +
-                  `Isso pode causar problemas na impressão. Considere editar o modelo.`
-                );
+                setModeloWarning(`A altura da etiqueta (${modelo.altura}mm) é maior que a área útil disponível (${areaUtilAltura}mm). ` + `Isso pode causar problemas na impressão. Considere editar o modelo.`);
                 return;
               }
             }
@@ -128,50 +107,40 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
           toast.error("Erro ao carregar modelo de etiqueta");
         }
       };
-      
       carregarModeloSelecionado();
     } else {
       setSelectedModelo(null);
     }
   }, [selectedModeloId]);
-
   const validateInput = (): boolean => {
     if (!item) {
       toast.error("Nenhum item selecionado para impressão");
       return false;
     }
-
     const copiesNum = parseInt(copies);
     const startRowNum = parseInt(startRow);
     const startColNum = parseInt(startColumn);
-
     if (isNaN(copiesNum) || copiesNum < 1) {
       toast.error("Número de cópias deve ser pelo menos 1");
       return false;
     }
-
     if (isNaN(startRowNum) || startRowNum < 1) {
       toast.error("Linha de início deve ser pelo menos 1");
       return false;
     }
-
     if (isNaN(startColNum) || startColNum < 1) {
       toast.error("Coluna de início deve ser pelo menos 1");
       return false;
     }
-
     if (selectedModeloId && modeloWarning) {
       if (!confirm("O modelo selecionado pode ter problemas de impressão. Deseja continuar mesmo assim?")) {
         return false;
       }
     }
-
     return true;
   };
-
   const handlePrint = async () => {
     if (!validateInput()) return;
-
     try {
       setIsProcessing(true);
       console.log("Iniciando impressão com modelo:", selectedModeloId);
@@ -193,7 +162,6 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
 
       // Abrir PDF em nova aba
       window.open(pdfUrl, '_blank');
-      
       toast.success("Etiquetas geradas com sucesso!");
       onClose();
     } catch (error) {
@@ -207,7 +175,6 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
       setIsProcessing(false);
     }
   };
-
   const handleModeloSuccess = async () => {
     setShowModeloForm(false);
     try {
@@ -218,7 +185,6 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
       console.error("Erro ao recarregar modelos:", error);
     }
   };
-
   const editarModeloSelecionado = () => {
     if (selectedModelo && selectedModelo.id) {
       // Funcionalidade futura: implementar edição do modelo
@@ -227,28 +193,20 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
       toast.error("Nenhum modelo selecionado para editar");
     }
   };
-
   if (showModeloForm) {
-    return (
-      <Dialog open={isOpen} onOpenChange={onClose}>
+    return <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden">
           <DialogHeader>
-            <DialogTitle>Criar Novo Modelo de Etiqueta</DialogTitle>
+            
             <DialogDescription>
               Preencha os campos abaixo para criar um novo modelo de etiqueta personalizada.
             </DialogDescription>
           </DialogHeader>
-          <EtiquetaCustomForm
-            onClose={() => setShowModeloForm(false)}
-            onSuccess={handleModeloSuccess}
-          />
+          <EtiquetaCustomForm onClose={() => setShowModeloForm(false)} onSuccess={handleModeloSuccess} />
         </DialogContent>
-      </Dialog>
-    );
+      </Dialog>;
   }
-
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+  return <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl">
         <DialogHeader>
           <DialogTitle>Imprimir Etiquetas</DialogTitle>
@@ -271,55 +229,28 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
             </div>
             <div className="space-y-2">
               <Label htmlFor="copies">Cópias</Label>
-              <Input
-                id="copies"
-                type="number"
-                min="1"
-                value={copies}
-                onChange={(e) => setCopies(e.target.value)}
-              />
+              <Input id="copies" type="number" min="1" value={copies} onChange={e => setCopies(e.target.value)} />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="start-row">Linha início</Label>
-              <Input
-                id="start-row"
-                type="number"
-                min="1"
-                value={startRow}
-                onChange={(e) => setStartRow(e.target.value)}
-              />
+              <Input id="start-row" type="number" min="1" value={startRow} onChange={e => setStartRow(e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="start-column">Coluna início</Label>
-              <Input
-                id="start-column"
-                type="number"
-                min="1"
-                value={startColumn}
-                onChange={(e) => setStartColumn(e.target.value)}
-              />
+              <Input id="start-column" type="number" min="1" value={startColumn} onChange={e => setStartColumn(e.target.value)} />
             </div>
           </div>
           <div className="flex items-center space-x-2">
-            <Switch
-              id="multiply-stock"
-              checked={multiplyByStock}
-              onCheckedChange={setMultiplyByStock}
-            />
+            <Switch id="multiply-stock" checked={multiplyByStock} onCheckedChange={setMultiplyByStock} />
             <Label htmlFor="multiply-stock">Multiplicar por estoque</Label>
           </div>
         </div>
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <h3 className="text-sm font-medium">Modelo de Etiqueta</h3>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowModeloForm(true)}
-              className="flex items-center gap-2"
-            >
+            <Button variant="outline" size="sm" onClick={() => setShowModeloForm(true)} className="flex items-center gap-2">
               <Plus className="h-4 w-4" />
               Novo Modelo
             </Button>
@@ -327,55 +258,39 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="modelos-custom">Modelos personalizados</Label>
-              <Select 
-                value={selectedModeloId} 
-                onValueChange={setSelectedModeloId}
-              >
+              <Select value={selectedModeloId} onValueChange={setSelectedModeloId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o modelo" />
                 </SelectTrigger>
                 <SelectContent>
-                  {modelosCustom.length > 0 ? (
-                    modelosCustom.map((modelo) => (
-                      <SelectItem key={modelo.id} value={modelo.id || ""}>
+                  {modelosCustom.length > 0 ? modelosCustom.map(modelo => <SelectItem key={modelo.id} value={modelo.id || ""}>
                         {modelo.nome}
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem value="sem-modelos" disabled>
+                      </SelectItem>) : <SelectItem value="sem-modelos" disabled>
                       Nenhum modelo disponível
-                    </SelectItem>
-                  )}
+                    </SelectItem>}
                 </SelectContent>
               </Select>
             </div>
           </div>
           
-          {selectedModelo && (
-            <div className="border p-4 rounded-md bg-slate-50">
+          {selectedModelo && <div className="border p-4 rounded-md bg-slate-50">
               <h4 className="font-medium mb-2">Detalhes do modelo: {selectedModelo.nome}</h4>
               <div className="text-sm space-y-1">
                 <p>Dimensões da etiqueta: {selectedModelo.largura}mm × {selectedModelo.altura}mm</p>
                 <p>Formato da página: {selectedModelo.formatoPagina} 
-                  {selectedModelo.formatoPagina === "Personalizado" && selectedModelo.larguraPagina && selectedModelo.alturaPagina 
-                    ? ` (${selectedModelo.larguraPagina}mm × ${selectedModelo.alturaPagina}mm)` 
-                    : ""
-                  }
+                  {selectedModelo.formatoPagina === "Personalizado" && selectedModelo.larguraPagina && selectedModelo.alturaPagina ? ` (${selectedModelo.larguraPagina}mm × ${selectedModelo.alturaPagina}mm)` : ""}
                 </p>
                 <p>Orientação: {selectedModelo.orientacao === "retrato" ? "Retrato" : "Paisagem"}</p>
               </div>
-            </div>
-          )}
+            </div>}
           
-          {modeloWarning && (
-            <Alert variant="warning" className="bg-yellow-50 border-yellow-200">
+          {modeloWarning && <Alert variant="warning" className="bg-yellow-50 border-yellow-200">
               <AlertTriangle className="h-4 w-4 text-yellow-700" />
               <AlertTitle className="text-yellow-800">Atenção</AlertTitle>
               <AlertDescription className="text-yellow-700">
                 {modeloWarning}
               </AlertDescription>
-            </Alert>
-          )}
+            </Alert>}
         </div>
         <div className="flex justify-end space-x-2">
           <Button variant="outline" onClick={onClose} disabled={isProcessing}>
@@ -386,6 +301,5 @@ export function PrintLabelDialog({ isOpen, onClose, item }: PrintLabelDialogProp
           </Button>
         </div>
       </DialogContent>
-    </Dialog>
-  );
+    </Dialog>;
 }
