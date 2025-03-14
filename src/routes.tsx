@@ -1,90 +1,47 @@
 
-import { createBrowserRouter, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "@/pages/Index";
+import AuthRoutes from "@/routes/auth";
+import Dashboard from "@/routes/dashboard";
 import NotFound from "@/pages/NotFound";
-import DashboardLayout from "@/routes/dashboard";
-import InventoryPage from "@/routes/inventory";
-import InventoryLabelsPage from "@/routes/inventory-labels";
-import InventoryReportsPage from "@/routes/inventory-reports";
-import CategoriesPage from "@/routes/categories";
-import PlatingTypesPage from "@/routes/plating-types";
-import SuitcasesPage from "@/routes/suitcases";
-import SuppliersPage from "@/routes/suppliers";
-import UsersPage from "@/routes/users";
-import SettingsPage from "@/routes/settings";
-import AuthPage from "@/routes/auth";
+import Inventory from "@/routes/inventory";
+import Suitcases from "@/routes/suitcases";
+import Suppliers from "@/routes/suppliers";
+import Categories from "@/routes/categories";
+import Users from "@/routes/users";
+import PlatingTypes from "@/routes/plating-types";
+import { DashboardContent } from "@/components/dashboard/DashboardContent";
+import InventoryReports from "@/routes/inventory-reports";
+import InventoryLabelsRoute from "@/routes/inventory-labels";
 import ResellersPage from "@/routes/sales/resellers";
 import ResellerFormPage from "@/routes/sales/reseller-form";
+import SettingsPage from "@/routes/settings";
 
-export const router = createBrowserRouter([
-  {
-    path: "/",
-    element: <Index />,
-  },
-  {
-    path: "/auth",
-    element: <AuthPage />,
-  },
-  {
-    path: "/dashboard",
-    element: <DashboardLayout />,
-    children: [
-      {
-        index: true,
-        element: <Navigate to="/dashboard/inventory" replace />,
-      },
-      {
-        path: "inventory",
-        element: <InventoryPage />,
-      },
-      {
-        path: "inventory/labels",
-        element: <InventoryLabelsPage />,
-      },
-      {
-        path: "inventory/reports",
-        element: <InventoryReportsPage />,
-      },
-      {
-        path: "categories",
-        element: <CategoriesPage />,
-      },
-      {
-        path: "plating-types",
-        element: <PlatingTypesPage />,
-      },
-      {
-        path: "suitcases",
-        element: <SuitcasesPage />,
-      },
-      {
-        path: "suppliers",
-        element: <SuppliersPage />,
-      },
-      {
-        path: "users",
-        element: <UsersPage />,
-      },
-      {
-        path: "settings",
-        element: <SettingsPage />,
-      },
-      {
-        path: "sales/resellers",
-        element: <ResellersPage />,
-      },
-      {
-        path: "sales/resellers/new",
-        element: <ResellerFormPage />,
-      },
-      {
-        path: "sales/resellers/:id",
-        element: <ResellerFormPage />,
-      }
-    ],
-  },
-  {
-    path: "*",
-    element: <NotFound />,
-  },
-]);
+const Router = () => {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route index element={<Index />} />
+        <Route path="/auth/*" element={<AuthRoutes />} />
+        <Route path="/dashboard/*" element={<Dashboard />}>
+          <Route index element={<DashboardContent />} />
+          <Route path="inventory" element={<Inventory />} />
+          <Route path="inventory/labels" element={<InventoryLabelsRoute />} />
+          <Route path="inventory/reports" element={<InventoryReports />} />
+          <Route path="suitcases" element={<Suitcases />} />
+          <Route path="suppliers" element={<Suppliers />} />
+          <Route path="plating-types" element={<PlatingTypes />} />
+          <Route path="categories" element={<Categories />} />
+          <Route path="sales/resellers" element={<ResellersPage />} />
+          <Route path="sales/resellers/new" element={<ResellerFormPage />} />
+          <Route path="sales/resellers/:id" element={<ResellerFormPage />} />
+          <Route path="settings" element={<SettingsPage />} />
+          <Route path="settings/users" element={<Users />} />
+        </Route>
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </BrowserRouter>
+  );
+};
+
+export default Router;

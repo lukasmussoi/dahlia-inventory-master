@@ -3,10 +3,9 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useQuery } from "@tanstack/react-query";
-import { ResellerController } from "@/controllers/resellerController";
-import { Reseller, ResellerInput, ResellerStatus } from "@/types/reseller";
-import { Promoter } from "@/types/promoter";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -24,121 +23,194 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { toast } from "sonner";
-import { formatCPFOrCNPJ, formatPhone, formatZipCode } from "@/utils/formatUtils";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { ResellerController } from "@/controllers/resellerController";
+import { PromoterController } from "@/controllers/promoterController";
+import { Promoter } from "@/types/promoter";
+import { Reseller, ResellerInput } from "@/types/reseller";
+import { formatPhone, formatCPFOrCNPJ, formatZipCode } from "@/utils/formatUtils";
+import { isValidCPFOrCNPJ, isValidPhone, isValidEmail, isValidZipCode } from "@/utils/validationUtils";
 
-// Schema para validação do formulário
+// Esquema de validação com zod
 const formSchema = z.object({
-  name: z.string().min(3, "Nome deve ter pelo menos 3 caracteres"),
-  cpfCnpj: z.string().min(11, "CPF/CNPJ inválido"),
-  phone: z.string().min(10, "Telefone inválido"),
+  name: z.string().min(3, "O nome deve ter pelo menos 3 caracteres"),
+  cpfCnpj: z.string().refine(isValidCPFOrCNPJ, "CPF/CNPJ inválido"),
+  phone: z.string().refine(isValidPhone, "Telefone inválido"),
   email: z.string().email("Email inválido").optional().or(z.literal("")),
   status: z.enum(["Ativa", "Inativa"]),
   promoterId: z.string().uuid("Selecione uma promotora"),
-  address: z.object({
-    street: z.string().optional().or(z.literal("")),
-    number: z.string().optional().or(z.literal("")),
-    complement: z.string().optional().or(z.literal("")),
-    neighborhood: z.string().optional().or(z.literal("")),
-    city: z.string().optional().or(z.literal("")),
-    state: z.string().optional().or(z.literal("")),
-    zipCode: z.string().optional().or(z.literal(""))
-  }).optional()
+  street: z.string().optional(),
+  number: z.string().optional(),
+  complement: z.string().optional(),
+  neighborhood: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  zipCode: z.string().optional(),
 });
 
-type FormData = z.infer<typeof formSchema>;
-
 interface ResellerFormProps {
-  reseller?: Reseller | null;
-  onCancel: () => void;
-  onSuccess: () => void;
+  resellerId?: string;
+  onSuccess?: () => void;
+  isDialog?: boolean;
 }
 
-export function ResellerForm({ reseller, onCancel, onSuccess }: ResellerFormProps) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  // Carregar lista de promotoras
-  const { data: promoters, isLoading: isLoadingPromoters } = useQuery({
-    queryKey: ['promoters'],
-    queryFn: () => ResellerController.getAllPromoters(),
-  });
+export function ResellerForm({ resellerId, onSuccess, isDialog = false }: ResellerFormProps) {
+  const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
+  const [promoters, setPromoters] = useState<Promoter[]>([]);
+  const [reseller, setReseller] = useState<Reseller | null>(null);
 
-  // Inicializar formulário
-  const form = useForm<FormData>({
+  const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: reseller?.name || "",
-      cpfCnpj: reseller?.cpfCnpj || "",
-      phone: reseller?.phone || "",
-      email: reseller?.email || "",
-      status: reseller?.status || "Ativa",
-      promoterId: reseller?.promoterId || "",
-      address: reseller?.address || {
-        street: "",
-        number: "",
-        complement: "",
-        neighborhood: "",
-        city: "",
-        state: "",
-        zipCode: ""
-      }
-    }
+      name: "",
+      cpfCnpj: "",
+      phone: "",
+      email: "",
+      status: "Ativa",
+      promoterId: "",
+      street: "",
+      number: "",
+      complement: "",
+      neighborhood: "",
+      city: "",
+      state: "",
+      zipCode: "",
+    },
   });
 
-  // Função para formatar campos
-  const handleCPFCNPJChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatCPFOrCNPJ(e.target.value);
-    form.setValue('cpfCnpj', formatted);
+  // Buscar promotoras
+  useEffect(() => {
+    const loadPromoters = async () => {
+      try {
+        const data = await PromoterController.getAllPromoters();
+        setPromoters(data);
+      } catch (error) {
+        console.error("Erro ao carregar promotoras:", error);
+        toast.error("Erro ao carregar promotoras");
+      }
+    };
+
+    loadPromoters();
+  }, []);
+
+  // Buscar dados da revendedora para edição
+  useEffect(() => {
+    if (resellerId) {
+      const loadReseller = async () => {
+        try {
+          setIsLoading(true);
+          const data = await ResellerController.getResellerById(resellerId);
+          setReseller(data);
+          
+          // Preencher formulário com dados da revendedora
+          form.reset({
+            name: data.name,
+            cpfCnpj: data.cpfCnpj,
+            phone: data.phone,
+            email: data.email || "",
+            status: data.status,
+            promoterId: data.promoterId,
+            street: data.address?.street || "",
+            number: data.address?.number || "",
+            complement: data.address?.complement || "",
+            neighborhood: data.address?.neighborhood || "",
+            city: data.address?.city || "",
+            state: data.address?.state || "",
+            zipCode: data.address?.zipCode || "",
+          });
+        } catch (error) {
+          console.error("Erro ao carregar revendedora:", error);
+          toast.error("Erro ao carregar dados da revendedora");
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      loadReseller();
+    }
+  }, [resellerId, form]);
+
+  // Lidar com a formatação de CPF/CNPJ
+  const handleCpfCnpjChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    const formattedValue = formatCPFOrCNPJ(value);
+    form.setValue("cpfCnpj", formattedValue);
   };
 
+  // Lidar com a formatação de telefone
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatPhone(e.target.value);
-    form.setValue('phone', formatted);
+    const value = e.target.value;
+    const formattedValue = formatPhone(value);
+    form.setValue("phone", formattedValue);
   };
 
+  // Lidar com a formatação de CEP
   const handleZipCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatZipCode(e.target.value);
-    form.setValue('address.zipCode', formatted);
+    const value = e.target.value;
+    const formattedValue = formatZipCode(value);
+    form.setValue("zipCode", formattedValue);
   };
 
-  // Enviar formulário
-  const onSubmit = async (data: FormData) => {
-    setIsSubmitting(true);
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
-      if (reseller) {
+      setIsLoading(true);
+
+      // Preparar dados do endereço
+      const address = {
+        street: values.street || "",
+        number: values.number || "",
+        complement: values.complement,
+        neighborhood: values.neighborhood || "",
+        city: values.city || "",
+        state: values.state || "",
+        zipCode: values.zipCode || "",
+      };
+
+      // Preparar dados da revendedora
+      const resellerData: ResellerInput = {
+        name: values.name,
+        cpfCnpj: values.cpfCnpj,
+        phone: values.phone,
+        email: values.email,
+        status: values.status,
+        promoterId: values.promoterId,
+        address,
+      };
+
+      if (resellerId) {
         // Atualizar revendedora existente
-        await ResellerController.updateReseller(reseller.id, data as ResellerInput);
+        await ResellerController.updateReseller(resellerId, resellerData);
         toast.success("Revendedora atualizada com sucesso!");
       } else {
         // Criar nova revendedora
-        await ResellerController.createReseller(data as ResellerInput);
+        await ResellerController.createReseller(resellerData);
         toast.success("Revendedora cadastrada com sucesso!");
       }
-      onSuccess();
-    } catch (error) {
-      console.error("Erro ao salvar revendedora:", error);
-      if (error instanceof Error) {
-        toast.error(error.message);
-      } else {
-        toast.error("Erro ao salvar revendedora. Tente novamente.");
+
+      // Callback de sucesso ou redirecionar
+      if (onSuccess) {
+        onSuccess();
+      } else if (!isDialog) {
+        navigate("/dashboard/sales/resellers");
       }
+    } catch (error: any) {
+      console.error("Erro ao salvar revendedora:", error);
+      toast.error(error.message || "Erro ao salvar revendedora");
     } finally {
-      setIsSubmitting(false);
+      setIsLoading(false);
     }
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <Tabs defaultValue="basic">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="basic">Dados Básicos</TabsTrigger>
-            <TabsTrigger value="address">Endereço</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="basic" className="space-y-4 mt-4">
+    <Card className="w-full">
+      <CardHeader>
+        <CardTitle>{resellerId ? "Editar Revendedora" : "Nova Revendedora"}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -147,7 +219,7 @@ export function ResellerForm({ reseller, onCancel, onSuccess }: ResellerFormProp
                   <FormItem>
                     <FormLabel>Nome*</FormLabel>
                     <FormControl>
-                      <Input placeholder="Nome da revendedora" {...field} />
+                      <Input {...field} placeholder="Nome da revendedora" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -162,18 +234,16 @@ export function ResellerForm({ reseller, onCancel, onSuccess }: ResellerFormProp
                     <FormLabel>CPF/CNPJ*</FormLabel>
                     <FormControl>
                       <Input 
+                        {...field} 
                         placeholder="CPF ou CNPJ" 
-                        value={field.value}
-                        onChange={(e) => handleCPFCNPJChange(e)}
+                        onChange={handleCpfCnpjChange}
                       />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="phone"
@@ -182,9 +252,9 @@ export function ResellerForm({ reseller, onCancel, onSuccess }: ResellerFormProp
                     <FormLabel>Telefone*</FormLabel>
                     <FormControl>
                       <Input 
-                        placeholder="(00) 00000-0000" 
-                        value={field.value}
-                        onChange={(e) => handlePhoneChange(e)}
+                        {...field} 
+                        placeholder="(00) 00000-0000"
+                        onChange={handlePhoneChange}
                       />
                     </FormControl>
                     <FormMessage />
@@ -199,23 +269,21 @@ export function ResellerForm({ reseller, onCancel, onSuccess }: ResellerFormProp
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input placeholder="email@exemplo.com" {...field} />
+                      <Input {...field} placeholder="email@exemplo.com" type="email" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="status"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Status*</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
+                    <Select 
+                      onValueChange={field.onChange} 
                       defaultValue={field.value}
                       value={field.value}
                     >
@@ -240,8 +308,8 @@ export function ResellerForm({ reseller, onCancel, onSuccess }: ResellerFormProp
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Promotora Responsável*</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
+                    <Select 
+                      onValueChange={field.onChange} 
                       defaultValue={field.value}
                       value={field.value}
                     >
@@ -251,17 +319,11 @@ export function ResellerForm({ reseller, onCancel, onSuccess }: ResellerFormProp
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {isLoadingPromoters ? (
-                          <SelectItem value="" disabled>Carregando...</SelectItem>
-                        ) : promoters?.length === 0 ? (
-                          <SelectItem value="" disabled>Nenhuma promotora cadastrada</SelectItem>
-                        ) : (
-                          promoters?.map((promoter) => (
-                            <SelectItem key={promoter.id} value={promoter.id}>
-                              {promoter.name}
-                            </SelectItem>
-                          ))
-                        )}
+                        {promoters.map(promoter => (
+                          <SelectItem key={promoter.id} value={promoter.id}>
+                            {promoter.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -269,134 +331,135 @@ export function ResellerForm({ reseller, onCancel, onSuccess }: ResellerFormProp
                 )}
               />
             </div>
-          </TabsContent>
-          
-          <TabsContent value="address" className="space-y-4 mt-4">
-            <Card>
-              <CardContent className="pt-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="address.street"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Rua/Avenida</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Rua/Avenida" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="address.number"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Número</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Número" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+            <Separator />
+            <h3 className="text-lg font-medium">Endereço</h3>
 
-                    <FormField
-                      control={form.control}
-                      name="address.complement"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Complemento</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Complemento" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <FormField
+                control={form.control}
+                name="zipCode"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>CEP</FormLabel>
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        placeholder="00000-000"
+                        onChange={handleZipCodeChange}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                  <FormField
-                    control={form.control}
-                    name="address.neighborhood"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Bairro</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Bairro" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+              <FormField
+                control={form.control}
+                name="street"
+                render={({ field }) => (
+                  <FormItem className="col-span-2">
+                    <FormLabel>Logradouro</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="Rua, Avenida, etc." />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-                  <FormField
-                    control={form.control}
-                    name="address.zipCode"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>CEP</FormLabel>
-                        <FormControl>
-                          <Input 
-                            placeholder="00000-000" 
-                            value={field.value}
-                            onChange={(e) => handleZipCodeChange(e)}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+              <FormField
+                control={form.control}
+                name="number"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Número</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="Número" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                  <FormField
-                    control={form.control}
-                    name="address.city"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Cidade</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Cidade" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+              <FormField
+                control={form.control}
+                name="complement"
+                render={({ field }) => (
+                  <FormItem className="col-span-2">
+                    <FormLabel>Complemento</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="Apartamento, sala, etc." />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-                  <FormField
-                    control={form.control}
-                    name="address.state"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Estado</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Estado" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-        
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
-            Cancelar
-          </Button>
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Salvando..." : reseller ? "Atualizar" : "Cadastrar"}
-          </Button>
-        </div>
-      </form>
-    </Form>
+              <FormField
+                control={form.control}
+                name="neighborhood"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Bairro</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="Bairro" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="city"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cidade</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="Cidade" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="state"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Estado</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="Estado" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  if (isDialog && onSuccess) {
+                    onSuccess();
+                  } else {
+                    navigate("/dashboard/sales/resellers");
+                  }
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? "Salvando..." : "Salvar"}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </CardContent>
+    </Card>
   );
 }
