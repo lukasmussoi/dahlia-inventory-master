@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EtiquetaEditor } from './editor/EtiquetaEditor';
 import { useEtiquetaCustomForm } from "@/hooks/useEtiquetaCustomForm";
+import EtiquetaCreator from './editor/EtiquetaCreator';
 import type { ModeloEtiqueta, CampoEtiqueta } from "@/types/etiqueta";
 import { 
   FormField, 
@@ -15,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, WrenchIcon, ArrowLeft, ArrowRight, Layout, File, LayoutGrid } from "lucide-react";
+import { useState } from "react";
 
 type EtiquetaCustomFormProps = {
   modelo?: ModeloEtiqueta;
@@ -24,7 +26,42 @@ type EtiquetaCustomFormProps = {
 
 export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCustomFormProps) {
   const { form, isLoading, onSubmit, pageAreaWarning, corrigirDimensoesAutomaticamente } = useEtiquetaCustomForm(modelo, onClose, onSuccess);
+  const [useNewEditor, setUseNewEditor] = useState(true);
 
+  const handleSave = (data: any) => {
+    // Adaptar os dados do editor visual para o formato esperado pelo formulário
+    form.setValue('nome', data.nome);
+    form.setValue('descricao', data.descricao);
+    form.setValue('campos', data.campos);
+    form.setValue('largura', data.largura);
+    form.setValue('altura', data.altura);
+    form.setValue('formatoPagina', data.formatoPagina);
+    form.setValue('orientacao', data.orientacao);
+    form.setValue('margemSuperior', data.margemSuperior);
+    form.setValue('margemInferior', data.margemInferior);
+    form.setValue('margemEsquerda', data.margemEsquerda);
+    form.setValue('margemDireita', data.margemDireita);
+    form.setValue('espacamentoHorizontal', data.espacamentoHorizontal);
+    form.setValue('espacamentoVertical', data.espacamentoVertical);
+    form.setValue('larguraPagina', data.larguraPagina);
+    form.setValue('alturaPagina', data.alturaPagina);
+    
+    // Submeter o formulário
+    form.handleSubmit(onSubmit)();
+  };
+
+  // Usar o novo editor de etiquetas
+  if (useNewEditor) {
+    return (
+      <EtiquetaCreator 
+        onClose={onClose}
+        onSave={handleSave}
+        initialData={modelo}
+      />
+    );
+  }
+
+  // Editor antigo (mantido como fallback)
   return (
     <Form {...form}>
       <form onSubmit={(e) => {
