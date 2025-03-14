@@ -1,3 +1,4 @@
+
 "use client"
 import { useState, useRef, useEffect } from "react"
 import { 
@@ -626,7 +627,14 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
             value={modelName}
             onChange={(e) => setModelName(e.target.value)}
           />
-          {/* Removido o botão X que estava duplicado aqui */}
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={onClose}
+          >
+            <X className="h-4 w-4" />
+            <span className="sr-only">Fechar</span>
+          </Button>
         </div>
       </div>
       
@@ -714,7 +722,7 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
       </div>
       
       {/* Conteúdo principal */}
-      <div className="flex h-[calc(100vh-8rem)] max-h-[700px]">
+      <div className="flex etiqueta-content">
         {/* Barra lateral */}
         <div className="border-r w-64 flex flex-col">
           {/* Conteúdo da barra lateral */}
@@ -846,3 +854,355 @@ export default function EtiquetaCreator({ onClose, onSave, initialData }: Etique
                               className="flex-1 h-9"
                               onClick={() => handleSetAlignment("right")}
                             >
+                              <AlignRight className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+            
+            {activeTab === "etiquetas" && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-medium text-sm">Etiquetas</h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0"
+                    onClick={handleAddLabel}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+                
+                <div className="space-y-2">
+                  {labels.map((label) => (
+                    <div 
+                      key={label.id}
+                      className={cn(
+                        "flex items-center justify-between p-2 border rounded cursor-pointer",
+                        selectedLabelId === label.id && "bg-primary/10 border-primary"
+                      )}
+                      onClick={() => {
+                        setSelectedLabelId(label.id);
+                        setSelectedElement(null);
+                      }}
+                    >
+                      <div className="flex items-center">
+                        <Input 
+                          className="h-7 w-36 text-xs"
+                          value={label.name}
+                          onChange={(e) => handleUpdateLabelName(label.id, e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </div>
+                      <div className="flex space-x-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDuplicateLabel(label.id);
+                          }}
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 text-destructive"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteLabel(label.id);
+                          }}
+                        >
+                          <Trash className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
+                {selectedLabelId !== null && (
+                  <div className="pt-4 border-t mt-4">
+                    <h3 className="font-medium text-sm mb-2">Dimensões da Etiqueta</h3>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <Label htmlFor="label-width" className="text-xs">Largura (mm)</Label>
+                          <Input
+                            id="label-width"
+                            type="number"
+                            className="h-8"
+                            value={getSelectedLabel()?.width || 0}
+                            onChange={(e) => handleUpdateLabelSize("width", Number(e.target.value))}
+                            min={10}
+                            max={pageSize.width}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor="label-height" className="text-xs">Altura (mm)</Label>
+                          <Input
+                            id="label-height"
+                            type="number"
+                            className="h-8"
+                            value={getSelectedLabel()?.height || 0}
+                            onChange={(e) => handleUpdateLabelSize("height", Number(e.target.value))}
+                            min={10}
+                            max={pageSize.height}
+                          />
+                        </div>
+                      </div>
+                      
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full h-8"
+                        onClick={handleOptimizeLayout}
+                      >
+                        <LayoutGrid className="h-4 w-4 mr-1" />
+                        <span className="text-xs">Otimizar Layout</span>
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {activeTab === "config" && (
+              <div className="space-y-4">
+                <h3 className="font-medium text-sm">Configurações da Página</h3>
+                <div className="space-y-4">
+                  <div className="space-y-1">
+                    <Label htmlFor="page-format" className="text-xs">Formato</Label>
+                    <Select
+                      value={pageFormat}
+                      onValueChange={handleUpdatePageFormat}
+                    >
+                      <SelectTrigger id="page-format" className="h-8">
+                        <SelectValue placeholder="Selecione o formato" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="A4">A4 (210 x 297 mm)</SelectItem>
+                        <SelectItem value="A5">A5 (148 x 210 mm)</SelectItem>
+                        <SelectItem value="Letter">Carta (216 x 279 mm)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label htmlFor="page-width" className="text-xs">Largura (mm)</Label>
+                      <Input
+                        id="page-width"
+                        type="number"
+                        className="h-8"
+                        value={pageSize.width}
+                        readOnly
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="page-height" className="text-xs">Altura (mm)</Label>
+                      <Input
+                        id="page-height"
+                        type="number"
+                        className="h-8"
+                        value={pageSize.height}
+                        readOnly
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <Label htmlFor="grid-size" className="text-xs">Tamanho da Grade (mm)</Label>
+                    <Input
+                      id="grid-size"
+                      type="number"
+                      className="h-8"
+                      value={gridSize}
+                      onChange={(e) => setGridSize(Number(e.target.value))}
+                      min={1}
+                      max={10}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {activeTab === "preview" && (
+              <div className="space-y-4">
+                <h3 className="font-medium text-sm">Pré-visualização</h3>
+                
+                {selectedLabelId !== null && (
+                  <div className="space-y-4">
+                    <div className="bg-white p-2 border rounded">
+                      <div 
+                        className="border border-dashed border-gray-300 relative bg-white"
+                        style={{
+                          width: `${getSelectedLabel()?.width}px`,
+                          height: `${getSelectedLabel()?.height}px`,
+                        }}
+                      >
+                        {getSelectedLabel()?.elements.map((element) => (
+                          <div
+                            key={element.id}
+                            className="absolute"
+                            style={{
+                              left: element.x,
+                              top: element.y,
+                              width: element.width,
+                              height: element.height,
+                            }}
+                          >
+                            <div 
+                              className="w-full h-full flex items-center justify-center p-1"
+                              style={{ 
+                                textAlign: element.align, 
+                                fontSize: `${element.fontSize / 2}px` 
+                              }}
+                            >
+                              {getElementPreview(element.type)}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <div className="text-xs text-muted-foreground">
+                      Esta é uma prévia aproximada de como sua etiqueta aparecerá quando impressa.
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          
+          {/* Footer da barra lateral */}
+          <div className="p-4 border-t">
+            <Button 
+              variant="default" 
+              size="sm" 
+              className="w-full"
+              onClick={selectedElement ? handleDeleteElement : undefined}
+              disabled={!selectedElement}
+            >
+              <Trash className="h-4 w-4 mr-1" />
+              <span className="text-xs">Remover Elemento Selecionado</span>
+            </Button>
+          </div>
+        </div>
+        
+        {/* Área principal */}
+        <div className="flex-1 flex flex-col h-full">
+          <div 
+            className="flex-1 relative overflow-auto bg-muted/50 p-6"
+            ref={editorRef}
+            onMouseMove={handleDrag}
+            onMouseUp={handleEndDrag}
+            onMouseLeave={handleEndDrag}
+          >
+            <div 
+              className={cn(
+                "bg-white shadow-sm transform origin-top-left",
+                "relative mx-auto"
+              )}
+              style={{
+                width: `${pageSize.width * zoom / 100}px`,
+                height: `${pageSize.height * zoom / 100}px`,
+                transform: `scale(${zoom / 100})`,
+                transformOrigin: "top left"
+              }}
+            >
+              {showGrid && (
+                <div 
+                  className="absolute inset-0 etiqueta-grid opacity-50"
+                  style={{
+                    backgroundSize: `${gridSize * zoom / 100}px ${gridSize * zoom / 100}px`
+                  }}
+                />
+              )}
+              
+              {labels.map((label) => (
+                <div 
+                  key={label.id}
+                  style={{
+                    position: "absolute",
+                    left: `${label.x}mm`,
+                    top: `${label.y}mm`,
+                    width: `${label.width}mm`,
+                    height: `${label.height}mm`,
+                    border: selectedLabelId === label.id ? "1px solid #3b82f6" : "1px dashed #ccc",
+                    background: selectedLabelId === label.id ? "rgba(219, 234, 254, 0.7)" : "rgba(255, 255, 255, 0.7)",
+                    cursor: "move"
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedLabelId(label.id);
+                  }}
+                  onMouseDown={(e) => handleStartDrag(e, "label", label.id, label.x, label.y)}
+                >
+                  {label.elements.map((element) => (
+                    <div
+                      key={element.id}
+                      style={{
+                        position: "absolute",
+                        left: `${element.x}mm`,
+                        top: `${element.y}mm`,
+                        width: `${element.width}mm`,
+                        height: `${element.height}mm`,
+                        border: selectedElement === element.id ? "1px solid #3b82f6" : "1px dashed #ccc",
+                        background: selectedElement === element.id ? "rgba(219, 234, 254, 0.7)" : "rgba(255, 255, 255, 0.5)",
+                        textAlign: element.align as any,
+                        fontSize: `${element.fontSize}pt`,
+                        cursor: "move",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: element.align === "center" ? "center" : 
+                                        element.align === "right" ? "flex-end" : "flex-start",
+                        padding: "0 2px",
+                        overflow: "hidden",
+                        whiteSpace: "nowrap",
+                        textOverflow: "ellipsis"
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedElement(element.id);
+                      }}
+                      onMouseDown={(e) => handleStartDrag(e, "element", element.id, element.x, element.y)}
+                    >
+                      {getElementPreview(element.type)}
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          {/* Footer da área principal com botões de ação */}
+          <div className="p-4 border-t flex justify-between">
+            <Button 
+              variant="outline" 
+              onClick={onClose}
+            >
+              <X className="h-4 w-4 mr-1" />
+              <span>Cancelar</span>
+            </Button>
+            
+            <Button 
+              variant="default"
+              onClick={handleSave}
+            >
+              <Save className="h-4 w-4 mr-1" />
+              <span>Salvar</span>
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
