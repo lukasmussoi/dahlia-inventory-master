@@ -16,6 +16,7 @@ import InventoryLabelsRoute from "@/routes/inventory-labels";
 import ResellersPage from "@/routes/sales/resellers";
 import PromotersPage from "@/routes/sales/promoters";
 import ResellerFormPage from "@/routes/sales/reseller-form";
+import PromoterFormPage from "@/routes/sales/promoter-form";
 import SettingsPage from "@/routes/settings";
 
 const Router = () => {
@@ -37,6 +38,8 @@ const Router = () => {
           <Route path="sales/resellers/new" element={<ResellerFormPage />} />
           <Route path="sales/resellers/:id" element={<ResellerFormPage />} />
           <Route path="sales/promoters" element={<PromotersPage />} />
+          <Route path="sales/promoters/new" element={<PromoterFormPage />} />
+          <Route path="sales/promoters/:id" element={<PromoterFormPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="settings/users" element={<Users />} />
         </Route>

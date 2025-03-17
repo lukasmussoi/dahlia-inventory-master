@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Pencil, Trash2, Search, FilterX, RefreshCw, UserPlus } from "lucide-react";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -38,12 +39,14 @@ import { Badge } from "../ui/badge";
 import { PromoterDialog } from "./PromoterDialog";
 
 export const PromoterList = () => {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("todos");
   const [isSearching, setIsSearching] = useState(false);
   const [deletePromoterId, setDeletePromoterId] = useState<string | null>(null);
   const [isPromoterDialogOpen, setIsPromoterDialogOpen] = useState(false);
   const [currentPromoter, setCurrentPromoter] = useState<Promoter | null>(null);
+  const [showingDeleted, setShowingDeleted] = useState<string | null>(null);
 
   // Buscar promotoras
   const {
@@ -86,6 +89,10 @@ export const PromoterList = () => {
     try {
       await PromoterController.deletePromoter(deletePromoterId);
       toast.success("Promotora excluída com sucesso");
+      setShowingDeleted(deletePromoterId);
+      setTimeout(() => {
+        setShowingDeleted(null);
+      }, 2000);
       refetch();
     } catch (error: any) {
       console.error("Erro ao excluir promotora:", error);
@@ -96,9 +103,13 @@ export const PromoterList = () => {
   };
 
   // Função para editar promotora
-  const handleEdit = (promoter: Promoter) => {
-    setCurrentPromoter(promoter);
-    setIsPromoterDialogOpen(true);
+  const handleEdit = (promoter: Promoter, useDialog: boolean = false) => {
+    if (useDialog) {
+      setCurrentPromoter(promoter);
+      setIsPromoterDialogOpen(true);
+    } else {
+      navigate(`/dashboard/sales/promoters/${promoter.id}`);
+    }
   };
 
   // Função para adicionar nova promotora
@@ -160,13 +171,6 @@ export const PromoterList = () => {
         </div>
       </div>
 
-      <div className="flex justify-between items-center mb-4">
-        <Button onClick={handleAdd}>
-          <UserPlus className="h-4 w-4 mr-2" />
-          Nova Promotora
-        </Button>
-      </div>
-
       {isLoading ? (
         <div className="text-center py-4">Carregando promotoras...</div>
       ) : promoters.length > 0 ? (
@@ -183,7 +187,10 @@ export const PromoterList = () => {
             </TableHeader>
             <TableBody>
               {promoters.map((promoter: Promoter) => (
-                <TableRow key={promoter.id}>
+                <TableRow 
+                  key={promoter.id}
+                  className={showingDeleted === promoter.id ? "bg-red-50 transition-colors" : ""}
+                >
                   <TableCell className="font-medium">{promoter.name}</TableCell>
                   <TableCell>{promoter.cpfCnpj}</TableCell>
                   <TableCell>{promoter.phone}</TableCell>
@@ -204,8 +211,17 @@ export const PromoterList = () => {
                         variant="ghost"
                         size="icon"
                         onClick={() => handleEdit(promoter)}
+                        title="Editar em página completa"
                       >
                         <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEdit(promoter, true)}
+                        title="Editar em modal"
+                      >
+                        <Pencil className="h-4 w-4 text-blue-500" />
                       </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>

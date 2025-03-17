@@ -47,13 +47,23 @@ export default function PromotersPage() {
         </div>
         
         <div className="flex justify-between items-center">
-          <Button 
-            onClick={() => setIsPromoterDialogOpen(true)}
-            className="mb-4"
-          >
-            <UserPlus className="h-4 w-4 mr-2" />
-            Nova Promotora
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              onClick={() => navigate("/dashboard/sales/promoters/new")}
+              className="mb-4"
+            >
+              <UserPlus className="h-4 w-4 mr-2" />
+              Nova Promotora
+            </Button>
+            <Button 
+              onClick={() => setIsPromoterDialogOpen(true)}
+              className="mb-4"
+              variant="outline"
+            >
+              <UserPlus className="h-4 w-4 mr-2" />
+              Nova Promotora (Modal)
+            </Button>
+          </div>
         </div>
         
         <PromoterList />

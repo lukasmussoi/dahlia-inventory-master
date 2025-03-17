@@ -123,6 +123,7 @@ export function DashboardSidebar() {
                     isActive ? "bg-accent text-accent-foreground" : ""
                   }`
                 }
+                end
               >
                 <item.icon className="h-4 w-4" />
                 <span>{item.title}</span>
