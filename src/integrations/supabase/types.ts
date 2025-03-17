@@ -372,6 +372,8 @@ export type Database = {
       }
       promoters: {
         Row: {
+          address: Json | null
+          cpf_cnpj: string | null
           created_at: string
           email: string | null
           id: string
@@ -381,6 +383,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          address?: Json | null
+          cpf_cnpj?: string | null
           created_at?: string
           email?: string | null
           id?: string
@@ -390,6 +394,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          address?: Json | null
+          cpf_cnpj?: string | null
           created_at?: string
           email?: string | null
           id?: string
