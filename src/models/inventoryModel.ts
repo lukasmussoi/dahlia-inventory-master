@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 // Interface para o item do inventário
@@ -157,7 +156,7 @@ export class InventoryModel {
     })) : [];
   }
 
-  // Método para obter todas as categorias
+  // Método para obter todos as categorias
   static async getAllCategories(): Promise<InventoryCategory[]> {
     const { data, error } = await supabase
       .from('inventory_categories')
@@ -401,5 +400,36 @@ export class InventoryModel {
     return data.reduce((total, item) => {
       return total + (item.price * item.quantity);
     }, 0);
+  }
+
+  // Método para buscar itens do inventário com base em filtros
+  static async searchInventoryItems(filter: any): Promise<InventoryItem[]> {
+    let query = supabase
+      .from('inventory')
+      .select(`
+        *,
+        category:categories!inventory_category_id_fkey(id, name),
+        plating_type:plating_types!inventory_plating_type_id_fkey(id, name),
+        photos:inventory_photos(id, photo_url),
+        suppliers:inventory_suppliers(supplier:suppliers(*))
+      `);
+
+    // Aplicar filtro de busca se fornecido
+    if (filter.search) {
+      // Buscar por nome, SKU ou categoria
+      query = query.or(`name.ilike.%${filter.search}%,sku.ilike.%${filter.search}%`);
+    }
+
+    // Filtrar apenas itens disponíveis (que não estão em maletas)
+    query = query.eq('status', 'available');
+    
+    const { data, error } = await query.order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Erro ao buscar itens do inventário:', error);
+      throw error;
+    }
+    
+    return data as InventoryItem[] || [];
   }
 }

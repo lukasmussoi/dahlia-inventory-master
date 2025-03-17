@@ -120,6 +120,16 @@ export class SuitcaseController {
     }
   }
 
+  static async updateInventoryItemStatus(inventoryId: string, status: string) {
+    try {
+      await InventoryModel.updateInventoryItemStatus(inventoryId, status);
+      return { message: "Status do item atualizado com sucesso" };
+    } catch (error: any) {
+      console.error("Erro ao atualizar status do item:", error);
+      throw new Error(error.message || "Erro ao atualizar status do item");
+    }
+  }
+
   static async getResellersForSelect() {
     try {
       const resellers = await ResellerModel.getAllResellers();

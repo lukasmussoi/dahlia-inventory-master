@@ -1,3 +1,4 @@
+
 import { useRef, useState, useEffect } from "react";
 import { format } from "date-fns";
 import { useReactToPrint } from "react-to-print";
@@ -22,6 +23,7 @@ interface SuitcasePrintDialogProps {
 
 export function SuitcasePrintDialog({ open, onOpenChange, suitcase, suitcaseItems }: SuitcasePrintDialogProps) {
   const [loading, setLoading] = useState(true);
+  const [items, setItems] = useState<any[]>([]);
   const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -30,8 +32,7 @@ export function SuitcasePrintDialog({ open, onOpenChange, suitcase, suitcaseItem
         setLoading(true);
         try {
           const itemsData = await SuitcaseController.getSuitcaseItems(suitcase.id);
-          
-          setSuitcaseItems(itemsData);
+          setItems(itemsData);
         } catch (error) {
           console.error("Erro ao buscar detalhes da maleta:", error);
         } finally {
@@ -43,18 +44,13 @@ export function SuitcasePrintDialog({ open, onOpenChange, suitcase, suitcaseItem
     fetchSuitcaseDetails();
   }, [open, suitcase]);
 
-  const { handlePrint } = useReactToPrint({
+  const handlePrint = useReactToPrint({
     documentTitle: `Maleta_${suitcase?.code || ""}`,
     onAfterPrint: () => {
       onOpenChange(false);
     },
+    content: () => printRef.current,
   });
-
-  const printDocument = () => {
-    if (printRef.current) {
-      handlePrint(undefined, () => printRef.current);
-    }
-  };
 
   if (loading) {
     return (
@@ -73,7 +69,7 @@ export function SuitcasePrintDialog({ open, onOpenChange, suitcase, suitcaseItem
     return null;
   }
 
-  const totalValue = suitcaseItems.reduce((total, item) => {
+  const totalValue = items.reduce((total, item) => {
     return total + (item.product?.price || 0);
   }, 0);
 
@@ -98,7 +94,7 @@ export function SuitcasePrintDialog({ open, onOpenChange, suitcase, suitcaseItem
 
         <div className="p-4">
           <Button 
-            onClick={printDocument}
+            onClick={handlePrint}
             className="mb-4"
           >
             <Printer className="h-4 w-4 mr-2" /> Imprimir Lista
@@ -125,7 +121,7 @@ export function SuitcasePrintDialog({ open, onOpenChange, suitcase, suitcaseItem
                 </tr>
               </thead>
               <tbody>
-                {suitcaseItems.map((item) => (
+                {items.map((item) => (
                   <tr key={item.id} className="border-b">
                     <td className="py-3 px-4">
                       <div className="h-12 w-12 bg-gray-100">
