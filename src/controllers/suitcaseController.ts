@@ -76,7 +76,7 @@ export class SuitcaseController {
       const result = await SuitcaseModel.createSuitcase(suitcaseData);
       toast.success("Maleta criada com sucesso");
       return result;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao criar maleta:", error);
       toast.error(error.message || "Erro ao criar maleta");
       throw error;
@@ -95,7 +95,7 @@ export class SuitcaseController {
       const result = await SuitcaseModel.updateSuitcase(id, updates);
       toast.success("Maleta atualizada com sucesso");
       return result;
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Erro ao atualizar maleta ${id}:`, error);
       toast.error(error.message || "Erro ao atualizar maleta");
       throw error;

@@ -36,7 +36,7 @@ export interface SuitcaseItem {
     name: string;
     price: number;
     sku: string;
-    photos?: Array<{photo_url: string}>;
+    photos?: { photo_url: string }[];
     photo_url?: string;
   };
   sales?: SuitcaseItemSale[];
@@ -138,24 +138,30 @@ export class SuitcaseModel {
       if (error) throw error;
       
       // Processar os dados para obter a primeira foto de cada produto
-      const processedData = data.map(item => {
+      const processedData: SuitcaseItem[] = data.map(item => {
         let photoUrl = undefined;
         
+        // Verificar se photos existe e tem pelo menos um elemento
         if (item.product && 
             item.product.photos && 
             Array.isArray(item.product.photos) && 
-            item.product.photos.length > 0 && 
-            item.product.photos[0].photo_url) {
-          photoUrl = item.product.photos[0].photo_url;
+            item.product.photos.length > 0) {
+          // Se a propriedade photo_url existir diretamente
+          if (item.product.photos[0] && typeof item.product.photos[0] === 'object' && 'photo_url' in item.product.photos[0]) {
+            photoUrl = item.product.photos[0].photo_url;
+          }
         }
         
+        // Retornar o objeto com a estrutura correta
         return {
           ...item,
           product: item.product ? {
             ...item.product,
-            photo_url: photoUrl
+            photo_url: photoUrl,
+            // Garantir que photos seja um array mesmo que venha como erro do Supabase
+            photos: Array.isArray(item.product.photos) ? item.product.photos : []
           } : undefined
-        };
+        } as SuitcaseItem;
       });
       
       return processedData;
@@ -173,9 +179,15 @@ export class SuitcaseModel {
     neighborhood?: string;
     code?: string;
   }): Promise<Suitcase> {
+    // Certificar-se de que status é um valor válido
+    const validStatus = suitcaseData.status || 'in_use';
+    
     const { data, error } = await supabase
       .from('suitcases')
-      .insert(suitcaseData)
+      .insert({
+        ...suitcaseData,
+        status: validStatus as 'in_use' | 'returned' | 'lost' | 'in_audit' | 'in_replenishment'
+      })
       .select()
       .single();
     
@@ -185,9 +197,15 @@ export class SuitcaseModel {
 
   // Atualizar maleta
   static async updateSuitcase(id: string, updates: Partial<Suitcase>): Promise<Suitcase> {
+    // Certificar-se de que status é um valor válido se estiver sendo atualizado
+    const validatedUpdates = { ...updates };
+    if (updates.status) {
+      validatedUpdates.status = updates.status as 'in_use' | 'returned' | 'lost' | 'in_audit' | 'in_replenishment';
+    }
+    
     const { data, error } = await supabase
       .from('suitcases')
-      .update(updates)
+      .update(validatedUpdates)
       .eq('id', id)
       .select()
       .single();

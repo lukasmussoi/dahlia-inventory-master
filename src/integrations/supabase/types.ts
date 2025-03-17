@@ -539,6 +539,7 @@ export type Database = {
       suitcases: {
         Row: {
           city: string | null
+          code: string | null
           created_at: string
           id: string
           neighborhood: string | null
@@ -549,6 +550,7 @@ export type Database = {
         }
         Insert: {
           city?: string | null
+          code?: string | null
           created_at?: string
           id?: string
           neighborhood?: string | null
@@ -559,6 +561,7 @@ export type Database = {
         }
         Update: {
           city?: string | null
+          code?: string | null
           created_at?: string
           id?: string
           neighborhood?: string | null
