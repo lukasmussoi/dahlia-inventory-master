@@ -309,13 +309,14 @@ export class SuitcaseController {
   static async updateNextSettlementDate(suitcaseId: string, nextDate: string | null): Promise<any> {
     try {
       // Verificar se a data é válida
-      let dateValue = null;
+      let dateValue: string | null = null;
       
-      // Corrigir a verificação que estava causando o erro TS2358
+      // Corrigir a verificação para evitar o erro TS2358
       if (nextDate && typeof nextDate === 'string' && nextDate.trim() !== '') {
         dateValue = nextDate;
       }
       
+      // Aqui estava o erro TS18047 - precisamos verificar se dateValue é null
       const result = await SuitcaseModel.updateSuitcase(suitcaseId, { 
         next_settlement_date: dateValue 
       });

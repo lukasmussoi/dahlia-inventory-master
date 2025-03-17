@@ -52,14 +52,21 @@ export function SuitcasePrintDialog({
   }, [open, suitcaseId]);
 
   const handlePrint = useReactToPrint({
-    content: () => printRef.current,
+    documentTitle: `Maleta ${suitcase?.code || ""}`,
     onAfterPrint: () => {
       toast.success("Relatório impresso com sucesso");
     },
     onPrintError: () => {
       toast.error("Erro ao imprimir relatório");
     },
+    removeAfterPrint: true,
   });
+
+  const printContent = () => {
+    if (printRef.current) {
+      handlePrint(undefined, () => printRef.current);
+    }
+  };
 
   if (loading) {
     return (
@@ -107,7 +114,7 @@ export function SuitcasePrintDialog({
 
         <div className="p-4">
           <Button 
-            onClick={handlePrint}
+            onClick={printContent}
             className="mb-4"
           >
             <Printer className="h-4 w-4 mr-2" /> Imprimir Lista

@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 // Interface para maleta com status atualizado
@@ -41,7 +40,7 @@ export interface SuitcaseItem {
     name: string;
     price: number;
     sku: string;
-    photos?: { photo_url: string }[];
+    photos?: { photo_url: string }[] | any; // Ajustado para aceitar qualquer tipo
     photo_url?: string;
   };
   sales?: SuitcaseItemSale[];
@@ -184,16 +183,16 @@ export class SuitcaseModel {
           }
         }
         
-        // Retornar o objeto com a estrutura correta
+        // Retornar o objeto com a estrutura correta e tratando photos de forma segura
         return {
           ...item,
           product: item.product ? {
             ...item.product,
             photo_url: photoUrl,
-            // Garantir que photos seja um array mesmo que venha como erro do Supabase
+            // Garantir uma estrutura de photos segura
             photos: Array.isArray(item.product.photos) ? item.product.photos : []
           } : undefined
-        } as SuitcaseItem;
+        };
       });
       
       return processedData;

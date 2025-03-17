@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -53,9 +52,9 @@ type SuitcaseFormValues = z.infer<typeof suitcaseFormSchema>;
 interface SuitcaseFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (data: SuitcaseFormValues) => void;
-  initialData?: any;
-  mode?: "create" | "edit";
+  onSubmit: (data: any) => void;
+  suitcaseId?: string;
+  onSuccess?: () => void;
 }
 
 export function SuitcaseFormDialog({
@@ -64,6 +63,8 @@ export function SuitcaseFormDialog({
   onSubmit,
   initialData,
   mode = "create",
+  suitcaseId,
+  onSuccess,
 }: SuitcaseFormDialogProps) {
   const [loading, setLoading] = useState(false);
   const [resellers, setResellers] = useState<{ value: string; label: string }[]>([]);
@@ -141,6 +142,9 @@ export function SuitcaseFormDialog({
   const handleSubmit = async (values: SuitcaseFormValues) => {
     try {
       onSubmit(values);
+      if (onSuccess) {
+        onSuccess();
+      }
     } catch (error) {
       console.error("Erro ao submeter formulário:", error);
     }
