@@ -109,11 +109,10 @@ export class SuitcaseController {
       if ('next_settlement_date' in updates) {
         const dateValue = updates.next_settlement_date;
         
-        // Processar apenas se não for null ou undefined
         if (dateValue !== null && dateValue !== undefined) {
-          // Se for um objeto Date
-          if (typeof dateValue === 'object' && dateValue !== null && 'toISOString' in dateValue) {
-            formattedDate = dateValue.toISOString().split('T')[0];
+          if (typeof dateValue === 'object' && 'toISOString' in dateValue) {
+            // Garantir que o método toISOString existe (é um objeto Date)
+            formattedDate = (dateValue as Date).toISOString().split('T')[0];
           } else if (typeof dateValue === 'string') {
             // Se for uma string
             formattedDate = dateValue;
@@ -245,7 +244,7 @@ export class SuitcaseController {
 
   // Formatar status da maleta para exibição
   static formatStatus(status: string) {
-    const statusMap = {
+    const statusMap: Record<string, string> = {
       'in_use': 'Em Uso',
       'returned': 'Devolvida',
       'in_audit': 'Em Auditoria',
@@ -258,7 +257,7 @@ export class SuitcaseController {
 
   // Obter cor do status da maleta
   static getStatusColor(status: string) {
-    const colorMap = {
+    const colorMap: Record<string, string> = {
       'in_use': 'green',
       'returned': 'blue',
       'in_audit': 'yellow',
