@@ -87,7 +87,7 @@ export function SuitcaseDetailsDialog({
     fetchSuitcaseDetails();
   }, [open, suitcaseId]);
 
-  // Manipular mudança de status de item
+  // Manipular mudança de status de peça
   const handleItemStatusChange = async (item: any, checked: boolean) => {
     try {
       const newStatus = checked ? 'sold' : 'in_possession';
@@ -97,11 +97,11 @@ export function SuitcaseDetailsDialog({
       
       await SuitcaseController.updateSuitcaseItemStatus(item.id, newStatus, saleInfo);
       
-      // Atualizar a lista de itens após a alteração
+      // Atualizar a lista de peças após a alteração
       const updatedItems = await SuitcaseController.getSuitcaseItems(suitcaseId);
       setSuitcaseItems(updatedItems);
     } catch (error) {
-      console.error("Erro ao atualizar status do item:", error);
+      console.error("Erro ao atualizar status da peça:", error);
     }
   };
 
@@ -127,7 +127,7 @@ export function SuitcaseDetailsDialog({
         }
       );
       
-      // Atualizar a lista de itens após a alteração
+      // Atualizar a lista de peças após a alteração
       const updatedItems = await SuitcaseController.getSuitcaseItems(suitcaseId);
       setSuitcaseItems(updatedItems);
     } catch (error) {
@@ -189,7 +189,7 @@ export function SuitcaseDetailsDialog({
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid grid-cols-3 mb-4">
             <TabsTrigger value="informacoes">Informações</TabsTrigger>
-            <TabsTrigger value="itens">Itens</TabsTrigger>
+            <TabsTrigger value="itens">Peças</TabsTrigger>
             <TabsTrigger value="historico">Histórico</TabsTrigger>
           </TabsList>
 
@@ -221,7 +221,7 @@ export function SuitcaseDetailsDialog({
               </div>
 
               <div className="space-y-2">
-                <h3 className="text-sm font-medium text-muted-foreground">Quantidade de Itens</h3>
+                <h3 className="text-sm font-medium text-muted-foreground">Quantidade de Peças</h3>
                 <p className="text-lg font-medium">{suitcaseItems.length}</p>
               </div>
 
@@ -258,14 +258,14 @@ export function SuitcaseDetailsDialog({
             </div>
           </TabsContent>
 
-          {/* Aba de Itens */}
+          {/* Aba de Peças */}
           <TabsContent value="itens" className="space-y-4">
             {suitcaseItems.length === 0 ? (
               <div className="text-center py-8">
                 <Briefcase className="h-12 w-12 mx-auto text-muted-foreground opacity-20" />
-                <h3 className="mt-2 text-lg font-medium">Nenhum item na maleta</h3>
+                <h3 className="mt-2 text-lg font-medium">Nenhuma peça na maleta</h3>
                 <p className="text-muted-foreground">
-                  Esta maleta não possui nenhum item registrado.
+                  Esta maleta não possui nenhuma peça registrada.
                 </p>
               </div>
             ) : (

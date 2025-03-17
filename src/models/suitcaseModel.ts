@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 // Interface para maleta com status atualizado
@@ -26,7 +27,7 @@ export interface SuitcaseSummary {
   in_replenishment: number;
 }
 
-// Interface para itens da maleta
+// Interface para peças da maleta
 export interface SuitcaseItem {
   id: string;
   suitcase_id: string;
@@ -46,7 +47,7 @@ export interface SuitcaseItem {
   sales?: SuitcaseItemSale[];
 }
 
-// Interface para vendas de itens da maleta
+// Interface para vendas de peças da maleta
 export interface SuitcaseItemSale {
   id: string;
   suitcase_item_id: string;
@@ -124,7 +125,30 @@ export class SuitcaseModel {
     return data;
   }
 
-  // Buscar itens de uma maleta
+  // Buscar uma peça da maleta pelo ID
+  static async getSuitcaseItemById(itemId: string): Promise<SuitcaseItem | null> {
+    if (!itemId) throw new Error("ID da peça é necessário");
+    
+    const { data, error } = await supabase
+      .from('suitcase_items')
+      .select(`
+        *,
+        product:inventory_id (
+          id,
+          name,
+          price,
+          sku,
+          photos:inventory_photos(photo_url)
+        )
+      `)
+      .eq('id', itemId)
+      .maybeSingle();
+    
+    if (error) throw error;
+    return data;
+  }
+
+  // Buscar peças de uma maleta
   static async getSuitcaseItems(suitcaseId: string): Promise<SuitcaseItem[]> {
     try {
       if (!suitcaseId) throw new Error("ID da maleta é necessário");
@@ -174,7 +198,7 @@ export class SuitcaseModel {
       
       return processedData;
     } catch (error) {
-      console.error("Erro ao buscar itens da maleta:", error);
+      console.error("Erro ao buscar peças da maleta:", error);
       throw error;
     }
   }
@@ -238,7 +262,7 @@ export class SuitcaseModel {
     if (error) throw error;
   }
 
-  // Adicionar item à maleta
+  // Adicionar peça à maleta
   static async addItemToSuitcase(itemData: {
     suitcase_id: string;
     inventory_id: string;
@@ -255,20 +279,20 @@ export class SuitcaseModel {
       .maybeSingle();
     
     if (error) throw error;
-    if (!data) throw new Error("Erro ao adicionar item à maleta: nenhum dado retornado");
+    if (!data) throw new Error("Erro ao adicionar peça à maleta: nenhum dado retornado");
     
     return data;
   }
 
-  // Atualizar status de um item da maleta
+  // Atualizar status de uma peça da maleta
   static async updateSuitcaseItemStatus(
     itemId: string, 
     status: 'in_possession' | 'sold' | 'returned' | 'lost',
     saleInfo?: Partial<SuitcaseItemSale>
   ): Promise<SuitcaseItem> {
-    if (!itemId) throw new Error("ID do item é necessário");
+    if (!itemId) throw new Error("ID da peça é necessário");
     
-    // Primeiro atualizar o status do item
+    // Primeiro atualizar o status da peça
     const { data, error } = await supabase
       .from('suitcase_items')
       .update({ status })
@@ -277,7 +301,7 @@ export class SuitcaseModel {
       .maybeSingle();
     
     if (error) throw error;
-    if (!data) throw new Error("Erro ao atualizar status do item: nenhum dado retornado");
+    if (!data) throw new Error("Erro ao atualizar status da peça: nenhum dado retornado");
     
     // Se for venda e tiver informações adicionais, registrar a venda
     if (status === 'sold' && saleInfo) {
@@ -294,9 +318,9 @@ export class SuitcaseModel {
     return data;
   }
 
-  // Buscar vendas de um item da maleta
+  // Buscar vendas de uma peça da maleta
   static async getSuitcaseItemSales(itemId: string): Promise<SuitcaseItemSale[]> {
-    if (!itemId) throw new Error("ID do item é necessário");
+    if (!itemId) throw new Error("ID da peça é necessário");
     
     const { data, error } = await supabase
       .from('suitcase_item_sales')
