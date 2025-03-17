@@ -32,6 +32,7 @@ const Categories = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  const [isAdmin, setIsAdmin] = useState(false);
 
   // Verificar autenticação ao carregar a página
   useEffect(() => {
@@ -43,6 +44,16 @@ const Categories = () => {
           navigate('/');
           return;
         }
+        
+        // Verificar se o usuário tem perfil e se é admin
+        const userProfile = await AuthController.getUserProfileWithRoles();
+        if (!userProfile?.isAdmin) {
+          toast.error("Você não tem permissão para acessar esta página.");
+          navigate('/dashboard');
+          return;
+        }
+        
+        setIsAdmin(userProfile.isAdmin);
         setIsLoading(false);
       } catch (error) {
         console.error("Erro ao verificar autenticação:", error);
@@ -54,18 +65,11 @@ const Categories = () => {
     checkAuth();
   }, [navigate]);
 
-  // Buscar perfil e permissões do usuário
-  const { data: userProfile, isLoading: isLoadingProfile } = useQuery({
-    queryKey: ['user-profile'],
-    queryFn: () => AuthController.getUserProfileWithRoles(),
-    enabled: !isLoading, // Só executa quando a verificação inicial estiver concluída
-  });
-
-  // Buscar categorias
+  // Buscar categorias somente se o usuário for admin
   const { data: categoriesList = [], isLoading: isLoadingCategories, refetch } = useQuery({
     queryKey: ['categories'],
     queryFn: InventoryModel.getAllCategories,
-    enabled: !isLoadingProfile && userProfile?.isAdmin, // Só executa quando o perfil do usuário for carregado e for admin
+    enabled: !isLoading && isAdmin, // Só executa quando o perfil do usuário for carregado e for admin
   });
 
   // Paginação
@@ -82,6 +86,10 @@ const Categories = () => {
 
   // Função para deletar categoria
   const handleDelete = async (id: string) => {
+    if (!window.confirm("Tem certeza que deseja excluir esta categoria?")) {
+      return;
+    }
+    
     try {
       await InventoryModel.deleteCategory(id);
       toast.success("Categoria removida com sucesso!");
@@ -96,24 +104,10 @@ const Categories = () => {
   };
 
   // Se estiver carregando, mostrar loading
-  if (isLoading || isLoadingProfile) {
+  if (isLoading || isLoadingCategories) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gold"></div>
-      </div>
-    );
-  }
-
-  // Verificar se o usuário é admin
-  if (!userProfile?.isAdmin) {
-    return (
-      <div className="container mx-auto py-6">
-        <div className="bg-destructive/20 p-4 rounded-md">
-          <h2 className="text-xl font-bold text-destructive">Acesso Negado</h2>
-          <p className="text-muted-foreground">
-            Você não tem permissão para acessar esta página. Esta funcionalidade é restrita aos administradores do sistema.
-          </p>
-        </div>
       </div>
     );
   }

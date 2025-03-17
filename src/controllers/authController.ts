@@ -8,15 +8,12 @@ export class AuthController {
     try {
       const user = await AuthModel.getCurrentUser();
       if (!user) {
-        // Redirecionar para página de login se não estiver autenticado
-        window.location.href = '/';
+        // O usuário deve ser redirecionado para página de login se não estiver autenticado
         return null;
       }
       return user;
     } catch (error) {
       console.error('Erro ao verificar autenticação:', error);
-      toast.error('Erro ao verificar autenticação. Por favor, faça login novamente.');
-      window.location.href = '/';
       return null;
     }
   }
@@ -24,12 +21,32 @@ export class AuthController {
   // Função para buscar perfil do usuário com suas permissões
   static async getUserProfileWithRoles() {
     try {
+      const { data: { user }, error: authError } = await AuthModel.supabase.auth.getUser();
+      if (authError || !user) {
+        throw new Error("Usuário não autenticado");
+      }
+      
       const data = await AuthModel.getCurrentUserProfile();
       return data;
     } catch (error) {
       console.error('Erro ao buscar perfil do usuário:', error);
-      toast.error('Erro ao carregar perfil do usuário');
       throw error;
+    }
+  }
+  
+  // Função para verificar se o usuário é administrador
+  static async isUserAdmin() {
+    try {
+      const { data: { user }, error: authError } = await AuthModel.supabase.auth.getUser();
+      if (authError || !user) {
+        return false;
+      }
+      
+      const isAdmin = await AuthModel.checkIsUserAdmin();
+      return isAdmin;
+    } catch (error) {
+      console.error('Erro ao verificar se usuário é admin:', error);
+      return false;
     }
   }
 }

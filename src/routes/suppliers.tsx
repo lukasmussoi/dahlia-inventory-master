@@ -42,9 +42,19 @@ export default function Suppliers() {
       try {
         const user = await AuthController.checkAuth();
         if (!user) {
+          toast.error("Sessão expirada. Por favor, faça login novamente.");
           navigate('/');
           return;
         }
+        
+        // Verificar se o usuário tem perfil e se é admin
+        const userProfile = await AuthController.getUserProfileWithRoles();
+        if (!userProfile?.isAdmin) {
+          toast.error("Você não tem permissão para acessar esta página.");
+          navigate('/dashboard');
+          return;
+        }
+        
         setIsLoading(false);
       } catch (error) {
         console.error("Erro ao verificar autenticação:", error);
@@ -56,17 +66,11 @@ export default function Suppliers() {
     checkAuth();
   }, [navigate]);
 
-  // Buscar perfil e permissões do usuário
-  const { data: userProfile, isLoading: isLoadingProfile } = useQuery({
-    queryKey: ['user-profile'],
-    queryFn: () => AuthController.getUserProfileWithRoles(),
-    enabled: !isLoading, // Só executa quando a verificação inicial estiver concluída
-  });
-
+  // Buscar fornecedores somente se o usuário estiver autenticado e com permissões
   const { data: suppliers = [], isLoading: isLoadingSuppliers } = useQuery({
     queryKey: ['suppliers'],
     queryFn: () => SupplierModel.getSuppliers(),
-    enabled: !isLoadingProfile, // Só executa quando o perfil do usuário for carregado
+    enabled: !isLoading, // Só executa quando a verificação inicial estiver concluída
   });
 
   const createMutation = useMutation({
@@ -74,8 +78,12 @@ export default function Suppliers() {
       SupplierModel.createSupplier(name, contactInfo),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+      toast.success("Fornecedor criado com sucesso!");
       resetForm();
     },
+    onError: (error) => {
+      toast.error("Erro ao criar fornecedor: " + (error instanceof Error ? error.message : "Erro desconhecido"));
+    }
   });
 
   const updateMutation = useMutation({
@@ -83,15 +91,23 @@ export default function Suppliers() {
       SupplierModel.updateSupplier(id, name, contactInfo),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+      toast.success("Fornecedor atualizado com sucesso!");
       resetForm();
     },
+    onError: (error) => {
+      toast.error("Erro ao atualizar fornecedor: " + (error instanceof Error ? error.message : "Erro desconhecido"));
+    }
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => SupplierModel.deleteSupplier(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+      toast.success("Fornecedor removido com sucesso!");
     },
+    onError: (error) => {
+      toast.error("Erro ao remover fornecedor: " + (error instanceof Error ? error.message : "Erro desconhecido"));
+    }
   });
 
   const resetForm = () => {
@@ -129,24 +145,10 @@ export default function Suppliers() {
   };
 
   // Se estiver carregando, mostrar loading
-  if (isLoading || isLoadingProfile || isLoadingSuppliers) {
+  if (isLoading || isLoadingSuppliers) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gold"></div>
-      </div>
-    );
-  }
-
-  // Verificar se o usuário é admin
-  if (!userProfile?.isAdmin) {
-    return (
-      <div className="container mx-auto py-6">
-        <div className="bg-destructive/20 p-4 rounded-md">
-          <h2 className="text-xl font-bold text-destructive">Acesso Negado</h2>
-          <p className="text-muted-foreground">
-            Você não tem permissão para acessar esta página. Esta funcionalidade é restrita aos administradores do sistema.
-          </p>
-        </div>
       </div>
     );
   }
@@ -173,32 +175,40 @@ export default function Suppliers() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {suppliers.map((supplier) => (
-              <TableRow key={supplier.id}>
-                <TableCell className="font-medium">{supplier.name}</TableCell>
-                <TableCell>{supplier.contact_info || "-"}</TableCell>
-                <TableCell>
-                  <div className="flex space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        handleEdit(supplier.id, supplier.name, supplier.contact_info)
-                      }
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDelete(supplier.id)}
-                    >
-                      <Trash className="h-4 w-4" />
-                    </Button>
-                  </div>
+            {suppliers.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={3} className="text-center py-4">
+                  Nenhum fornecedor encontrado
                 </TableCell>
               </TableRow>
-            ))}
+            ) : (
+              suppliers.map((supplier) => (
+                <TableRow key={supplier.id}>
+                  <TableCell className="font-medium">{supplier.name}</TableCell>
+                  <TableCell>{supplier.contact_info || "-"}</TableCell>
+                  <TableCell>
+                    <div className="flex space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          handleEdit(supplier.id, supplier.name, supplier.contact_info)
+                        }
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDelete(supplier.id)}
+                      >
+                        <Trash className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </div>

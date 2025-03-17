@@ -3,12 +3,12 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { InventoryContent } from "@/components/inventory/InventoryContent";
 import { AuthController } from "@/controllers/authController";
-import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 const Inventory = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   // Verificar autenticação ao carregar a página
   useEffect(() => {
@@ -20,6 +20,13 @@ const Inventory = () => {
           navigate('/');
           return;
         }
+
+        // Verificar se o usuário tem perfil e permissões
+        const userProfile = await AuthController.getUserProfileWithRoles();
+        if (userProfile) {
+          setIsAdmin(userProfile.isAdmin);
+        }
+        
         setIsLoading(false);
       } catch (error) {
         console.error("Erro ao verificar autenticação:", error);
@@ -31,15 +38,8 @@ const Inventory = () => {
     checkAuth();
   }, [navigate]);
 
-  // Buscar perfil e permissões do usuário
-  const { data: userProfile, isLoading: isLoadingProfile } = useQuery({
-    queryKey: ['user-profile'],
-    queryFn: () => AuthController.getUserProfileWithRoles(),
-    enabled: !isLoading, // Só executa quando a verificação inicial estiver concluída
-  });
-
   // Se estiver carregando, mostrar loading
-  if (isLoading || isLoadingProfile) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gold"></div>
@@ -50,7 +50,7 @@ const Inventory = () => {
   return (
     <div className="h-full min-h-screen bg-background">
       <main className="flex-1 space-y-4 p-4 pt-20">
-        <InventoryContent isAdmin={userProfile?.isAdmin} />
+        <InventoryContent isAdmin={isAdmin} />
       </main>
     </div>
   );
