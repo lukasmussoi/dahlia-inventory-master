@@ -1,6 +1,7 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom"; 
 import { InventoryModel, PlatingType } from "@/models/inventoryModel";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,14 +15,45 @@ import {
 import { Edit, Plus, Trash } from "lucide-react";
 import { PlatingTypeForm } from "@/components/plating/PlatingTypeForm";
 import { toast } from "sonner";
+import { AuthController } from "@/controllers/authController";
 
 const PlatingTypes = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedType, setSelectedType] = useState<PlatingType | null>(null);
+  const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(true);
 
-  const { data: platingTypes = [], refetch } = useQuery({
+  // Verificar autenticação ao carregar a página
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const user = await AuthController.checkAuth();
+        if (!user) {
+          navigate('/');
+          return;
+        }
+        setIsLoading(false);
+      } catch (error) {
+        console.error("Erro ao verificar autenticação:", error);
+        toast.error("Erro ao verificar autenticação");
+        navigate('/');
+      }
+    };
+
+    checkAuth();
+  }, [navigate]);
+
+  // Buscar perfil e permissões do usuário
+  const { data: userProfile, isLoading: isLoadingProfile } = useQuery({
+    queryKey: ['user-profile'],
+    queryFn: () => AuthController.getUserProfileWithRoles(),
+    enabled: !isLoading, // Só executa quando a verificação inicial estiver concluída
+  });
+
+  const { data: platingTypes = [], refetch, isLoading: isLoadingTypes } = useQuery({
     queryKey: ['plating-types'],
     queryFn: () => InventoryModel.getAllPlatingTypes(),
+    enabled: !isLoadingProfile, // Só executa quando o perfil do usuário for carregado
   });
 
   const handleEdit = (type: PlatingType) => {
@@ -48,6 +80,29 @@ const PlatingTypes = () => {
     setSelectedType(null);
     setIsFormOpen(true);
   };
+
+  // Se estiver carregando, mostrar loading
+  if (isLoading || isLoadingProfile || isLoadingTypes) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gold"></div>
+      </div>
+    );
+  }
+
+  // Verificar se o usuário é admin
+  if (!userProfile?.isAdmin) {
+    return (
+      <div className="container mx-auto py-6">
+        <div className="bg-destructive/20 p-4 rounded-md">
+          <h2 className="text-xl font-bold text-destructive">Acesso Negado</h2>
+          <p className="text-muted-foreground">
+            Você não tem permissão para acessar esta página. Esta funcionalidade é restrita aos administradores do sistema.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full min-h-screen bg-background">

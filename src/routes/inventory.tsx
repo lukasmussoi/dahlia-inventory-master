@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { InventoryContent } from "@/components/inventory/InventoryContent";
 import { AuthController } from "@/controllers/authController";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 const Inventory = () => {
   const navigate = useNavigate();
@@ -21,6 +22,7 @@ const Inventory = () => {
         setIsLoading(false);
       } catch (error) {
         console.error("Erro ao verificar autenticação:", error);
+        toast.error("Erro ao verificar autenticação");
         navigate('/');
       }
     };
@@ -39,7 +41,7 @@ const Inventory = () => {
   if (isLoading || isLoadingProfile) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-gold"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gold"></div>
       </div>
     );
   }

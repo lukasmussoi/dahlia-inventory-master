@@ -1,17 +1,9 @@
 
-import { useEffect, useState } from "react";
-import { AuthController } from "@/controllers/authController";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { SupplierModel } from "@/models/supplierModel";
-import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { PlusIcon, Pencil, Trash2 } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -20,200 +12,246 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { Plus, Edit, Trash } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { AuthController } from "@/controllers/authController";
 
-interface Supplier {
-  id: string;
-  name: string;
-  contact_info: string | null;
-  created_at: string;
-}
+export default function Suppliers() {
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [contactInfo, setContactInfo] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
 
-interface SupplierFormData {
-  name: string;
-  contactInfo: string;
-}
+  // Verificar autenticação ao carregar a página
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const user = await AuthController.checkAuth();
+        if (!user) {
+          navigate('/');
+          return;
+        }
+        setIsLoading(false);
+      } catch (error) {
+        console.error("Erro ao verificar autenticação:", error);
+        toast.error("Erro ao verificar autenticação");
+        navigate('/');
+      }
+    };
 
-const Suppliers = () => {
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
-  const [formData, setFormData] = useState<SupplierFormData>({
-    name: "",
-    contactInfo: "",
+    checkAuth();
+  }, [navigate]);
+
+  // Buscar perfil e permissões do usuário
+  const { data: userProfile, isLoading: isLoadingProfile } = useQuery({
+    queryKey: ['user-profile'],
+    queryFn: () => AuthController.getUserProfileWithRoles(),
+    enabled: !isLoading, // Só executa quando a verificação inicial estiver concluída
   });
 
-  useEffect(() => {
-    AuthController.checkAuth();
-  }, []);
-
-  const { data: suppliers = [], refetch } = useQuery({
+  const { data: suppliers = [], isLoading: isLoadingSuppliers } = useQuery({
     queryKey: ['suppliers'],
     queryFn: () => SupplierModel.getSuppliers(),
+    enabled: !isLoadingProfile, // Só executa quando o perfil do usuário for carregado
   });
+
+  const createMutation = useMutation({
+    mutationFn: ({ name, contactInfo }: { name: string; contactInfo?: string }) =>
+      SupplierModel.createSupplier(name, contactInfo),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+      resetForm();
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, name, contactInfo }: { id: string; name: string; contactInfo?: string }) =>
+      SupplierModel.updateSupplier(id, name, contactInfo),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+      resetForm();
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => SupplierModel.deleteSupplier(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+    },
+  });
+
+  const resetForm = () => {
+    setName("");
+    setContactInfo("");
+    setEditingId(null);
+    setIsOpen(false);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      if (selectedSupplier) {
-        await SupplierModel.updateSupplier(
-          selectedSupplier.id,
-          formData.name,
-          formData.contactInfo
-        );
-      } else {
-        await SupplierModel.createSupplier(formData.name, formData.contactInfo);
-      }
-      setIsDialogOpen(false);
-      refetch();
-      resetForm();
-    } catch (error) {
-      console.error('Erro ao salvar fornecedor:', error);
+    if (!name.trim()) {
+      toast.error("O nome do fornecedor é obrigatório");
+      return;
+    }
+
+    if (editingId) {
+      updateMutation.mutate({ id: editingId, name, contactInfo });
+    } else {
+      createMutation.mutate({ name, contactInfo });
     }
   };
 
-  const handleEdit = (supplier: Supplier) => {
-    setSelectedSupplier(supplier);
-    setFormData({
-      name: supplier.name,
-      contactInfo: supplier.contact_info || "",
-    });
-    setIsDialogOpen(true);
+  const handleEdit = (id: string, name: string, contactInfo?: string) => {
+    setEditingId(id);
+    setName(name);
+    setContactInfo(contactInfo || "");
+    setIsOpen(true);
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Tem certeza que deseja excluir este fornecedor?')) {
-      try {
-        await SupplierModel.deleteSupplier(id);
-        refetch();
-      } catch (error) {
-        console.error('Erro ao deletar fornecedor:', error);
-      }
+    if (window.confirm("Tem certeza que deseja excluir este fornecedor?")) {
+      deleteMutation.mutate(id);
     }
   };
 
-  const resetForm = () => {
-    setSelectedSupplier(null);
-    setFormData({ name: "", contactInfo: "" });
-  };
+  // Se estiver carregando, mostrar loading
+  if (isLoading || isLoadingProfile || isLoadingSuppliers) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gold"></div>
+      </div>
+    );
+  }
 
-  const handleDialogClose = () => {
-    setIsDialogOpen(false);
-    resetForm();
-  };
+  // Verificar se o usuário é admin
+  if (!userProfile?.isAdmin) {
+    return (
+      <div className="container mx-auto py-6">
+        <div className="bg-destructive/20 p-4 rounded-md">
+          <h2 className="text-xl font-bold text-destructive">Acesso Negado</h2>
+          <p className="text-muted-foreground">
+            Você não tem permissão para acessar esta página. Esta funcionalidade é restrita aos administradores do sistema.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-6">
+    <div className="container mx-auto py-8">
       <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Fornecedores</h1>
-          <p className="text-gray-600">Gerencie os fornecedores do sistema</p>
-        </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button
-              onClick={() => {
-                resetForm();
-                setIsDialogOpen(true);
-              }}
-            >
-              <PlusIcon className="h-4 w-4 mr-2" />
-              Novo Fornecedor
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                {selectedSupplier ? "Editar Fornecedor" : "Novo Fornecedor"}
-              </DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Nome</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="contactInfo">Informações de Contato</Label>
-                <Input
-                  id="contactInfo"
-                  value={formData.contactInfo}
-                  onChange={(e) =>
-                    setFormData({ ...formData, contactInfo: e.target.value })
-                  }
-                  placeholder="Telefone, email, etc."
-                />
-              </div>
-              <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={handleDialogClose}>
-                  Cancelar
-                </Button>
-                <Button type="submit">
-                  {selectedSupplier ? "Atualizar" : "Criar"}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <h1 className="text-3xl font-bold">Fornecedores</h1>
+        <Button
+          onClick={() => setIsOpen(true)}
+          className="bg-gold hover:bg-gold/90"
+        >
+          <Plus className="mr-2 h-4 w-4" /> Novo Fornecedor
+        </Button>
       </div>
 
-      <div className="bg-white rounded-lg shadow">
+      <div className="bg-white rounded-lg shadow overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Nome</TableHead>
-              <TableHead>Contato</TableHead>
-              <TableHead>Data de Cadastro</TableHead>
-              <TableHead className="w-[100px]">Ações</TableHead>
+              <TableHead>Informações de Contato</TableHead>
+              <TableHead className="w-[120px]">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {suppliers.map((supplier: Supplier) => (
+            {suppliers.map((supplier) => (
               <TableRow key={supplier.id}>
-                <TableCell>{supplier.name}</TableCell>
+                <TableCell className="font-medium">{supplier.name}</TableCell>
                 <TableCell>{supplier.contact_info || "-"}</TableCell>
-                <TableCell>
-                  {new Date(supplier.created_at).toLocaleDateString("pt-BR")}
-                </TableCell>
                 <TableCell>
                   <div className="flex space-x-2">
                     <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleEdit(supplier)}
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        handleEdit(supplier.id, supplier.name, supplier.contact_info)
+                      }
                     >
-                      <Pencil className="h-4 w-4" />
+                      <Edit className="h-4 w-4" />
                     </Button>
                     <Button
-                      variant="ghost"
-                      size="icon"
+                      variant="destructive"
+                      size="sm"
                       onClick={() => handleDelete(supplier.id)}
                     >
-                      <Trash2 className="h-4 w-4 text-red-500" />
+                      <Trash className="h-4 w-4" />
                     </Button>
                   </div>
                 </TableCell>
               </TableRow>
             ))}
-            {suppliers.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={4} className="text-center py-4">
-                  Nenhum fornecedor cadastrado
-                </TableCell>
-              </TableRow>
-            )}
           </TableBody>
         </Table>
       </div>
+
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {editingId ? "Editar Fornecedor" : "Novo Fornecedor"}
+            </DialogTitle>
+            <DialogDescription>
+              {editingId
+                ? "Atualize as informações do fornecedor abaixo."
+                : "Preencha as informações do novo fornecedor."}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSubmit}>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="name">Nome</Label>
+                <Input
+                  id="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Nome do fornecedor"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="contactInfo">Informações de Contato</Label>
+                <Textarea
+                  id="contactInfo"
+                  value={contactInfo}
+                  onChange={(e) => setContactInfo(e.target.value)}
+                  placeholder="Telefone, email, endereço, etc."
+                  rows={3}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={resetForm}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit">
+                {editingId ? "Atualizar" : "Salvar"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
-};
-
-export default Suppliers;
+}
