@@ -79,7 +79,7 @@ export class ResellerModel {
         cpf_cnpj: reseller.cpfCnpj,
         phone: reseller.phone,
         email: reseller.email,
-        // Convertendo Address para um objeto JSON simples
+        // Precisamos usar 'as any' para evitar erros de tipo com o campo address
         address: reseller.address as any,
         status: reseller.status,
         promoter_id: reseller.promoterId
@@ -105,7 +105,7 @@ export class ResellerModel {
         cpf_cnpj: reseller.cpfCnpj,
         phone: reseller.phone,
         email: reseller.email,
-        // Convertendo Address para um objeto JSON simples
+        // Precisamos usar 'as any' para evitar erros de tipo com o campo address
         address: reseller.address as any,
         status: reseller.status,
         promoter_id: reseller.promoterId
