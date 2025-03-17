@@ -109,10 +109,10 @@ export class SuitcaseController {
       if ('next_settlement_date' in updates) {
         const dateValue = updates.next_settlement_date;
         
-        // Processar apenas se não for null
+        // Processar apenas se não for null ou undefined
         if (dateValue !== null && dateValue !== undefined) {
           // Se for um objeto Date
-          if (typeof dateValue === 'object' && 'toISOString' in dateValue) {
+          if (typeof dateValue === 'object' && dateValue !== null && 'toISOString' in dateValue) {
             formattedDate = dateValue.toISOString().split('T')[0];
           } else if (typeof dateValue === 'string') {
             // Se for uma string
