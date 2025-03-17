@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -227,7 +226,8 @@ export function SuitcaseDetailsDialog({
                             ? "bg-green-100 text-green-800"
                             : suitcase.status === "returned"
                             ? "bg-blue-100 text-blue-800"
-                            : "bg-orange-100 text-orange-800"
+                            : suitcase.status === "in_replenishment"
+                            ? "bg-orange-100 text-orange-800"
                         )}
                       >
                         {SuitcaseController.formatStatus(suitcase.status)}
@@ -258,10 +258,10 @@ export function SuitcaseDetailsDialog({
                     <p className="text-sm text-gray-500">Nome</p>
                     <p>{suitcase.seller?.name || "Revendedora não especificada"}</p>
                     
-                    {suitcase.seller && 'phone' in suitcase.seller && (
+                    {suitcase.seller && typeof suitcase.seller === 'object' && 'phone' in suitcase.seller && (
                       <>
                         <p className="text-sm text-gray-500 mt-2">Telefone</p>
-                        <p>{suitcase.seller.phone || "Não disponível"}</p>
+                        <p>{typeof suitcase.seller.phone === 'string' ? suitcase.seller.phone : "Não disponível"}</p>
                       </>
                     )}
                   </div>

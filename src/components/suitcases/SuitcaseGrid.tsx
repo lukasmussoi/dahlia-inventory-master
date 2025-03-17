@@ -248,7 +248,7 @@ export function SuitcaseGrid({ suitcases, onRefresh }: SuitcaseGridProps) {
         }}
       />
 
-      {/* Reseller Edit Dialog */}
+      
       <ResellerFormDialog
         open={showEditResellerDialog}
         onOpenChange={setShowEditResellerDialog}
@@ -267,7 +267,7 @@ export function SuitcaseGrid({ suitcases, onRefresh }: SuitcaseGridProps) {
               address: data.address ? {
                 street: data.address.street || "",
                 number: data.address.number || "",
-                complement: data.address.complement,
+                complement: data.address?.complement || "",
                 neighborhood: data.address.neighborhood || "",
                 city: data.address.city || "",
                 state: data.address.state || "",
