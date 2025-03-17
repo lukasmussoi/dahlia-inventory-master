@@ -3,7 +3,7 @@ import { useRef, useState, useEffect } from "react";
 import { format } from "date-fns";
 import { useReactToPrint } from "react-to-print";
 import { SuitcaseController } from "@/controllers/suitcaseController";
-import { Printer, Loader2, X } from "lucide-react";
+import { Printer, Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -49,6 +49,7 @@ export function SuitcasePrintDialog({ open, onOpenChange, suitcase, suitcaseItem
     onAfterPrint: () => {
       onOpenChange(false);
     },
+    // Use a callback function que retorna o elemento a ser impresso
     content: () => printRef.current,
   });
 

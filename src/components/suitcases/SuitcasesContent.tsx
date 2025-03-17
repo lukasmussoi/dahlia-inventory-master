@@ -67,7 +67,7 @@ export function SuitcasesContent({ isAdmin, userProfile }: SuitcasesContentProps
   };
 
   // Lidar com busca
-  const handleSearch = (newFilters) => {
+  const handleSearch = (newFilters: any) => {
     setFilters(newFilters);
     setIsSearching(true);
   };
@@ -84,13 +84,15 @@ export function SuitcasesContent({ isAdmin, userProfile }: SuitcasesContentProps
   };
 
   // Lidar com criação de nova maleta
-  const handleCreateSuitcase = async (data) => {
+  const handleCreateSuitcase = async (data: any) => {
     try {
       await SuitcaseController.createSuitcase(data);
       setShowNewSuitcaseDialog(false);
       refreshData();
+      toast.success("Maleta criada com sucesso");
     } catch (error) {
       console.error("Erro ao criar maleta:", error);
+      toast.error("Erro ao criar maleta");
     }
   };
 
@@ -142,6 +144,7 @@ export function SuitcasesContent({ isAdmin, userProfile }: SuitcasesContentProps
         open={showNewSuitcaseDialog}
         onOpenChange={setShowNewSuitcaseDialog}
         onSubmit={handleCreateSuitcase}
+        mode="create"
       />
     </div>
   );
