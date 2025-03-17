@@ -1,4 +1,3 @@
-
 import { SuitcaseModel, Suitcase, SuitcaseItem, SuitcaseItemSale } from "@/models/suitcaseModel";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -304,5 +303,27 @@ export class SuitcaseController {
     };
     
     return colorMap[status] || 'gray';
+  }
+
+  // Corrigir o método com o erro de TypeScript
+  static async updateNextSettlementDate(suitcaseId: string, nextDate: string | null): Promise<any> {
+    try {
+      // Verificar se a data é válida
+      let dateValue = null;
+      
+      // Corrigir a verificação que estava causando o erro TS2358
+      if (nextDate && typeof nextDate === 'string' && nextDate.trim() !== '') {
+        dateValue = nextDate;
+      }
+      
+      const result = await SuitcaseModel.updateSuitcase(suitcaseId, { 
+        next_settlement_date: dateValue 
+      });
+      
+      return result;
+    } catch (error) {
+      console.error("Erro ao atualizar data do próximo acerto:", error);
+      throw error;
+    }
   }
 }

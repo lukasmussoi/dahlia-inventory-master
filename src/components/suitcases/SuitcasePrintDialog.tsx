@@ -91,6 +91,11 @@ export function SuitcasePrintDialog({
     ? suitcase.seller.name 
     : "Revendedora não especificada";
 
+  // Formatar data do próximo acerto
+  const nextSettlementDate = suitcase.next_settlement_date 
+    ? format(new Date(suitcase.next_settlement_date), 'dd/MM/yyyy')
+    : "Não especificada";
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl">
@@ -112,7 +117,8 @@ export function SuitcasePrintDialog({
             <div className="text-center mb-6">
               <h1 className="text-2xl font-bold">Maleta {code}</h1>
               <p className="text-gray-600">Revendedora: {resellerName}</p>
-              <p className="text-gray-600">Data: {format(new Date(), 'dd/MM/yyyy')}</p>
+              <p className="text-gray-600">Data do Próximo Acerto: {nextSettlementDate}</p>
+              <p className="text-gray-600">Data de Impressão: {format(new Date(), 'dd/MM/yyyy')}</p>
             </div>
 
             <table className="w-full border-collapse">
