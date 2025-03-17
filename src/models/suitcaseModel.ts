@@ -120,32 +120,49 @@ export class SuitcaseModel {
 
   // Buscar itens de uma maleta
   static async getSuitcaseItems(suitcaseId: string): Promise<SuitcaseItem[]> {
-    const { data, error } = await supabase
-      .from('suitcase_items')
-      .select(`
-        *,
-        product:inventory_id (
-          id,
-          name,
-          price,
-          sku,
-          photos:inventory_photos(photo_url)
-        )
-      `)
-      .eq('suitcase_id', suitcaseId);
-    
-    if (error) throw error;
-    
-    // Processar os dados para obter a primeira foto de cada produto
-    return data.map(item => ({
-      ...item,
-      product: item.product ? {
-        ...item.product,
-        photo_url: item.product.photos && item.product.photos.length > 0 
-          ? item.product.photos[0].photo_url 
-          : undefined
-      } : undefined
-    }));
+    try {
+      const { data, error } = await supabase
+        .from('suitcase_items')
+        .select(`
+          *,
+          product:inventory_id (
+            id,
+            name,
+            price,
+            sku,
+            photos:inventory_photos(photo_url)
+          )
+        `)
+        .eq('suitcase_id', suitcaseId);
+      
+      if (error) throw error;
+      
+      // Processar os dados para obter a primeira foto de cada produto
+      const processedData = data.map(item => {
+        let photoUrl = undefined;
+        
+        if (item.product && 
+            item.product.photos && 
+            Array.isArray(item.product.photos) && 
+            item.product.photos.length > 0 && 
+            item.product.photos[0].photo_url) {
+          photoUrl = item.product.photos[0].photo_url;
+        }
+        
+        return {
+          ...item,
+          product: item.product ? {
+            ...item.product,
+            photo_url: photoUrl
+          } : undefined
+        };
+      });
+      
+      return processedData;
+    } catch (error) {
+      console.error("Erro ao buscar itens da maleta:", error);
+      throw error;
+    }
   }
 
   // Criar nova maleta
@@ -280,7 +297,7 @@ export class SuitcaseModel {
     
     if (filters.search) {
       // Buscar por código da maleta ou nome da revendedora
-      query = query.or(`id.ilike.%${filters.search}%,seller.full_name.ilike.%${filters.search}%`);
+      query = query.or(`code.ilike.%${filters.search}%,seller.full_name.ilike.%${filters.search}%`);
     }
     
     const { data, error } = await query.order('created_at', { ascending: false });

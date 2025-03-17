@@ -1,3 +1,4 @@
+
 import { SuitcaseModel, Suitcase, SuitcaseItem, SuitcaseItemSale } from "@/models/suitcaseModel";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
