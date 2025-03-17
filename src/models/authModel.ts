@@ -9,23 +9,28 @@ export class AuthModel {
   
   // Função para verificar se o usuário está autenticado
   static async getCurrentUser() {
-    const { data: { user }, error } = await supabase.auth.getUser();
-    if (error) {
+    try {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (error) {
+        console.error("Erro ao obter usuário:", error);
+        return null;
+      }
+      return user;
+    } catch (error) {
       console.error("Erro ao obter usuário:", error);
       return null;
     }
-    return user;
   }
 
   // Função para buscar o perfil e papel do usuário atual
   static async getCurrentUserProfile(): Promise<{profile: UserProfile | null, isAdmin: boolean}> {
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      console.error("Erro de autenticação ou usuário não encontrado:", authError);
-      return { profile: null, isAdmin: false };
-    }
-
     try {
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        console.error("Erro de autenticação ou usuário não encontrado:", authError);
+        return { profile: null, isAdmin: false };
+      }
+
       // Buscar perfil do usuário
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
@@ -40,6 +45,7 @@ export class AuthModel {
 
       // Verificar se o usuário é admin usando a função RPC
       const isAdmin = await UserRoleModel.isUserAdmin(user.id);
+      console.log("Is Admin:", isAdmin);
 
       return {
         profile,

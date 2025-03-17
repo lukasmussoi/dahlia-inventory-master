@@ -1,25 +1,29 @@
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Routes, Route, Outlet, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Outlet, useNavigate } from "react-router-dom";
 import { TopNavbar } from "@/components/dashboard/TopNavbar";
 import { AuthController } from "@/controllers/authController";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
-
-const queryClient = new QueryClient();
+import { toast } from "sonner";
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(true);
 
+  // Verificar autenticação ao carregar a página
   useEffect(() => {
     const checkAuth = async () => {
       try {
         const user = await AuthController.checkAuth();
         if (!user) {
+          toast.error("Sessão expirada. Por favor, faça login novamente.");
           navigate('/');
+          return;
         }
+        setIsLoading(false);
       } catch (error) {
         console.error('Erro ao verificar autenticação:', error);
+        toast.error("Erro ao verificar autenticação. Por favor, tente novamente.");
         navigate('/');
       }
     };
@@ -27,12 +31,14 @@ const Dashboard = () => {
     checkAuth();
   }, [navigate]);
 
+  // Buscar perfil e permissões do usuário após autenticação confirmada
   const { data: userProfile, isLoading: isLoadingProfile } = useQuery({
     queryKey: ['user-profile'],
     queryFn: () => AuthController.getUserProfileWithRoles(),
+    enabled: !isLoading, // Só executa quando a verificação inicial estiver concluída
   });
 
-  if (isLoadingProfile) {
+  if (isLoading || isLoadingProfile) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-pearl">
         <div className="flex flex-col items-center gap-4">
@@ -44,14 +50,12 @@ const Dashboard = () => {
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <div className="min-h-screen bg-gradient-to-br from-pearl to-pearl-dark">
-        <TopNavbar isAdmin={userProfile?.isAdmin} />
-        <div className="pt-16">
-          <Outlet />
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-pearl to-pearl-dark">
+      <TopNavbar isAdmin={userProfile?.isAdmin} />
+      <div className="pt-16">
+        <Outlet />
       </div>
-    </QueryClientProvider>
+    </div>
   );
 };
 

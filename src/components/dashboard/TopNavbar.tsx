@@ -12,10 +12,11 @@ import {
   Droplet,
   LineChart,
   Tag,
-  UserCircle
+  UserCircle,
+  ShoppingCart
 } from "lucide-react";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -24,7 +25,6 @@ import {
   NavigationMenuItem,
   NavigationMenuList,
   NavigationMenuTrigger,
-  NavigationMenuLink,
 } from "@/components/ui/navigation-menu";
 
 interface TopNavbarProps {
@@ -33,44 +33,62 @@ interface TopNavbarProps {
 
 export function TopNavbar({ isAdmin }: TopNavbarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const navigate = useNavigate();
 
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
-      window.location.href = '/';
+      toast.success("Logout realizado com sucesso");
+      navigate('/');
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
       toast.error('Erro ao fazer logout');
     }
   };
 
-  const menuItems = [
-    {
-      title: "Dashboard",
-      icon: LayoutDashboard,
-      url: "/dashboard",
-    },
-    {
-      title: "Estoque",
-      icon: Package,
-      url: "/dashboard/inventory",
-      subItems: [
-        {
-          title: "Gestão de Estoque",
-          url: "/dashboard/inventory",
-          icon: Package,
-        },
-        {
-          title: "Etiquetas",
-          url: "/dashboard/inventory/labels",
-          icon: Tag,
-        },
-        {
-          title: "Relatórios",
-          url: "/dashboard/inventory/reports",
-          icon: LineChart,
-        },
-        ...(isAdmin ? [
+  // Items de menu baseados nas permissões do usuário
+  const getMenuItems = () => {
+    const baseMenuItems = [
+      {
+        title: "Dashboard",
+        icon: LayoutDashboard,
+        url: "/dashboard",
+      },
+      {
+        title: "Estoque",
+        icon: Package,
+        url: "/dashboard/inventory",
+        subItems: [
+          {
+            title: "Gestão de Estoque",
+            url: "/dashboard/inventory",
+            icon: Package,
+          },
+          {
+            title: "Etiquetas",
+            url: "/dashboard/inventory/labels",
+            icon: Tag,
+          },
+          {
+            title: "Relatórios",
+            url: "/dashboard/inventory/reports",
+            icon: LineChart,
+          }
+        ],
+      },
+      {
+        title: "Maletas",
+        icon: Briefcase,
+        url: "/dashboard/suitcases",
+      }
+    ];
+
+    // Itens apenas para administradores
+    if (isAdmin) {
+      // Adicionar sub-itens ao Estoque para administradores
+      const estoqueItem = baseMenuItems.find(item => item.title === "Estoque");
+      if (estoqueItem && estoqueItem.subItems) {
+        estoqueItem.subItems.push(
           {
             title: "Tipos de Banho",
             url: "/dashboard/plating-types",
@@ -86,50 +104,51 @@ export function TopNavbar({ isAdmin }: TopNavbarProps) {
             url: "/dashboard/categories",
             icon: FolderTree,
           }
-        ] : []),
-      ],
-    },
-    {
-      title: "Maletas",
-      icon: Briefcase,
-      url: "/dashboard/suitcases",
-    },
-    ...(isAdmin ? [
-      {
-        title: "Vendas",
-        icon: UserCircle,
-        url: "/dashboard/sales",
-        subItems: [
-          {
-            title: "Revendedoras",
-            url: "/dashboard/sales/resellers",
-            icon: Users,
-          },
-        ],
-      },
-      {
-        title: "Configurações",
-        icon: Settings,
-        url: "/dashboard/settings",
-        subItems: [
-          {
-            title: "Usuários",
-            url: "/dashboard/settings/users",
-            icon: Users,
-          },
-        ],
+        );
       }
-    ] : []),
-  ];
+
+      // Adicionar itens específicos para admin
+      baseMenuItems.push(
+        {
+          title: "Vendas",
+          icon: ShoppingCart,
+          url: "/dashboard/sales",
+          subItems: [
+            {
+              title: "Revendedoras",
+              url: "/dashboard/sales/resellers",
+              icon: UserCircle,
+            },
+          ],
+        },
+        {
+          title: "Configurações",
+          icon: Settings,
+          url: "/dashboard/settings",
+          subItems: [
+            {
+              title: "Usuários",
+              url: "/dashboard/settings/users",
+              icon: Users,
+            },
+          ],
+        }
+      );
+    }
+
+    return baseMenuItems;
+  };
+
+  const menuItems = getMenuItems();
 
   return (
     <nav className="bg-white/80 backdrop-blur-lg border-b border-gray-200 fixed w-full z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex items-center">
-            <h1 className="text-xl md:text-2xl font-semibold text-gold">
+            <Link to="/dashboard" className="text-xl md:text-2xl font-semibold text-gold">
               Dália Manager
-            </h1>
+            </Link>
           </div>
 
           {/* Menu para desktop */}

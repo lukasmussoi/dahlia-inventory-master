@@ -9,6 +9,7 @@ export class SupplierModel {
       // Verificar se o usuário está autenticado antes de fazer a consulta
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError || !user) {
+        console.error("Erro de autenticação:", authError);
         throw new Error("Usuário não autenticado");
       }
 
@@ -17,7 +18,11 @@ export class SupplierModel {
         .select('*')
         .order('name');
 
-      if (error) throw error;
+      if (error) {
+        console.error("Erro ao buscar fornecedores:", error);
+        throw error;
+      }
+      
       return data;
     } catch (error) {
       console.error('Erro ao buscar fornecedores:', error);
@@ -31,6 +36,7 @@ export class SupplierModel {
       // Verificar se o usuário está autenticado antes de fazer a inserção
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError || !user) {
+        console.error("Erro de autenticação:", authError);
         throw new Error("Usuário não autenticado");
       }
 
@@ -40,7 +46,11 @@ export class SupplierModel {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Erro ao criar fornecedor:", error);
+        throw error;
+      }
+      
       return data;
     } catch (error) {
       console.error('Erro ao criar fornecedor:', error);
@@ -54,6 +64,7 @@ export class SupplierModel {
       // Verificar se o usuário está autenticado antes de fazer a atualização
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError || !user) {
+        console.error("Erro de autenticação:", authError);
         throw new Error("Usuário não autenticado");
       }
 
@@ -64,7 +75,11 @@ export class SupplierModel {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Erro ao atualizar fornecedor:", error);
+        throw error;
+      }
+      
       return data;
     } catch (error) {
       console.error('Erro ao atualizar fornecedor:', error);
@@ -78,6 +93,7 @@ export class SupplierModel {
       // Verificar se o usuário está autenticado antes de fazer a exclusão
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError || !user) {
+        console.error("Erro de autenticação:", authError);
         throw new Error("Usuário não autenticado");
       }
 
@@ -86,7 +102,11 @@ export class SupplierModel {
         .delete()
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Erro ao remover fornecedor:", error);
+        throw error;
+      }
+      
       return true;
     } catch (error) {
       console.error('Erro ao remover fornecedor:', error);

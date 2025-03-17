@@ -23,11 +23,13 @@ export class AuthController {
     try {
       const { data: { user }, error: authError } = await AuthModel.supabase.auth.getUser();
       if (authError || !user) {
+        console.error("Usuário não autenticado:", authError);
         throw new Error("Usuário não autenticado");
       }
       
-      const data = await AuthModel.getCurrentUserProfile();
-      return data;
+      const profileData = await AuthModel.getCurrentUserProfile();
+      console.log("Perfil do usuário:", profileData);
+      return profileData;
     } catch (error) {
       console.error('Erro ao buscar perfil do usuário:', error);
       throw error;
@@ -39,6 +41,7 @@ export class AuthController {
     try {
       const { data: { user }, error: authError } = await AuthModel.supabase.auth.getUser();
       if (authError || !user) {
+        console.error("Erro ao verificar usuário:", authError);
         return false;
       }
       
