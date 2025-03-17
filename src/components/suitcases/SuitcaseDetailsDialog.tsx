@@ -228,6 +228,7 @@ export function SuitcaseDetailsDialog({
                             ? "bg-blue-100 text-blue-800"
                             : suitcase.status === "in_replenishment"
                             ? "bg-orange-100 text-orange-800"
+                            : "bg-gray-100 text-gray-800"
                         )}
                       >
                         {SuitcaseController.formatStatus(suitcase.status)}
