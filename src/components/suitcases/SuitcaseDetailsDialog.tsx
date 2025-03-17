@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -57,14 +56,12 @@ export function SuitcaseDetailsDialog({
   const [isSearching, setIsSearching] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Buscar detalhes da maleta
   const { data: suitcase, isLoading: isLoadingSuitcase, refetch: refetchSuitcase } = useQuery({
     queryKey: ['suitcase', suitcaseId],
     queryFn: () => suitcaseId ? SuitcaseController.getSuitcaseById(suitcaseId) : null,
     enabled: !!suitcaseId && open,
   });
 
-  // Buscar itens da maleta
   const { 
     data: suitcaseItems = [], 
     isLoading: isLoadingItems, 
@@ -75,7 +72,6 @@ export function SuitcaseDetailsDialog({
     enabled: !!suitcaseId && open,
   });
 
-  // Mapear itens para ter os dados necessários
   const itemsWithSales = suitcaseItems.map((item) => ({
     ...item,
     name: item.product?.name || '',
@@ -84,17 +80,14 @@ export function SuitcaseDetailsDialog({
     sales: item.sales || []
   })) as SuitcaseItemWithSales[];
 
-  // Função para calcular valor total da maleta
   const calculateTotalValue = () => {
     return itemsWithSales.reduce((total, item) => {
       return total + (item.product?.price || 0);
     }, 0);
   };
 
-  // Função para marcar item como vendido
   const handleMarkAsSold = async (itemId: string) => {
     try {
-      // Fix: use correct status value from enum
       await SuitcaseController.updateSuitcaseItemStatus(itemId, 'sold');
       toast.success("Item marcado como vendido");
       refetchItems();
@@ -104,11 +97,9 @@ export function SuitcaseDetailsDialog({
     }
   };
 
-  // Função para marcar item como disponível
   const handleMarkAsAvailable = async (itemId: string) => {
     try {
-      // Fix: use correct status value from enum
-      await SuitcaseController.updateSuitcaseItemStatus(itemId, 'available');
+      await SuitcaseController.updateSuitcaseItemStatus(itemId, 'in_possession');
       toast.success("Item marcado como disponível");
       refetchItems();
     } catch (error) {
@@ -117,7 +108,6 @@ export function SuitcaseDetailsDialog({
     }
   };
 
-  // Função para remover item da maleta
   const handleRemoveItem = async (itemId: string) => {
     try {
       await SuitcaseController.removeItemFromSuitcase(itemId);
@@ -129,7 +119,6 @@ export function SuitcaseDetailsDialog({
     }
   };
 
-  // Função para buscar itens do inventário
   const handleSearchInventory = async (query: string) => {
     setSearchTerm(query);
     
@@ -152,21 +141,19 @@ export function SuitcaseDetailsDialog({
     }
   };
 
-  // Função para adicionar item à maleta
   const handleAddItem = async (inventoryId: string) => {
     try {
       await SuitcaseController.addItemToSuitcase(suitcaseId, inventoryId);
       toast.success("Item adicionado à maleta");
       refetchItems();
-      setSearchTerm(""); // Limpar busca
-      setSearchResults([]); // Limpar resultados
+      setSearchTerm("");
+      setSearchResults([]);
     } catch (error) {
       console.error("Erro ao adicionar item à maleta:", error);
       toast.error("Erro ao adicionar item");
     }
   };
 
-  // Focar no campo de busca quando a aba "Itens" é selecionada
   useEffect(() => {
     if (open && searchInputRef.current) {
       setTimeout(() => {
@@ -270,8 +257,7 @@ export function SuitcaseDetailsDialog({
                     <p className="text-sm text-gray-500">Nome</p>
                     <p>{suitcase.seller?.name || "Revendedora não especificada"}</p>
                     
-                    {/* Fix: check if phone properties exist on seller object */}
-                    {suitcase.seller && suitcase.seller.phone && (
+                    {suitcase.seller && 'phone' in suitcase.seller && suitcase.seller.phone && (
                       <>
                         <p className="text-sm text-gray-500 mt-2">Telefone</p>
                         <p>{suitcase.seller.phone}</p>
@@ -322,7 +308,6 @@ export function SuitcaseDetailsDialog({
           </TabsContent>
 
           <TabsContent value="items">
-            {/* Campo de busca para adicionar itens */}
             <div className="mb-4">
               <div className="flex items-center space-x-2">
                 <div className="flex-1 relative">
@@ -337,7 +322,6 @@ export function SuitcaseDetailsDialog({
                 </div>
               </div>
               
-              {/* Exibir resultados da busca */}
               {searchTerm.length > 1 && (
                 <div className="relative w-full mt-1">
                   <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-auto">
@@ -457,7 +441,7 @@ export function SuitcaseDetailsDialog({
                         <td className="px-6 py-4 whitespace-nowrap text-center">
                           <Badge
                             className={cn(
-                              item.status === "available"
+                              item.status === "in_possession"
                                 ? "bg-blue-100 text-blue-800"
                                 : item.status === "sold"
                                 ? "bg-green-100 text-green-800"
@@ -469,8 +453,7 @@ export function SuitcaseDetailsDialog({
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <div className="flex justify-end space-x-2">
-                            {/* Fix: use correct enum value for comparison */}
-                            {item.status === 'available' ? (
+                            {item.status === 'in_possession' ? (
                               <Button 
                                 size="sm" 
                                 variant="outline" 

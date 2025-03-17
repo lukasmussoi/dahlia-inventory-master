@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Pencil, Trash2, Search, FilterX, RefreshCw } from "lucide-react";
@@ -53,7 +54,7 @@ export const ResellerList = () => {
     queryKey: ["resellers", isSearching, searchTerm, statusFilter, promoterFilter],
     queryFn: () =>
       isSearching
-        ? ResellerController.searchResellers(searchTerm)
+        ? ResellerController.searchResellers(searchTerm, statusFilter, promoterFilter)
         : ResellerController.getAll(),
   });
 
