@@ -453,6 +453,44 @@ export type Database = {
           },
         ]
       }
+      suitcase_item_sales: {
+        Row: {
+          created_at: string
+          customer_name: string | null
+          id: string
+          payment_method: string | null
+          sold_at: string | null
+          suitcase_item_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer_name?: string | null
+          id?: string
+          payment_method?: string | null
+          sold_at?: string | null
+          suitcase_item_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer_name?: string | null
+          id?: string
+          payment_method?: string | null
+          sold_at?: string | null
+          suitcase_item_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "suitcase_item_sales_suitcase_item_id_fkey"
+            columns: ["suitcase_item_id"]
+            isOneToOne: false
+            referencedRelation: "suitcase_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       suitcase_items: {
         Row: {
           created_at: string
@@ -500,24 +538,30 @@ export type Database = {
       }
       suitcases: {
         Row: {
+          city: string | null
           created_at: string
           id: string
+          neighborhood: string | null
           seller_id: string
           sent_at: string
           status: Database["public"]["Enums"]["suitcase_status"] | null
           updated_at: string
         }
         Insert: {
+          city?: string | null
           created_at?: string
           id?: string
+          neighborhood?: string | null
           seller_id: string
           sent_at?: string
           status?: Database["public"]["Enums"]["suitcase_status"] | null
           updated_at?: string
         }
         Update: {
+          city?: string | null
           created_at?: string
           id?: string
+          neighborhood?: string | null
           seller_id?: string
           sent_at?: string
           status?: Database["public"]["Enums"]["suitcase_status"] | null
@@ -631,7 +675,12 @@ export type Database = {
       plating_type: "ouro" | "prata" | "rose" | "rhodium" | "sem_banho"
       reseller_status: "Ativa" | "Inativa"
       suitcase_item_status: "in_possession" | "sold" | "returned" | "lost"
-      suitcase_status: "in_use" | "returned" | "in_audit" | "lost"
+      suitcase_status:
+        | "in_use"
+        | "returned"
+        | "in_audit"
+        | "lost"
+        | "in_replenishment"
       user_role: "admin" | "promoter" | "seller"
       user_status: "active" | "inactive" | "suspended"
     }
