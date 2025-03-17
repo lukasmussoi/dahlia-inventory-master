@@ -56,7 +56,6 @@ export const ResellerList = () => {
       isSearching
         ? ResellerController.searchResellers(searchTerm, statusFilter, promoterFilter)
         : ResellerController.getAllResellers(),
-    enabled: true,
   });
 
   // Buscar promotoras para o filtro

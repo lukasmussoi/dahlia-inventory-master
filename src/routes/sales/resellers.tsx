@@ -9,11 +9,18 @@ import { AccessDenied } from "@/components/shared/AccessDenied";
 
 export default function ResellersPage() {
   const navigate = useNavigate();
-  const { isLoading, isAdmin } = useAuthProtection();
+  const { isLoading, isAuthenticated, isAdmin } = useAuthProtection();
+
+  console.log("ResellersPage - Estado de autenticação:", { isLoading, isAuthenticated, isAdmin });
 
   // Se estiver carregando, mostrar indicador de carregamento
   if (isLoading) {
     return <LoadingIndicator message="Carregando informações do módulo de revendedoras..." />;
+  }
+
+  // Verificar se o usuário está autenticado
+  if (!isAuthenticated) {
+    return <LoadingIndicator message="Verificando autenticação..." />;
   }
 
   // Verificar se o usuário é admin
