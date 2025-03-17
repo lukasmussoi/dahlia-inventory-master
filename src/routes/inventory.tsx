@@ -16,6 +16,7 @@ const Inventory = () => {
       try {
         const user = await AuthController.checkAuth();
         if (!user) {
+          toast.error("Sessão expirada. Por favor, faça login novamente.");
           navigate('/');
           return;
         }

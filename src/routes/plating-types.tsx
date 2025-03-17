@@ -16,12 +16,22 @@ import { Edit, Plus, Trash } from "lucide-react";
 import { PlatingTypeForm } from "@/components/plating/PlatingTypeForm";
 import { toast } from "sonner";
 import { AuthController } from "@/controllers/authController";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 const PlatingTypes = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedType, setSelectedType] = useState<PlatingType | null>(null);
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // Verificar autenticação ao carregar a página
   useEffect(() => {
@@ -29,6 +39,7 @@ const PlatingTypes = () => {
       try {
         const user = await AuthController.checkAuth();
         if (!user) {
+          toast.error("Sessão expirada. Por favor, faça login novamente.");
           navigate('/');
           return;
         }
@@ -50,11 +61,17 @@ const PlatingTypes = () => {
     enabled: !isLoading, // Só executa quando a verificação inicial estiver concluída
   });
 
-  const { data: platingTypes = [], refetch, isLoading: isLoadingTypes } = useQuery({
+  const { data: platingTypesList = [], refetch, isLoading: isLoadingTypes } = useQuery({
     queryKey: ['plating-types'],
     queryFn: () => InventoryModel.getAllPlatingTypes(),
-    enabled: !isLoadingProfile, // Só executa quando o perfil do usuário for carregado
+    enabled: !isLoadingProfile && userProfile?.isAdmin, // Só executa quando o perfil do usuário for carregado e for admin
   });
+
+  // Paginação
+  const totalPages = Math.ceil(platingTypesList.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const platingTypes = platingTypesList.slice(startIndex, endIndex);
 
   const handleEdit = (type: PlatingType) => {
     setSelectedType(type);
@@ -72,7 +89,11 @@ const PlatingTypes = () => {
       refetch();
     } catch (error) {
       console.error('Erro ao excluir tipo de banho:', error);
-      toast.error('Erro ao excluir tipo de banho');
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error('Erro ao excluir tipo de banho');
+      }
     }
   };
 
@@ -82,7 +103,7 @@ const PlatingTypes = () => {
   };
 
   // Se estiver carregando, mostrar loading
-  if (isLoading || isLoadingProfile || isLoadingTypes) {
+  if (isLoading || isLoadingProfile) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gold"></div>
@@ -131,33 +152,72 @@ const PlatingTypes = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {platingTypes.map((type) => (
-                <TableRow key={type.id}>
-                  <TableCell>{type.name}</TableCell>
-                  <TableCell>R$ {type.gram_value.toFixed(2)}</TableCell>
-                  <TableCell>{type.description || '-'}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEdit(type)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleDelete(type.id)}
-                      >
-                        <Trash className="h-4 w-4" />
-                      </Button>
-                    </div>
+              {platingTypes.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center py-4">
+                    Nenhum tipo de banho encontrado
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                platingTypes.map((type) => (
+                  <TableRow key={type.id}>
+                    <TableCell>{type.name}</TableCell>
+                    <TableCell>R$ {type.gram_value.toFixed(2)}</TableCell>
+                    <TableCell>{type.description || '-'}</TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEdit(type)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDelete(type.id)}
+                        >
+                          <Trash className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
+
+          {totalPages > 1 && (
+            <Pagination className="my-4">
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious 
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+                  />
+                </PaginationItem>
+                
+                {[...Array(totalPages)].map((_, i) => (
+                  <PaginationItem key={i}>
+                    <PaginationLink 
+                      onClick={() => setCurrentPage(i + 1)}
+                      isActive={currentPage === i + 1}
+                    >
+                      {i + 1}
+                    </PaginationLink>
+                  </PaginationItem>
+                ))}
+                
+                <PaginationItem>
+                  <PaginationNext 
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          )}
         </div>
 
         {isFormOpen && (
@@ -165,7 +225,11 @@ const PlatingTypes = () => {
             platingType={selectedType}
             isOpen={isFormOpen}
             onClose={() => setIsFormOpen(false)}
-            onSuccess={refetch}
+            onSuccess={() => {
+              setIsFormOpen(false);
+              setSelectedType(null);
+              refetch();
+            }}
           />
         )}
       </main>

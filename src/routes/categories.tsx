@@ -16,12 +16,22 @@ import {
 } from "@/components/ui/table";
 import { CategoryForm } from "@/components/inventory/CategoryForm";
 import { AuthController } from "@/controllers/authController";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 const Categories = () => {
   const navigate = useNavigate();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<InventoryCategory | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // Verificar autenticação ao carregar a página
   useEffect(() => {
@@ -29,6 +39,7 @@ const Categories = () => {
       try {
         const user = await AuthController.checkAuth();
         if (!user) {
+          toast.error("Sessão expirada. Por favor, faça login novamente.");
           navigate('/');
           return;
         }
@@ -51,11 +62,17 @@ const Categories = () => {
   });
 
   // Buscar categorias
-  const { data: categories = [], isLoading: isLoadingCategories, refetch } = useQuery({
+  const { data: categoriesList = [], isLoading: isLoadingCategories, refetch } = useQuery({
     queryKey: ['categories'],
     queryFn: InventoryModel.getAllCategories,
-    enabled: !isLoadingProfile, // Só executa quando o perfil do usuário for carregado
+    enabled: !isLoadingProfile && userProfile?.isAdmin, // Só executa quando o perfil do usuário for carregado e for admin
   });
+
+  // Paginação
+  const totalPages = Math.ceil(categoriesList.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const categories = categoriesList.slice(startIndex, endIndex);
 
   // Função para abrir o modal de edição
   const handleEdit = (category: InventoryCategory) => {
@@ -79,7 +96,7 @@ const Categories = () => {
   };
 
   // Se estiver carregando, mostrar loading
-  if (isLoading || isLoadingProfile || isLoadingCategories) {
+  if (isLoading || isLoadingProfile) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gold"></div>
@@ -127,32 +144,71 @@ const Categories = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {categories.map((category) => (
-                <TableRow key={category.id}>
-                  <TableCell>{category.name}</TableCell>
-                  <TableCell>
-                    {new Date(category.created_at || '').toLocaleDateString('pt-BR')}
-                  </TableCell>
-                  <TableCell className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEdit(category)}
-                    >
-                      Editar
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDelete(category.id)}
-                    >
-                      Excluir
-                    </Button>
+              {categories.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={3} className="text-center py-4">
+                    Nenhuma categoria encontrada
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                categories.map((category) => (
+                  <TableRow key={category.id}>
+                    <TableCell>{category.name}</TableCell>
+                    <TableCell>
+                      {new Date(category.created_at || '').toLocaleDateString('pt-BR')}
+                    </TableCell>
+                    <TableCell className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEdit(category)}
+                      >
+                        Editar
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDelete(category.id)}
+                      >
+                        Excluir
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
+
+          {totalPages > 1 && (
+            <Pagination className="my-4">
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious 
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+                  />
+                </PaginationItem>
+                
+                {[...Array(totalPages)].map((_, i) => (
+                  <PaginationItem key={i}>
+                    <PaginationLink 
+                      onClick={() => setCurrentPage(i + 1)}
+                      isActive={currentPage === i + 1}
+                    >
+                      {i + 1}
+                    </PaginationLink>
+                  </PaginationItem>
+                ))}
+                
+                <PaginationItem>
+                  <PaginationNext 
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          )}
         </div>
 
         {/* Modal de Categoria */}
