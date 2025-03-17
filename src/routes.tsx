@@ -14,6 +14,7 @@ import { DashboardContent } from "@/components/dashboard/DashboardContent";
 import InventoryReports from "@/routes/inventory-reports";
 import InventoryLabelsRoute from "@/routes/inventory-labels";
 import ResellersPage from "@/routes/sales/resellers";
+import PromotersPage from "@/routes/sales/promoters";
 import ResellerFormPage from "@/routes/sales/reseller-form";
 import SettingsPage from "@/routes/settings";
 
@@ -35,6 +36,7 @@ const Router = () => {
           <Route path="sales/resellers" element={<ResellersPage />} />
           <Route path="sales/resellers/new" element={<ResellerFormPage />} />
           <Route path="sales/resellers/:id" element={<ResellerFormPage />} />
+          <Route path="sales/promoters" element={<PromotersPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="settings/users" element={<Users />} />
         </Route>

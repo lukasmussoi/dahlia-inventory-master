@@ -13,6 +13,7 @@ import {
   Printer,
   ShoppingCart,
   UserCircle,
+  Award,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
@@ -82,6 +83,11 @@ const menuItems = [
     href: "/dashboard/sales",
     icon: ShoppingCart,
     submenu: [
+      {
+        title: "Promotoras",
+        href: "/dashboard/sales/promoters",
+        icon: Award,
+      },
       {
         title: "Revendedoras",
         href: "/dashboard/sales/resellers",
