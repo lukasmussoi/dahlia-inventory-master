@@ -1,59 +1,45 @@
 
-import { useState, useEffect } from "react";
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet } from "react-router-dom";
 import { TopNavbar } from "@/components/dashboard/TopNavbar";
-import { AuthController } from "@/controllers/authController";
-import { useQuery } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { useAuthProtection } from "@/hooks/useAuthProtection";
+import { LoadingIndicator } from "@/components/shared/LoadingIndicator";
+import { DashboardContent } from "@/components/dashboard/DashboardContent";
+import { useLocation } from "react-router-dom";
 
 const Dashboard = () => {
-  const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(true);
+  const { isLoading, isAuthenticated, userProfile } = useAuthProtection();
+  const location = useLocation();
+  const isExactlyDashboard = location.pathname === "/dashboard";
 
-  // Verificar autenticação ao carregar a página
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const user = await AuthController.checkAuth();
-        if (!user) {
-          toast.error("Sessão expirada. Por favor, faça login novamente.");
-          navigate('/');
-          return;
-        }
-        setIsLoading(false);
-      } catch (error) {
-        console.error('Erro ao verificar autenticação:', error);
-        toast.error("Erro ao verificar autenticação. Por favor, tente novamente.");
-        navigate('/');
-      }
-    };
-    
-    checkAuth();
-  }, [navigate]);
-
-  // Buscar perfil e permissões do usuário após autenticação confirmada
-  const { data: userProfile, isLoading: isLoadingProfile } = useQuery({
-    queryKey: ['user-profile'],
-    queryFn: () => AuthController.getUserProfileWithRoles(),
-    enabled: !isLoading, // Só executa quando a verificação inicial estiver concluída
-  });
-
-  if (isLoading || isLoadingProfile) {
+  // Se estiver carregando, mostrar indicador de carregamento
+  if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-pearl">
-        <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gold"></div>
-          <p className="text-gray-600">Carregando...</p>
+      <div className="min-h-screen bg-gradient-to-br from-pearl to-pearl-dark">
+        <TopNavbar isAdmin={false} />
+        <div className="pt-16">
+          <LoadingIndicator message="Carregando informações do usuário..." />
         </div>
       </div>
     );
   }
 
+  // Se autenticado, mostrar o conteúdo do dashboard
+  if (isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-pearl to-pearl-dark">
+        <TopNavbar isAdmin={userProfile?.isAdmin} />
+        <div className="pt-16">
+          {isExactlyDashboard ? <DashboardContent /> : <Outlet />}
+        </div>
+      </div>
+    );
+  }
+
+  // Caso contrário, mostrar indicador de carregamento (redirecionamento será feito pelo hook)
   return (
     <div className="min-h-screen bg-gradient-to-br from-pearl to-pearl-dark">
-      <TopNavbar isAdmin={userProfile?.isAdmin} />
       <div className="pt-16">
-        <Outlet />
+        <LoadingIndicator message="Verificando autenticação..." />
       </div>
     </div>
   );

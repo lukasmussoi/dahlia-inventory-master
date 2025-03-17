@@ -9,8 +9,10 @@ export class AuthController {
       const user = await AuthModel.getCurrentUser();
       if (!user) {
         // O usuário deve ser redirecionado para página de login se não estiver autenticado
+        console.log("Controller: Usuário não autenticado");
         return null;
       }
+      console.log("Controller: Usuário autenticado:", user.id);
       return user;
     } catch (error) {
       console.error('Erro ao verificar autenticação:', error);

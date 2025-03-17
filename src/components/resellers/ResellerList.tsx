@@ -53,6 +53,7 @@ import { PromoterController } from "@/controllers/promoterController";
 import { ResellerForm } from "./ResellerForm";
 import { Reseller } from "@/types/reseller";
 import { Promoter } from "@/types/promoter";
+import { LoadingIndicator } from "@/components/shared/LoadingIndicator";
 
 export function ResellerList() {
   const navigate = useNavigate();
@@ -77,11 +78,13 @@ export function ResellerList() {
   const fetchResellers = async () => {
     try {
       setIsLoading(true);
+      console.log("Buscando revendedoras com filtros:", { searchQuery, statusFilter, promoterFilter });
       const data = await ResellerController.searchResellers(
         searchQuery,
         statusFilter,
         promoterFilter
       );
+      console.log("Revendedoras encontradas:", data.length);
       setResellers(data);
     } catch (error) {
       console.error("Erro ao buscar revendedoras:", error);
@@ -94,21 +97,26 @@ export function ResellerList() {
   // Buscar promotoras
   const fetchPromoters = async () => {
     try {
+      console.log("Buscando promotoras...");
       const data = await PromoterController.getAllPromoters();
+      console.log("Promotoras encontradas:", data.length);
       setPromoters(data);
     } catch (error) {
       console.error("Erro ao buscar promotoras:", error);
+      toast.error("Erro ao carregar promotoras");
     }
   };
 
   // Carregar dados iniciais
   useEffect(() => {
+    console.log("Carregando dados iniciais da lista de revendedoras...");
     fetchResellers();
     fetchPromoters();
   }, []);
 
   // Atualizar quando os filtros mudarem
   useEffect(() => {
+    console.log("Filtros atualizados, buscando revendedoras...");
     fetchResellers();
   }, [searchQuery, statusFilter, promoterFilter]);
 
@@ -159,17 +167,14 @@ export function ResellerList() {
     setCurrentPage(1); // Voltar para a primeira página ao pesquisar
   };
 
+  if (isLoading && resellers.length === 0) {
+    return <LoadingIndicator message="Carregando lista de revendedoras..." />;
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row justify-between gap-4">
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <Button onClick={() => navigate("/dashboard/sales/resellers/new")}>
-            <Plus className="h-4 w-4 mr-2" />
-            Nova Revendedora
-          </Button>
-        </div>
-        
-        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row gap-2 w-full">
           <div className="flex items-center gap-2 w-full sm:w-64">
             <div className="relative w-full">
               <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
