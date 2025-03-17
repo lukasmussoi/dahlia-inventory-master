@@ -77,7 +77,9 @@ export class SuitcaseController {
       // Formatar a data para o formato esperado pelo banco de dados (ISO)
       const formattedData = {
         ...suitcaseData,
-        next_settlement_date: suitcaseData.next_settlement_date ? suitcaseData.next_settlement_date.toISOString().split('T')[0] : undefined
+        next_settlement_date: suitcaseData.next_settlement_date 
+          ? suitcaseData.next_settlement_date.toISOString().split('T')[0] 
+          : undefined
       };
 
       const result = await SuitcaseModel.createSuitcase(formattedData);
@@ -103,10 +105,10 @@ export class SuitcaseController {
       const formattedUpdates = {
         ...updates,
         next_settlement_date: updates.next_settlement_date 
-          ? typeof updates.next_settlement_date === 'object' && 'toISOString' in updates.next_settlement_date
+          ? (typeof updates.next_settlement_date === 'object' && 'toISOString' in updates.next_settlement_date)
             ? updates.next_settlement_date.toISOString().split('T')[0]
             : updates.next_settlement_date
-          : updates.next_settlement_date
+          : undefined
       };
 
       const result = await SuitcaseModel.updateSuitcase(id, formattedUpdates);
