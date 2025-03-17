@@ -56,6 +56,7 @@ export function SuitcaseDetailsDialog({
           const suitcaseData = await SuitcaseController.getSuitcaseById(suitcaseId);
           const itemsData = await SuitcaseController.getSuitcaseItems(suitcaseId);
           
+          console.log("Dados da maleta:", suitcaseData);
           setSuitcase(suitcaseData);
           setSuitcaseItems(itemsData);
           
@@ -154,8 +155,10 @@ export function SuitcaseDetailsDialog({
   // Formatar código da maleta
   const code = suitcase.code || `ML${suitcase.id.substring(0, 3)}`;
   
-  // Obter nome da revendedora
-  const resellerName = suitcase.seller?.full_name || "Revendedora não especificada";
+  // Obter nome da revendedora corretamente
+  const resellerName = suitcase.seller && suitcase.seller.name 
+    ? suitcase.seller.name 
+    : "Revendedora não especificada";
   
   // Formatar datas
   const createdAt = suitcase.created_at 
@@ -165,6 +168,11 @@ export function SuitcaseDetailsDialog({
   const updatedAt = suitcase.updated_at 
     ? format(new Date(suitcase.updated_at), 'dd/MM/yyyy HH:mm')
     : "Data não disponível";
+  
+  // Formatar data do próximo acerto
+  const nextSettlementDate = suitcase.next_settlement_date
+    ? format(new Date(suitcase.next_settlement_date), 'dd/MM/yyyy')
+    : null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -223,6 +231,15 @@ export function SuitcaseDetailsDialog({
                   <Calendar className="h-4 w-4 mr-1 text-muted-foreground" /> {createdAt}
                 </p>
               </div>
+
+              {nextSettlementDate && (
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium text-muted-foreground">Próximo Acerto</h3>
+                  <p className="text-lg font-medium flex items-center">
+                    <Calendar className="h-4 w-4 mr-1 text-muted-foreground" /> {nextSettlementDate}
+                  </p>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <h3 className="text-sm font-medium text-muted-foreground">Última Atualização</h3>
