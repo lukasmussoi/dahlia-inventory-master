@@ -4,20 +4,18 @@ import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { SuitcaseController } from "@/controllers/suitcaseController";
-import { InventoryModel } from "@/models/inventoryModel";
 import { 
   Info, 
   Package, 
   ShoppingBag, 
-  Tag, 
-  Calendar, 
   Edit, 
   Printer, 
   CheckCircle, 
   XCircle,
   Search,
   Loader2,
-  ShoppingCart
+  ShoppingCart,
+  AlertTriangle
 } from "lucide-react";
 import {
   Dialog,
@@ -32,23 +30,9 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { 
   SuitcaseItem, 
-  SuitcaseItemWithSales, 
-  InventoryFilters 
+  SuitcaseItemWithSales 
 } from "@/types/suitcase";
 
 interface SuitcaseDetailsDialogProps {
@@ -67,7 +51,6 @@ export function SuitcaseDetailsDialog({
   onPrint
 }: SuitcaseDetailsDialogProps) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [openPopover, setOpenPopover] = useState(false);
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -171,7 +154,6 @@ export function SuitcaseDetailsDialog({
       refetchItems();
       setSearchTerm(""); // Limpar busca
       setSearchResults([]); // Limpar resultados
-      setOpenPopover(false); // Fechar popover
     } catch (error) {
       console.error("Erro ao adicionar item à maleta:", error);
       toast.error("Erro ao adicionar item");
@@ -398,7 +380,7 @@ export function SuitcaseDetailsDialog({
               )}
 
               <div className="mt-2 text-sm text-gray-500 flex items-center">
-                <Info className="h-4 w-4 mr-1" />
+                <AlertTriangle className="h-4 w-4 mr-1" />
                 <span>
                   Esta maleta possui <strong>{itemsWithSales.length}</strong> itens. 
                   Digite no campo acima para adicionar novos itens.

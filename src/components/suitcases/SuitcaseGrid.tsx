@@ -40,7 +40,7 @@ import { ResellerFormDialog } from "@/components/resellers/ResellerFormDialog";
 import { SuitcaseFormDialog } from "@/components/suitcases/SuitcaseFormDialog";
 import { SuitcasePrintDialog } from "@/components/suitcases/SuitcasePrintDialog";
 import { SuitcaseDetailsDialog } from "@/components/suitcases/SuitcaseDetailsDialog";
-import { Suitcase } from "@/models/suitcaseModel";
+import { Suitcase } from "@/types/suitcase";
 
 interface SuitcaseGridProps {
   suitcases: any[];
@@ -90,8 +90,7 @@ export function SuitcaseGrid({ suitcases, onRefresh }: SuitcaseGridProps) {
   const handleOpenResellerDetails = async (sellerId: string) => {
     try {
       const reseller = await SuitcaseController.getResellerById(sellerId);
-      // Usar o tipo "as any" temporariamente para evitar erros de tipagem
-      setSelectedSuitcase(reseller as any);
+      setSelectedSuitcase(reseller);
       setShowResellerDetails(true);
     } catch (error) {
       console.error("Erro ao buscar detalhes da revendedora:", error);
@@ -169,7 +168,7 @@ export function SuitcaseGrid({ suitcases, onRefresh }: SuitcaseGridProps) {
                     <DropdownMenuLabel>Ações</DropdownMenuLabel>
                     <DropdownMenuItem
                       onClick={() => {
-                        handleCopyCode(suitcase.code);
+                        handleCopyCode(suitcase.code || `ML${suitcase.id.substring(0, 3)}`);
                       }}
                     >
                       <Copy className="mr-2 h-4 w-4" />

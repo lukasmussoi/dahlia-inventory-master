@@ -1,9 +1,8 @@
 
-import { useRef, useState, useEffect } from "react";
-import { format } from "date-fns";
+import { useRef } from "react";
 import { useReactToPrint } from "react-to-print";
-import { SuitcaseController } from "@/controllers/suitcaseController";
-import { Printer, Loader2 } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import {
   Dialog,
   DialogContent,
@@ -12,8 +11,10 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Printer } from "lucide-react";
 import { toast } from "sonner";
 
+// Interface para os props do componente
 interface SuitcasePrintDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -21,145 +22,132 @@ interface SuitcasePrintDialogProps {
   suitcaseItems: any[];
 }
 
-export function SuitcasePrintDialog({ open, onOpenChange, suitcase, suitcaseItems }: SuitcasePrintDialogProps) {
-  const [loading, setLoading] = useState(true);
-  const [items, setItems] = useState<any[]>([]);
+export function SuitcasePrintDialog({
+  open,
+  onOpenChange,
+  suitcase,
+  suitcaseItems
+}: SuitcasePrintDialogProps) {
+  // Referência para o componente que será impresso
   const printRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    async function fetchSuitcaseDetails() {
-      if (open && suitcase) {
-        setLoading(true);
-        try {
-          const itemsData = await SuitcaseController.getSuitcaseItems(suitcase.id);
-          setItems(itemsData);
-        } catch (error) {
-          console.error("Erro ao buscar detalhes da maleta:", error);
-        } finally {
-          setLoading(false);
-        }
-      }
-    }
-
-    fetchSuitcaseDetails();
-  }, [open, suitcase]);
-
+  // Função para imprimir o conteúdo
   const handlePrint = useReactToPrint({
-    documentTitle: `Maleta_${suitcase?.code || ""}`,
-    onAfterPrint: () => {
-      onOpenChange(false);
+    documentTitle: `Maleta ${suitcase?.code || ''}`,
+    onPrintError: (error) => {
+      console.error('Erro ao imprimir:', error);
+      toast.error('Erro ao imprimir documento');
     },
-    // Use a callback function que retorna o elemento a ser impresso
-    content: () => printRef.current,
+    content: () => printRef.current
   });
 
-  if (loading) {
-    return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-3xl">
-          <div className="flex justify-center items-center p-8">
-            <Loader2 className="h-8 w-8 animate-spin text-gold" />
-            <span className="ml-2">Carregando detalhes da maleta...</span>
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
-  }
+  if (!suitcase) return null;
 
-  if (!suitcase) {
-    return null;
-  }
-
-  const totalValue = items.reduce((total, item) => {
+  // Calcular o total da maleta
+  const totalValue = suitcaseItems?.reduce((total, item) => {
     return total + (item.product?.price || 0);
   }, 0);
 
-  const code = suitcase.code || `ML${suitcase.id.substring(0, 3)}`;
-
-  const resellerName = suitcase.seller && suitcase.seller.name 
-    ? suitcase.seller.name 
-    : "Revendedora não especificada";
-
-  const nextSettlementDate = suitcase.next_settlement_date 
-    ? format(new Date(suitcase.next_settlement_date), 'dd/MM/yyyy')
-    : "Não especificada";
+  // Formatar a data
+  const formattedDate = (date: string) => {
+    if (!date) return '';
+    try {
+      return format(new Date(date), 'dd/MM/yyyy', { locale: ptBR });
+    } catch (e) {
+      return '';
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Printer className="h-5 w-5" /> Impressão de Peças da Maleta
-          </DialogTitle>
+          <DialogTitle>Imprimir Maleta</DialogTitle>
         </DialogHeader>
 
-        <div className="p-4">
-          <Button 
-            onClick={handlePrint}
-            className="mb-4"
-          >
-            <Printer className="h-4 w-4 mr-2" /> Imprimir Lista
-          </Button>
-
-          <div ref={printRef} className="p-6 bg-white">
-            <div className="text-center mb-6">
-              <h1 className="text-2xl font-bold">Maleta {code}</h1>
-              <p className="text-gray-600">Revendedora: {resellerName}</p>
-              <p className="text-gray-600">Data do Próximo Acerto: {nextSettlementDate}</p>
-              <p className="text-gray-600">Data de Impressão: {format(new Date(), 'dd/MM/yyyy')}</p>
+        {/* Conteúdo a ser impresso */}
+        <div 
+          ref={printRef} 
+          className="p-6 print:text-black print:p-0"
+        >
+          <div className="border-b pb-4 mb-4">
+            <h1 className="text-2xl font-bold mb-2">
+              Maleta {suitcase.code || `ML${suitcase.id?.substring(0, 3)}`}
+            </h1>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <p className="text-sm text-muted-foreground">Revendedora</p>
+                <p>{suitcase.seller?.name || "Não especificada"}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Data de Criação</p>
+                <p>{formattedDate(suitcase.created_at)}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Cidade/Bairro</p>
+                <p>
+                  {suitcase.city || "N/A"} / {suitcase.neighborhood || "N/A"}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Próximo Acerto</p>
+                <p>{formattedDate(suitcase.next_settlement_date) || "Não definido"}</p>
+              </div>
             </div>
+          </div>
 
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="border-b">
-                  <th className="py-2 px-4 text-left">Imagem</th>
-                  <th className="py-2 px-4 text-left">Código</th>
-                  <th className="py-2 px-4 text-left">Peça</th>
-                  <th className="py-2 px-4 text-right">Preço</th>
-                  <th className="py-2 px-4 text-center">Vendido</th>
-                  <th className="py-2 px-4 text-left">Cliente</th>
-                  <th className="py-2 px-4 text-left">Pagamento</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item) => (
+          <table className="min-w-full print:border-collapse print:border">
+            <thead>
+              <tr className="border-b">
+                <th className="text-left py-2">Item</th>
+                <th className="text-left py-2">SKU</th>
+                <th className="text-right py-2">Preço</th>
+                <th className="text-right py-2 print:w-[100px]">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {suitcaseItems?.length > 0 ? (
+                suitcaseItems.map((item) => (
                   <tr key={item.id} className="border-b">
-                    <td className="py-3 px-4">
-                      <div className="h-12 w-12 bg-gray-100">
-                        {item.product?.photo_url && (
-                          <img 
-                            src={item.product.photo_url} 
-                            alt={item.product.name} 
-                            className="h-full w-full object-cover"
-                          />
-                        )}
-                      </div>
+                    <td className="py-2">{item.product?.name || "—"}</td>
+                    <td className="py-2">{item.product?.sku || "—"}</td>
+                    <td className="py-2 text-right">
+                      R$ {(item.product?.price || 0).toFixed(2).replace('.', ',')}
                     </td>
-                    <td className="py-3 px-4">{item.product?.sku || "N/A"}</td>
-                    <td className="py-3 px-4">{item.product?.name || "Produto não especificado"}</td>
-                    <td className="py-3 px-4 text-right">
-                      R$ {item.product?.price.toFixed(2).replace('.', ',') || "0,00"}
+                    <td className="py-2 text-right">
+                      {item.status === "sold" ? "Vendido" : "Disponível"}
                     </td>
-                    <td className="py-3 px-4 text-center">
-                      <div className="inline-block h-4 w-4 border border-gray-300"></div>
-                    </td>
-                    <td className="py-3 px-4 border-b border-dashed"></td>
-                    <td className="py-3 px-4 border-b border-dashed"></td>
                   </tr>
-                ))}
+                ))
+              ) : (
                 <tr>
-                  <td colSpan={3} className="py-3 px-4 text-right font-bold">Total:</td>
-                  <td className="py-3 px-4 text-right font-bold">
-                    R$ {totalValue.toFixed(2).replace('.', ',')}
+                  <td colSpan={4} className="py-4 text-center text-muted-foreground">
+                    Nenhum item na maleta
                   </td>
-                  <td colSpan={3}></td>
                 </tr>
-              </tbody>
-            </table>
+              )}
+            </tbody>
+            <tfoot>
+              <tr className="font-bold">
+                <td colSpan={2} className="py-2 text-right">Total:</td>
+                <td className="py-2 text-right">
+                  R$ {totalValue.toFixed(2).replace('.', ',')}
+                </td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
 
-            <div className="mt-12 pt-6 border-t">
-              <p className="text-center mb-8">Assinatura da Revendedora: ____________________________</p>
-              <p className="text-center text-sm text-gray-500">Dália Joias © {new Date().getFullYear()}</p>
+          <div className="mt-8 print:mt-16 grid grid-cols-2 gap-8">
+            <div>
+              <div className="border-t border-dashed w-full pt-2">
+                Assinatura da Revendedora
+              </div>
+            </div>
+            <div>
+              <div className="border-t border-dashed w-full pt-2">
+                Dália Joias
+              </div>
             </div>
           </div>
         </div>
@@ -167,6 +155,16 @@ export function SuitcasePrintDialog({ open, onOpenChange, suitcase, suitcaseItem
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Fechar
+          </Button>
+          <Button 
+            onClick={() => {
+              if (handlePrint) {
+                handlePrint();
+              }
+            }}
+            className="gap-1"
+          >
+            <Printer className="h-4 w-4" /> Imprimir
           </Button>
         </DialogFooter>
       </DialogContent>

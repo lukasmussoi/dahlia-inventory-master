@@ -7,8 +7,8 @@ export class SuitcaseController {
   static async getSuitcases(page = 1, limit = 10) {
     try {
       console.log(`Controller: Buscando maletas (página ${page}, limite ${limit})`);
-      const suitcases = await SuitcaseModel.getSuitcases(page, limit);
-      return suitcases;
+      const suitcases = await SuitcaseModel.getAllSuitcases();
+      return suitcases.slice((page - 1) * limit, page * limit);
     } catch (error) {
       console.error('Erro ao buscar maletas:', error);
       throw error;
@@ -102,7 +102,13 @@ export class SuitcaseController {
     try {
       console.log(`Controller: Atualizando status do item da maleta ${id} para ${status}`);
       
-      const result = await SuitcaseModel.updateSuitcaseItemStatus(id, status, clientName, paymentMethod);
+      // Preparar informações de venda se for o caso
+      const saleInfo = status === 'sold' ? {
+        customer_name: clientName,
+        payment_method: paymentMethod 
+      } : undefined;
+      
+      const result = await SuitcaseModel.updateSuitcaseItemStatus(id, status, saleInfo);
       
       // Se o item foi marcado como vendido, atualizar o status do inventário
       if (status === 'sold' && result.inventory_id) {
@@ -120,14 +126,17 @@ export class SuitcaseController {
     try {
       console.log(`Controller: Adicionando item ${inventoryId} à maleta ${suitcaseId}`);
       
-      // Verifica se o item já existe em alguma maleta
-      const existingItem = await SuitcaseModel.checkItemExistsInAnySuitcase(inventoryId);
-      if (existingItem) {
-        throw new Error('Este item já está em outra maleta');
+      // Verificar se o item está disponível no inventário
+      const inventoryItem = await InventoryModel.searchInventoryItems(inventoryId);
+      if (!inventoryItem || inventoryItem.length === 0) {
+        throw new Error('Item não encontrado no inventário');
       }
       
       // Adiciona o item à maleta
-      const result = await SuitcaseModel.addItemToSuitcase(suitcaseId, inventoryId);
+      const result = await SuitcaseModel.addItemToSuitcase({
+        suitcase_id: suitcaseId,
+        inventory_id: inventoryId
+      });
       
       // Atualiza o status do item no inventário
       if (result) {
@@ -149,14 +158,19 @@ export class SuitcaseController {
       const item = await SuitcaseModel.getSuitcaseItemById(suitcaseItemId);
       
       // Remove o item da maleta
-      const result = await SuitcaseModel.removeItemFromSuitcase(suitcaseItemId);
+      const { data, error } = await supabase
+        .from('suitcase_items')
+        .delete()
+        .eq('id', suitcaseItemId);
+      
+      if (error) throw error;
       
       // Atualiza o status do item no inventário
-      if (result && item && item.inventory_id) {
+      if (item && item.inventory_id) {
         await InventoryModel.updateInventoryItemStatus(item.inventory_id, 'available');
       }
       
-      return result;
+      return { success: true };
     } catch (error) {
       console.error(`Erro ao remover item da maleta:`, error);
       throw error;
@@ -233,4 +247,20 @@ export class SuitcaseController {
       throw error;
     }
   }
+
+  // Método para obter revendedoras no formato para select
+  static async getResellersForSelect() {
+    try {
+      const resellers = await ResellerModel.getAll();
+      return resellers.map(reseller => ({
+        value: reseller.id,
+        label: reseller.name
+      }));
+    } catch (error) {
+      console.error('Erro ao buscar revendedoras para select:', error);
+      throw error;
+    }
+  }
 }
+
+import { supabase } from "@/integrations/supabase/client";
