@@ -31,6 +31,12 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 // Schema para validação do formulário
 const suitcaseFormSchema = z.object({
@@ -39,6 +45,7 @@ const suitcaseFormSchema = z.object({
   status: z.enum(["in_use", "returned", "in_replenishment"]),
   city: z.string().min(1, "Cidade é obrigatória"),
   neighborhood: z.string().min(1, "Bairro é obrigatório"),
+  next_settlement_date: z.date().optional(),
 });
 
 type SuitcaseFormValues = z.infer<typeof suitcaseFormSchema>;
@@ -70,6 +77,7 @@ export function SuitcaseFormDialog({
       status: "in_use",
       city: "",
       neighborhood: "",
+      next_settlement_date: undefined,
     },
   });
 
@@ -96,6 +104,7 @@ export function SuitcaseFormDialog({
             status: initialData.status || "in_use",
             city: initialData.city || "",
             neighborhood: initialData.neighborhood || "",
+            next_settlement_date: initialData.next_settlement_date ? new Date(initialData.next_settlement_date) : undefined,
           });
         }
       } catch (error) {
@@ -207,6 +216,48 @@ export function SuitcaseFormDialog({
                     <FormControl>
                       <Input {...field} placeholder="Bairro" />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="next_settlement_date"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Data do próximo acerto</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? (
+                              format(field.value, "PPP", { locale: ptBR })
+                            ) : (
+                              <span>Selecione uma data</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          disabled={(date) =>
+                            date < new Date(new Date().setHours(0, 0, 0, 0))
+                          }
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
                     <FormMessage />
                   </FormItem>
                 )}

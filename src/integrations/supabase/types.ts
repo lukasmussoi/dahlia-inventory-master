@@ -543,6 +543,7 @@ export type Database = {
           created_at: string
           id: string
           neighborhood: string | null
+          next_settlement_date: string | null
           seller_id: string
           sent_at: string
           status: Database["public"]["Enums"]["suitcase_status"] | null
@@ -554,6 +555,7 @@ export type Database = {
           created_at?: string
           id?: string
           neighborhood?: string | null
+          next_settlement_date?: string | null
           seller_id: string
           sent_at?: string
           status?: Database["public"]["Enums"]["suitcase_status"] | null
@@ -565,6 +567,7 @@ export type Database = {
           created_at?: string
           id?: string
           neighborhood?: string | null
+          next_settlement_date?: string | null
           seller_id?: string
           sent_at?: string
           status?: Database["public"]["Enums"]["suitcase_status"] | null
@@ -575,7 +578,7 @@ export type Database = {
             foreignKeyName: "suitcases_seller_id_fkey"
             columns: ["seller_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "resellers"
             referencedColumns: ["id"]
           },
         ]

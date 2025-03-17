@@ -60,6 +60,7 @@ export class SuitcaseController {
     city?: string;
     neighborhood?: string;
     code?: string;
+    next_settlement_date?: Date;
   }) {
     try {
       // Verificar se cidade e bairro estão preenchidos
@@ -73,7 +74,13 @@ export class SuitcaseController {
         suitcaseData.code = await SuitcaseModel.generateSuitcaseCode();
       }
 
-      const result = await SuitcaseModel.createSuitcase(suitcaseData);
+      // Formatar a data para o formato esperado pelo banco de dados (ISO)
+      const formattedData = {
+        ...suitcaseData,
+        next_settlement_date: suitcaseData.next_settlement_date ? suitcaseData.next_settlement_date.toISOString().split('T')[0] : undefined
+      };
+
+      const result = await SuitcaseModel.createSuitcase(formattedData);
       toast.success("Maleta criada com sucesso");
       return result;
     } catch (error: any) {
@@ -84,7 +91,7 @@ export class SuitcaseController {
   }
 
   // Atualizar maleta
-  static async updateSuitcase(id: string, updates: Partial<Suitcase>) {
+  static async updateSuitcase(id: string, updates: Partial<Suitcase> & { next_settlement_date?: Date }) {
     try {
       // Verificar se cidade e bairro estão preenchidos
       if (updates.city === "" || updates.neighborhood === "") {
@@ -92,7 +99,17 @@ export class SuitcaseController {
         throw new Error("Cidade e Bairro são obrigatórios");
       }
 
-      const result = await SuitcaseModel.updateSuitcase(id, updates);
+      // Formatar a data para o formato esperado pelo banco de dados (ISO)
+      const formattedUpdates = {
+        ...updates,
+        next_settlement_date: updates.next_settlement_date 
+          ? updates.next_settlement_date instanceof Date
+            ? updates.next_settlement_date.toISOString().split('T')[0]
+            : updates.next_settlement_date
+          : updates.next_settlement_date
+      };
+
+      const result = await SuitcaseModel.updateSuitcase(id, formattedUpdates);
       toast.success("Maleta atualizada com sucesso");
       return result;
     } catch (error: any) {

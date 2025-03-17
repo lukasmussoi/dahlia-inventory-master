@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 // Interface para maleta com status atualizado
@@ -12,6 +11,7 @@ export interface Suitcase {
   city?: string;
   neighborhood?: string;
   code?: string;
+  next_settlement_date?: string; // Adicionado o campo de data do próximo acerto
 }
 
 // Interface para resumo de contagem de maletas por status
@@ -178,6 +178,7 @@ export class SuitcaseModel {
     city?: string;
     neighborhood?: string;
     code?: string;
+    next_settlement_date?: string;
   }): Promise<Suitcase> {
     // Certificar-se de que status é um valor válido
     const validStatus = suitcaseData.status || 'in_use';
