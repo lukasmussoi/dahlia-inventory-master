@@ -1,4 +1,3 @@
-
 import { SuitcaseModel, Suitcase, SuitcaseItem, SuitcaseItemSale } from "@/models/suitcaseModel";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -103,15 +102,21 @@ export class SuitcaseController {
       }
 
       // Formatar a data para o formato esperado pelo banco de dados (ISO)
+      let formattedDate: string | null = null;
+      
+      if (updates.next_settlement_date !== undefined) {
+        if (updates.next_settlement_date !== null) {
+          if (typeof updates.next_settlement_date === 'object' && 'toISOString' in updates.next_settlement_date) {
+            formattedDate = updates.next_settlement_date.toISOString().split('T')[0];
+          } else {
+            formattedDate = String(updates.next_settlement_date);
+          }
+        }
+      }
+      
       const formattedUpdates = {
         ...updates,
-        next_settlement_date: updates.next_settlement_date !== undefined 
-          ? (updates.next_settlement_date !== null 
-              ? (typeof updates.next_settlement_date === 'object' && 'toISOString' in updates.next_settlement_date)
-                ? updates.next_settlement_date.toISOString().split('T')[0]
-                : String(updates.next_settlement_date)
-              : null)
-          : null
+        next_settlement_date: formattedDate
       };
 
       const result = await SuitcaseModel.updateSuitcase(id, formattedUpdates);
