@@ -119,6 +119,25 @@ export function SuitcaseFormDialog({
     }
   }, [open, form, initialData, mode]);
 
+  // Buscar dados da revendedora quando o seller_id mudar
+  const handleSellerChange = async (sellerId: string) => {
+    if (!sellerId) return;
+    
+    setLoading(true);
+    try {
+      const reseller = await SuitcaseController.getResellerById(sellerId);
+      
+      if (reseller && reseller.address) {
+        form.setValue("city", reseller.address.city || "");
+        form.setValue("neighborhood", reseller.address.neighborhood || "");
+      }
+    } catch (error) {
+      console.error("Erro ao buscar dados da revendedora:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (values: SuitcaseFormValues) => {
     try {
       onSubmit(values);
@@ -171,7 +190,10 @@ export function SuitcaseFormDialog({
                   <FormItem>
                     <FormLabel>Revendedora</FormLabel>
                     <Select
-                      onValueChange={field.onChange}
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        handleSellerChange(value);
+                      }}
                       defaultValue={field.value}
                       value={field.value}
                     >
@@ -255,6 +277,7 @@ export function SuitcaseFormDialog({
                             date < new Date(new Date().setHours(0, 0, 0, 0))
                           }
                           initialFocus
+                          className="pointer-events-auto"
                         />
                       </PopoverContent>
                     </Popover>

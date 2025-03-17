@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 // Interface para maleta com status atualizado
@@ -73,7 +74,7 @@ export class SuitcaseModel {
         *,
         seller:seller_id (
           id,
-          full_name
+          name
         )
       `)
       .order('created_at', { ascending: false });
@@ -108,7 +109,7 @@ export class SuitcaseModel {
         *,
         seller:seller_id (
           id,
-          full_name
+          name
         )
       `)
       .eq('id', id)
@@ -291,7 +292,7 @@ export class SuitcaseModel {
         *,
         seller:seller_id (
           id,
-          full_name
+          name
         )
       `);
     
@@ -310,7 +311,7 @@ export class SuitcaseModel {
     
     if (filters.search) {
       // Buscar por código da maleta ou nome da revendedora
-      query = query.or(`code.ilike.%${filters.search}%,seller.full_name.ilike.%${filters.search}%`);
+      query = query.or(`code.ilike.%${filters.search}%`);
     }
     
     const { data, error } = await query.order('created_at', { ascending: false });

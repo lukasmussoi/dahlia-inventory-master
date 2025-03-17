@@ -2,6 +2,7 @@
 import { SuitcaseModel, Suitcase, SuitcaseItem, SuitcaseItemSale } from "@/models/suitcaseModel";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { ResellerModel } from "@/models/resellerModel";
 
 export class SuitcaseController {
   // Buscar todas as maletas
@@ -104,8 +105,8 @@ export class SuitcaseController {
       // Formatar a data para o formato esperado pelo banco de dados (ISO)
       const formattedUpdates = {
         ...updates,
-        next_settlement_date: updates.next_settlement_date 
-          ? (typeof updates.next_settlement_date === 'object' && updates.next_settlement_date !== null && 'toISOString' in updates.next_settlement_date)
+        next_settlement_date: updates.next_settlement_date !== undefined && updates.next_settlement_date !== null
+          ? (typeof updates.next_settlement_date === 'object' && 'toISOString' in updates.next_settlement_date)
             ? updates.next_settlement_date.toISOString().split('T')[0]
             : String(updates.next_settlement_date)
           : undefined
@@ -214,6 +215,17 @@ export class SuitcaseController {
       console.error("Erro ao buscar revendedoras:", error);
       toast.error("Erro ao buscar revendedoras");
       return [];
+    }
+  }
+
+  // Buscar uma revendedora por ID
+  static async getResellerById(resellerId: string) {
+    try {
+      return await ResellerModel.getById(resellerId);
+    } catch (error) {
+      console.error(`Erro ao buscar revendedora ${resellerId}:`, error);
+      toast.error("Erro ao buscar dados da revendedora");
+      return null;
     }
   }
 
