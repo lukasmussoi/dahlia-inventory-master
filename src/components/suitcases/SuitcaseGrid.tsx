@@ -6,9 +6,10 @@ import {
   Edit, 
   Trash2, 
   Eye, 
-  Printer 
+  Printer,
+  Calendar 
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   DropdownMenu,
@@ -70,6 +71,16 @@ export function SuitcaseGrid({ suitcases, onRefresh }: SuitcaseGridProps) {
     }
   };
 
+  const formatDate = (dateStr: string | null | undefined) => {
+    if (!dateStr) return null;
+    try {
+      return format(parseISO(dateStr), 'dd/MM/yyyy');
+    } catch (e) {
+      console.error("Erro ao formatar data:", e);
+      return null;
+    }
+  };
+
   if (suitcases.length === 0) {
     return (
       <div className="bg-white rounded-lg shadow p-8 text-center">
@@ -89,13 +100,18 @@ export function SuitcaseGrid({ suitcases, onRefresh }: SuitcaseGridProps) {
           // Formatar o código da maleta (se existir) ou usar os primeiros 6 caracteres do ID como código
           const code = suitcase.code || `ML${suitcase.id.substring(0, 3)}`;
           
-          // Obter o nome da revendedora
-          const resellerName = suitcase.seller?.full_name || "Revendedora não especificada";
+          // Obter o nome da revendedora corretamente
+          const resellerName = suitcase.seller && suitcase.seller.name 
+            ? suitcase.seller.name 
+            : "Revendedora não especificada";
           
           // Formatar a data de atualização
           const updatedAt = suitcase.updated_at 
             ? format(new Date(suitcase.updated_at), 'dd/MM/yyyy HH:mm')
             : "Data não disponível";
+            
+          // Formatar a data do próximo acerto
+          const nextSettlementDate = formatDate(suitcase.next_settlement_date);
           
           return (
             <Card key={suitcase.id} className="overflow-hidden border border-muted">
@@ -159,6 +175,13 @@ export function SuitcaseGrid({ suitcases, onRefresh }: SuitcaseGridProps) {
                         ? `${suitcase.city} - ${suitcase.neighborhood}`
                         : "Localização não especificada"}
                     </p>
+                    
+                    {nextSettlementDate && (
+                      <div className="flex items-center mt-2 text-xs text-gray-600">
+                        <Calendar className="h-3 w-3 mr-1" />
+                        <span>Próximo acerto: {nextSettlementDate}</span>
+                      </div>
+                    )}
                   </div>
                   
                   <div className="mt-4 pt-4 border-t border-border flex justify-between text-xs text-muted-foreground">

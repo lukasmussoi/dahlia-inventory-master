@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 // Interface para maleta com status atualizado
@@ -12,7 +11,11 @@ export interface Suitcase {
   city?: string;
   neighborhood?: string;
   code?: string;
-  next_settlement_date?: string; // Adicionado o campo de data do próximo acerto
+  next_settlement_date?: string; // Campo para data do próximo acerto
+  seller?: {
+    id: string;
+    name: string;
+  };
 }
 
 // Interface para resumo de contagem de maletas por status
@@ -72,7 +75,7 @@ export class SuitcaseModel {
       .from('suitcases')
       .select(`
         *,
-        seller:seller_id (
+        seller:resellers!suitcases_seller_id_fkey (
           id,
           name
         )
@@ -109,13 +112,13 @@ export class SuitcaseModel {
       .from('suitcases')
       .select(`
         *,
-        seller:seller_id (
+        seller:resellers!suitcases_seller_id_fkey (
           id,
           name
         )
       `)
       .eq('id', id)
-      .maybeSingle();  // Usar maybeSingle() em vez de single() para evitar erros quando não encontrar
+      .maybeSingle();
     
     if (error) throw error;
     return data;
@@ -315,7 +318,7 @@ export class SuitcaseModel {
       .from('suitcases')
       .select(`
         *,
-        seller:seller_id (
+        seller:resellers!suitcases_seller_id_fkey (
           id,
           name
         )

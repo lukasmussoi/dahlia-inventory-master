@@ -110,9 +110,9 @@ export class SuitcaseController {
         const dateValue = updates.next_settlement_date;
         
         if (dateValue !== null && dateValue !== undefined) {
-          if (typeof dateValue === 'object' && 'toISOString' in dateValue) {
-            // Garantir que o método toISOString existe (é um objeto Date)
-            formattedDate = (dateValue as Date).toISOString().split('T')[0];
+          if (typeof dateValue === 'object' && dateValue instanceof Date) {
+            // Garantir que é um objeto Date válido
+            formattedDate = dateValue.toISOString().split('T')[0];
           } else if (typeof dateValue === 'string') {
             // Se for uma string
             formattedDate = dateValue;
