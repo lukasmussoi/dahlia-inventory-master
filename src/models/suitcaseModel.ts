@@ -298,7 +298,10 @@ export class SuitcaseModel {
     
     // Aplicar filtros se fornecidos
     if (filters.status && filters.status !== 'todos') {
-      query = query.eq('status', filters.status);
+      // Garantir que o status é um dos valores válidos
+      if (['in_use', 'returned', 'lost', 'in_audit', 'in_replenishment'].includes(filters.status)) {
+        query = query.eq('status', filters.status as 'in_use' | 'returned' | 'lost' | 'in_audit' | 'in_replenishment');
+      }
     }
     
     if (filters.city) {

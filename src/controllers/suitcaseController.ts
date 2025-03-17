@@ -109,7 +109,7 @@ export class SuitcaseController {
           ? (typeof updates.next_settlement_date === 'object' && 'toISOString' in updates.next_settlement_date)
             ? updates.next_settlement_date.toISOString().split('T')[0]
             : String(updates.next_settlement_date)
-          : undefined
+          : null // Trocar undefined por null para garantir consistência de tipo
       };
 
       const result = await SuitcaseModel.updateSuitcase(id, formattedUpdates);
