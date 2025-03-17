@@ -105,11 +105,13 @@ export class SuitcaseController {
       // Formatar a data para o formato esperado pelo banco de dados (ISO)
       const formattedUpdates = {
         ...updates,
-        next_settlement_date: updates.next_settlement_date !== undefined && updates.next_settlement_date !== null
-          ? (typeof updates.next_settlement_date === 'object' && 'toISOString' in updates.next_settlement_date)
-            ? updates.next_settlement_date.toISOString().split('T')[0]
-            : String(updates.next_settlement_date)
-          : null // Trocar undefined por null para garantir consistência de tipo
+        next_settlement_date: updates.next_settlement_date !== undefined 
+          ? (updates.next_settlement_date !== null 
+              ? (typeof updates.next_settlement_date === 'object' && 'toISOString' in updates.next_settlement_date)
+                ? updates.next_settlement_date.toISOString().split('T')[0]
+                : String(updates.next_settlement_date)
+              : null)
+          : null
       };
 
       const result = await SuitcaseModel.updateSuitcase(id, formattedUpdates);
