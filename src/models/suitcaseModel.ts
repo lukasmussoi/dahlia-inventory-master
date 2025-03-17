@@ -187,7 +187,7 @@ export class SuitcaseModel {
       .from('suitcases')
       .insert({
         ...suitcaseData,
-        status: validStatus as 'in_use' | 'returned' | 'lost' | 'in_audit' | 'in_replenishment'
+        status: validStatus
       })
       .select()
       .single();
@@ -200,9 +200,6 @@ export class SuitcaseModel {
   static async updateSuitcase(id: string, updates: Partial<Suitcase>): Promise<Suitcase> {
     // Certificar-se de que status é um valor válido se estiver sendo atualizado
     const validatedUpdates = { ...updates };
-    if (updates.status) {
-      validatedUpdates.status = updates.status as 'in_use' | 'returned' | 'lost' | 'in_audit' | 'in_replenishment';
-    }
     
     const { data, error } = await supabase
       .from('suitcases')

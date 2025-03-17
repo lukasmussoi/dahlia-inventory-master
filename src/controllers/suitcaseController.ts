@@ -91,7 +91,7 @@ export class SuitcaseController {
   }
 
   // Atualizar maleta
-  static async updateSuitcase(id: string, updates: Partial<Suitcase> & { next_settlement_date?: Date }) {
+  static async updateSuitcase(id: string, updates: Partial<Suitcase> & { next_settlement_date?: Date | string }) {
     try {
       // Verificar se cidade e bairro estão preenchidos
       if (updates.city === "" || updates.neighborhood === "") {
@@ -103,7 +103,7 @@ export class SuitcaseController {
       const formattedUpdates = {
         ...updates,
         next_settlement_date: updates.next_settlement_date 
-          ? updates.next_settlement_date instanceof Date
+          ? typeof updates.next_settlement_date === 'object' && 'toISOString' in updates.next_settlement_date
             ? updates.next_settlement_date.toISOString().split('T')[0]
             : updates.next_settlement_date
           : updates.next_settlement_date
