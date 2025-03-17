@@ -33,6 +33,7 @@ export interface InventoryItem {
   material_weight?: number;
   packaging_cost?: number;
   barcode?: string;
+  profit_margin?: number;
 }
 
 // Interface para categoria de inventário
@@ -50,6 +51,11 @@ export interface InventoryFilters {
   min_price?: number;
   max_price?: number;
   status?: string;
+  // Propriedades adicionais usadas nos componentes
+  searchTerm?: string;
+  category?: string;
+  minQuantity?: number;
+  maxQuantity?: number;
 }
 
 // Interface para fornecedor
@@ -98,7 +104,7 @@ export class InventoryModel {
       ...data,
       category_name: data.inventory_categories?.name,
       supplier_name: data.suppliers?.name,
-      status: 'available' // Define um status padrão para correção temporária
+      status: data.status || 'available' // Define um status padrão para correção temporária
     };
   }
 
@@ -173,7 +179,7 @@ export class InventoryModel {
   }
 
   // Método para obter todos os itens do inventário
-  static async getInventoryItems(status?: string): Promise<InventoryItem[]> {
+  static async getInventoryItems(filters?: InventoryFilters): Promise<InventoryItem[]> {
     let query = supabase
       .from('inventory')
       .select(`
@@ -186,8 +192,22 @@ export class InventoryModel {
         )
       `);
     
-    if (status) {
-      query = query.eq('status', status);
+    if (filters) {
+      if (filters.status) {
+        query = query.eq('status', filters.status);
+      }
+      
+      if (filters.search || filters.searchTerm) {
+        const searchValue = filters.search || filters.searchTerm;
+        query = query.ilike('name', `%${searchValue}%`);
+      }
+      
+      if (filters.category_id || filters.category) {
+        const categoryId = filters.category_id || filters.category;
+        if (categoryId && categoryId !== 'all') {
+          query = query.eq('category_id', categoryId);
+        }
+      }
     }
     
     const { data, error } = await query.order('created_at', { ascending: false });
@@ -202,7 +222,7 @@ export class InventoryModel {
     })) : [];
   }
 
-  // Métodos auxiliares para compatibilidade com o código existente
+  // Método para atualizar um item
   static async updateItem(id: string, updates: Partial<InventoryItem>): Promise<InventoryItem> {
     const { data, error } = await supabase
       .from('inventory')
@@ -220,20 +240,190 @@ export class InventoryModel {
     };
   }
 
-  // Stub para métodos que ainda não foram implementados mas são necessários para a compatibilidade
-  static async getAllItems() { return []; }
-  static async getAllCategories() { return []; }
-  static async checkItemInSuitcase() { return false; }
-  static async deleteItem() { return true; }
-  static async deleteCategory() { return true; }
-  static async getAllSuppliers() { return []; }
-  static async getItemPhotos() { return []; }
-  static async createPlatingType() { return {}; }
-  static async getAllPlatingTypes() { return []; }
-  static async deletePlatingType() { return true; }
-  static async getTotalInventory() { return 0; }
-  static async createCategory() { return {}; }
-  static async updateCategory() { return {}; }
-  static async updateItemPhotos() { return []; }
-  static async createItem() { return { id: '', name: '', sku: '', price: 0, quantity: 0, status: 'available' as const }; }
+  // Método para obter todos os itens
+  static async getAllItems(filters?: InventoryFilters): Promise<InventoryItem[]> {
+    return this.getInventoryItems(filters);
+  }
+
+  // Método para obter todas as categorias
+  static async getAllCategories(): Promise<InventoryCategory[]> {
+    const { data, error } = await supabase
+      .from('inventory_categories')
+      .select('*')
+      .order('name', { ascending: true });
+    
+    if (error) throw error;
+    return data || [];
+  }
+
+  // Método para verificar se um item está em uma maleta
+  static async checkItemInSuitcase(id: string): Promise<boolean> {
+    const { data, error } = await supabase
+      .from('inventory')
+      .select('suitcase_id, status')
+      .eq('id', id)
+      .maybeSingle();
+    
+    if (error) throw error;
+    return !!(data && data.suitcase_id && data.status === 'reserved');
+  }
+
+  // Método para deletar um item
+  static async deleteItem(id: string): Promise<boolean> {
+    const { error } = await supabase
+      .from('inventory')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+    return true;
+  }
+
+  // Método para deletar uma categoria
+  static async deleteCategory(id: string): Promise<boolean> {
+    const { error } = await supabase
+      .from('inventory_categories')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+    return true;
+  }
+
+  // Método para obter todos os fornecedores
+  static async getAllSuppliers(): Promise<Supplier[]> {
+    const { data, error } = await supabase
+      .from('suppliers')
+      .select('*')
+      .order('name', { ascending: true });
+    
+    if (error) throw error;
+    return data || [];
+  }
+
+  // Método para obter as fotos de um item
+  static async getItemPhotos(id: string): Promise<{ url: string; isPrimary: boolean }[]> {
+    const { data, error } = await supabase
+      .from('inventory_photos')
+      .select('*')
+      .eq('inventory_id', id);
+    
+    if (error) throw error;
+    
+    return data ? data.map(photo => ({
+      url: photo.photo_url,
+      isPrimary: photo.is_primary
+    })) : [];
+  }
+
+  // Método para criar um tipo de banho
+  static async createPlatingType(data: Partial<PlatingType>): Promise<PlatingType> {
+    const { data: newData, error } = await supabase
+      .from('plating_types')
+      .insert([data])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    if (!newData) throw new Error("Erro ao criar tipo de banho");
+    
+    return newData;
+  }
+
+  // Método para obter todos os tipos de banho
+  static async getAllPlatingTypes(): Promise<PlatingType[]> {
+    const { data, error } = await supabase
+      .from('plating_types')
+      .select('*')
+      .order('name', { ascending: true });
+    
+    if (error) throw error;
+    return data || [];
+  }
+
+  // Método para deletar um tipo de banho
+  static async deletePlatingType(id: string): Promise<boolean> {
+    const { error } = await supabase
+      .from('plating_types')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+    return true;
+  }
+
+  // Método para obter o valor total do inventário
+  static async getTotalInventory(): Promise<number> {
+    const { data, error } = await supabase
+      .from('inventory')
+      .select('price, quantity');
+    
+    if (error) throw error;
+    
+    if (!data) return 0;
+    
+    return data.reduce((total, item) => {
+      return total + (item.price * item.quantity);
+    }, 0);
+  }
+
+  // Método para criar uma categoria
+  static async createCategory(name: string): Promise<InventoryCategory> {
+    const { data, error } = await supabase
+      .from('inventory_categories')
+      .insert([{ name }])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    if (!data) throw new Error("Erro ao criar categoria");
+    
+    return data;
+  }
+
+  // Método para atualizar uma categoria
+  static async updateCategory(id: string, name: string): Promise<InventoryCategory> {
+    const { data, error } = await supabase
+      .from('inventory_categories')
+      .update({ name })
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    if (!data) throw new Error("Erro ao atualizar categoria");
+    
+    return data;
+  }
+
+  // Método para atualizar as fotos de um item
+  static async updateItemPhotos(itemId: string, photos: File[], primaryIndex: number | null): Promise<{ url: string; isPrimary: boolean }[]> {
+    // Simulação - na implementação real, faria upload das fotos para o Supabase Storage
+    return photos.map((_, index) => ({
+      url: 'https://exemplo.com/foto.jpg',
+      isPrimary: index === primaryIndex
+    }));
+  }
+
+  // Método para criar um item
+  static async createItem(itemData: Partial<InventoryItem>): Promise<InventoryItem> {
+    const { data, error } = await supabase
+      .from('inventory')
+      .insert([{
+        ...itemData,
+        status: 'available', // Garantir que o status está definido
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    if (!data) throw new Error("Erro ao criar item");
+    
+    return {
+      ...data,
+      status: 'available'
+    };
+  }
 }

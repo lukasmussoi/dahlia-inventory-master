@@ -20,11 +20,13 @@ interface InventoryFiltersProps {
 export function InventoryFilters({ categories, onFilter }: InventoryFiltersProps) {
   // Estado local para os filtros
   const [filters, setFilters] = useState<Filters>({
-    searchTerm: '',
-    category: undefined,
-    minQuantity: undefined,
-    maxQuantity: undefined,
+    search: '',
+    category_id: undefined,
+    min_price: undefined,
+    max_price: undefined,
     status: undefined,
+    minQuantity: undefined,
+    maxQuantity: undefined
   });
 
   // Atualizar filtros e notificar componente pai
@@ -37,11 +39,13 @@ export function InventoryFilters({ categories, onFilter }: InventoryFiltersProps
   // Limpar todos os filtros
   const clearFilters = () => {
     const clearedFilters = {
-      searchTerm: '',
-      category: undefined,
-      minQuantity: undefined,
-      maxQuantity: undefined,
+      search: '',
+      category_id: undefined,
+      min_price: undefined,
+      max_price: undefined,
       status: undefined,
+      minQuantity: undefined,
+      maxQuantity: undefined
     };
     setFilters(clearedFilters);
     onFilter(clearedFilters);
@@ -56,8 +60,8 @@ export function InventoryFilters({ categories, onFilter }: InventoryFiltersProps
           <Input
             type="text"
             placeholder="Nome ou categoria..."
-            value={filters.searchTerm || ''}
-            onChange={(e) => updateFilters({ searchTerm: e.target.value })}
+            value={filters.search || ''}
+            onChange={(e) => updateFilters({ search: e.target.value })}
           />
         </div>
 
@@ -65,8 +69,8 @@ export function InventoryFilters({ categories, onFilter }: InventoryFiltersProps
         <div className="space-y-2">
           <Label>Categoria</Label>
           <Select
-            value={filters.category}
-            onValueChange={(value) => updateFilters({ category: value })}
+            value={filters.category_id}
+            onValueChange={(value) => updateFilters({ category_id: value })}
           >
             <SelectTrigger>
               <SelectValue placeholder="Todas as categorias" />
@@ -108,7 +112,7 @@ export function InventoryFilters({ categories, onFilter }: InventoryFiltersProps
           <Label>Status</Label>
           <Select
             value={filters.status}
-            onValueChange={(value: 'available' | 'out_of_stock' | undefined) => 
+            onValueChange={(value: string | undefined) => 
               updateFilters({ status: value })
             }
           >
@@ -137,4 +141,3 @@ export function InventoryFilters({ categories, onFilter }: InventoryFiltersProps
     </div>
   );
 }
-

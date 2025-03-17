@@ -58,13 +58,12 @@ export function SuitcasePrintDialog({
     },
     onPrintError: () => {
       toast.error("Erro ao imprimir relatório");
-    },
-    removeAfterPrint: true,
+    }
   });
 
   const printContent = () => {
     if (printRef.current) {
-      handlePrint(undefined, () => printRef.current);
+      handlePrint({ content: () => printRef.current });
     }
   };
 

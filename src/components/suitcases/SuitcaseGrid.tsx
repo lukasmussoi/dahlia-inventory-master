@@ -27,11 +27,19 @@ export function SuitcaseGrid({ suitcases, onRefresh }: SuitcaseGridProps) {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [printOpen, setPrintOpen] = useState(false);
+  const [suitcaseData, setSuitcaseData] = useState<any>(null);
 
   // Manipular clique em "Editar"
-  const handleEdit = (id: string) => {
-    setSelectedSuitcase(id);
-    setEditOpen(true);
+  const handleEdit = async (id: string) => {
+    try {
+      const data = await SuitcaseController.getSuitcaseById(id);
+      setSelectedSuitcase(id);
+      setSuitcaseData(data);
+      setEditOpen(true);
+    } catch (error) {
+      console.error("Erro ao buscar dados da maleta:", error);
+      toast.error("Erro ao carregar dados da maleta");
+    }
   };
 
   // Manipular clique em "Detalhes"
@@ -56,6 +64,21 @@ export function SuitcaseGrid({ suitcases, onRefresh }: SuitcaseGridProps) {
         console.error("Erro ao excluir maleta:", error);
         toast.error("Erro ao excluir maleta");
       }
+    }
+  };
+
+  // Manipular atualização de maleta
+  const handleSubmitEdit = async (data: any) => {
+    try {
+      if (selectedSuitcase) {
+        await SuitcaseController.updateSuitcase(selectedSuitcase, data);
+        toast.success("Maleta atualizada com sucesso");
+        setEditOpen(false);
+        onRefresh();
+      }
+    } catch (error) {
+      console.error("Erro ao atualizar maleta:", error);
+      toast.error("Erro ao atualizar maleta");
     }
   };
 
@@ -205,7 +228,7 @@ export function SuitcaseGrid({ suitcases, onRefresh }: SuitcaseGridProps) {
             suitcaseId={selectedSuitcase}
             onEdit={() => {
               setDetailsOpen(false);
-              setEditOpen(true);
+              handleEdit(selectedSuitcase);
             }}
             onPrint={() => {
               setDetailsOpen(false);
@@ -215,8 +238,11 @@ export function SuitcaseGrid({ suitcases, onRefresh }: SuitcaseGridProps) {
           <SuitcaseFormDialog
             open={editOpen}
             onOpenChange={setEditOpen}
+            onSubmit={handleSubmitEdit}
             suitcaseId={selectedSuitcase}
             onSuccess={onRefresh}
+            initialData={suitcaseData}
+            mode="edit"
           />
           <SuitcasePrintDialog
             open={printOpen}

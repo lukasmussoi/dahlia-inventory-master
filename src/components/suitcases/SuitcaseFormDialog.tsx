@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -55,16 +56,18 @@ interface SuitcaseFormDialogProps {
   onSubmit: (data: any) => void;
   suitcaseId?: string;
   onSuccess?: () => void;
+  initialData?: any;
+  mode?: "create" | "edit";
 }
 
 export function SuitcaseFormDialog({
   open,
   onOpenChange,
   onSubmit,
-  initialData,
-  mode = "create",
   suitcaseId,
   onSuccess,
+  initialData,
+  mode = "create",
 }: SuitcaseFormDialogProps) {
   const [loading, setLoading] = useState(false);
   const [resellers, setResellers] = useState<{ value: string; label: string }[]>([]);
