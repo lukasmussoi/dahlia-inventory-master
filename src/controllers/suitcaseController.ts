@@ -1,7 +1,6 @@
-
 import { SuitcaseModel, Suitcase, SuitcaseItem, SuitcaseItemSale } from "@/models/suitcaseModel";
-import { ResellerModel } from "@/models/resellerModel";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export class SuitcaseController {
   // Buscar todas as maletas
@@ -54,7 +53,13 @@ export class SuitcaseController {
   }
 
   // Criar nova maleta
-  static async createSuitcase(suitcaseData: Partial<Suitcase>) {
+  static async createSuitcase(suitcaseData: {
+    seller_id: string;
+    status?: 'in_use' | 'returned' | 'lost' | 'in_audit' | 'in_replenishment';
+    city?: string;
+    neighborhood?: string;
+    code?: string;
+  }) {
     try {
       // Verificar se cidade e bairro estão preenchidos
       if (!suitcaseData.city || !suitcaseData.neighborhood) {
@@ -109,9 +114,14 @@ export class SuitcaseController {
   }
 
   // Adicionar item à maleta
-  static async addItemToSuitcase(item: Partial<SuitcaseItem>) {
+  static async addItemToSuitcase(itemData: {
+    suitcase_id: string;
+    inventory_id: string;
+    quantity?: number;
+    status?: 'in_possession' | 'sold' | 'returned' | 'lost';
+  }) {
     try {
-      const result = await SuitcaseModel.addItemToSuitcase(item);
+      const result = await SuitcaseModel.addItemToSuitcase(itemData);
       toast.success("Item adicionado à maleta com sucesso");
       return result;
     } catch (error) {
@@ -169,7 +179,13 @@ export class SuitcaseController {
   // Buscar revendedoras para seleção
   static async getResellersForSelect() {
     try {
-      const resellers = await ResellerModel.getResellers();
+      // Usar o método correto para buscar revendedoras
+      const { data: resellers, error } = await supabase
+        .from('resellers')
+        .select('id, name');
+      
+      if (error) throw error;
+      
       return resellers.map(reseller => ({
         value: reseller.id,
         label: reseller.name

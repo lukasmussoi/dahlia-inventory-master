@@ -36,6 +36,7 @@ export interface SuitcaseItem {
     name: string;
     price: number;
     sku: string;
+    photos?: Array<{photo_url: string}>;
     photo_url?: string;
   };
   sales?: SuitcaseItemSale[];
@@ -138,20 +139,26 @@ export class SuitcaseModel {
     // Processar os dados para obter a primeira foto de cada produto
     return data.map(item => ({
       ...item,
-      product: {
+      product: item.product ? {
         ...item.product,
         photo_url: item.product.photos && item.product.photos.length > 0 
           ? item.product.photos[0].photo_url 
           : undefined
-      }
+      } : undefined
     }));
   }
 
   // Criar nova maleta
-  static async createSuitcase(suitcase: Partial<Suitcase>): Promise<Suitcase> {
+  static async createSuitcase(suitcaseData: {
+    seller_id: string;
+    status?: 'in_use' | 'returned' | 'lost' | 'in_audit' | 'in_replenishment';
+    city?: string;
+    neighborhood?: string;
+    code?: string;
+  }): Promise<Suitcase> {
     const { data, error } = await supabase
       .from('suitcases')
-      .insert(suitcase)
+      .insert(suitcaseData)
       .select()
       .single();
     
@@ -183,10 +190,15 @@ export class SuitcaseModel {
   }
 
   // Adicionar item à maleta
-  static async addItemToSuitcase(item: Partial<SuitcaseItem>): Promise<SuitcaseItem> {
+  static async addItemToSuitcase(itemData: {
+    suitcase_id: string;
+    inventory_id: string;
+    quantity?: number;
+    status?: 'in_possession' | 'sold' | 'returned' | 'lost';
+  }): Promise<SuitcaseItem> {
     const { data, error } = await supabase
       .from('suitcase_items')
-      .insert(item)
+      .insert(itemData)
       .select()
       .single();
     
