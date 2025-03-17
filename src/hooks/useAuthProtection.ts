@@ -54,9 +54,11 @@ export const useAuthProtection = (): UseAuthProtectionResult => {
     enabled: isAuthenticated, // Só executa quando a autenticação for confirmada
     retry: 1,
     staleTime: 5 * 60 * 1000, // 5 minutos
-    onError: (error) => {
-      console.error("Erro ao buscar perfil do usuário:", error);
-      toast.error("Erro ao carregar perfil do usuário");
+    meta: {
+      onError: (error: Error) => {
+        console.error("Erro ao buscar perfil do usuário:", error);
+        toast.error("Erro ao carregar perfil do usuário");
+      }
     }
   });
 
