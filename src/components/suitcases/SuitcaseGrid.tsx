@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -40,6 +41,7 @@ import { SuitcaseFormDialog } from "@/components/suitcases/SuitcaseFormDialog";
 import { SuitcasePrintDialog } from "@/components/suitcases/SuitcasePrintDialog";
 import { SuitcaseDetailsDialog } from "@/components/suitcases/SuitcaseDetailsDialog";
 import { Suitcase } from "@/types/suitcase";
+import { ResellerInput } from "@/types/reseller";
 
 interface SuitcaseGridProps {
   suitcases: any[];
@@ -257,12 +259,12 @@ export function SuitcaseGrid({ suitcases, onRefresh }: SuitcaseGridProps) {
           if (!selectedSuitcase) return;
           try {
             // Convertendo para o formato esperado por ResellerInput
-            const resellerInput = {
+            const resellerInput: ResellerInput = {
               name: data.name,
               cpfCnpj: data.cpf_cnpj || "",
               phone: data.phone || "",
               email: data.email || "",
-              status: data.status as "Ativa" | "Inativa",
+              status: data.status || "Ativa",
               promoterId: data.promoter_id || "",
               address: data.address ? {
                 street: data.address.street || "",

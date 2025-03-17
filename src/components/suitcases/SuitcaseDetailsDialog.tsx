@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -189,6 +190,13 @@ export function SuitcaseDetailsDialog({
 
   const code = suitcase.code || `ML${suitcase.id.substring(0, 3)}`;
 
+  // Verificação segura do telefone da revendedora
+  const sellerPhone = suitcase.seller && 
+                     typeof suitcase.seller === 'object' && 
+                     'phone' in suitcase.seller ? 
+                     String(suitcase.seller.phone || 'Não disponível') : 
+                     'Não disponível';
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
@@ -259,12 +267,8 @@ export function SuitcaseDetailsDialog({
                     <p className="text-sm text-gray-500">Nome</p>
                     <p>{suitcase.seller?.name || "Revendedora não especificada"}</p>
                     
-                    {suitcase.seller && typeof suitcase.seller === 'object' && 'phone' in suitcase.seller && (
-                      <>
-                        <p className="text-sm text-gray-500 mt-2">Telefone</p>
-                        <p>{typeof suitcase.seller.phone === 'string' ? suitcase.seller.phone : "Não disponível"}</p>
-                      </>
-                    )}
+                    <p className="text-sm text-gray-500 mt-2">Telefone</p>
+                    <p>{sellerPhone}</p>
                   </div>
                 </div>
               </div>

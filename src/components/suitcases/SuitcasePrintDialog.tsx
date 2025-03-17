@@ -29,10 +29,10 @@ export function SuitcasePrintDialog({
 
   // Configurar impressão
   const handlePrint = useReactToPrint({
-    content: () => printRef.current,
     documentTitle: `Maleta_${suitcase?.code || ""}`,
     onPrintError: () => toast.error("Erro ao imprimir maleta"),
     onAfterPrint: () => toast.success("Maleta impressa com sucesso"),
+    content: () => printRef.current,
   });
 
   if (!suitcase) {
@@ -124,7 +124,7 @@ export function SuitcasePrintDialog({
             Cancelar
           </Button>
           <Button 
-            onClick={handlePrint} 
+            onClick={() => handlePrint()}
             className="gap-1"
           >
             <Printer className="h-4 w-4" /> Imprimir

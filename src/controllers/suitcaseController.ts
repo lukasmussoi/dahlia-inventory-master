@@ -3,6 +3,7 @@ import { SuitcaseModel } from "@/models/suitcaseModel";
 import { InventoryModel } from "@/models/inventoryModel";
 import { ResellerModel } from "@/models/resellerModel";
 import { supabase } from "@/integrations/supabase/client";
+import { SuitcaseItemStatus } from "@/types/suitcase";
 
 export class SuitcaseController {
   static async getSuitcases(page = 1, limit = 10) {
@@ -101,7 +102,7 @@ export class SuitcaseController {
 
   static async updateSuitcaseItemStatus(
     id: string, 
-    status: 'in_possession' | 'sold' | 'returned' | 'lost', 
+    status: SuitcaseItemStatus, 
     clientName?: string, 
     paymentMethod?: string
   ) {
@@ -247,7 +248,16 @@ export class SuitcaseController {
   static async searchInventoryItems(query: string) {
     try {
       console.log(`Controller: Buscando itens do inventário com query "${query}"`);
-      return await InventoryModel.searchInventoryItems(query);
+      // Verificar se a query parece um UUID, caso contrário buscar por texto
+      const isUuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      
+      if (isUuidPattern.test(query)) {
+        // Se for UUID, buscar por ID exato
+        return await InventoryModel.searchInventoryItemsById(query);
+      } else {
+        // Se não for UUID, buscar por texto (nome, código, etc)
+        return await InventoryModel.searchInventoryItemsByText(query);
+      }
     } catch (error) {
       console.error(`Erro ao buscar itens do inventário:`, error);
       throw error;
