@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Pencil, Trash2, Search, FilterX, RefreshCw } from "lucide-react";
@@ -54,12 +53,8 @@ export const ResellerList = () => {
     queryKey: ["resellers", isSearching, searchTerm, statusFilter, promoterFilter],
     queryFn: () =>
       isSearching
-        ? ResellerController.searchResellers(
-            searchTerm, 
-            statusFilter !== "todos" ? statusFilter : undefined,
-            promoterFilter !== "todos" ? promoterFilter : undefined
-          )
-        : ResellerController.getAllResellers(),
+        ? ResellerController.searchResellers(searchTerm)
+        : ResellerController.getAll(),
   });
 
   // Buscar promotoras para o filtro

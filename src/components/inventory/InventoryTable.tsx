@@ -51,7 +51,8 @@ export function InventoryTable({ items, isLoading, onEdit, onDelete }: Inventory
       queryFn: () => InventoryModel.getItemPhotos(item.id),
     });
 
-    const primaryPhoto = photos?.find(photo => photo.isPrimary) || photos?.[0];
+    // Fixed: Changed isPrimary to is_primary
+    const primaryPhoto = photos?.find(photo => photo.is_primary) || photos?.[0];
 
     return (
       <TableRow>
@@ -59,7 +60,8 @@ export function InventoryTable({ items, isLoading, onEdit, onDelete }: Inventory
           <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
             {primaryPhoto ? (
               <img 
-                src={primaryPhoto.url} 
+                // Fixed: Changed url to photo_url
+                src={primaryPhoto.photo_url} 
                 alt={item.name}
                 className="w-full h-full object-cover"
               />

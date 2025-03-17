@@ -52,14 +52,14 @@ export const useInventoryForm = ({ item, onSuccess, onClose }: UseInventoryFormP
       price: item?.price || 0,
       unit_cost: item?.unit_cost || 0,
       suggested_price: item?.suggested_price || 0,
-      weight: item?.weight || null,
-      width: item?.width || null,
-      height: item?.height || null,
-      depth: item?.depth || null,
+      weight: item?.weight || 0,
+      width: item?.width || 0,
+      height: item?.height || 0,
+      depth: item?.depth || 0,
       min_stock: item?.min_stock || 0,
-      supplier_id: item?.supplier_id || undefined,
+      supplier_id: item?.supplier_id || "",
       markup_percentage: item?.markup_percentage || 30.0,
-      plating_type_id: item?.plating_type_id || undefined,
+      plating_type_id: item?.plating_type_id || "",
       material_weight: item?.material_weight || 0,
       packaging_cost: item?.packaging_cost || 0,
     },
@@ -98,13 +98,15 @@ export const useInventoryForm = ({ item, onSuccess, onClose }: UseInventoryFormP
       if (item) {
         await InventoryModel.updateItem(item.id, itemData);
         if (photos.length > 0) {
-          await InventoryModel.updateItemPhotos(item.id, photos, primaryPhotoIndex);
+          // Fix: Remove third parameter
+          await InventoryModel.updateItemPhotos(item.id, photos);
         }
         toast.success("Item atualizado com sucesso!");
       } else {
         const createdItem = await InventoryModel.createItem(itemData);
         if (photos.length > 0) {
-          await InventoryModel.updateItemPhotos(createdItem.id, photos, primaryPhotoIndex);
+          // Fix: Remove third parameter
+          await InventoryModel.updateItemPhotos(createdItem.id, photos);
         }
         toast.success("Item criado com sucesso!");
       }

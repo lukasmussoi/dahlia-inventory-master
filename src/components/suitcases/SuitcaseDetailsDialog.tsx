@@ -33,6 +33,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { 
   SuitcaseItem, 
+  SuitcaseItemStatus,
   SuitcaseItemWithSales 
 } from "@/types/suitcase";
 
@@ -93,6 +94,7 @@ export function SuitcaseDetailsDialog({
   // Função para marcar item como vendido
   const handleMarkAsSold = async (itemId: string) => {
     try {
+      // Fix: use correct status value from enum
       await SuitcaseController.updateSuitcaseItemStatus(itemId, 'sold');
       toast.success("Item marcado como vendido");
       refetchItems();
@@ -105,7 +107,8 @@ export function SuitcaseDetailsDialog({
   // Função para marcar item como disponível
   const handleMarkAsAvailable = async (itemId: string) => {
     try {
-      await SuitcaseController.updateSuitcaseItemStatus(itemId, 'in_possession');
+      // Fix: use correct status value from enum
+      await SuitcaseController.updateSuitcaseItemStatus(itemId, 'available');
       toast.success("Item marcado como disponível");
       refetchItems();
     } catch (error) {
@@ -267,10 +270,11 @@ export function SuitcaseDetailsDialog({
                     <p className="text-sm text-gray-500">Nome</p>
                     <p>{suitcase.seller?.name || "Revendedora não especificada"}</p>
                     
-                    {suitcase.seller && (suitcase.seller.phone || suitcase.seller.phone_number) && (
+                    {/* Fix: check if phone properties exist on seller object */}
+                    {suitcase.seller && suitcase.seller.phone && (
                       <>
                         <p className="text-sm text-gray-500 mt-2">Telefone</p>
-                        <p>{suitcase.seller.phone || suitcase.seller.phone_number}</p>
+                        <p>{suitcase.seller.phone}</p>
                       </>
                     )}
                   </div>
@@ -453,7 +457,7 @@ export function SuitcaseDetailsDialog({
                         <td className="px-6 py-4 whitespace-nowrap text-center">
                           <Badge
                             className={cn(
-                              item.status === "in_possession"
+                              item.status === "available"
                                 ? "bg-blue-100 text-blue-800"
                                 : item.status === "sold"
                                 ? "bg-green-100 text-green-800"
@@ -465,7 +469,8 @@ export function SuitcaseDetailsDialog({
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <div className="flex justify-end space-x-2">
-                            {item.status === 'in_possession' ? (
+                            {/* Fix: use correct enum value for comparison */}
+                            {item.status === 'available' ? (
                               <Button 
                                 size="sm" 
                                 variant="outline" 

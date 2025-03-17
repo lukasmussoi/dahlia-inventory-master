@@ -1,6 +1,7 @@
 
 import { ResellerModel } from "@/models/resellerModel";
 import { toast } from "sonner";
+import { Reseller, ResellerInput } from "@/types/reseller";
 
 export class ResellerController {
   // Buscar todas as revendedoras
@@ -13,6 +14,11 @@ export class ResellerController {
       toast.error("Erro ao carregar revendedoras");
       throw error;
     }
+  }
+
+  // Alias para getAll para compatibilidade com componentes existentes
+  static async getAllResellers() {
+    return this.getAll();
   }
 
   // Buscar revendedora por ID
@@ -30,8 +36,13 @@ export class ResellerController {
     }
   }
 
+  // Alias para getById para compatibilidade com componentes existentes
+  static async getResellerById(id: string) {
+    return this.getById(id);
+  }
+
   // Criar nova revendedora
-  static async createReseller(data: any) {
+  static async createReseller(data: ResellerInput) {
     try {
       const reseller = await ResellerModel.create(data);
       toast.success("Revendedora cadastrada com sucesso!");
@@ -44,7 +55,7 @@ export class ResellerController {
   }
 
   // Atualizar revendedora existente
-  static async updateReseller(id: string, data: any) {
+  static async updateReseller(id: string, data: ResellerInput) {
     try {
       const reseller = await ResellerModel.update(id, data);
       toast.success("Revendedora atualizada com sucesso!");
@@ -70,9 +81,9 @@ export class ResellerController {
   }
   
   // Buscar revendedoras por termo
-  static async searchResellers(query: string) {
+  static async searchResellers(query: string, status?: string, promoterId?: string) {
     try {
-      return await ResellerModel.searchResellers(query);
+      return await ResellerModel.searchResellers(query, status, promoterId);
     } catch (error) {
       console.error("Erro ao buscar revendedoras:", error);
       toast.error("Erro ao pesquisar revendedoras");
