@@ -198,12 +198,9 @@ export class SuitcaseModel {
 
   // Atualizar maleta
   static async updateSuitcase(id: string, updates: Partial<Suitcase>): Promise<Suitcase> {
-    // Certificar-se de que status é um valor válido se estiver sendo atualizado
-    const validatedUpdates = { ...updates };
-    
     const { data, error } = await supabase
       .from('suitcases')
-      .update(validatedUpdates)
+      .update(updates)
       .eq('id', id)
       .select()
       .single();
