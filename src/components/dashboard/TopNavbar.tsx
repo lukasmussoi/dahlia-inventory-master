@@ -13,7 +13,8 @@ import {
   LineChart,
   Tag,
   UserCircle,
-  ShoppingCart
+  ShoppingCart,
+  User
 } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -119,6 +120,11 @@ export function TopNavbar({ isAdmin }: TopNavbarProps) {
               url: "/dashboard/sales/resellers",
               icon: UserCircle,
             },
+            {
+              title: "Promotoras",
+              url: "/dashboard/sales/promoters",
+              icon: User,
+            }
           ],
         },
         {
