@@ -1,27 +1,19 @@
 
 import { useState, useEffect } from "react";
-import { z } from "zod";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { SuitcaseController } from "@/controllers/suitcaseController";
-import { SuitcaseModel } from "@/models/suitcaseModel";
-import { Briefcase, Loader2 } from "lucide-react";
+import { format } from "date-fns";
+import { CalendarIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
+  DialogClose,
   DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -29,305 +21,261 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
-// Schema para validação do formulário
-const suitcaseFormSchema = z.object({
-  code: z.string().min(1, "Código da maleta é obrigatório"),
-  seller_id: z.string().min(1, "Selecione uma revendedora"),
-  status: z.enum(["in_use", "returned", "in_replenishment"]),
-  city: z.string().min(1, "Cidade é obrigatória"),
-  neighborhood: z.string().min(1, "Bairro é obrigatório"),
-  next_settlement_date: z.date().optional(),
-});
-
-type SuitcaseFormValues = z.infer<typeof suitcaseFormSchema>;
-
-interface SuitcaseFormDialogProps {
+export interface SuitcaseFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: FormData) => Promise<void>;
+  // Fields to support edit mode
   suitcaseId?: string;
-  onSuccess?: () => void;
   initialData?: any;
-  mode?: "create" | "edit";
+  mode?: 'create' | 'edit';
 }
 
-export function SuitcaseFormDialog({
-  open,
-  onOpenChange,
+export function SuitcaseFormDialog({ 
+  open, 
+  onOpenChange, 
   onSubmit,
-  suitcaseId,
-  onSuccess,
-  initialData,
-  mode = "create",
+  suitcaseId, 
+  initialData, 
+  mode = 'create' 
 }: SuitcaseFormDialogProps) {
-  const [loading, setLoading] = useState(false);
-  const [resellers, setResellers] = useState<{ value: string; label: string }[]>([]);
-
-  // Inicializar formulário com React Hook Form e Zod
-  const form = useForm<SuitcaseFormValues>({
-    resolver: zodResolver(suitcaseFormSchema),
-    defaultValues: {
-      code: "",
-      seller_id: "",
-      status: "in_use",
-      city: "",
-      neighborhood: "",
-      next_settlement_date: undefined,
-    },
+  const [sellerOptions, setSellerOptions] = useState<{ value: string; label: string }[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedSettlementDate, setSelectedSettlementDate] = useState<Date | undefined>();
+  const [formData, setFormData] = useState({
+    code: "",
+    seller_id: "",
+    status: "in_use", // Default value
+    city: "",
+    neighborhood: "",
+    next_settlement_date: ""
   });
 
-  // Buscar revendedoras e gerar código da maleta
+  // Buscar opções de revendedoras para o select
   useEffect(() => {
-    async function loadInitialData() {
-      setLoading(true);
+    async function fetchSellerOptions() {
       try {
-        // Buscar revendedoras
-        const resellersData = await SuitcaseController.getResellersForSelect();
-        setResellers(resellersData);
-
-        // Se estiver criando uma nova maleta
-        if (mode === "create" && !initialData) {
-          // Gerar código único para a maleta
-          const code = await SuitcaseModel.generateSuitcaseCode();
-          form.setValue("code", code);
-        }
-        // Se estiver editando uma maleta existente
-        else if (initialData) {
-          form.reset({
-            code: initialData.code || "",
-            seller_id: initialData.seller_id || "",
-            status: initialData.status || "in_use",
-            city: initialData.city || "",
-            neighborhood: initialData.neighborhood || "",
-            next_settlement_date: initialData.next_settlement_date ? new Date(initialData.next_settlement_date) : undefined,
-          });
-        }
+        const options = await SuitcaseController.getResellersForSelect();
+        setSellerOptions(options);
       } catch (error) {
-        console.error("Erro ao carregar dados iniciais:", error);
-      } finally {
-        setLoading(false);
+        console.error("Erro ao buscar revendedoras:", error);
+        toast.error("Erro ao carregar lista de revendedoras");
       }
     }
 
     if (open) {
-      loadInitialData();
-    }
-  }, [open, form, initialData, mode]);
+      fetchSellerOptions();
 
-  // Buscar dados da revendedora quando o seller_id mudar
-  const handleSellerChange = async (sellerId: string) => {
-    if (!sellerId) return;
-    
-    setLoading(true);
-    try {
-      const reseller = await SuitcaseController.getResellerById(sellerId);
-      
-      if (reseller && reseller.address) {
-        form.setValue("city", reseller.address.city || "");
-        form.setValue("neighborhood", reseller.address.neighborhood || "");
+      // Pré-preencher o formulário se estiver no modo de edição
+      if (mode === 'edit' && initialData) {
+        const formattedDate = initialData.next_settlement_date
+          ? new Date(initialData.next_settlement_date)
+          : undefined;
+
+        setFormData({
+          code: initialData.code || "",
+          seller_id: initialData.seller_id || "",
+          status: initialData.status || "in_use",
+          city: initialData.city || "",
+          neighborhood: initialData.neighborhood || "",
+          next_settlement_date: initialData.next_settlement_date || "",
+        });
+
+        setSelectedSettlementDate(formattedDate);
+      } else {
+        // Resetar o formulário para a criação
+        setFormData({
+          code: "",
+          seller_id: "",
+          status: "in_use",
+          city: "",
+          neighborhood: "",
+          next_settlement_date: ""
+        });
+        setSelectedSettlementDate(undefined);
       }
+    }
+  }, [open, mode, initialData]);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    
+    try {
+      // Criar FormData para envio
+      const formDataObj = new FormData(e.currentTarget);
+      if (mode === 'edit' && suitcaseId) {
+        formDataObj.append('suitcaseId', suitcaseId);
+      }
+      
+      await onSubmit(formDataObj);
+      onOpenChange(false);
+      toast.success(`Maleta ${mode === 'create' ? 'criada' : 'atualizada'} com sucesso`);
     } catch (error) {
-      console.error("Erro ao buscar dados da revendedora:", error);
+      console.error(`Erro ao ${mode === 'create' ? 'criar' : 'atualizar'} maleta:`, error);
+      toast.error(`Erro ao ${mode === 'create' ? 'criar' : 'atualizar'} maleta`);
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
-  const handleSubmit = async (values: SuitcaseFormValues) => {
-    try {
-      onSubmit(values);
-      if (onSuccess) {
-        onSuccess();
-      }
-    } catch (error) {
-      console.error("Erro ao submeter formulário:", error);
+  const handleDateSelect = (date?: Date) => {
+    setSelectedSettlementDate(date);
+    if (date) {
+      const formattedDate = format(date, "yyyy-MM-dd");
+      setFormData(prev => ({ ...prev, next_settlement_date: formattedDate }));
+    } else {
+      setFormData(prev => ({ ...prev, next_settlement_date: "" }));
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Briefcase className="h-5 w-5" /> 
-            {mode === "create" ? "Criar Nova Maleta" : "Editar Maleta"}
+          <DialogTitle>
+            {mode === 'create' ? 'Criar Nova Maleta' : 'Editar Maleta'}
           </DialogTitle>
-          <DialogDescription>
-            {mode === "create" 
-              ? "Preencha os dados abaixo para criar uma nova maleta para uma revendedora."
-              : "Edite os dados da maleta conforme necessário."}
-          </DialogDescription>
         </DialogHeader>
 
-        {loading ? (
-          <div className="flex justify-center items-center p-8">
-            <Loader2 className="h-8 w-8 animate-spin text-gold" />
-            <span className="ml-2">Carregando...</span>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Código da Maleta */}
+          <div className="space-y-2">
+            <Label htmlFor="code">Código da Maleta</Label>
+            <Input 
+              id="code" 
+              name="code"
+              placeholder="Ex: ML001" 
+              value={formData.code}
+              onChange={(e) => setFormData(prev => ({ ...prev, code: e.target.value }))}
+              required
+            />
           </div>
-        ) : (
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="code"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Código</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="ML001" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
 
-              <FormField
-                control={form.control}
-                name="seller_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Revendedora</FormLabel>
-                    <Select
-                      onValueChange={(value) => {
-                        field.onChange(value);
-                        handleSellerChange(value);
-                      }}
-                      defaultValue={field.value}
-                      value={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione uma revendedora" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {resellers.map((reseller) => (
-                          <SelectItem key={reseller.value} value={reseller.value}>
-                            {reseller.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          {/* Revendedora */}
+          <div className="space-y-2">
+            <Label htmlFor="seller_id">Revendedora</Label>
+            <Select 
+              name="seller_id"
+              value={formData.seller_id}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, seller_id: value }))}
+              required
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione uma revendedora" />
+              </SelectTrigger>
+              <SelectContent>
+                {sellerOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-              <FormField
-                control={form.control}
-                name="city"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Cidade</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="Cidade" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          {/* Status */}
+          <div className="space-y-2">
+            <Label htmlFor="status">Status</Label>
+            <Select 
+              name="status"
+              value={formData.status}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}
+              required
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="in_use">Em Uso</SelectItem>
+                <SelectItem value="returned">Devolvida</SelectItem>
+                <SelectItem value="in_replenishment">Em Reposição</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-              <FormField
-                control={form.control}
-                name="neighborhood"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Bairro</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="Bairro" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          {/* Localização: Cidade */}
+          <div className="space-y-2">
+            <Label htmlFor="city">Cidade</Label>
+            <Input 
+              id="city" 
+              name="city"
+              placeholder="Ex: São Paulo"
+              value={formData.city}
+              onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
+              required
+            />
+          </div>
 
-              <FormField
-                control={form.control}
-                name="next_settlement_date"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Data do próximo acerto</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, "PPP", { locale: ptBR })
-                            ) : (
-                              <span>Selecione uma data</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) =>
-                            date < new Date(new Date().setHours(0, 0, 0, 0))
-                          }
-                          initialFocus
-                          className="pointer-events-auto"
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          {/* Localização: Bairro */}
+          <div className="space-y-2">
+            <Label htmlFor="neighborhood">Bairro</Label>
+            <Input 
+              id="neighborhood" 
+              name="neighborhood"
+              placeholder="Ex: Vila Mariana"
+              value={formData.neighborhood}
+              onChange={(e) => setFormData(prev => ({ ...prev, neighborhood: e.target.value }))}
+              required
+            />
+          </div>
 
-              <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Status</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                      value={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione o status" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="in_use">Em Uso</SelectItem>
-                        <SelectItem value="returned">Devolvida</SelectItem>
-                        <SelectItem value="in_replenishment">Aguardando Reposição</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <DialogFooter>
-                <Button type="submit" className="w-full">
-                  {mode === "create" ? "Criar Maleta" : "Salvar Alterações"}
+          {/* Data do Próximo Acerto */}
+          <div className="space-y-2">
+            <Label htmlFor="next_settlement_date">Data do Próximo Acerto</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !selectedSettlementDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {selectedSettlementDate ? (
+                    format(selectedSettlementDate, "dd/MM/yyyy")
+                  ) : (
+                    <span>Selecione uma data</span>
+                  )}
                 </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        )}
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={selectedSettlementDate}
+                  onSelect={handleDateSelect}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+            <input 
+              type="hidden" 
+              name="next_settlement_date" 
+              value={formData.next_settlement_date} 
+            />
+          </div>
+
+          <DialogFooter className="pt-4">
+            <DialogClose asChild>
+              <Button variant="outline" type="button">
+                Cancelar
+              </Button>
+            </DialogClose>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Salvando..." : mode === 'create' ? "Criar Maleta" : "Salvar Alterações"}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

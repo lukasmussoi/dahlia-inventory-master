@@ -26,7 +26,9 @@ export function InventoryFilters({ categories, onFilter }: InventoryFiltersProps
     max_price: undefined,
     status: undefined,
     minQuantity: undefined,
-    maxQuantity: undefined
+    maxQuantity: undefined,
+    searchTerm: '', // Added this to match the interface
+    category: undefined, // Added this to match the interface
   });
 
   // Atualizar filtros e notificar componente pai
@@ -38,14 +40,16 @@ export function InventoryFilters({ categories, onFilter }: InventoryFiltersProps
 
   // Limpar todos os filtros
   const clearFilters = () => {
-    const clearedFilters = {
+    const clearedFilters: Filters = {
       search: '',
       category_id: undefined,
       min_price: undefined,
       max_price: undefined,
       status: undefined,
       minQuantity: undefined,
-      maxQuantity: undefined
+      maxQuantity: undefined,
+      searchTerm: '', // Clear this too
+      category: undefined, // Clear this too
     };
     setFilters(clearedFilters);
     onFilter(clearedFilters);
@@ -61,7 +65,7 @@ export function InventoryFilters({ categories, onFilter }: InventoryFiltersProps
             type="text"
             placeholder="Nome ou categoria..."
             value={filters.search || ''}
-            onChange={(e) => updateFilters({ search: e.target.value })}
+            onChange={(e) => updateFilters({ search: e.target.value, searchTerm: e.target.value })}
           />
         </div>
 
@@ -69,8 +73,11 @@ export function InventoryFilters({ categories, onFilter }: InventoryFiltersProps
         <div className="space-y-2">
           <Label>Categoria</Label>
           <Select
-            value={filters.category_id}
-            onValueChange={(value) => updateFilters({ category_id: value })}
+            value={filters.category_id || filters.category}
+            onValueChange={(value) => updateFilters({ 
+              category_id: value, 
+              category: value 
+            })}
           >
             <SelectTrigger>
               <SelectValue placeholder="Todas as categorias" />
@@ -95,14 +102,18 @@ export function InventoryFilters({ categories, onFilter }: InventoryFiltersProps
               placeholder="Mín"
               min={0}
               value={filters.minQuantity || ''}
-              onChange={(e) => updateFilters({ minQuantity: e.target.value ? Number(e.target.value) : undefined })}
+              onChange={(e) => updateFilters({ 
+                minQuantity: e.target.value ? Number(e.target.value) : undefined 
+              })}
             />
             <Input
               type="number"
               placeholder="Máx"
               min={0}
               value={filters.maxQuantity || ''}
-              onChange={(e) => updateFilters({ maxQuantity: e.target.value ? Number(e.target.value) : undefined })}
+              onChange={(e) => updateFilters({ 
+                maxQuantity: e.target.value ? Number(e.target.value) : undefined 
+              })}
             />
           </div>
         </div>

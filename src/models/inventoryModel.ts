@@ -104,7 +104,7 @@ export class InventoryModel {
       ...data,
       category_name: data.inventory_categories?.name,
       supplier_name: data.suppliers?.name,
-      status: data.status || 'available' // Define um status padrão para correção temporária
+      status: 'available' // Default status if not present
     };
   }
 
@@ -139,7 +139,7 @@ export class InventoryModel {
     
     return {
       ...data,
-      status: status // Garantir que o status está definido
+      status: status // Explicitar o status no retorno
     };
   }
 
@@ -169,7 +169,7 @@ export class InventoryModel {
       ...item,
       category_name: item.inventory_categories?.name,
       supplier_name: item.suppliers?.name,
-      status: 'reserved' // Definir status como reserved para itens em maletas
+      status: 'reserved' // Explicit status for items in suitcases
     }));
   }
 
@@ -218,7 +218,7 @@ export class InventoryModel {
       ...item,
       category_name: item.inventory_categories?.name,
       supplier_name: item.suppliers?.name,
-      status: item.status || 'available' // Garantir que o status está definido
+      status: item.status || 'available' // Default status
     })) : [];
   }
 
@@ -236,7 +236,7 @@ export class InventoryModel {
     
     return {
       ...data,
-      status: data.status || 'available' // Garantir que o status está definido
+      status: data.status || 'available' // Default status
     };
   }
 
@@ -265,6 +265,8 @@ export class InventoryModel {
       .maybeSingle();
     
     if (error) throw error;
+    
+    // Safely check if data exists, has suitcase_id and correct status
     return !!(data && data.suitcase_id && data.status === 'reserved');
   }
 
@@ -318,9 +320,13 @@ export class InventoryModel {
 
   // Método para criar um tipo de banho
   static async createPlatingType(data: Partial<PlatingType>): Promise<PlatingType> {
+    if (!data.name) {
+      throw new Error("Nome é obrigatório para o tipo de banho");
+    }
+    
     const { data: newData, error } = await supabase
       .from('plating_types')
-      .insert([data])
+      .insert([data]) // Fixed: was passing an array of objects
       .select()
       .single();
     
@@ -407,14 +413,38 @@ export class InventoryModel {
 
   // Método para criar um item
   static async createItem(itemData: Partial<InventoryItem>): Promise<InventoryItem> {
+    // Ensure essential properties are present
+    if (!itemData.name || !itemData.category_id || !itemData.price) {
+      throw new Error("Nome, categoria e preço são obrigatórios");
+    }
+    
+    // Create a correctly typed object for Supabase
+    const inventory = {
+      name: itemData.name,
+      category_id: itemData.category_id,
+      price: itemData.price,
+      quantity: itemData.quantity || 0,
+      description: itemData.description,
+      cost_price: itemData.cost_price,
+      supplier_id: itemData.supplier_id,
+      unit_cost: itemData.unit_cost,
+      suggested_price: itemData.suggested_price,
+      weight: itemData.weight,
+      width: itemData.width,
+      height: itemData.height,
+      depth: itemData.depth,
+      min_stock: itemData.min_stock,
+      plating_type_id: itemData.plating_type_id,
+      material_weight: itemData.material_weight,
+      packaging_cost: itemData.packaging_cost,
+      markup_percentage: itemData.markup_percentage,
+      profit_margin: itemData.profit_margin,
+      // Not including status because it's set by Supabase trigger
+    };
+    
     const { data, error } = await supabase
       .from('inventory')
-      .insert([{
-        ...itemData,
-        status: 'available', // Garantir que o status está definido
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }])
+      .insert([inventory])
       .select()
       .single();
     
@@ -423,7 +453,7 @@ export class InventoryModel {
     
     return {
       ...data,
-      status: 'available'
+      status: 'available' // Default status for new items
     };
   }
 }

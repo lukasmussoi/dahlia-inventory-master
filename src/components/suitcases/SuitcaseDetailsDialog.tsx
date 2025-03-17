@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { SuitcaseController } from "@/controllers/suitcaseController";
@@ -27,7 +26,14 @@ import {
 } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { toast } from "sonner";
-import { InventoryModel } from "@/models/inventoryModel";
+import { InventoryModel, type InventoryItem } from "@/models/inventoryModel";
+
+interface SuitcaseItemWithSales extends InventoryItem {
+  sales?: Array<{
+    customer_name?: string;
+    payment_method?: string;
+  }>;
+}
 
 interface SuitcaseDetailsDialogProps {
   open: boolean;
@@ -46,28 +52,26 @@ export function SuitcaseDetailsDialog({
 }: SuitcaseDetailsDialogProps) {
   const [activeTab, setActiveTab] = useState("peças");
   const [suitcase, setSuitcase] = useState<any>(null);
-  const [suitcaseItems, setSuitcaseItems] = useState<any[]>([]);
+  const [suitcaseItems, setSuitcaseItems] = useState<SuitcaseItemWithSales[]>([]);
   const [loading, setLoading] = useState(true);
   const [customerNames, setCustomerNames] = useState<Record<string, string>>({});
   const [paymentMethods, setPaymentMethods] = useState<Record<string, string>>({});
   const [isAddItemSheetOpen, setIsAddItemSheetOpen] = useState(false);
-  const [availableItems, setAvailableItems] = useState<any[]>([]);
+  const [availableItems, setAvailableItems] = useState<InventoryItem[]>([]);
   const [selectedInventoryId, setSelectedInventoryId] = useState("");
   const [loadingInventory, setLoadingInventory] = useState(false);
 
-  // Buscar detalhes da maleta
   useEffect(() => {
     async function fetchSuitcaseDetails() {
       if (open && suitcaseId) {
         setLoading(true);
         try {
           const suitcaseData = await SuitcaseController.getSuitcaseById(suitcaseId);
-          const itemsData = await SuitcaseController.getSuitcaseItems(suitcaseId);
+          const itemsData = await SuitcaseController.getSuitcaseItems(suitcaseId) as SuitcaseItemWithSales[];
           
           setSuitcase(suitcaseData);
           setSuitcaseItems(itemsData);
           
-          // Inicializar estados para nomes de clientes e métodos de pagamento
           const initialCustomerNames: Record<string, string> = {};
           const initialPaymentMethods: Record<string, string> = {};
           
@@ -95,7 +99,6 @@ export function SuitcaseDetailsDialog({
     fetchSuitcaseDetails();
   }, [open, suitcaseId]);
 
-  // Manipular mudança de status de peça
   const handleItemStatusChange = async (item: any, checked: boolean) => {
     try {
       const newStatus = checked ? 'sold' : 'in_possession';
@@ -105,9 +108,8 @@ export function SuitcaseDetailsDialog({
       
       await SuitcaseController.updateSuitcaseItemStatus(item.id, newStatus, saleInfo);
       
-      // Atualizar a lista de peças após a alteração
       const updatedItems = await SuitcaseController.getSuitcaseItems(suitcaseId);
-      setSuitcaseItems(updatedItems);
+      setSuitcaseItems(updatedItems as SuitcaseItemWithSales[]);
       toast.success(`Peça ${checked ? 'marcada como vendida' : 'desmarcada como vendida'}`);
     } catch (error) {
       console.error("Erro ao atualizar status da peça:", error);
@@ -115,17 +117,14 @@ export function SuitcaseDetailsDialog({
     }
   };
 
-  // Manipular mudança no nome do cliente
   const handleCustomerNameChange = (itemId: string, name: string) => {
     setCustomerNames(prev => ({ ...prev, [itemId]: name }));
   };
 
-  // Manipular mudança no método de pagamento
   const handlePaymentMethodChange = (itemId: string, method: string) => {
     setPaymentMethods(prev => ({ ...prev, [itemId]: method }));
   };
 
-  // Manipular salvamento de venda
   const handleSaveSale = async (item: any) => {
     try {
       await SuitcaseController.updateSuitcaseItemStatus(
@@ -137,9 +136,8 @@ export function SuitcaseDetailsDialog({
         }
       );
       
-      // Atualizar a lista de peças após a alteração
       const updatedItems = await SuitcaseController.getSuitcaseItems(suitcaseId);
-      setSuitcaseItems(updatedItems);
+      setSuitcaseItems(updatedItems as SuitcaseItemWithSales[]);
       toast.success("Informações da venda salvas com sucesso");
     } catch (error) {
       console.error("Erro ao salvar venda:", error);
@@ -147,12 +145,11 @@ export function SuitcaseDetailsDialog({
     }
   };
 
-  // Buscar itens disponíveis do inventário
   const fetchAvailableInventoryItems = async () => {
     setLoadingInventory(true);
     try {
-      // Vamos buscar apenas itens com status 'available'
-      const items = await InventoryModel.getInventoryItems('available');
+      const filters = { status: 'available' };
+      const items = await InventoryModel.getInventoryItems(filters);
       setAvailableItems(items || []);
     } catch (error) {
       console.error("Erro ao buscar itens do inventário:", error);
@@ -162,13 +159,11 @@ export function SuitcaseDetailsDialog({
     }
   };
 
-  // Abrir painel para adicionar item
   const openAddItemSheet = () => {
     fetchAvailableInventoryItems();
     setIsAddItemSheetOpen(true);
   };
 
-  // Adicionar item à maleta
   const handleAddItemToSuitcase = async () => {
     if (!selectedInventoryId) {
       toast.error("Selecione um item para adicionar");
@@ -181,9 +176,8 @@ export function SuitcaseDetailsDialog({
         inventory_id: selectedInventoryId
       });
 
-      // Recarregar itens da maleta
       const updatedItems = await SuitcaseController.getSuitcaseItems(suitcaseId);
-      setSuitcaseItems(updatedItems);
+      setSuitcaseItems(updatedItems as SuitcaseItemWithSales[]);
 
       setIsAddItemSheetOpen(false);
       setSelectedInventoryId("");
@@ -211,15 +205,12 @@ export function SuitcaseDetailsDialog({
     return null;
   }
 
-  // Formatar código da maleta
   const code = suitcase.code || `ML${suitcase.id.substring(0, 3)}`;
   
-  // Obter nome da revendedora
   const resellerName = suitcase.seller && suitcase.seller.name 
     ? suitcase.seller.name 
     : "Revendedora não especificada";
   
-  // Formatar datas
   const createdAt = suitcase.created_at 
     ? format(new Date(suitcase.created_at), 'dd/MM/yyyy')
     : "Data não disponível";
@@ -228,7 +219,6 @@ export function SuitcaseDetailsDialog({
     ? format(new Date(suitcase.updated_at), 'dd/MM/yyyy HH:mm')
     : "Data não disponível";
   
-  // Formatar data do próximo acerto
   const nextSettlementDate = suitcase.next_settlement_date
     ? format(new Date(suitcase.next_settlement_date), 'dd/MM/yyyy')
     : "Não especificada";
@@ -264,7 +254,6 @@ export function SuitcaseDetailsDialog({
               <TabsTrigger value="histórico">Histórico</TabsTrigger>
             </TabsList>
 
-            {/* Aba de Informações */}
             <TabsContent value="informações" className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -327,7 +316,6 @@ export function SuitcaseDetailsDialog({
               </div>
             </TabsContent>
 
-            {/* Aba de Peças */}
             <TabsContent value="peças" className="space-y-4">
               <div className="flex justify-between items-center">
                 <h2 className="text-xl font-semibold">Itens na Maleta</h2>
@@ -351,21 +339,21 @@ export function SuitcaseDetailsDialog({
                       <div className="flex flex-col md:flex-row gap-4">
                         <div className="flex items-start gap-3">
                           <div className="h-16 w-16 bg-gray-100 rounded">
-                            {item.product?.photo_url && (
+                            {item.photo_url && (
                               <img 
-                                src={item.product.photo_url} 
-                                alt={item.product.name} 
+                                src={item.photo_url} 
+                                alt={item.name} 
                                 className="h-full w-full object-cover rounded"
                               />
                             )}
                           </div>
                           <div>
-                            <h4 className="font-medium text-lg">{item.product?.name || "Produto não especificado"}</h4>
+                            <h4 className="font-medium text-lg">{item.name || "Produto não especificado"}</h4>
                             <p className="text-sm text-muted-foreground">
-                              Código: {item.product?.sku || "N/A"}
+                              Código: {item.sku || "N/A"}
                             </p>
                             <p className="font-medium text-lg">
-                              R$ {item.product?.price.toFixed(2).replace('.', ',') || "0,00"}
+                              R$ {item.price?.toFixed(2).replace('.', ',') || "0,00"}
                             </p>
                           </div>
                         </div>
@@ -437,7 +425,6 @@ export function SuitcaseDetailsDialog({
               )}
             </TabsContent>
 
-            {/* Aba de Histórico */}
             <TabsContent value="histórico" className="space-y-4">
               <div className="space-y-4 py-2">
                 <div className="flex gap-4">
@@ -475,8 +462,6 @@ export function SuitcaseDetailsDialog({
                     </p>
                   </div>
                 </div>
-
-                {/* Aqui poderia ser adicionado mais eventos do histórico real da maleta */}
               </div>
             </TabsContent>
           </Tabs>
@@ -497,7 +482,6 @@ export function SuitcaseDetailsDialog({
         </DialogContent>
       </Dialog>
 
-      {/* Painel para adicionar item à maleta */}
       <Sheet open={isAddItemSheetOpen} onOpenChange={setIsAddItemSheetOpen}>
         <SheetContent>
           <SheetHeader>

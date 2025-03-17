@@ -3,7 +3,7 @@ import { useRef, useState, useEffect } from "react";
 import { format } from "date-fns";
 import { useReactToPrint } from "react-to-print";
 import { SuitcaseController } from "@/controllers/suitcaseController";
-import { Printer, Loader2 } from "lucide-react";
+import { Printer, Loader2, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -51,6 +51,7 @@ export function SuitcasePrintDialog({
     fetchSuitcaseDetails();
   }, [open, suitcaseId]);
 
+  // Fix react-to-print usage
   const handlePrint = useReactToPrint({
     documentTitle: `Maleta ${suitcase?.code || ""}`,
     onAfterPrint: () => {
@@ -63,6 +64,7 @@ export function SuitcasePrintDialog({
 
   const printContent = () => {
     if (printRef.current) {
+      // Wrap the ref in a function to get the current value when called
       handlePrint({ content: () => printRef.current });
     }
   };

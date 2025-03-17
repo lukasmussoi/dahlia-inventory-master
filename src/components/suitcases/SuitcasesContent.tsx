@@ -25,6 +25,14 @@ export function SuitcasesContent({ isAdmin, userProfile }: SuitcasesContentProps
     neighborhood: ""
   });
 
+  // Default empty summary if data is not yet loaded
+  const defaultSummary = {
+    total: 0,
+    in_use: 0,
+    returned: 0,
+    in_replenishment: 0
+  };
+
   // Buscar maletas usando React Query
   const { 
     data: suitcases = [], 
@@ -32,19 +40,23 @@ export function SuitcasesContent({ isAdmin, userProfile }: SuitcasesContentProps
     refetch: refetchSuitcases
   } = useQuery({
     queryKey: ['suitcases', isSearching, filters],
-    queryFn: () => isSearching
-      ? SuitcaseController.searchSuitcases(filters)
-      : SuitcaseController.getAllSuitcases(),
+    queryFn: () => {
+      if (isSearching) {
+        return SuitcaseController.searchSuitcases(filters);
+      } else {
+        return SuitcaseController.getAllSuitcases();
+      }
+    },
   });
 
   // Buscar resumo das maletas
   const { 
-    data: summary, 
+    data: summary = defaultSummary, 
     isLoading: isLoadingSummary,
     refetch: refetchSummary 
   } = useQuery({
     queryKey: ['suitcases-summary'],
-    queryFn: SuitcaseController.getSuitcaseSummary,
+    queryFn: () => SuitcaseController.getSuitcaseSummary(),
   });
 
   // Refazer consultas quando necessário

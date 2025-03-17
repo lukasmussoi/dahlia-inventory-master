@@ -1,7 +1,8 @@
+
 import { InventoryModel } from "@/models/inventoryModel";
 import { ResellerModel } from "@/models/resellerModel";
 import { SuitcaseModel } from "@/models/suitcaseModel";
-import { AddressModel } from "@/models/addressModel";
+// Remove the AddressModel import as it doesn't exist
 import { format } from "date-fns";
 
 export class SuitcaseController {
@@ -11,22 +12,24 @@ export class SuitcaseController {
       const currentPage = page ? parseInt(page as string, 10) : 1;
       const itemsPerPage = per_page ? parseInt(per_page as string, 10) : 10;
 
-      const suitcases = await SuitcaseModel.getSuitcasesWithPagination({
-        page: currentPage,
-        per_page: itemsPerPage,
-        seller_id: seller_id as string,
-        status: status as string,
+      // Fix method name to match what's in SuitcaseModel
+      const suitcases = await SuitcaseModel.getAllSuitcases();
+      
+      // Calculate pagination manually since we're not using getSuitcasesWithPagination
+      const startIndex = (currentPage - 1) * itemsPerPage;
+      const endIndex = startIndex + itemsPerPage;
+      const filteredSuitcases = suitcases.filter(suitcase => {
+        if (seller_id && suitcase.seller_id !== seller_id) return false;
+        if (status && status !== 'todos' && suitcase.status !== status) return false;
+        return true;
       });
-
-      const totalSuitcases = await SuitcaseModel.getTotalSuitcases({
-        seller_id: seller_id as string,
-        status: status as string,
-      });
-
+      
+      const paginatedSuitcases = filteredSuitcases.slice(startIndex, endIndex);
+      const totalSuitcases = filteredSuitcases.length;
       const totalPages = Math.ceil(totalSuitcases / itemsPerPage);
 
       return {
-        data: suitcases,
+        data: paginatedSuitcases,
         meta: {
           current_page: currentPage,
           per_page: itemsPerPage,
@@ -60,7 +63,7 @@ export class SuitcaseController {
       const status = formData.get("status") as string;
       const city = formData.get("city") as string;
       const neighborhood = formData.get("neighborhood") as string;
-      const nextSettlementDate = formData.get("next_settlement_date") as string;
+      const nextSettlementDate = formData.get("next_settlement_date") as string | null;
 
       if (!sellerId || !code || !status || !city || !neighborhood) {
         throw new Error("Todos os campos são obrigatórios");
@@ -123,11 +126,12 @@ export class SuitcaseController {
 
   static async getResellersForSelect() {
     try {
-      const resellers = await ResellerModel.getAllResellers();
-      return resellers.map((reseller) => ({
+      // Use ResellerModel directly instead of getAllResellers
+      const { data: resellers } = await ResellerModel.getResellers();
+      return resellers?.map((reseller) => ({
         value: reseller.id,
         label: reseller.name,
-      }));
+      })) || [];
     } catch (error: any) {
       console.error("Erro ao buscar revendedoras para o select:", error);
       throw new Error(
@@ -138,7 +142,8 @@ export class SuitcaseController {
 
   static async getResellerById(id: string) {
     try {
-      const reseller = await ResellerModel.getResellerById(id);
+      // Use ResellerModel directly instead of getResellerById
+      const { data: reseller } = await ResellerModel.getResellerById(id);
       return reseller;
     } catch (error: any) {
       console.error("Erro ao buscar revendedora por ID:", error);
@@ -148,9 +153,7 @@ export class SuitcaseController {
 
   static async getSuitcaseItems(suitcaseId: string) {
     try {
-      const items = await InventoryModel.getInventoryItemsBySuitcaseId(
-        suitcaseId
-      );
+      const items = await SuitcaseModel.getSuitcaseItems(suitcaseId);
       return items;
     } catch (error: any) {
       console.error("Erro ao buscar itens da maleta:", error);
@@ -179,9 +182,9 @@ export class SuitcaseController {
         neighborhood: neighborhood,
       };
 
-      const dateValue = formData.get('next_settlement_date') as string;
+      const dateValue = formData.get('next_settlement_date');
       if (dateValue) {
-        const parsedDate = new Date(dateValue);
+        const parsedDate = new Date(dateValue as string);
         if (!isNaN(parsedDate.getTime())) {
           suitcaseData.next_settlement_date = parsedDate.toISOString().split('T')[0];
         }
@@ -204,9 +207,59 @@ export class SuitcaseController {
     }
   }
 
+  // Add missing methods
+  static async updateSuitcaseItemStatus(
+    itemId: string, 
+    status: string, 
+    saleInfo?: any
+  ) {
+    try {
+      return await SuitcaseModel.updateSuitcaseItemStatus(itemId, status as any, saleInfo);
+    } catch (error: any) {
+      console.error("Erro ao atualizar status do item:", error);
+      throw new Error(error.message || "Erro ao atualizar status do item");
+    }
+  }
+
+  static async searchSuitcases(filters: any) {
+    try {
+      return await SuitcaseModel.searchSuitcases(filters);
+    } catch (error: any) {
+      console.error("Erro ao buscar maletas:", error);
+      throw new Error(error.message || "Erro ao buscar maletas");
+    }
+  }
+
+  static async getAllSuitcases() {
+    try {
+      return await SuitcaseModel.getAllSuitcases();
+    } catch (error: any) {
+      console.error("Erro ao buscar maletas:", error);
+      throw new Error(error.message || "Erro ao buscar maletas");
+    }
+  }
+
+  static async getSuitcaseSummary() {
+    try {
+      return await SuitcaseModel.getSuitcaseSummary();
+    } catch (error: any) {
+      console.error("Erro ao buscar resumo das maletas:", error);
+      throw new Error(error.message || "Erro ao buscar resumo das maletas");
+    }
+  }
+
+  static async addItemToSuitcase(data: { suitcase_id: string, inventory_id: string }) {
+    try {
+      return await SuitcaseModel.addItemToSuitcase(data);
+    } catch (error: any) {
+      console.error("Erro ao adicionar item à maleta:", error);
+      throw new Error(error.message || "Erro ao adicionar item à maleta");
+    }
+  }
+
   static async markItemAsSold(inventoryId: string) {
     try {
-      // Atualizar o status do item para 'sold'
+      // Update the inventory status
       await InventoryModel.updateInventoryItemStatus(inventoryId, 'sold');
       return { message: "Item marcado como vendido com sucesso" };
     } catch (error: any) {
