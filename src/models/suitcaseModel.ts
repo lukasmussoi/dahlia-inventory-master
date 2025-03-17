@@ -1,4 +1,6 @@
+
 import { supabase } from "@/integrations/supabase/client";
+import { SuitcaseItemStatus } from "@/types/suitcase";
 
 // Interface para maleta com status atualizado
 export interface Suitcase {
@@ -10,11 +12,20 @@ export interface Suitcase {
   sent_at?: string;
   city?: string;
   neighborhood?: string;
-  code?: string;
+  code: string;
   next_settlement_date?: string; // Campo para data do próximo acerto
   seller?: {
     id: string;
     name: string;
+    phone?: string;
+    address?: {
+      city?: string;
+      neighborhood?: string;
+      street?: string;
+      number?: string;
+      state?: string;
+      zipCode?: string;
+    };
   };
 }
 
@@ -35,6 +46,7 @@ export interface SuitcaseItem {
   status: 'in_possession' | 'sold' | 'returned' | 'lost';
   created_at?: string;
   updated_at?: string;
+  added_at: string;
   product?: {
     id: string;
     name: string;
@@ -70,14 +82,16 @@ export class SuitcaseModel {
   }
 
   // Buscar todas as maletas
-  static async getAllSuitcases(): Promise<Suitcase[]> {
+  static async getAllSuitcases(filters?: any): Promise<Suitcase[]> {
     const { data, error } = await supabase
       .from('suitcases')
       .select(`
         *,
         seller:resellers!suitcases_seller_id_fkey (
           id,
-          name
+          name,
+          phone,
+          address
         )
       `)
       .order('created_at', { ascending: false });
@@ -114,7 +128,9 @@ export class SuitcaseModel {
         *,
         seller:resellers!suitcases_seller_id_fkey (
           id,
-          name
+          name,
+          phone,
+          address
         )
       `)
       .eq('id', id)
@@ -144,7 +160,7 @@ export class SuitcaseModel {
       .maybeSingle();
     
     if (error) throw error;
-    return data;
+    return data as SuitcaseItem;
   }
 
   // Buscar peças de uma maleta
@@ -186,13 +202,14 @@ export class SuitcaseModel {
         // Retornar o objeto com a estrutura correta e tratando photos de forma segura
         return {
           ...item,
+          added_at: item.created_at || new Date().toISOString(),
           product: item.product ? {
             ...item.product,
             photo_url: photoUrl,
             // Garantir uma estrutura de photos segura
             photos: Array.isArray(item.product.photos) ? item.product.photos : []
           } : undefined
-        };
+        } as SuitcaseItem;
       });
       
       return processedData;
@@ -280,7 +297,7 @@ export class SuitcaseModel {
     if (error) throw error;
     if (!data) throw new Error("Erro ao adicionar peça à maleta: nenhum dado retornado");
     
-    return data;
+    return data as SuitcaseItem;
   }
 
   // Atualizar status de uma peça da maleta
@@ -314,7 +331,7 @@ export class SuitcaseModel {
       if (saleError) throw saleError;
     }
     
-    return data;
+    return data as SuitcaseItem;
   }
 
   // Buscar vendas de uma peça da maleta
@@ -343,7 +360,9 @@ export class SuitcaseModel {
         *,
         seller:resellers!suitcases_seller_id_fkey (
           id,
-          name
+          name,
+          phone,
+          address
         )
       `);
     
@@ -385,5 +404,72 @@ export class SuitcaseModel {
     // Formato: ML001, ML002, etc.
     const nextNumber = (count || 0) + 1;
     return `ML${nextNumber.toString().padStart(3, '0')}`;
+  }
+
+  // Adicionar métodos que estavam faltando
+  static async removeSuitcaseItem(itemId: string): Promise<void> {
+    if (!itemId) throw new Error("ID do item é necessário");
+    
+    const { error } = await supabase
+      .from('suitcase_items')
+      .delete()
+      .eq('id', itemId);
+    
+    if (error) throw error;
+  }
+
+  static async getAllSellers(): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('resellers')
+      .select('*');
+    
+    if (error) throw error;
+    return data || [];
+  }
+
+  static async getSellerById(sellerId: string): Promise<any> {
+    if (!sellerId) throw new Error("ID do vendedor é necessário");
+    
+    const { data, error } = await supabase
+      .from('resellers')
+      .select('*')
+      .eq('id', sellerId)
+      .maybeSingle();
+    
+    if (error) throw error;
+    return data;
+  }
+
+  static async searchInventoryItems(query: string): Promise<any[]> {
+    let searchQuery = supabase
+      .from('inventory')
+      .select(`
+        *,
+        photos:inventory_photos(*)
+      `);
+    
+    // Verificar se é um UUID ou um termo de busca
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    
+    if (uuidRegex.test(query)) {
+      searchQuery = searchQuery.eq('id', query);
+    } else {
+      searchQuery = searchQuery.or(`name.ilike.%${query}%,sku.ilike.%${query}%,barcode.ilike.%${query}%`);
+    }
+    
+    const { data, error } = await searchQuery.limit(10);
+    
+    if (error) throw error;
+    
+    // Processar para obter a primeira foto de cada item
+    return (data || []).map(item => {
+      const photos = item.photos || [];
+      const primaryPhoto = photos.find((p: any) => p.is_primary) || photos[0];
+      
+      return {
+        ...item,
+        photo_url: primaryPhoto ? primaryPhoto.photo_url : null
+      };
+    });
   }
 }

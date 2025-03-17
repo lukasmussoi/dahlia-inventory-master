@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { SuitcaseController } from "@/controllers/suitcaseController";
+import { suitcaseController } from "@/controllers/suitcaseController";
 import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -61,7 +61,7 @@ export function SuitcaseFormDialog({
   useEffect(() => {
     async function fetchSellerOptions() {
       try {
-        const options = await SuitcaseController.getResellersForSelect();
+        const options = await suitcaseController.getResellersForSelect();
         setSellerOptions(options);
       } catch (error) {
         console.error("Erro ao buscar revendedoras:", error);

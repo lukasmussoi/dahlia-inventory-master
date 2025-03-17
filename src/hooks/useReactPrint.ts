@@ -1,9 +1,13 @@
 
-import { useReactToPrint as useOriginalReactToPrint } from "react-to-print";
-import { type UseReactToPrintOptions } from "react-to-print";
+import { useReactToPrint, type UseReactToPrintOptions as OriginalOptions } from "react-to-print";
 
-// Hook personalizado com tipagem correta
+// Estendendo o tipo para incluir a propriedade content que utilizamos
+export interface UseReactToPrintOptions extends OriginalOptions {
+  content: () => HTMLElement | null;
+}
+
+// Hook personalizado que aceita nossa interface estendida
 export function useReactPrint(options: UseReactToPrintOptions) {
   // Usamos o hook original com as opções corretas
-  return useOriginalReactToPrint(options);
+  return useReactToPrint(options);
 }

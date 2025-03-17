@@ -1,9 +1,8 @@
-
 import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { SuitcaseController } from "@/controllers/suitcaseController";
+import { suitcaseController } from "@/controllers/suitcaseController";
 import { 
   Info, 
   Package, 
@@ -59,7 +58,7 @@ export function SuitcaseDetailsDialog({
 
   const { data: suitcase, isLoading: isLoadingSuitcase, refetch: refetchSuitcase } = useQuery({
     queryKey: ['suitcase', suitcaseId],
-    queryFn: () => suitcaseId ? SuitcaseController.getSuitcaseById(suitcaseId) : null,
+    queryFn: () => suitcaseId ? suitcaseController.getSuitcaseById(suitcaseId) : null,
     enabled: !!suitcaseId && open,
   });
 
@@ -69,7 +68,7 @@ export function SuitcaseDetailsDialog({
     refetch: refetchItems
   } = useQuery({
     queryKey: ['suitcase-items', suitcaseId],
-    queryFn: () => suitcaseId ? SuitcaseController.getSuitcaseItems(suitcaseId) : [],
+    queryFn: () => suitcaseId ? suitcaseController.getSuitcaseItems(suitcaseId) : [],
     enabled: !!suitcaseId && open,
   });
 
@@ -89,7 +88,7 @@ export function SuitcaseDetailsDialog({
 
   const handleMarkAsSold = async (itemId: string) => {
     try {
-      await SuitcaseController.updateSuitcaseItemStatus(itemId, 'sold');
+      await suitcaseController.updateSuitcaseItemStatus(itemId, 'sold');
       toast.success("Item marcado como vendido");
       refetchItems();
     } catch (error) {
@@ -100,7 +99,7 @@ export function SuitcaseDetailsDialog({
 
   const handleMarkAsAvailable = async (itemId: string) => {
     try {
-      await SuitcaseController.updateSuitcaseItemStatus(itemId, 'in_possession');
+      await suitcaseController.updateSuitcaseItemStatus(itemId, 'in_possession');
       toast.success("Item marcado como disponível");
       refetchItems();
     } catch (error) {
@@ -111,7 +110,7 @@ export function SuitcaseDetailsDialog({
 
   const handleRemoveItem = async (itemId: string) => {
     try {
-      await SuitcaseController.removeItemFromSuitcase(itemId);
+      await suitcaseController.removeItemFromSuitcase(itemId);
       toast.success("Item removido da maleta");
       refetchItems();
     } catch (error) {
@@ -131,7 +130,7 @@ export function SuitcaseDetailsDialog({
     setIsSearching(true);
     
     try {
-      const results = await SuitcaseController.searchInventoryItems(query);
+      const results = await suitcaseController.searchInventoryItems(query);
       console.log("Resultados da busca:", results);
       setSearchResults(results);
     } catch (error) {
@@ -144,7 +143,7 @@ export function SuitcaseDetailsDialog({
 
   const handleAddItem = async (inventoryId: string) => {
     try {
-      await SuitcaseController.addItemToSuitcase(suitcaseId, inventoryId);
+      await suitcaseController.addItemToSuitcase(suitcaseId, inventoryId);
       toast.success("Item adicionado à maleta");
       refetchItems();
       setSearchTerm("");
@@ -239,7 +238,7 @@ export function SuitcaseDetailsDialog({
                             : "bg-gray-100 text-gray-800"
                         )}
                       >
-                        {SuitcaseController.formatStatus(suitcase.status)}
+                        {suitcaseController.formatStatus(suitcase.status)}
                       </Badge>
                     </div>
                     <div>
@@ -454,7 +453,7 @@ export function SuitcaseDetailsDialog({
                                 : "bg-gray-100 text-gray-800"
                             )}
                           >
-                            {SuitcaseController.formatStatus(item.status)}
+                            {suitcaseController.formatStatus(item.status)}
                           </Badge>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">

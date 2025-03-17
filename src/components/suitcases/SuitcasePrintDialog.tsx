@@ -1,6 +1,6 @@
 
 import { useRef } from "react";
-import { useReactToPrint } from "react-to-print";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -8,9 +8,9 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Printer, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useReactPrint } from "@/hooks/useReactPrint";
 
 interface SuitcasePrintDialogProps {
   open: boolean;
@@ -27,12 +27,11 @@ export function SuitcasePrintDialog({
 }: SuitcasePrintDialogProps) {
   const printRef = useRef<HTMLDivElement>(null);
 
-  // Configurar impressão corrigindo o uso de useReactToPrint
-  const handlePrint = useReactToPrint({
+  // Configurar impressão usando o hook personalizado
+  const handlePrint = useReactPrint({
     documentTitle: `Maleta_${suitcase?.code || ""}`,
     onPrintError: () => toast.error("Erro ao imprimir maleta"),
     onAfterPrint: () => toast.success("Maleta impressa com sucesso"),
-    // Corrigido para usar uma função que retorna o elemento
     content: () => printRef.current,
   });
 
@@ -125,8 +124,7 @@ export function SuitcasePrintDialog({
             Cancelar
           </Button>
           <Button 
-            // Corrigido para chamar handlePrint diretamente sem argumentos
-            onClick={handlePrint}
+            onClick={() => handlePrint()}
             className="gap-1"
           >
             <Printer className="h-4 w-4" /> Imprimir

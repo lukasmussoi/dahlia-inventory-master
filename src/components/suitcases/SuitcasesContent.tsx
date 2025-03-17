@@ -1,7 +1,7 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { SuitcaseController } from "@/controllers/suitcaseController";
+import { suitcaseController } from "@/controllers/suitcaseController";
 import { SuitcaseGrid } from "@/components/suitcases/SuitcaseGrid";
 import { SuitcaseFilters } from "@/components/suitcases/SuitcaseFilters";
 import { SuitcaseSummary } from "@/components/suitcases/SuitcaseSummary";
@@ -42,9 +42,9 @@ export function SuitcasesContent({ isAdmin, userProfile }: SuitcasesContentProps
     queryKey: ['suitcases', isSearching, filters],
     queryFn: () => {
       if (isSearching) {
-        return SuitcaseController.searchSuitcases(filters);
+        return suitcaseController.searchSuitcases(filters);
       } else {
-        return SuitcaseController.getAllSuitcases();
+        return suitcaseController.getAllSuitcases();
       }
     },
   });
@@ -56,7 +56,7 @@ export function SuitcasesContent({ isAdmin, userProfile }: SuitcasesContentProps
     refetch: refetchSummary 
   } = useQuery({
     queryKey: ['suitcases-summary'],
-    queryFn: () => SuitcaseController.getSuitcaseSummary(),
+    queryFn: () => suitcaseController.getSuitcaseSummary(),
   });
 
   // Refazer consultas quando necessário
@@ -86,7 +86,7 @@ export function SuitcasesContent({ isAdmin, userProfile }: SuitcasesContentProps
   // Lidar com criação de nova maleta
   const handleCreateSuitcase = async (data: any) => {
     try {
-      await SuitcaseController.createSuitcase(data);
+      await suitcaseController.createSuitcase(data);
       setShowNewSuitcaseDialog(false);
       refreshData();
       toast.success("Maleta criada com sucesso");
@@ -134,7 +134,7 @@ export function SuitcasesContent({ isAdmin, userProfile }: SuitcasesContentProps
         
         {/* Lista de Maletas */}
         <SuitcaseGrid 
-          suitcases={suitcases}
+          isAdmin={isAdmin}
           onRefresh={refreshData}
         />
       </div>

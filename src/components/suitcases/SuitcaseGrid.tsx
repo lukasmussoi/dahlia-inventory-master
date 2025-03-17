@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -44,9 +45,10 @@ import { SuitcasePrintDialog } from "./SuitcasePrintDialog";
 
 interface SuitcaseGridProps {
   isAdmin?: boolean;
+  onRefresh?: () => void;
 }
 
-export function SuitcaseGrid({ isAdmin }: SuitcaseGridProps) {
+export function SuitcaseGrid({ isAdmin, onRefresh }: SuitcaseGridProps) {
   const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
@@ -71,7 +73,7 @@ export function SuitcaseGrid({ isAdmin }: SuitcaseGridProps) {
   // Buscar dados dos itens da maleta
   const { data: suitcaseItems = [], refetch: refetchSuitcaseItems } = useQuery({
     queryKey: ["suitcase-items", selectedSuitcase?.id],
-    queryFn: () => SuitcaseModel.getSuitcaseItems(selectedSuitcase?.id || ""),
+    queryFn: () => selectedSuitcase?.id ? SuitcaseModel.getSuitcaseItems(selectedSuitcase.id) : [],
     enabled: !!selectedSuitcase?.id,
   });
 
@@ -131,6 +133,7 @@ export function SuitcaseGrid({ isAdmin }: SuitcaseGridProps) {
       }
       closeModal();
       refetch();
+      if (onRefresh) onRefresh();
     } catch (error) {
       console.error("Erro ao salvar maleta:", error);
       toast.error("Erro ao salvar maleta");
@@ -147,7 +150,10 @@ export function SuitcaseGrid({ isAdmin }: SuitcaseGridProps) {
         toast.error("Nenhuma maleta selecionada.");
         return;
       }
-      await SuitcaseModel.addSuitcaseItem(selectedSuitcase.id, inventoryId);
+      await SuitcaseModel.addItemToSuitcase({
+        suitcase_id: selectedSuitcase.id,
+        inventory_id: inventoryId
+      });
       toast.success("Item adicionado à maleta com sucesso!");
       closeItemModal();
       refetchSuitcaseItems();
@@ -176,7 +182,17 @@ export function SuitcaseGrid({ isAdmin }: SuitcaseGridProps) {
   // Atualizar status do item na maleta
   const handleUpdateItemStatus = async (itemId: string, status: SuitcaseItemStatus) => {
     try {
-      await SuitcaseModel.updateSuitcaseItemStatus(itemId, status);
+      // Garantir que só status válidos sejam enviados
+      const validStatus = ["in_possession", "sold", "returned", "lost"] as const;
+      if (!validStatus.includes(status as any)) {
+        toast.error(`Status inválido: ${status}`);
+        return;
+      }
+      
+      await SuitcaseModel.updateSuitcaseItemStatus(
+        itemId, 
+        status as "in_possession" | "sold" | "returned" | "lost"
+      );
       toast.success("Status do item atualizado com sucesso!");
       refetchSuitcaseItems();
     } catch (error) {
@@ -192,6 +208,7 @@ export function SuitcaseGrid({ isAdmin }: SuitcaseGridProps) {
         await SuitcaseModel.deleteSuitcase(id);
         toast.success("Maleta excluída com sucesso!");
         refetch();
+        if (onRefresh) onRefresh();
       } catch (error) {
         console.error("Erro ao excluir maleta:", error);
         toast.error("Erro ao excluir maleta");
@@ -318,7 +335,7 @@ export function SuitcaseGrid({ isAdmin }: SuitcaseGridProps) {
               </TableRow>
             ) : paginatedSuitcases
                 .filter((suitcase) =>
-                  suitcase.code.toLowerCase().includes(searchTerm.toLowerCase())
+                  suitcase.code?.toLowerCase().includes(searchTerm.toLowerCase()) || ""
                 )
                 .map((suitcase) => {
                   // Buscar dados do vendedor para cada maleta
@@ -540,6 +557,8 @@ export function SuitcaseGrid({ isAdmin }: SuitcaseGridProps) {
                                 Em posse
                               </SelectItem>
                               <SelectItem value="sold">Vendido</SelectItem>
+                              <SelectItem value="returned">Devolvido</SelectItem>
+                              <SelectItem value="lost">Perdido</SelectItem>
                             </SelectContent>
                           </Select>
                         </TableCell>
@@ -613,6 +632,7 @@ function SuitcaseForm({ suitcase, onSave, onClose, isSubmitting }: SuitcaseFormP
         <Label htmlFor="code">Código</Label>
         <Input
           id="code"
+          name="code"
           defaultValue={suitcase?.code || ""}
           className="w-full"
           required
@@ -646,6 +666,7 @@ function SuitcaseForm({ suitcase, onSave, onClose, isSubmitting }: SuitcaseFormP
         <Label htmlFor="city">Cidade</Label>
         <Input
           id="city"
+          name="city"
           defaultValue={suitcase?.city || ""}
           className="w-full"
         />
@@ -654,6 +675,7 @@ function SuitcaseForm({ suitcase, onSave, onClose, isSubmitting }: SuitcaseFormP
         <Label htmlFor="neighborhood">Bairro</Label>
         <Input
           id="neighborhood"
+          name="neighborhood"
           defaultValue={suitcase?.neighborhood || ""}
           className="w-full"
         />
