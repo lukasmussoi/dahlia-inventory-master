@@ -6,13 +6,10 @@ import { PromoterList } from "@/components/promoters/PromoterList";
 import { useAuthProtection } from "@/hooks/useAuthProtection";
 import { LoadingIndicator } from "@/components/shared/LoadingIndicator";
 import { AccessDenied } from "@/components/shared/AccessDenied";
-import { useState } from "react";
-import { PromoterDialog } from "@/components/promoters/PromoterDialog";
 
 export default function PromotersPage() {
   const navigate = useNavigate();
   const { isLoading, isAuthenticated, isAdmin } = useAuthProtection();
-  const [isPromoterDialogOpen, setIsPromoterDialogOpen] = useState(false);
 
   console.log("PromotersPage - Estado de autenticação:", { isLoading, isAuthenticated, isAdmin });
 
@@ -47,7 +44,7 @@ export default function PromotersPage() {
         </div>
         
         <div className="flex justify-between items-center">
-          <div className="flex gap-2">
+          <div>
             <Button 
               onClick={() => navigate("/dashboard/sales/promoters/new")}
               className="mb-4"
@@ -55,27 +52,10 @@ export default function PromotersPage() {
               <UserPlus className="h-4 w-4 mr-2" />
               Nova Promotora
             </Button>
-            <Button 
-              onClick={() => setIsPromoterDialogOpen(true)}
-              className="mb-4"
-              variant="outline"
-            >
-              <UserPlus className="h-4 w-4 mr-2" />
-              Nova Promotora (Modal)
-            </Button>
           </div>
         </div>
         
         <PromoterList />
-        
-        <PromoterDialog
-          open={isPromoterDialogOpen}
-          onOpenChange={setIsPromoterDialogOpen}
-          promoter={null}
-          onClose={(saved) => {
-            setIsPromoterDialogOpen(false);
-          }}
-        />
       </div>
     </div>
   );

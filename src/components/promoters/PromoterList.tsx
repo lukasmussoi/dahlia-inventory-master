@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Pencil, Trash2, Search, FilterX, RefreshCw, UserPlus } from "lucide-react";
+import { Pencil, Trash2, Search, FilterX, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
@@ -36,7 +36,6 @@ import {
 import { PromoterController } from "@/controllers/promoterController";
 import { Promoter } from "@/types/promoter";
 import { Badge } from "../ui/badge";
-import { PromoterDialog } from "./PromoterDialog";
 
 export const PromoterList = () => {
   const navigate = useNavigate();
@@ -44,8 +43,6 @@ export const PromoterList = () => {
   const [statusFilter, setStatusFilter] = useState<string>("todos");
   const [isSearching, setIsSearching] = useState(false);
   const [deletePromoterId, setDeletePromoterId] = useState<string | null>(null);
-  const [isPromoterDialogOpen, setIsPromoterDialogOpen] = useState(false);
-  const [currentPromoter, setCurrentPromoter] = useState<Promoter | null>(null);
   const [showingDeleted, setShowingDeleted] = useState<string | null>(null);
 
   // Buscar promotoras
@@ -103,27 +100,8 @@ export const PromoterList = () => {
   };
 
   // Função para editar promotora
-  const handleEdit = (promoter: Promoter, useDialog: boolean = false) => {
-    if (useDialog) {
-      setCurrentPromoter(promoter);
-      setIsPromoterDialogOpen(true);
-    } else {
-      navigate(`/dashboard/sales/promoters/${promoter.id}`);
-    }
-  };
-
-  // Função para adicionar nova promotora
-  const handleAdd = () => {
-    setCurrentPromoter(null);
-    setIsPromoterDialogOpen(true);
-  };
-
-  // Função chamada após salvar promotora no diálogo
-  const handleDialogClose = (saved: boolean) => {
-    setIsPromoterDialogOpen(false);
-    if (saved) {
-      refetch();
-    }
+  const handleEdit = (promoter: Promoter) => {
+    navigate(`/dashboard/sales/promoters/${promoter.id}`);
   };
 
   return (
@@ -211,17 +189,9 @@ export const PromoterList = () => {
                         variant="ghost"
                         size="icon"
                         onClick={() => handleEdit(promoter)}
-                        title="Editar em página completa"
+                        title="Editar promotora"
                       >
                         <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEdit(promoter, true)}
-                        title="Editar em modal"
-                      >
-                        <Pencil className="h-4 w-4 text-blue-500" />
                       </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
@@ -265,14 +235,6 @@ export const PromoterList = () => {
           <p className="text-muted-foreground">Nenhuma promotora encontrada</p>
         </div>
       )}
-
-      {/* Diálogo para adicionar/editar promotora */}
-      <PromoterDialog
-        open={isPromoterDialogOpen}
-        onOpenChange={setIsPromoterDialogOpen}
-        promoter={currentPromoter}
-        onClose={handleDialogClose}
-      />
     </div>
   );
 };
