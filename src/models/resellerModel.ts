@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Reseller, ResellerInput, Address } from "@/types/reseller";
 
@@ -205,7 +204,11 @@ export class ResellerModel {
 
       // Filtrar por status
       if (status && status !== 'todos') {
-        queryBuilder = queryBuilder.eq('status', status);
+        // Certifica-se que o status seja um valor válido (Ativa ou Inativa)
+        const validStatus = status === 'Ativa' || status === 'Inativa' ? status : undefined;
+        if (validStatus) {
+          queryBuilder = queryBuilder.eq('status', validStatus);
+        }
       }
 
       // Filtrar por promotora

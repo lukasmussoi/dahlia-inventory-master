@@ -1,6 +1,6 @@
 
 export type SuitcaseStatus = 'in_use' | 'returned' | 'in_replenishment';
-export type SuitcaseItemStatus = 'available' | 'sold' | 'reserved';
+export type SuitcaseItemStatus = 'in_possession' | 'sold' | 'reserved' | 'available';
 
 export interface SuitcaseItemSale {
   id: string;

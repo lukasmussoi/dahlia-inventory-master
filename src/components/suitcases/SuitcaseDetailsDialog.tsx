@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -257,10 +258,10 @@ export function SuitcaseDetailsDialog({
                     <p className="text-sm text-gray-500">Nome</p>
                     <p>{suitcase.seller?.name || "Revendedora não especificada"}</p>
                     
-                    {suitcase.seller && 'phone' in suitcase.seller && suitcase.seller.phone && (
+                    {suitcase.seller && 'phone' in suitcase.seller && (
                       <>
                         <p className="text-sm text-gray-500 mt-2">Telefone</p>
-                        <p>{suitcase.seller.phone}</p>
+                        <p>{suitcase.seller.phone || "Não disponível"}</p>
                       </>
                     )}
                   </div>
@@ -453,7 +454,7 @@ export function SuitcaseDetailsDialog({
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <div className="flex justify-end space-x-2">
-                            {item.status === 'in_possession' ? (
+                            {item.status === "in_possession" ? (
                               <Button 
                                 size="sm" 
                                 variant="outline" 

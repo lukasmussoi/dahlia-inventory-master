@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -257,7 +256,26 @@ export function SuitcaseGrid({ suitcases, onRefresh }: SuitcaseGridProps) {
         onSubmit={async (data) => {
           if (!selectedSuitcase) return;
           try {
-            await ResellerModel.update(selectedSuitcase.id, data);
+            // Convertendo para o formato esperado por ResellerInput
+            const resellerInput = {
+              name: data.name,
+              cpfCnpj: data.cpf_cnpj || "",
+              phone: data.phone || "",
+              email: data.email || "",
+              status: data.status as "Ativa" | "Inativa",
+              promoterId: data.promoter_id || "",
+              address: data.address ? {
+                street: data.address.street || "",
+                number: data.address.number || "",
+                complement: data.address.complement,
+                neighborhood: data.address.neighborhood || "",
+                city: data.address.city || "",
+                state: data.address.state || "",
+                zipCode: data.address.zipCode || ""
+              } : undefined
+            };
+            
+            await ResellerModel.update(selectedSuitcase.id, resellerInput);
             toast.success("Revendedora atualizada com sucesso");
             onRefresh();
           } catch (error) {

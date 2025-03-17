@@ -32,7 +32,6 @@ export function SuitcasePrintDialog({
     documentTitle: `Maleta_${suitcase?.code || ""}`,
     onPrintError: () => toast.error("Erro ao imprimir maleta"),
     onAfterPrint: () => toast.success("Maleta impressa com sucesso"),
-    // Fix: removed removeAfterPrint and use onAfterPrint instead
   });
 
   if (!suitcase) {
@@ -126,7 +125,7 @@ export function SuitcasePrintDialog({
           <Button 
             onClick={() => {
               if (printRef.current) {
-                handlePrint();
+                handlePrint(printRef.current);
               }
             }} 
             className="gap-1"
