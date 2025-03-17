@@ -15,19 +15,24 @@ export default function ResellersPage() {
 
   // Se estiver carregando, mostrar indicador de carregamento
   if (isLoading) {
+    console.log("ResellersPage - Carregando...");
     return <LoadingIndicator message="Carregando informações do módulo de revendedoras..." />;
   }
 
   // Verificar se o usuário está autenticado
   if (!isAuthenticated) {
+    console.log("ResellersPage - Usuário não autenticado");
     return <LoadingIndicator message="Verificando autenticação..." />;
   }
 
   // Verificar se o usuário é admin
   if (!isAdmin) {
+    console.log("ResellersPage - Usuário não é administrador");
     return <AccessDenied />;
   }
 
+  console.log("ResellersPage - Renderizando página completa");
+  
   return (
     <div className="container mx-auto py-6">
       <div className="flex flex-col gap-6">

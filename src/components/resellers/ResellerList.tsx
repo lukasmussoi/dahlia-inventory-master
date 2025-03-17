@@ -40,8 +40,8 @@ import { Badge } from "../ui/badge";
 
 export const ResellerList = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("");
-  const [promoterFilter, setPromoterFilter] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>("todos");
+  const [promoterFilter, setPromoterFilter] = useState<string>("todos");
   const [isSearching, setIsSearching] = useState(false);
   const [deleteResellerId, setDeleteResellerId] = useState<string | null>(null);
 
@@ -54,7 +54,11 @@ export const ResellerList = () => {
     queryKey: ["resellers", isSearching, searchTerm, statusFilter, promoterFilter],
     queryFn: () =>
       isSearching
-        ? ResellerController.searchResellers(searchTerm, statusFilter, promoterFilter)
+        ? ResellerController.searchResellers(
+            searchTerm, 
+            statusFilter !== "todos" ? statusFilter : undefined,
+            promoterFilter !== "todos" ? promoterFilter : undefined
+          )
         : ResellerController.getAllResellers(),
   });
 
@@ -77,8 +81,8 @@ export const ResellerList = () => {
   // Função para limpar os filtros
   const handleClearFilters = () => {
     setSearchTerm("");
-    setStatusFilter("");
-    setPromoterFilter("");
+    setStatusFilter("todos");
+    setPromoterFilter("todos");
     setIsSearching(false);
     refetch();
   };
@@ -121,7 +125,7 @@ export const ResellerList = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
-                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="todos">Todos os status</SelectItem>
                   <SelectItem value="Ativa">Ativas</SelectItem>
                   <SelectItem value="Inativa">Inativas</SelectItem>
                 </SelectGroup>
@@ -138,7 +142,7 @@ export const ResellerList = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
-                  <SelectItem value="">Todas as promotoras</SelectItem>
+                  <SelectItem value="todos">Todas as promotoras</SelectItem>
                   {promoters.map((promoter: Promoter) => (
                     <SelectItem key={promoter.id} value={promoter.id}>
                       {promoter.name}
