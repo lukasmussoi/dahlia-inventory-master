@@ -6,6 +6,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -57,6 +58,9 @@ export function ResellerDetails({
           <DialogTitle className="text-xl font-bold">
             {reseller.name || "Revendedora"}
           </DialogTitle>
+          <DialogDescription>
+            Informações detalhadas da revendedora
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
@@ -74,10 +78,10 @@ export function ResellerDetails({
             </div>
           )}
 
-          {reseller.phone && (
+          {(reseller.phone || reseller.phone_number) && (
             <div className="flex items-center gap-2">
               <Phone className="h-4 w-4 text-muted-foreground" />
-              <span>{reseller.phone}</span>
+              <span>{reseller.phone || reseller.phone_number}</span>
             </div>
           )}
 

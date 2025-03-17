@@ -27,8 +27,8 @@ export function InventoryFilters({ categories, onFilter }: InventoryFiltersProps
     status: undefined,
     minQuantity: undefined,
     maxQuantity: undefined,
-    searchTerm: '', // Added this to match the interface
-    category: undefined, // Added this to match the interface
+    searchTerm: '',
+    category: undefined,
   });
 
   // Atualizar filtros e notificar componente pai
@@ -48,8 +48,8 @@ export function InventoryFilters({ categories, onFilter }: InventoryFiltersProps
       status: undefined,
       minQuantity: undefined,
       maxQuantity: undefined,
-      searchTerm: '', // Clear this too
-      category: undefined, // Clear this too
+      searchTerm: '',
+      category: undefined,
     };
     setFilters(clearedFilters);
     onFilter(clearedFilters);
@@ -73,7 +73,7 @@ export function InventoryFilters({ categories, onFilter }: InventoryFiltersProps
         <div className="space-y-2">
           <Label>Categoria</Label>
           <Select
-            value={filters.category_id || filters.category}
+            value={filters.category_id || ''}
             onValueChange={(value) => updateFilters({ 
               category_id: value, 
               category: value 
@@ -101,7 +101,7 @@ export function InventoryFilters({ categories, onFilter }: InventoryFiltersProps
               type="number"
               placeholder="Mín"
               min={0}
-              value={filters.minQuantity || ''}
+              value={filters.minQuantity ?? ''}
               onChange={(e) => updateFilters({ 
                 minQuantity: e.target.value ? Number(e.target.value) : undefined 
               })}
@@ -110,7 +110,7 @@ export function InventoryFilters({ categories, onFilter }: InventoryFiltersProps
               type="number"
               placeholder="Máx"
               min={0}
-              value={filters.maxQuantity || ''}
+              value={filters.maxQuantity ?? ''}
               onChange={(e) => updateFilters({ 
                 maxQuantity: e.target.value ? Number(e.target.value) : undefined 
               })}
@@ -122,9 +122,9 @@ export function InventoryFilters({ categories, onFilter }: InventoryFiltersProps
         <div className="space-y-2">
           <Label>Status</Label>
           <Select
-            value={filters.status}
-            onValueChange={(value: string | undefined) => 
-              updateFilters({ status: value })
+            value={filters.status || ''}
+            onValueChange={(value) => 
+              updateFilters({ status: value === 'all' ? undefined : value })
             }
           >
             <SelectTrigger>

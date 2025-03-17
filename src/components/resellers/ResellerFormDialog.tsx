@@ -1,15 +1,18 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -17,13 +20,44 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+import { Loader2 } from "lucide-react";
+import { ResellerModel } from "@/models/resellerModel";
+
+// Esquema de validação
+const resellerSchema = z.object({
+  name: z.string().min(3, "Nome deve ter pelo menos 3 caracteres"),
+  cpf_cnpj: z.string().min(11, "CPF/CNPJ deve ter pelo menos 11 caracteres"),
+  phone: z.string().min(10, "Telefone deve ter pelo menos 10 caracteres"),
+  email: z.string().email("Email inválido").optional().or(z.literal("")),
+  status: z.enum(["Ativa", "Inativa"]),
+  promoter_id: z.string().optional(),
+  address: z.object({
+    street: z.string().optional(),
+    number: z.string().optional(),
+    neighborhood: z.string().optional(),
+    city: z.string().optional(),
+    state: z.string().optional(),
+    zipCode: z.string().optional(),
+  }).optional(),
+});
+
+type ResellerFormValues = z.infer<typeof resellerSchema>;
 
 interface ResellerFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   reseller?: any;
-  onSubmit: (data: any) => Promise<void>;
+  onSubmit: (data: ResellerFormValues) => void;
 }
 
 export function ResellerFormDialog({
@@ -32,267 +66,312 @@ export function ResellerFormDialog({
   reseller,
   onSubmit,
 }: ResellerFormDialogProps) {
-  const [formData, setFormData] = useState({
-    name: "",
-    cpf_cnpj: "",
-    phone: "",
-    email: "",
-    status: "Ativa",
-    address: {
-      street: "",
-      number: "",
-      complement: "",
-      neighborhood: "",
-      city: "",
-      state: "",
-      zipCode: ""
-    }
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Inicializar o formulário com os valores do revendedor se estiver editando
+  const form = useForm<ResellerFormValues>({
+    resolver: zodResolver(resellerSchema),
+    defaultValues: {
+      name: reseller?.name || "",
+      cpf_cnpj: reseller?.cpf_cnpj || "",
+      phone: reseller?.phone || "",
+      email: reseller?.email || "",
+      status: reseller?.status || "Ativa",
+      promoter_id: reseller?.promoter_id || undefined,
+      address: reseller?.address || {},
+    },
   });
-  
-  const [loading, setLoading] = useState(false);
 
-  // Carregar dados do revendedor ao abrir o modal
-  useEffect(() => {
-    if (reseller) {
-      setFormData({
-        name: reseller.name || "",
-        cpf_cnpj: reseller.cpf_cnpj || "",
-        phone: reseller.phone || "",
-        email: reseller.email || "",
-        status: reseller.status || "Ativa",
-        address: {
-          street: reseller.address?.street || "",
-          number: reseller.address?.number || "",
-          complement: reseller.address?.complement || "",
-          neighborhood: reseller.address?.neighborhood || "",
-          city: reseller.address?.city || "",
-          state: reseller.address?.state || "",
-          zipCode: reseller.address?.zipCode || ""
-        }
-      });
-    } else {
-      // Limpar o formulário ao abrir para um novo revendedor
-      setFormData({
-        name: "",
-        cpf_cnpj: "",
-        phone: "",
-        email: "",
-        status: "Ativa",
-        address: {
-          street: "",
-          number: "",
-          complement: "",
-          neighborhood: "",
-          city: "",
-          state: "",
-          zipCode: ""
-        }
-      });
-    }
-  }, [reseller, open]);
+  // Buscar promotores para o select
+  const { data: promoters = [], isLoading: isLoadingPromoters } = useQuery({
+    queryKey: ['promoters'],
+    queryFn: async () => {
+      try {
+        // Simulando a busca de promotores, já que não temos acesso ao PromoterModel
+        return [
+          { id: "1", name: "Promotor 1" },
+          { id: "2", name: "Promotor 2" },
+          { id: "3", name: "Promotor 3" },
+        ];
+      } catch (error) {
+        console.error("Erro ao buscar promotores:", error);
+        return [];
+      }
+    },
+    enabled: open,
+  });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    
-    if (name.includes('.')) {
-      // Campo de endereço
-      const [parent, child] = name.split('.');
-      setFormData(prev => ({
-        ...prev,
-        address: {
-          ...prev.address,
-          [child]: value
-        }
-      }));
-    } else {
-      // Campo normal
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
-      }));
-    }
-  };
-
-  const handleSelectChange = (value: string, field: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    
-    setLoading(true);
+  // Função de submissão do formulário
+  const handleSubmit = async (data: ResellerFormValues) => {
+    setIsSubmitting(true);
     try {
-      await onSubmit(formData);
-      toast.success(reseller ? "Revendedor atualizado com sucesso" : "Revendedor criado com sucesso");
-      onOpenChange(false);
+      await onSubmit(data);
     } catch (error) {
-      console.error("Erro ao salvar revendedor:", error);
-      toast.error("Erro ao salvar revendedor");
+      console.error("Erro ao submeter formulário:", error);
+      toast.error("Erro ao salvar revendedora");
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-xl">
         <DialogHeader>
           <DialogTitle>
             {reseller ? "Editar Revendedora" : "Nova Revendedora"}
           </DialogTitle>
+          <DialogDescription>
+            {reseller
+              ? "Edite os dados da revendedora selecionada"
+              : "Preencha os dados para cadastrar uma nova revendedora"}
+          </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 py-2">
-          <div className="space-y-2">
-            <Label htmlFor="name">Nome</Label>
-            <Input 
-              id="name" 
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              required
-            />
-          </div>
+        <Form {...form}>
+          <form
+            onSubmit={form.handleSubmit(handleSubmit)}
+            className="space-y-4 py-2"
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Nome */}
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nome</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Nome completo" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-          <div className="space-y-2">
-            <Label htmlFor="cpf_cnpj">CPF/CNPJ</Label>
-            <Input 
-              id="cpf_cnpj" 
-              name="cpf_cnpj"
-              value={formData.cpf_cnpj}
-              onChange={handleChange}
-            />
-          </div>
+              {/* CPF/CNPJ */}
+              <FormField
+                control={form.control}
+                name="cpf_cnpj"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>CPF/CNPJ</FormLabel>
+                    <FormControl>
+                      <Input placeholder="CPF ou CNPJ" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-          <div className="space-y-2">
-            <Label htmlFor="phone">Telefone</Label>
-            <Input 
-              id="phone" 
-              name="phone"
-              value={formData.phone}
-              onChange={handleChange}
-            />
-          </div>
+              {/* Telefone */}
+              <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Telefone</FormLabel>
+                    <FormControl>
+                      <Input placeholder="(00) 00000-0000" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-          <div className="space-y-2">
-            <Label htmlFor="email">E-mail</Label>
-            <Input 
-              id="email" 
-              name="email"
-              type="email"
-              value={formData.email}
-              onChange={handleChange}
-            />
-          </div>
+              {/* Email */}
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input placeholder="email@exemplo.com" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-          <div className="space-y-2">
-            <Label htmlFor="status">Status</Label>
-            <Select 
-              value={formData.status} 
-              onValueChange={(value) => handleSelectChange(value, 'status')}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Ativa">Ativa</SelectItem>
-                <SelectItem value="Inativa">Inativa</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+              {/* Status */}
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="Ativa">Ativa</SelectItem>
+                        <SelectItem value="Inativa">Inativa</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-          <div className="border rounded-md p-4 space-y-4">
-            <div className="font-medium">Endereço</div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="address.street">Rua</Label>
-                <Input 
-                  id="address.street" 
-                  name="address.street"
-                  value={formData.address.street}
-                  onChange={handleChange}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="address.number">Número</Label>
-                <Input 
-                  id="address.number" 
-                  name="address.number"
-                  value={formData.address.number}
-                  onChange={handleChange}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="address.complement">Complemento</Label>
-              <Input 
-                id="address.complement" 
-                name="address.complement"
-                value={formData.address.complement}
-                onChange={handleChange}
+              {/* Promotor */}
+              <FormField
+                control={form.control}
+                name="promoter_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Promotor</FormLabel>
+                    {isLoadingPromoters ? (
+                      <div className="flex items-center space-x-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span className="text-sm text-muted-foreground">
+                          Carregando...
+                        </span>
+                      </div>
+                    ) : (
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione um promotor" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {promoters.map((promoter) => (
+                            <SelectItem key={promoter.id} value={promoter.id}>
+                              {promoter.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="address.neighborhood">Bairro</Label>
-                <Input 
-                  id="address.neighborhood" 
+            {/* Endereço */}
+            <div>
+              <h3 className="text-md font-medium mb-2">Endereço</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Rua */}
+                <FormField
+                  control={form.control}
+                  name="address.street"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Rua</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Nome da rua" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Número */}
+                <FormField
+                  control={form.control}
+                  name="address.number"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Número</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Número" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Bairro */}
+                <FormField
+                  control={form.control}
                   name="address.neighborhood"
-                  value={formData.address.neighborhood}
-                  onChange={handleChange}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Bairro</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Bairro" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="address.city">Cidade</Label>
-                <Input 
-                  id="address.city" 
+                {/* Cidade */}
+                <FormField
+                  control={form.control}
                   name="address.city"
-                  value={formData.address.city}
-                  onChange={handleChange}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Cidade</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Cidade" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="address.state">Estado</Label>
-                <Input 
-                  id="address.state" 
+                {/* Estado */}
+                <FormField
+                  control={form.control}
                   name="address.state"
-                  value={formData.address.state}
-                  onChange={handleChange}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Estado</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Estado" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="address.zipCode">CEP</Label>
-                <Input 
-                  id="address.zipCode" 
+                {/* CEP */}
+                <FormField
+                  control={form.control}
                   name="address.zipCode"
-                  value={formData.address.zipCode}
-                  onChange={handleChange}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>CEP</FormLabel>
+                      <FormControl>
+                        <Input placeholder="00000-000" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
               </div>
             </div>
-          </div>
 
-          <DialogFooter>
-            <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? "Salvando..." : reseller ? "Atualizar" : "Criar"}
-            </Button>
-          </DialogFooter>
-        </form>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                {reseller ? "Salvar Alterações" : "Cadastrar"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );

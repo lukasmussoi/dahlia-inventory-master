@@ -2,6 +2,7 @@
 import { SuitcaseModel } from "@/models/suitcaseModel";
 import { InventoryModel } from "@/models/inventoryModel";
 import { ResellerModel } from "@/models/resellerModel";
+import { supabase } from "@/integrations/supabase/client";
 
 export class SuitcaseController {
   static async getSuitcases(page = 1, limit = 10) {
@@ -98,7 +99,12 @@ export class SuitcaseController {
     }
   }
 
-  static async updateSuitcaseItemStatus(id: string, status: string, clientName?: string, paymentMethod?: string) {
+  static async updateSuitcaseItemStatus(
+    id: string, 
+    status: 'in_possession' | 'sold' | 'returned' | 'lost', 
+    clientName?: string, 
+    paymentMethod?: string
+  ) {
     try {
       console.log(`Controller: Atualizando status do item da maleta ${id} para ${status}`);
       
@@ -126,9 +132,9 @@ export class SuitcaseController {
     try {
       console.log(`Controller: Adicionando item ${inventoryId} à maleta ${suitcaseId}`);
       
-      // Verificar se o item está disponível no inventário
-      const inventoryItem = await InventoryModel.searchInventoryItems(inventoryId);
-      if (!inventoryItem || inventoryItem.length === 0) {
+      // Verificar se o item existe no inventário
+      const inventoryItems = await InventoryModel.searchInventoryItems(inventoryId);
+      if (!inventoryItems || inventoryItems.length === 0) {
         throw new Error('Item não encontrado no inventário');
       }
       
@@ -138,10 +144,9 @@ export class SuitcaseController {
         inventory_id: inventoryId
       });
       
-      // Atualiza o status do item no inventário
-      if (result) {
-        await InventoryModel.updateInventoryItemStatus(inventoryId, 'in_suitcase');
-      }
+      // Atualiza o "status virtual" do item no inventário
+      console.log(`Marcando item ${inventoryId} como em uso na maleta`);
+      await InventoryModel.updateInventoryItemStatus(inventoryId, 'in_suitcase');
       
       return result;
     } catch (error) {
@@ -158,14 +163,14 @@ export class SuitcaseController {
       const item = await SuitcaseModel.getSuitcaseItemById(suitcaseItemId);
       
       // Remove o item da maleta
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('suitcase_items')
         .delete()
         .eq('id', suitcaseItemId);
       
       if (error) throw error;
       
-      // Atualiza o status do item no inventário
+      // Atualiza o "status virtual" do item no inventário (se item existe)
       if (item && item.inventory_id) {
         await InventoryModel.updateInventoryItemStatus(item.inventory_id, 'available');
       }
@@ -188,17 +193,18 @@ export class SuitcaseController {
   }
 
   static formatStatus(status: string) {
-    const statusMap = {
+    const statusMap: {[key: string]: string} = {
       'in_use': 'Em uso',
       'returned': 'Devolvida',
       'in_replenishment': 'Em reposição',
       'sold': 'Vendido',
       'reserved': 'Reservado',
       'available': 'Disponível',
-      'in_suitcase': 'Em maleta'
+      'in_suitcase': 'Em maleta',
+      'in_possession': 'Em posse'
     };
     
-    return statusMap[status as keyof typeof statusMap] || status;
+    return statusMap[status] || status;
   }
 
   static async getResellers() {
@@ -262,5 +268,3 @@ export class SuitcaseController {
     }
   }
 }
-
-import { supabase } from "@/integrations/supabase/client";

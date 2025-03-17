@@ -23,6 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -104,7 +105,7 @@ export function SuitcaseDetailsDialog({
   // Função para marcar item como disponível
   const handleMarkAsAvailable = async (itemId: string) => {
     try {
-      await SuitcaseController.updateSuitcaseItemStatus(itemId, 'available');
+      await SuitcaseController.updateSuitcaseItemStatus(itemId, 'in_possession');
       toast.success("Item marcado como disponível");
       refetchItems();
     } catch (error) {
@@ -138,9 +139,11 @@ export function SuitcaseDetailsDialog({
     
     try {
       const results = await SuitcaseController.searchInventoryItems(query);
+      console.log("Resultados da busca:", results);
       setSearchResults(results);
     } catch (error) {
       console.error("Erro ao buscar itens:", error);
+      toast.error("Erro ao buscar itens do inventário");
     } finally {
       setIsSearching(false);
     }
@@ -173,6 +176,10 @@ export function SuitcaseDetailsDialog({
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Detalhes da Maleta</DialogTitle>
+            <DialogDescription>Carregando informações...</DialogDescription>
+          </DialogHeader>
           <div className="flex justify-center items-center p-8">
             <Loader2 className="h-8 w-8 animate-spin text-gold" />
             <span className="ml-2">Carregando detalhes da maleta...</span>
@@ -260,10 +267,10 @@ export function SuitcaseDetailsDialog({
                     <p className="text-sm text-gray-500">Nome</p>
                     <p>{suitcase.seller?.name || "Revendedora não especificada"}</p>
                     
-                    {suitcase.seller?.phone && (
+                    {suitcase.seller && (suitcase.seller.phone || suitcase.seller.phone_number) && (
                       <>
                         <p className="text-sm text-gray-500 mt-2">Telefone</p>
-                        <p>{suitcase.seller.phone}</p>
+                        <p>{suitcase.seller.phone || suitcase.seller.phone_number}</p>
                       </>
                     )}
                   </div>
@@ -446,7 +453,7 @@ export function SuitcaseDetailsDialog({
                         <td className="px-6 py-4 whitespace-nowrap text-center">
                           <Badge
                             className={cn(
-                              item.status === "available"
+                              item.status === "in_possession"
                                 ? "bg-blue-100 text-blue-800"
                                 : item.status === "sold"
                                 ? "bg-green-100 text-green-800"
@@ -458,7 +465,7 @@ export function SuitcaseDetailsDialog({
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <div className="flex justify-end space-x-2">
-                            {item.status === 'available' ? (
+                            {item.status === 'in_possession' ? (
                               <Button 
                                 size="sm" 
                                 variant="outline" 

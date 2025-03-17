@@ -30,7 +30,7 @@ export function InventoryContent({ isAdmin }: InventoryContentProps) {
 
   const { data: categories = [], refetch: refetchCategories } = useQuery({
     queryKey: ['inventory-categories'],
-    queryFn: InventoryModel.getAllCategories,
+    queryFn: () => InventoryModel.getAllCategories(),
   });
 
   // Função para abrir o modal de edição de item
