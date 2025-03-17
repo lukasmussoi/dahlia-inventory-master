@@ -1,7 +1,6 @@
-
-import { useState } from "react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import {
   Table,
   TableBody,
@@ -11,316 +10,675 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { MoreVertical, Edit, Copy, Printer, Trash2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Plus, Edit, CheckCircle, XCircle, Loader2, Printer } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
-import { ResellerModel } from "@/models/resellerModel";
-import { SuitcaseController } from "@/controllers/suitcaseController";
-import { ResellerDetails } from "@/components/resellers/ResellerDetails";
-import { ResellerFormDialog } from "@/components/resellers/ResellerFormDialog";
-import { SuitcaseFormDialog } from "@/components/suitcases/SuitcaseFormDialog";
-import { SuitcasePrintDialog } from "@/components/suitcases/SuitcasePrintDialog";
-import { SuitcaseDetailsDialog } from "@/components/suitcases/SuitcaseDetailsDialog";
-import { Suitcase } from "@/types/suitcase";
-import { ResellerInput } from "@/types/reseller";
+import {
+  Suitcase,
+  SuitcaseFilters,
+  SuitcaseItem,
+  SuitcaseItemStatus,
+  SuitcaseItemSale,
+} from "@/types/suitcase";
+import { SuitcaseModel } from "@/models/suitcaseModel";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { InventoryModel } from "@/models/inventoryModel";
+import { InventoryItem } from "@/models/inventoryModel";
+import { SuitcasePrintDialog } from "./SuitcasePrintDialog";
 
 interface SuitcaseGridProps {
-  suitcases: any[];
-  onRefresh: () => void;
+  isAdmin?: boolean;
 }
 
-export function SuitcaseGrid({ suitcases, onRefresh }: SuitcaseGridProps) {
-  const [selectedSuitcase, setSelectedSuitcase] = useState<any>(null);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [showResellerDetails, setShowResellerDetails] = useState(false);
-  const [showEditResellerDialog, setShowEditResellerDialog] = useState(false);
-  const [showEditDialog, setShowEditDialog] = useState(false);
-  const [showPrintDialog, setShowPrintDialog] = useState(false);
-  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+export function SuitcaseGrid({ isAdmin }: SuitcaseGridProps) {
+  const navigate = useNavigate();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isItemModalOpen, setIsItemModalOpen] = useState(false);
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+  const [filters, setFilters] = useState<SuitcaseFilters>({});
+  const [selectedSuitcase, setSelectedSuitcase] = useState<Suitcase | null>(null);
+  const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
+  const [selectedSuitcaseForPrint, setSelectedSuitcaseForPrint] = useState<Suitcase | null>(null);
+  const [suitcaseItemsForPrint, setSuitcaseItemsForPrint] = useState<SuitcaseItem[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isItemSubmitting, setIsItemSubmitting] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
-  const formatDate = (dateString: string) => {
+  // Buscar dados das maletas
+  const { data: suitcases = [], refetch, isLoading } = useQuery({
+    queryKey: ["suitcases", filters],
+    queryFn: () => SuitcaseModel.getAllSuitcases(filters),
+  });
+
+  // Buscar dados dos itens da maleta
+  const { data: suitcaseItems = [], refetch: refetchSuitcaseItems } = useQuery({
+    queryKey: ["suitcase-items", selectedSuitcase?.id],
+    queryFn: () => SuitcaseModel.getSuitcaseItems(selectedSuitcase?.id || ""),
+    enabled: !!selectedSuitcase?.id,
+  });
+
+  // Buscar todos os itens do inventário para adicionar à maleta
+  const { data: inventoryItems = [] } = useQuery({
+    queryKey: ["inventory-items"],
+    queryFn: () => InventoryModel.getAllItems(),
+  });
+
+  // Calcular paginação
+  const totalPages = Math.ceil(suitcases.length / itemsPerPage);
+  const paginatedSuitcases = suitcases.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  // Formatar data
+  const formatDate = (date: string) => {
+    return format(new Date(date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+  };
+
+  // Abrir modal de edição
+  const handleEdit = (suitcase: Suitcase) => {
+    setSelectedSuitcase(suitcase);
+    setIsModalOpen(true);
+  };
+
+  // Abrir modal de adicionar item
+  const handleAddItem = (suitcase: Suitcase) => {
+    setSelectedSuitcase(suitcase);
+    setSelectedItem(null);
+    setIsItemModalOpen(true);
+  };
+
+  const handlePrint = async (suitcase: Suitcase) => {
+    setSelectedSuitcaseForPrint(suitcase);
     try {
-      const date = new Date(dateString);
-      return format(date, "dd 'de' MMMM 'às' HH:mm", { locale: ptBR });
+      const items = await SuitcaseModel.getSuitcaseItems(suitcase.id);
+      setSuitcaseItemsForPrint(items);
+      setIsPrintModalOpen(true);
     } catch (error) {
-      console.error("Erro ao formatar a data:", error);
-      return "Data inválida";
+      console.error("Erro ao carregar itens da maleta para impressão:", error);
+      toast.error("Erro ao carregar itens da maleta para impressão");
     }
   };
 
-  const handleCopyCode = (code: string) => {
-    navigator.clipboard.writeText(code);
-    toast.success("Código copiado para a área de transferência");
-  };
-
-  const handleDeleteSuitcase = async () => {
-    if (!selectedSuitcase) return;
-
+  // Salvar maleta
+  const handleSave = async (data: any) => {
+    setIsSubmitting(true);
     try {
-      await SuitcaseController.deleteSuitcase(selectedSuitcase.id);
-      toast.success("Maleta excluída com sucesso");
-      onRefresh();
+      if (selectedSuitcase) {
+        await SuitcaseModel.updateSuitcase(selectedSuitcase.id, data);
+        toast.success("Maleta atualizada com sucesso!");
+      } else {
+        await SuitcaseModel.createSuitcase(data);
+        toast.success("Maleta criada com sucesso!");
+      }
+      closeModal();
+      refetch();
     } catch (error) {
-      console.error("Erro ao excluir maleta:", error);
-      toast.error("Erro ao excluir maleta");
+      console.error("Erro ao salvar maleta:", error);
+      toast.error("Erro ao salvar maleta");
     } finally {
-      setShowDeleteDialog(false);
-      setSelectedSuitcase(null);
+      setIsSubmitting(false);
     }
   };
 
-  const handleOpenResellerDetails = async (sellerId: string) => {
+  // Adicionar item à maleta
+  const handleSaveItem = async (inventoryId: string) => {
+    setIsItemSubmitting(true);
     try {
-      const reseller = await SuitcaseController.getResellerById(sellerId);
-      setSelectedSuitcase(reseller);
-      setShowResellerDetails(true);
+      if (!selectedSuitcase) {
+        toast.error("Nenhuma maleta selecionada.");
+        return;
+      }
+      await SuitcaseModel.addSuitcaseItem(selectedSuitcase.id, inventoryId);
+      toast.success("Item adicionado à maleta com sucesso!");
+      closeItemModal();
+      refetchSuitcaseItems();
     } catch (error) {
-      console.error("Erro ao buscar detalhes da revendedora:", error);
-      toast.error("Erro ao carregar detalhes da revendedora");
-    }
-  };
-
-  const handleEditSuitcase = async (data: any) => {
-    if (!selectedSuitcase) return;
-
-    try {
-      await SuitcaseController.updateSuitcase(selectedSuitcase.id, data);
-      toast.success("Maleta atualizada com sucesso");
-      onRefresh();
-    } catch (error) {
-      console.error("Erro ao atualizar maleta:", error);
-      toast.error("Erro ao atualizar maleta");
+      console.error("Erro ao adicionar item à maleta:", error);
+      toast.error("Erro ao adicionar item à maleta");
     } finally {
-      setShowEditDialog(false);
-      setSelectedSuitcase(null);
+      setIsItemSubmitting(false);
+    }
+  };
+
+  // Remover item da maleta
+  const handleRemoveItem = async (itemId: string) => {
+    if (window.confirm("Tem certeza que deseja remover este item da maleta?")) {
+      try {
+        await SuitcaseModel.removeSuitcaseItem(itemId);
+        toast.success("Item removido da maleta com sucesso!");
+        refetchSuitcaseItems();
+      } catch (error) {
+        console.error("Erro ao remover item da maleta:", error);
+        toast.error("Erro ao remover item da maleta");
+      }
+    }
+  };
+
+  // Atualizar status do item na maleta
+  const handleUpdateItemStatus = async (itemId: string, status: SuitcaseItemStatus) => {
+    try {
+      await SuitcaseModel.updateSuitcaseItemStatus(itemId, status);
+      toast.success("Status do item atualizado com sucesso!");
+      refetchSuitcaseItems();
+    } catch (error) {
+      console.error("Erro ao atualizar status do item:", error);
+      toast.error("Erro ao atualizar status do item");
+    }
+  };
+
+  // Deletar maleta
+  const handleDelete = async (id: string) => {
+    if (window.confirm("Tem certeza que deseja excluir esta maleta?")) {
+      try {
+        await SuitcaseModel.deleteSuitcase(id);
+        toast.success("Maleta excluída com sucesso!");
+        refetch();
+      } catch (error) {
+        console.error("Erro ao excluir maleta:", error);
+        toast.error("Erro ao excluir maleta");
+      }
+    }
+  };
+
+  // Fechar modal
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedSuitcase(null);
+  };
+
+  // Fechar modal de item
+  const closeItemModal = () => {
+    setIsItemModalOpen(false);
+    setSelectedItem(null);
+  };
+
+  const closePrintModal = () => {
+    setIsPrintModalOpen(false);
+    setSelectedSuitcaseForPrint(null);
+    setSuitcaseItemsForPrint([]);
+  };
+
+  // Atualizar filtros
+  const handleFilter = (newFilters: SuitcaseFilters) => {
+    setFilters(newFilters);
+  };
+
+  // Buscar vendedor
+  const fetchSeller = async (sellerId: string) => {
+    try {
+      const seller = await SuitcaseModel.getSellerById(sellerId);
+      return seller;
+    } catch (error) {
+      console.error("Erro ao buscar vendedor:", error);
+      return null;
     }
   };
 
   return (
-    <>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Código</TableHead>
-            <TableHead>Revendedora</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Cidade</TableHead>
-            <TableHead>Bairro</TableHead>
-            <TableHead className="text-right">Ações</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {suitcases.map((suitcase) => (
-            <TableRow key={suitcase.id}>
-              <TableCell className="font-medium">{suitcase.code || `ML${suitcase.id.substring(0, 3)}`}</TableCell>
-              <TableCell>
-                <Button
-                  variant="link"
-                  onClick={() => handleOpenResellerDetails(suitcase.seller_id)}
-                >
-                  {suitcase.seller?.name || "Revendedora não especificada"}
-                </Button>
-              </TableCell>
-              <TableCell>
-                <Badge
-                  className={cn(
-                    suitcase.status === "in_use"
-                      ? "bg-green-100 text-green-800"
-                      : suitcase.status === "returned"
-                      ? "bg-blue-100 text-blue-800"
-                      : suitcase.status === "in_replenishment"
-                      ? "bg-orange-100 text-orange-800"
-                      : "bg-gray-100 text-gray-800"
-                  )}
-                >
-                  {SuitcaseController.formatStatus(suitcase.status)}
-                </Badge>
-              </TableCell>
-              <TableCell>{suitcase.city}</TableCell>
-              <TableCell>{suitcase.neighborhood}</TableCell>
-              <TableCell className="text-right">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="h-8 w-8 p-0">
-                      <span className="sr-only">Abrir menu</span>
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                    <DropdownMenuItem
-                      onClick={() => {
-                        handleCopyCode(suitcase.code || `ML${suitcase.id.substring(0, 3)}`);
-                      }}
-                    >
-                      <Copy className="mr-2 h-4 w-4" />
-                      Copiar código
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => {
-                        setSelectedSuitcase(suitcase);
-                        setShowDetailsDialog(true);
-                      }}
-                    >
-                      <Edit className="mr-2 h-4 w-4" />
-                      Ver Detalhes
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => {
-                        setSelectedSuitcase(suitcase);
-                        setShowEditDialog(true);
-                      }}
-                    >
-                      <Edit className="mr-2 h-4 w-4" />
-                      Editar
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => {
-                        setSelectedSuitcase(suitcase);
-                        setShowPrintDialog(true);
-                      }}
-                    >
-                      <Printer className="mr-2 h-4 w-4" />
-                      Imprimir
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={() => {
-                        setSelectedSuitcase(suitcase);
-                        setShowDeleteDialog(true);
-                      }}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Excluir
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Gestão de Maletas</h1>
+          <p className="text-muted-foreground">
+            Gerencie as maletas e seus respectivos itens
+          </p>
+        </div>
+        {isAdmin && (
+          <Button onClick={() => setIsModalOpen(true)} className="bg-gold hover:bg-gold/90">
+            <Plus className="h-5 w-5 mr-2" />
+            Nova Maleta
+          </Button>
+        )}
+      </div>
+
+      {/* Filtros */}
+      <div className="bg-white rounded-lg p-4 shadow">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <Label>Buscar</Label>
+            <Input
+              type="text"
+              placeholder="Código da maleta..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <div>
+            <Label>Status</Label>
+            <Select onValueChange={(value) => handleFilter({ status: value })}>
+              <SelectTrigger>
+                <SelectValue placeholder="Todos os status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Todos os status</SelectItem>
+                <SelectItem value="in_use">Em uso</SelectItem>
+                <SelectItem value="returned">Devolvida</SelectItem>
+                <SelectItem value="in_replenishment">Em reposição</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Cidade</Label>
+            <Input
+              type="text"
+              placeholder="Cidade..."
+              onChange={(e) => handleFilter({ city: e.target.value })}
+            />
+          </div>
+          <div>
+            <Label>Bairro</Label>
+            <Input
+              type="text"
+              placeholder="Bairro..."
+              onChange={(e) => handleFilter({ neighborhood: e.target.value })}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Tabela de Maletas */}
+      <div className="bg-white rounded-lg border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Código</TableHead>
+              <TableHead>Vendedor</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Cidade</TableHead>
+              <TableHead>Bairro</TableHead>
+              <TableHead>Data de Criação</TableHead>
+              <TableHead className="text-right">Ações</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-4">
+                  <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                </TableCell>
+              </TableRow>
+            ) : paginatedSuitcases
+                .filter((suitcase) =>
+                  suitcase.code.toLowerCase().includes(searchTerm.toLowerCase())
+                )
+                .map((suitcase) => {
+                  // Buscar dados do vendedor para cada maleta
+                  const { data: reseller, isLoading: isResellerLoading } = useQuery({
+                    queryKey: ["reseller", suitcase.seller_id],
+                    queryFn: () => fetchSeller(suitcase.seller_id),
+                    staleTime: Infinity,
+                  });
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação irá excluir a maleta permanentemente. Tem certeza que
-              deseja continuar?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteSuitcase}>
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+                  return (
+                    <TableRow key={suitcase.id}>
+                      <TableCell>{suitcase.code}</TableCell>
+                      <TableCell>
+                        {isResellerLoading ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <>
+                            {reseller?.name}
+                            {reseller?.phone && (
+                              <div className="text-sm text-gray-500">
+                                {reseller.phone}
+                              </div>
+                            )}
+                            {reseller?.address && (
+                              <div className="text-sm text-gray-500 mt-1">
+                                {reseller.address.city || ''}
+                                {reseller.address.neighborhood ? `, ${reseller.address.neighborhood}` : ''}
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {suitcase.status === "in_use"
+                          ? "Em uso"
+                          : suitcase.status === "returned"
+                            ? "Devolvida"
+                            : "Em reposição"}
+                      </TableCell>
+                      <TableCell>{suitcase.city || "-"}</TableCell>
+                      <TableCell>{suitcase.neighborhood || "-"}</TableCell>
+                      <TableCell>{formatDate(suitcase.created_at)}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handlePrint(suitcase)}
+                            className="hover:bg-gray-100"
+                          >
+                            <Printer className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleAddItem(suitcase)}
+                            className="hover:bg-gray-100"
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                          {isAdmin && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleEdit(suitcase)}
+                                className="hover:bg-gray-100"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDelete(suitcase.id)}
+                                className="hover:bg-red-100 hover:text-red-600"
+                              >
+                                <XCircle className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+          </TableBody>
+        </Table>
+      </div>
 
-      {/* Reseller Details Dialog */}
-      <ResellerDetails
-        open={showResellerDetails}
-        onOpenChange={setShowResellerDetails}
-        reseller={selectedSuitcase}
-        onEdit={() => {
-          setShowResellerDetails(false);
-          setShowEditResellerDialog(true);
-        }}
-      />
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex justify-center items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setCurrentPage(currentPage - 1)}
+            disabled={currentPage === 1}
+          >
+            Anterior
+          </Button>
+          <span>
+            Página {currentPage} de {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            onClick={() => setCurrentPage(currentPage + 1)}
+            disabled={currentPage === totalPages}
+          >
+            Próximo
+          </Button>
+        </div>
+      )}
 
-      
-      <ResellerFormDialog
-        open={showEditResellerDialog}
-        onOpenChange={setShowEditResellerDialog}
-        reseller={selectedSuitcase}
-        onSubmit={async (data) => {
-          if (!selectedSuitcase) return;
-          try {
-            // Convertendo para o formato esperado por ResellerInput
-            const resellerInput: ResellerInput = {
-              name: data.name,
-              cpfCnpj: data.cpf_cnpj || "",
-              phone: data.phone || "",
-              email: data.email || "",
-              status: data.status || "Ativa",
-              promoterId: data.promoter_id || "",
-              address: data.address ? {
-                street: data.address.street || "",
-                number: data.address.number || "",
-                complement: data.address?.complement || "",
-                neighborhood: data.address.neighborhood || "",
-                city: data.address.city || "",
-                state: data.address.state || "",
-                zipCode: data.address.zipCode || ""
-              } : undefined
-            };
-            
-            await ResellerModel.update(selectedSuitcase.id, resellerInput);
-            toast.success("Revendedora atualizada com sucesso");
-            onRefresh();
-          } catch (error) {
-            console.error("Erro ao atualizar revendedora:", error);
-            toast.error("Erro ao atualizar revendedora");
-          } finally {
-            setShowEditResellerDialog(false);
-            setSelectedSuitcase(null);
-          }
-        }}
-      />
+      {/* Modal de Maleta */}
+      <Dialog open={isModalOpen} onOpenChange={closeModal}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedSuitcase ? "Editar Maleta" : "Nova Maleta"}
+            </DialogTitle>
+          </DialogHeader>
+          <SuitcaseForm
+            suitcase={selectedSuitcase}
+            onSave={handleSave}
+            onClose={closeModal}
+            isSubmitting={isSubmitting}
+          />
+        </DialogContent>
+      </Dialog>
 
-      {/* Suitcase Edit Dialog */}
-      <SuitcaseFormDialog 
-        open={showEditDialog}
-        onOpenChange={setShowEditDialog}
-        onSubmit={handleEditSuitcase}
-        initialData={selectedSuitcase}
-        mode="edit"
-      />
+      {/* Modal de Adicionar Item */}
+      <Dialog open={isItemModalOpen} onOpenChange={closeItemModal}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Adicionar Item à Maleta</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4">
+            {inventoryItems.map((item) => (
+              <div
+                key={item.id}
+                className="flex items-center justify-between p-4 border rounded-md"
+              >
+                <div>
+                  <p className="font-semibold">{item.name}</p>
+                  <p className="text-sm text-gray-500">SKU: {item.sku}</p>
+                </div>
+                <Button
+                  onClick={() => handleSaveItem(item.id)}
+                  disabled={isItemSubmitting}
+                >
+                  {isItemSubmitting ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <Plus className="h-4 w-4 mr-2" />
+                  )}
+                  Adicionar
+                </Button>
+              </div>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="secondary" onClick={closeItemModal}>
+              Cancelar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-      {/* Suitcase Print Dialog */}
+      {/* Modal de Impressão */}
       <SuitcasePrintDialog
-        open={showPrintDialog}
-        onOpenChange={setShowPrintDialog}
-        suitcase={selectedSuitcase}
-        suitcaseItems={[]}
+        open={isPrintModalOpen}
+        onOpenChange={closePrintModal}
+        suitcase={selectedSuitcaseForPrint}
+        suitcaseItems={suitcaseItemsForPrint}
       />
 
-      {/* Suitcase Details Dialog */}
-      <SuitcaseDetailsDialog
-        open={showDetailsDialog}
-        onOpenChange={setShowDetailsDialog}
-        suitcaseId={selectedSuitcase?.id || ""}
-        onEdit={() => {
-          setShowDetailsDialog(false);
-          setShowEditDialog(true);
-        }}
-        onPrint={() => {
-          setShowDetailsDialog(false);
-          setShowPrintDialog(true);
-        }}
-      />
-    </>
+      {/* Drawer de Itens da Maleta */}
+      {selectedSuitcase && (
+        <Drawer
+          open={!!selectedSuitcase}
+          onOpenChange={() => setSelectedSuitcase(null)}
+        >
+          <DrawerContent className="sm:max-w-md">
+            <DrawerHeader>
+              <DrawerTitle>Itens da Maleta</DrawerTitle>
+              <DrawerDescription>
+                Gerencie os itens da maleta {selectedSuitcase.code}
+              </DrawerDescription>
+            </DrawerHeader>
+            <div className="relative">
+              {suitcaseItems.length === 0 ? (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-gold" />
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Item</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {suitcaseItems.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell>{item.product?.name}</TableCell>
+                        <TableCell>
+                          <Select
+                            value={item.status}
+                            onValueChange={(value) =>
+                              handleUpdateItemStatus(item.id, value as SuitcaseItemStatus)
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="in_possession">
+                                Em posse
+                              </SelectItem>
+                              <SelectItem value="sold">Vendido</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleRemoveItem(item.id)}
+                            className="hover:bg-red-100 hover:text-red-600"
+                          >
+                            <XCircle className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </div>
+            <DrawerFooter>
+              <Button variant="outline" onClick={() => setSelectedSuitcase(null)}>
+                Fechar
+              </Button>
+            </DrawerFooter>
+          </DrawerContent>
+        </Drawer>
+      )}
+    </div>
   );
 }
+
+interface SuitcaseFormProps {
+  suitcase?: Suitcase | null;
+  onSave: (data: any) => void;
+  onClose: () => void;
+  isSubmitting: boolean;
+}
+
+function SuitcaseForm({ suitcase, onSave, onClose, isSubmitting }: SuitcaseFormProps) {
+  const [sellers, setSellers] = useState([]);
+
+  useEffect(() => {
+    const fetchSellers = async () => {
+      try {
+        const data = await SuitcaseModel.getAllSellers();
+        setSellers(data);
+      } catch (error) {
+        console.error("Erro ao buscar vendedores:", error);
+        toast.error("Erro ao buscar vendedores");
+      }
+    };
+
+    fetchSellers();
+  }, []);
+
+  const handleSubmit = async (event: any) => {
+    event.preventDefault();
+    const formData = new FormData(event.target);
+    const data = {
+      code: formData.get("code"),
+      seller_id: formData.get("seller_id"),
+      city: formData.get("city"),
+      neighborhood: formData.get("neighborhood"),
+    };
+    onSave(data);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <Label htmlFor="code">Código</Label>
+        <Input
+          id="code"
+          defaultValue={suitcase?.code || ""}
+          className="w-full"
+          required
+        />
+      </div>
+      <div>
+        <Label htmlFor="seller_id">Vendedor</Label>
+        <Select
+          defaultValue={suitcase?.seller_id || ""}
+          onValueChange={(value) => {
+            const sellerInput = document.getElementById("seller_id") as HTMLSelectElement;
+            if (sellerInput) {
+              sellerInput.value = value;
+            }
+          }}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Selecione um vendedor" />
+          </SelectTrigger>
+          <SelectContent>
+            {sellers.map((seller: any) => (
+              <SelectItem key={seller.id} value={seller.id}>
+                {seller.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <input type="hidden" id="seller_id" name="seller_id" />
+      </div>
+      <div>
+        <Label htmlFor="city">Cidade</Label>
+        <Input
+          id="city"
+          defaultValue={suitcase?.city || ""}
+          className="w-full"
+        />
+      </div>
+      <div>
+        <Label htmlFor="neighborhood">Bairro</Label>
+        <Input
+          id="neighborhood"
+          defaultValue={suitcase?.neighborhood || ""}
+          className="w-full"
+        />
+      </div>
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onClose}>
+          Cancelar
+        </Button>
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? (
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+          ) : (
+            "Salvar"
+          )}
+        </Button>
+      </DialogFooter>
+    </form>
+  );
+}
+
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";

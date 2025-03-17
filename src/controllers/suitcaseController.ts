@@ -1,280 +1,188 @@
-
-import { SuitcaseModel } from "@/models/suitcaseModel";
-import { InventoryModel } from "@/models/inventoryModel";
-import { ResellerModel } from "@/models/resellerModel";
-import { supabase } from "@/integrations/supabase/client";
+import { Request, Response } from "express";
+import { suitcaseModel } from "@/models/suitcaseModel";
 import { SuitcaseItemStatus } from "@/types/suitcase";
 
-export class SuitcaseController {
-  static async getSuitcases(page = 1, limit = 10) {
+export const suitcaseController = {
+  async getAllSuitcases(req: Request, res: Response) {
     try {
-      console.log(`Controller: Buscando maletas (página ${page}, limite ${limit})`);
-      const suitcases = await SuitcaseModel.getAllSuitcases();
-      return suitcases.slice((page - 1) * limit, page * limit);
+      const filters = req.query;
+      const suitcases = await suitcaseModel.getAllSuitcases(filters);
+      res.json(suitcases);
     } catch (error) {
-      console.error('Erro ao buscar maletas:', error);
-      throw error;
+      console.error("Erro ao buscar maletas:", error);
+      res.status(500).json({ message: "Erro ao buscar maletas" });
     }
-  }
+  },
 
-  static async getAllSuitcases() {
+  async getSuitcaseById(req: Request, res: Response) {
     try {
-      console.log('Controller: Buscando todas as maletas');
-      const suitcases = await SuitcaseModel.getAllSuitcases();
-      return suitcases;
-    } catch (error) {
-      console.error('Erro ao buscar todas as maletas:', error);
-      throw error;
-    }
-  }
-
-  static async getSuitcaseSummary() {
-    try {
-      console.log('Controller: Buscando resumo das maletas');
-      const total = await SuitcaseModel.getAllSuitcases();
-      
-      // Filtrar maletas por status
-      const in_use = total.filter(s => s.status === 'in_use').length;
-      const returned = total.filter(s => s.status === 'returned').length;
-      const in_replenishment = total.filter(s => s.status === 'in_replenishment').length;
-      
-      return {
-        total: total.length,
-        in_use,
-        returned,
-        in_replenishment
-      };
-    } catch (error) {
-      console.error('Erro ao buscar resumo das maletas:', error);
-      throw error;
-    }
-  }
-
-  static async getSuitcaseById(id: string) {
-    try {
-      console.log(`Controller: Buscando maleta com ID ${id}`);
-      return await SuitcaseModel.getSuitcaseById(id);
-    } catch (error) {
-      console.error(`Erro ao buscar maleta ${id}:`, error);
-      throw error;
-    }
-  }
-
-  static async getSuitcaseItems(suitcaseId: string) {
-    try {
-      console.log(`Controller: Buscando itens da maleta ${suitcaseId}`);
-      return await SuitcaseModel.getSuitcaseItems(suitcaseId);
-    } catch (error) {
-      console.error(`Erro ao buscar itens da maleta ${suitcaseId}:`, error);
-      throw error;
-    }
-  }
-
-  static async createSuitcase(data: any) {
-    try {
-      console.log('Controller: Criando nova maleta');
-      return await SuitcaseModel.createSuitcase(data);
-    } catch (error) {
-      console.error('Erro ao criar maleta:', error);
-      throw error;
-    }
-  }
-
-  static async updateSuitcase(id: string, data: any) {
-    try {
-      console.log(`Controller: Atualizando maleta ${id}`);
-      return await SuitcaseModel.updateSuitcase(id, data);
-    } catch (error) {
-      console.error(`Erro ao atualizar maleta ${id}:`, error);
-      throw error;
-    }
-  }
-
-  static async deleteSuitcase(id: string) {
-    try {
-      console.log(`Controller: Excluindo maleta ${id}`);
-      return await SuitcaseModel.deleteSuitcase(id);
-    } catch (error) {
-      console.error(`Erro ao excluir maleta ${id}:`, error);
-      throw error;
-    }
-  }
-
-  static async updateSuitcaseItemStatus(
-    id: string, 
-    status: SuitcaseItemStatus, 
-    clientName?: string, 
-    paymentMethod?: string
-  ) {
-    try {
-      console.log(`Controller: Atualizando status do item da maleta ${id} para ${status}`);
-      
-      // Preparar informações de venda se for o caso
-      const saleInfo = status === 'sold' ? {
-        customer_name: clientName,
-        payment_method: paymentMethod 
-      } : undefined;
-      
-      const result = await SuitcaseModel.updateSuitcaseItemStatus(id, status, saleInfo);
-      
-      // Se o item foi marcado como vendido, atualizar o status do inventário
-      if (status === 'sold' && result.inventory_id) {
-        await InventoryModel.updateInventoryItemStatus(result.inventory_id, 'sold');
-      }
-      
-      return result;
-    } catch (error) {
-      console.error(`Erro ao atualizar status do item da maleta ${id}:`, error);
-      throw error;
-    }
-  }
-
-  static async addItemToSuitcase(suitcaseId: string, inventoryId: string) {
-    try {
-      console.log(`Controller: Adicionando item ${inventoryId} à maleta ${suitcaseId}`);
-      
-      // Verificar se o item existe no inventário
-      const inventoryItems = await InventoryModel.searchInventoryItems(inventoryId);
-      if (!inventoryItems || inventoryItems.length === 0) {
-        throw new Error('Item não encontrado no inventário');
-      }
-      
-      // Adiciona o item à maleta
-      const result = await SuitcaseModel.addItemToSuitcase({
-        suitcase_id: suitcaseId,
-        inventory_id: inventoryId
-      });
-      
-      // Atualiza o "status virtual" do item no inventário
-      console.log(`Marcando item ${inventoryId} como em uso na maleta`);
-      await InventoryModel.updateInventoryItemStatus(inventoryId, 'in_suitcase');
-      
-      return result;
-    } catch (error) {
-      console.error(`Erro ao adicionar item à maleta:`, error);
-      throw error;
-    }
-  }
-
-  static async removeItemFromSuitcase(suitcaseItemId: string) {
-    try {
-      console.log(`Controller: Removendo item ${suitcaseItemId} da maleta`);
-      
-      // Busca o item para obter o inventory_id
-      const item = await SuitcaseModel.getSuitcaseItemById(suitcaseItemId);
-      
-      // Remove o item da maleta
-      const { error } = await supabase
-        .from('suitcase_items')
-        .delete()
-        .eq('id', suitcaseItemId);
-      
-      if (error) throw error;
-      
-      // Atualiza o "status virtual" do item no inventário (se item existe)
-      if (item && item.inventory_id) {
-        await InventoryModel.updateInventoryItemStatus(item.inventory_id, 'available');
-      }
-      
-      return { success: true };
-    } catch (error) {
-      console.error(`Erro ao remover item da maleta:`, error);
-      throw error;
-    }
-  }
-
-  static async searchSuitcases(filters: any) {
-    try {
-      console.log('Controller: Buscando maletas com filtros', filters);
-      return await SuitcaseModel.searchSuitcases(filters);
-    } catch (error) {
-      console.error('Erro ao buscar maletas:', error);
-      throw error;
-    }
-  }
-
-  static formatStatus(status: string) {
-    const statusMap: {[key: string]: string} = {
-      'in_use': 'Em uso',
-      'returned': 'Devolvida',
-      'in_replenishment': 'Em reposição',
-      'sold': 'Vendido',
-      'reserved': 'Reservado',
-      'available': 'Disponível',
-      'in_suitcase': 'Em maleta',
-      'in_possession': 'Em posse'
-    };
-    
-    return statusMap[status] || status;
-  }
-
-  static async getResellers() {
-    try {
-      console.log('Controller: Buscando revendedoras');
-      return await ResellerModel.getAll();
-    } catch (error) {
-      console.error('Erro ao buscar revendedoras:', error);
-      throw error;
-    }
-  }
-
-  static async getResellerById(id: string) {
-    try {
-      console.log(`Controller: Buscando revendedora com ID ${id}`);
-      return await ResellerModel.getById(id);
-    } catch (error) {
-      console.error(`Erro ao buscar revendedora ${id}:`, error);
-      throw error;
-    }
-  }
-
-  static async updateInventoryItemStatus(id: string, status: string) {
-    try {
-      console.log(`Controller: Atualizando status do item do inventário ${id} para ${status}`);
-      
-      // Verifica se o status é válido
-      const validStatus = ['available', 'in_suitcase', 'sold', 'reserved'];
-      if (!validStatus.includes(status)) {
-        throw new Error('Status inválido');
-      }
-      
-      return await InventoryModel.updateInventoryItemStatus(id, status);
-    } catch (error) {
-      console.error(`Erro ao atualizar status do item do inventário ${id}:`, error);
-      throw error;
-    }
-  }
-
-  static async searchInventoryItems(query: string) {
-    try {
-      console.log(`Controller: Buscando itens do inventário com query "${query}"`);
-      // Verificar se a query parece um UUID, caso contrário buscar por texto
-      const isUuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      
-      if (isUuidPattern.test(query)) {
-        // Se for UUID, buscar por ID exato
-        return await InventoryModel.searchInventoryItemsById(query);
+      const { id } = req.params;
+      const suitcase = await suitcaseModel.getSuitcaseById(id);
+      if (suitcase) {
+        res.json(suitcase);
       } else {
-        // Se não for UUID, buscar por texto (nome, código, etc)
-        return await InventoryModel.searchInventoryItemsByText(query);
+        res.status(404).json({ message: "Maleta não encontrada" });
       }
     } catch (error) {
-      console.error(`Erro ao buscar itens do inventário:`, error);
-      throw error;
+      console.error("Erro ao buscar maleta:", error);
+      res.status(500).json({ message: "Erro ao buscar maleta" });
     }
-  }
+  },
 
-  // Método para obter revendedoras no formato para select
-  static async getResellersForSelect() {
+  async createSuitcase(req: Request, res: Response) {
     try {
-      const resellers = await ResellerModel.getAll();
-      return resellers.map(reseller => ({
-        value: reseller.id,
-        label: reseller.name
-      }));
+      const suitcaseData = req.body;
+      const newSuitcase = await suitcaseModel.createSuitcase(suitcaseData);
+      res.status(201).json(newSuitcase);
     } catch (error) {
-      console.error('Erro ao buscar revendedoras para select:', error);
-      throw error;
+      console.error("Erro ao criar maleta:", error);
+      res.status(500).json({ message: "Erro ao criar maleta" });
     }
-  }
-}
+  },
+
+  async updateSuitcase(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const suitcaseData = req.body;
+      const updatedSuitcase = await suitcaseModel.updateSuitcase(id, suitcaseData);
+      if (updatedSuitcase) {
+        res.json(updatedSuitcase);
+      } else {
+        res.status(404).json({ message: "Maleta não encontrada" });
+      }
+    } catch (error) {
+      console.error("Erro ao atualizar maleta:", error);
+      res.status(500).json({ message: "Erro ao atualizar maleta" });
+    }
+  },
+
+  async deleteSuitcase(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const deletedSuitcase = await suitcaseModel.deleteSuitcase(id);
+      if (deletedSuitcase) {
+        res.status(204).send();
+      } else {
+        res.status(404).json({ message: "Maleta não encontrada" });
+      }
+    } catch (error) {
+      console.error("Erro ao excluir maleta:", error);
+      res.status(500).json({ message: "Erro ao excluir maleta" });
+    }
+  },
+
+  async getSuitcaseItems(req: Request, res: Response) {
+    try {
+      const { suitcaseId } = req.params;
+      const items = await suitcaseModel.getSuitcaseItems(suitcaseId);
+      res.json(items);
+    } catch (error) {
+      console.error("Erro ao buscar itens da maleta:", error);
+      res.status(500).json({ message: "Erro ao buscar itens da maleta" });
+    }
+  },
+
+  async addSuitcaseItem(req: Request, res: Response) {
+    try {
+      const { suitcaseId } = req.params;
+      const { inventoryId } = req.body;
+      const newItem = await suitcaseModel.addSuitcaseItem(suitcaseId, inventoryId);
+      res.status(201).json(newItem);
+    } catch (error) {
+      console.error("Erro ao adicionar item à maleta:", error);
+      res.status(500).json({ message: "Erro ao adicionar item à maleta" });
+    }
+  },
+
+  async removeSuitcaseItem(req: Request, res: Response) {
+    try {
+      const { itemId } = req.params;
+      const removedItem = await suitcaseModel.removeSuitcaseItem(itemId);
+      if (removedItem) {
+        res.status(204).send();
+      } else {
+        res.status(404).json({ message: "Item não encontrado na maleta" });
+      }
+    } catch (error) {
+      console.error("Erro ao remover item da maleta:", error);
+      res.status(500).json({ message: "Erro ao remover item da maleta" });
+    }
+  },
+
+  async updateSuitcaseItemStatus(req: Request, res: Response) {
+    try {
+      const { itemId } = req.params;
+      const { status } = req.body;
+
+      // Corrigir o tipo de SuitcaseItemStatus removendo 'available'
+      // e usando apenas os tipos válidos: 'in_possession', 'sold', 'returned', 'lost'
+      try {
+        const result = await suitcaseModel.updateSuitcaseItemStatus(
+          itemId,
+          status as "in_possession" | "sold" | "returned" | "lost"
+        );
+        return res.json(result);
+      } catch (error) {
+        console.error("Erro ao atualizar status do item:", error);
+        throw error;
+      }
+    } catch (error) {
+      console.error("Erro ao atualizar status do item na maleta:", error);
+      res.status(500).json({ message: "Erro ao atualizar status do item na maleta" });
+    }
+  },
+
+  async getSuitcaseItemSales(req: Request, res: Response) {
+    try {
+      const { itemId } = req.params;
+      const sales = await suitcaseModel.getSuitcaseItemSales(itemId);
+      res.json(sales);
+    } catch (error) {
+      console.error("Erro ao buscar vendas do item da maleta:", error);
+      res.status(500).json({ message: "Erro ao buscar vendas do item da maleta" });
+    }
+  },
+
+  async addSuitcaseItemSale(req: Request, res: Response) {
+    try {
+      const { itemId } = req.params;
+      const saleData = req.body;
+      const newSale = await suitcaseModel.addSuitcaseItemSale(itemId, saleData);
+      res.status(201).json(newSale);
+    } catch (error) {
+      console.error("Erro ao adicionar venda ao item da maleta:", error);
+      res.status(500).json({ message: "Erro ao adicionar venda ao item da maleta" });
+    }
+  },
+
+  async updateSuitcaseItemSale(req: Request, res: Response) {
+    try {
+      const { saleId } = req.params;
+      const saleData = req.body;
+      const updatedSale = await suitcaseModel.updateSuitcaseItemSale(saleId, saleData);
+      if (updatedSale) {
+        res.json(updatedSale);
+      } else {
+        res.status(404).json({ message: "Venda não encontrada" });
+      }
+    } catch (error) {
+      console.error("Erro ao atualizar venda do item da maleta:", error);
+      res.status(500).json({ message: "Erro ao atualizar venda do item da maleta" });
+    }
+  },
+
+  async deleteSuitcaseItemSale(req: Request, res: Response) {
+    try {
+      const { saleId } = req.params;
+      const deletedSale = await suitcaseModel.deleteSuitcaseItemSale(saleId);
+      if (deletedSale) {
+        res.status(204).send();
+      } else {
+        res.status(404).json({ message: "Venda não encontrada" });
+      }
+    } catch (error) {
+      console.error("Erro ao excluir venda do item da maleta:", error);
+      res.status(500).json({ message: "Erro ao excluir venda do item da maleta" });
+    }
+  },
+};

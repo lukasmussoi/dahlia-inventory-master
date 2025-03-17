@@ -1,10 +1,10 @@
-
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { InventoryCategory, InventoryModel } from "@/models/inventoryModel";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { InventoryModel, InventoryCategory } from "@/models/inventoryModel";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Plus, Pencil, Trash2 } from "lucide-react";
+import { CategoryForm } from "@/components/inventory/CategoryForm";
 import { toast } from "sonner";
 import {
   Table,
@@ -14,8 +14,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CategoryForm } from "@/components/inventory/CategoryForm";
-import { AuthController } from "@/controllers/authController";
 import {
   Pagination,
   PaginationContent,
@@ -25,205 +23,193 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 
-const Categories = () => {
-  const navigate = useNavigate();
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<InventoryCategory | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+export default function CategoriesPage() {
+  // Estado para controle de paginação e busca
   const [currentPage, setCurrentPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState("");
   const itemsPerPage = 10;
-  const [isAdmin, setIsAdmin] = useState(false);
 
-  // Verificar autenticação ao carregar a página
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const user = await AuthController.checkAuth();
-        if (!user) {
-          toast.error("Sessão expirada. Por favor, faça login novamente.");
-          navigate('/');
-          return;
-        }
-        
-        // Verificar se o usuário tem perfil e se é admin
-        const userProfile = await AuthController.getUserProfileWithRoles();
-        if (!userProfile?.isAdmin) {
-          toast.error("Você não tem permissão para acessar esta página.");
-          navigate('/dashboard');
-          return;
-        }
-        
-        setIsAdmin(userProfile.isAdmin);
-        setIsLoading(false);
-      } catch (error) {
-        console.error("Erro ao verificar autenticação:", error);
-        toast.error("Erro ao verificar autenticação");
-        navigate('/');
-      }
-    };
+  // Estado para controle do modal de categoria
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<InventoryCategory | null>(null);
 
-    checkAuth();
-  }, [navigate]);
-
-  // Buscar categorias somente se o usuário for admin
-  const { data: categoriesList = [], isLoading: isLoadingCategories, refetch } = useQuery({
-    queryKey: ['categories'],
-    queryFn: InventoryModel.getAllCategories,
-    enabled: !isLoading && isAdmin, // Só executa quando o perfil do usuário for carregado e for admin
+  // Buscar categorias
+  const { data: categories = [], isLoading, refetch } = useQuery({
+    queryKey: ['inventory-categories'],
+    queryFn: () => InventoryModel.getAllCategories(),
   });
 
-  // Paginação
-  const totalPages = Math.ceil(categoriesList.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const categories = categoriesList.slice(startIndex, endIndex);
+  // Filtrar categorias com base no termo de busca
+  const filteredCategories = searchTerm 
+    ? categories.filter(cat => 
+        cat.name.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    : categories;
+
+  // Paginar resultados
+  const paginatedCategories = filteredCategories.slice(
+    (currentPage - 1) * itemsPerPage, 
+    currentPage * itemsPerPage
+  );
+
+  // Calcular total de páginas
+  const totalPages = Math.ceil(filteredCategories.length / itemsPerPage);
 
   // Função para abrir o modal de edição
   const handleEdit = (category: InventoryCategory) => {
     setSelectedCategory(category);
-    setIsFormOpen(true);
+    setIsModalOpen(true);
   };
 
   // Função para deletar categoria
   const handleDelete = async (id: string) => {
-    if (!window.confirm("Tem certeza que deseja excluir esta categoria?")) {
-      return;
-    }
-    
     try {
-      await InventoryModel.deleteCategory(id);
-      toast.success("Categoria removida com sucesso!");
-      refetch();
+      if (window.confirm("Tem certeza que deseja excluir esta categoria?")) {
+        await InventoryModel.deleteCategory(id);
+        toast.success("Categoria excluída com sucesso");
+        refetch();
+      }
     } catch (error) {
+      console.error("Erro ao excluir:", error);
       if (error instanceof Error) {
         toast.error(error.message);
       } else {
-        toast.error("Erro ao remover categoria");
+        toast.error("Erro ao excluir categoria");
       }
     }
   };
 
-  // Se estiver carregando, mostrar loading
-  if (isLoading || isLoadingCategories) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gold"></div>
-      </div>
-    );
-  }
+  // Função para fechar o modal e atualizar dados
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedCategory(null);
+  };
 
   return (
-    <div className="h-full min-h-screen bg-background">
-      <main className="flex-1 space-y-4 p-4 pt-20">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Categorias</h1>
-            <p className="text-muted-foreground">
-              Gerencie as categorias dos produtos do seu estoque
-            </p>
-          </div>
-          <Button onClick={() => setIsFormOpen(true)} className="bg-gold hover:bg-gold/90">
-            <Plus className="h-5 w-5 mr-2" />
-            Nova Categoria
-          </Button>
+    <div className="container mx-auto py-10">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-3xl font-bold">Categorias</h1>
+          <p className="text-muted-foreground">
+            Gerencie as categorias de produtos do seu inventário
+          </p>
         </div>
+        <Button 
+          onClick={() => setIsModalOpen(true)}
+          className="bg-gold hover:bg-gold/90"
+        >
+          <Plus className="mr-2 h-4 w-4" /> Nova Categoria
+        </Button>
+      </div>
 
-        <div className="bg-white rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>Data de Criação</TableHead>
-                <TableHead className="w-[100px]">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {categories.length === 0 ? (
+      <div className="bg-white p-4 rounded-lg shadow mb-6">
+        <Input
+          placeholder="Buscar categorias..."
+          value={searchTerm}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            setCurrentPage(1); // Reset para primeira página ao buscar
+          }}
+          className="max-w-sm"
+        />
+      </div>
+
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        {isLoading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gold"></div>
+          </div>
+        ) : (
+          <>
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={3} className="text-center py-4">
-                    Nenhuma categoria encontrada
-                  </TableCell>
+                  <TableHead>Nome</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
-              ) : (
-                categories.map((category) => (
-                  <TableRow key={category.id}>
-                    <TableCell>{category.name}</TableCell>
-                    <TableCell>
-                      {new Date(category.created_at || '').toLocaleDateString('pt-BR')}
-                    </TableCell>
-                    <TableCell className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEdit(category)}
-                      >
-                        Editar
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleDelete(category.id)}
-                      >
-                        Excluir
-                      </Button>
+              </TableHeader>
+              <TableBody>
+                {paginatedCategories.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={2} className="text-center py-10">
+                      Nenhuma categoria encontrada
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : (
+                  paginatedCategories.map((category) => (
+                    <TableRow key={category.id}>
+                      <TableCell>{category.name}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEdit(category)}
+                            className="hover:bg-gray-100"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDelete(category.id)}
+                            className="hover:bg-red-100 hover:text-red-600"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
 
-          {totalPages > 1 && (
-            <Pagination className="my-4">
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious 
-                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                    className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
-                  />
-                </PaginationItem>
-                
-                {[...Array(totalPages)].map((_, i) => (
-                  <PaginationItem key={i}>
-                    <PaginationLink 
-                      onClick={() => setCurrentPage(i + 1)}
-                      isActive={currentPage === i + 1}
-                    >
-                      {i + 1}
-                    </PaginationLink>
-                  </PaginationItem>
-                ))}
-                
-                <PaginationItem>
-                  <PaginationNext 
-                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                    className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
-          )}
-        </div>
-
-        {/* Modal de Categoria */}
-        {isFormOpen && (
-          <CategoryForm
-            category={selectedCategory}
-            isOpen={isFormOpen}
-            onClose={() => {
-              setIsFormOpen(false);
-              setSelectedCategory(null);
-            }}
-            onSuccess={() => {
-              setIsFormOpen(false);
-              setSelectedCategory(null);
-              refetch();
-            }}
-          />
+            {totalPages > 1 && (
+              <div className="py-4 border-t">
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious 
+                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                        className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+                      />
+                    </PaginationItem>
+                    
+                    {Array.from({ length: totalPages }).map((_, index) => (
+                      <PaginationItem key={index}>
+                        <PaginationLink
+                          onClick={() => setCurrentPage(index + 1)}
+                          isActive={currentPage === index + 1}
+                        >
+                          {index + 1}
+                        </PaginationLink>
+                      </PaginationItem>
+                    ))}
+                    
+                    <PaginationItem>
+                      <PaginationNext 
+                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                        className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            )}
+          </>
         )}
-      </main>
+      </div>
+
+      {/* Modal de Categoria */}
+      {isModalOpen && (
+        <CategoryForm
+          category={selectedCategory}
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+          onSuccess={refetch}
+        />
+      )}
     </div>
   );
-};
-
-export default Categories;
+}

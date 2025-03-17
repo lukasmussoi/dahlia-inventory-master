@@ -27,11 +27,12 @@ export function SuitcasePrintDialog({
 }: SuitcasePrintDialogProps) {
   const printRef = useRef<HTMLDivElement>(null);
 
-  // Configurar impressão
+  // Configurar impressão corrigindo o uso de useReactToPrint
   const handlePrint = useReactToPrint({
     documentTitle: `Maleta_${suitcase?.code || ""}`,
     onPrintError: () => toast.error("Erro ao imprimir maleta"),
     onAfterPrint: () => toast.success("Maleta impressa com sucesso"),
+    // Corrigido para usar uma função que retorna o elemento
     content: () => printRef.current,
   });
 
@@ -124,7 +125,8 @@ export function SuitcasePrintDialog({
             Cancelar
           </Button>
           <Button 
-            onClick={() => handlePrint()}
+            // Corrigido para chamar handlePrint diretamente sem argumentos
+            onClick={handlePrint}
             className="gap-1"
           >
             <Printer className="h-4 w-4" /> Imprimir
