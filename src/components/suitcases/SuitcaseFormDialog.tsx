@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { SuitcaseController } from "@/controllers/suitcaseController";
 import { format } from "date-fns";
@@ -33,20 +32,19 @@ import { toast } from "sonner";
 export interface SuitcaseFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (data: FormData) => Promise<void>;
-  // Fields to support edit mode
-  suitcaseId?: string;
+  onSubmit: (data: any) => Promise<void>;
   initialData?: any;
   mode?: 'create' | 'edit';
+  onSuccess?: () => void;
 }
 
 export function SuitcaseFormDialog({ 
   open, 
   onOpenChange, 
   onSubmit,
-  suitcaseId, 
-  initialData, 
-  mode = 'create' 
+  initialData,
+  mode = 'create',
+  onSuccess
 }: SuitcaseFormDialogProps) {
   const [sellerOptions, setSellerOptions] = useState<{ value: string; label: string }[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -54,13 +52,12 @@ export function SuitcaseFormDialog({
   const [formData, setFormData] = useState({
     code: "",
     seller_id: "",
-    status: "in_use", // Default value
+    status: "in_use",
     city: "",
     neighborhood: "",
     next_settlement_date: ""
   });
 
-  // Buscar opções de revendedoras para o select
   useEffect(() => {
     async function fetchSellerOptions() {
       try {
@@ -75,7 +72,6 @@ export function SuitcaseFormDialog({
     if (open) {
       fetchSellerOptions();
 
-      // Pré-preencher o formulário se estiver no modo de edição
       if (mode === 'edit' && initialData) {
         const formattedDate = initialData.next_settlement_date
           ? new Date(initialData.next_settlement_date)
@@ -92,7 +88,6 @@ export function SuitcaseFormDialog({
 
         setSelectedSettlementDate(formattedDate);
       } else {
-        // Resetar o formulário para a criação
         setFormData({
           code: "",
           seller_id: "",
@@ -111,15 +106,15 @@ export function SuitcaseFormDialog({
     setIsSubmitting(true);
     
     try {
-      // Criar FormData para envio
       const formDataObj = new FormData(e.currentTarget);
-      if (mode === 'edit' && suitcaseId) {
-        formDataObj.append('suitcaseId', suitcaseId);
+      if (mode === 'edit' && initialData) {
+        formDataObj.append('suitcaseId', initialData.id);
       }
       
       await onSubmit(formDataObj);
       onOpenChange(false);
       toast.success(`Maleta ${mode === 'create' ? 'criada' : 'atualizada'} com sucesso`);
+      onSuccess?.();
     } catch (error) {
       console.error(`Erro ao ${mode === 'create' ? 'criar' : 'atualizar'} maleta:`, error);
       toast.error(`Erro ao ${mode === 'create' ? 'criar' : 'atualizar'} maleta`);
@@ -148,7 +143,6 @@ export function SuitcaseFormDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Código da Maleta */}
           <div className="space-y-2">
             <Label htmlFor="code">Código da Maleta</Label>
             <Input 
@@ -161,7 +155,6 @@ export function SuitcaseFormDialog({
             />
           </div>
 
-          {/* Revendedora */}
           <div className="space-y-2">
             <Label htmlFor="seller_id">Revendedora</Label>
             <Select 
@@ -183,7 +176,6 @@ export function SuitcaseFormDialog({
             </Select>
           </div>
 
-          {/* Status */}
           <div className="space-y-2">
             <Label htmlFor="status">Status</Label>
             <Select 
@@ -203,7 +195,6 @@ export function SuitcaseFormDialog({
             </Select>
           </div>
 
-          {/* Localização: Cidade */}
           <div className="space-y-2">
             <Label htmlFor="city">Cidade</Label>
             <Input 
@@ -216,7 +207,6 @@ export function SuitcaseFormDialog({
             />
           </div>
 
-          {/* Localização: Bairro */}
           <div className="space-y-2">
             <Label htmlFor="neighborhood">Bairro</Label>
             <Input 
@@ -229,7 +219,6 @@ export function SuitcaseFormDialog({
             />
           </div>
 
-          {/* Data do Próximo Acerto */}
           <div className="space-y-2">
             <Label htmlFor="next_settlement_date">Data do Próximo Acerto</Label>
             <Popover>

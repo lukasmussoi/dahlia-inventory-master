@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { SuitcaseController } from "@/controllers/suitcaseController";
@@ -27,8 +28,10 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { toast } from "sonner";
 import { InventoryModel, type InventoryItem } from "@/models/inventoryModel";
+import { SuitcaseItem } from "@/models/suitcaseModel";
 
-interface SuitcaseItemWithSales extends InventoryItem {
+// Interface estendida para incluir campos de vendas associados a um item da maleta
+interface SuitcaseItemWithSales extends SuitcaseItem {
   sales?: Array<{
     customer_name?: string;
     payment_method?: string;
@@ -67,10 +70,11 @@ export function SuitcaseDetailsDialog({
         setLoading(true);
         try {
           const suitcaseData = await SuitcaseController.getSuitcaseById(suitcaseId);
-          const itemsData = await SuitcaseController.getSuitcaseItems(suitcaseId) as SuitcaseItemWithSales[];
+          const itemsData = await SuitcaseController.getSuitcaseItems(suitcaseId);
           
           setSuitcase(suitcaseData);
-          setSuitcaseItems(itemsData);
+          // Convertemos explicitamente para o tipo esperado
+          setSuitcaseItems(itemsData as unknown as SuitcaseItemWithSales[]);
           
           const initialCustomerNames: Record<string, string> = {};
           const initialPaymentMethods: Record<string, string> = {};
@@ -109,7 +113,8 @@ export function SuitcaseDetailsDialog({
       await SuitcaseController.updateSuitcaseItemStatus(item.id, newStatus, saleInfo);
       
       const updatedItems = await SuitcaseController.getSuitcaseItems(suitcaseId);
-      setSuitcaseItems(updatedItems as SuitcaseItemWithSales[]);
+      // Convertemos explicitamente para o tipo esperado
+      setSuitcaseItems(updatedItems as unknown as SuitcaseItemWithSales[]);
       toast.success(`Peça ${checked ? 'marcada como vendida' : 'desmarcada como vendida'}`);
     } catch (error) {
       console.error("Erro ao atualizar status da peça:", error);
@@ -137,7 +142,8 @@ export function SuitcaseDetailsDialog({
       );
       
       const updatedItems = await SuitcaseController.getSuitcaseItems(suitcaseId);
-      setSuitcaseItems(updatedItems as SuitcaseItemWithSales[]);
+      // Convertemos explicitamente para o tipo esperado
+      setSuitcaseItems(updatedItems as unknown as SuitcaseItemWithSales[]);
       toast.success("Informações da venda salvas com sucesso");
     } catch (error) {
       console.error("Erro ao salvar venda:", error);
@@ -148,8 +154,8 @@ export function SuitcaseDetailsDialog({
   const fetchAvailableInventoryItems = async () => {
     setLoadingInventory(true);
     try {
-      const filters = { status: 'available' };
-      const items = await InventoryModel.getInventoryItems(filters);
+      // Buscamos todos os itens disponíveis no inventário, sem filtros
+      const items = await InventoryModel.getInventoryItems();
       setAvailableItems(items || []);
     } catch (error) {
       console.error("Erro ao buscar itens do inventário:", error);
@@ -177,7 +183,8 @@ export function SuitcaseDetailsDialog({
       });
 
       const updatedItems = await SuitcaseController.getSuitcaseItems(suitcaseId);
-      setSuitcaseItems(updatedItems as SuitcaseItemWithSales[]);
+      // Convertemos explicitamente para o tipo esperado
+      setSuitcaseItems(updatedItems as unknown as SuitcaseItemWithSales[]);
 
       setIsAddItemSheetOpen(false);
       setSelectedInventoryId("");

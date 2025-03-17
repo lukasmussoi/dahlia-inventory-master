@@ -1,4 +1,3 @@
-
 import { useRef, useState, useEffect } from "react";
 import { format } from "date-fns";
 import { useReactToPrint } from "react-to-print";
@@ -17,28 +16,21 @@ import { toast } from "sonner";
 interface SuitcasePrintDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  suitcaseId: string;
+  suitcase: any;
+  suitcaseItems: any[];
 }
 
-export function SuitcasePrintDialog({
-  open,
-  onOpenChange,
-  suitcaseId,
-}: SuitcasePrintDialogProps) {
-  const [suitcase, setSuitcase] = useState<any>(null);
-  const [suitcaseItems, setSuitcaseItems] = useState<any[]>([]);
+export function SuitcasePrintDialog({ open, onOpenChange, suitcase, suitcaseItems }: SuitcasePrintDialogProps) {
   const [loading, setLoading] = useState(true);
   const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     async function fetchSuitcaseDetails() {
-      if (open && suitcaseId) {
+      if (open && suitcase) {
         setLoading(true);
         try {
-          const suitcaseData = await SuitcaseController.getSuitcaseById(suitcaseId);
-          const itemsData = await SuitcaseController.getSuitcaseItems(suitcaseId);
+          const itemsData = await SuitcaseController.getSuitcaseItems(suitcase.id);
           
-          setSuitcase(suitcaseData);
           setSuitcaseItems(itemsData);
         } catch (error) {
           console.error("Erro ao buscar detalhes da maleta:", error);
@@ -49,23 +41,18 @@ export function SuitcasePrintDialog({
     }
 
     fetchSuitcaseDetails();
-  }, [open, suitcaseId]);
+  }, [open, suitcase]);
 
-  // Fix react-to-print usage
-  const handlePrint = useReactToPrint({
-    documentTitle: `Maleta ${suitcase?.code || ""}`,
+  const { handlePrint } = useReactToPrint({
+    documentTitle: `Maleta_${suitcase?.code || ""}`,
     onAfterPrint: () => {
-      toast.success("Relatório impresso com sucesso");
+      onOpenChange(false);
     },
-    onPrintError: () => {
-      toast.error("Erro ao imprimir relatório");
-    }
   });
 
-  const printContent = () => {
+  const printDocument = () => {
     if (printRef.current) {
-      // Wrap the ref in a function to get the current value when called
-      handlePrint({ content: () => printRef.current });
+      handlePrint(undefined, () => printRef.current);
     }
   };
 
@@ -86,20 +73,16 @@ export function SuitcasePrintDialog({
     return null;
   }
 
-  // Calcular valor total das peças
   const totalValue = suitcaseItems.reduce((total, item) => {
     return total + (item.product?.price || 0);
   }, 0);
 
-  // Formatar código da maleta
   const code = suitcase.code || `ML${suitcase.id.substring(0, 3)}`;
 
-  // Obter nome da revendedora
   const resellerName = suitcase.seller && suitcase.seller.name 
     ? suitcase.seller.name 
     : "Revendedora não especificada";
 
-  // Formatar data do próximo acerto
   const nextSettlementDate = suitcase.next_settlement_date 
     ? format(new Date(suitcase.next_settlement_date), 'dd/MM/yyyy')
     : "Não especificada";
@@ -115,7 +98,7 @@ export function SuitcasePrintDialog({
 
         <div className="p-4">
           <Button 
-            onClick={printContent}
+            onClick={printDocument}
             className="mb-4"
           >
             <Printer className="h-4 w-4 mr-2" /> Imprimir Lista

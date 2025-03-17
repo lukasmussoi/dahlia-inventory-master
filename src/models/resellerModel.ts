@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Reseller, ResellerInput } from "@/types/reseller";
 
@@ -35,6 +34,37 @@ export class ResellerModel {
         zipCode: typeof reseller.address === 'object' && 'zipCode' in reseller.address ? String(reseller.address.zipCode || '') : ''
       } : undefined
     })) as Reseller[];
+  }
+
+  static async getAllResellers() {
+    try {
+      const { data, error } = await supabase
+        .from('resellers')
+        .select('*')
+        .order('name', { ascending: true });
+      
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error("Erro ao buscar revendedores:", error);
+      throw error;
+    }
+  }
+
+  static async getReseller(id: string) {
+    try {
+      const { data, error } = await supabase
+        .from('resellers')
+        .select('*')
+        .eq('id', id)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error("Erro ao buscar revendedor:", error);
+      throw error;
+    }
   }
 
   static async getById(id: string) {

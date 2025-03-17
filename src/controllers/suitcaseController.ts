@@ -1,8 +1,6 @@
-
 import { InventoryModel } from "@/models/inventoryModel";
 import { ResellerModel } from "@/models/resellerModel";
 import { SuitcaseModel } from "@/models/suitcaseModel";
-// Remove the AddressModel import as it doesn't exist
 import { format } from "date-fns";
 
 export class SuitcaseController {
@@ -12,10 +10,8 @@ export class SuitcaseController {
       const currentPage = page ? parseInt(page as string, 10) : 1;
       const itemsPerPage = per_page ? parseInt(per_page as string, 10) : 10;
 
-      // Fix method name to match what's in SuitcaseModel
       const suitcases = await SuitcaseModel.getAllSuitcases();
       
-      // Calculate pagination manually since we're not using getSuitcasesWithPagination
       const startIndex = (currentPage - 1) * itemsPerPage;
       const endIndex = startIndex + itemsPerPage;
       const filteredSuitcases = suitcases.filter(suitcase => {
@@ -126,9 +122,8 @@ export class SuitcaseController {
 
   static async getResellersForSelect() {
     try {
-      // Use ResellerModel directly instead of getAllResellers
-      const { data: resellers } = await ResellerModel.getResellers();
-      return resellers?.map((reseller) => ({
+      const resellers = await ResellerModel.getAllResellers();
+      return resellers.map((reseller) => ({
         value: reseller.id,
         label: reseller.name,
       })) || [];
@@ -142,8 +137,7 @@ export class SuitcaseController {
 
   static async getResellerById(id: string) {
     try {
-      // Use ResellerModel directly instead of getResellerById
-      const { data: reseller } = await ResellerModel.getResellerById(id);
+      const reseller = await ResellerModel.getReseller(id);
       return reseller;
     } catch (error: any) {
       console.error("Erro ao buscar revendedora por ID:", error);
@@ -184,18 +178,16 @@ export class SuitcaseController {
 
       const dateValue = formData.get('next_settlement_date');
       if (dateValue) {
-        const parsedDate = new Date(dateValue as string);
+        const parsedDate = new Date(dateValue.toString());
         if (!isNaN(parsedDate.getTime())) {
           suitcaseData.next_settlement_date = parsedDate.toISOString().split('T')[0];
         }
       }
 
       if (suitcaseId) {
-        // Atualizar maleta existente
         await SuitcaseModel.updateSuitcase(suitcaseId, suitcaseData);
         return { message: "Maleta atualizada com sucesso" };
       } else {
-        // Criar nova maleta
         await SuitcaseModel.createSuitcase(suitcaseData);
         return { message: "Maleta criada com sucesso" };
       }
@@ -204,20 +196,6 @@ export class SuitcaseController {
       throw new Error(
         error.message || "Erro ao manipular formulário da maleta"
       );
-    }
-  }
-
-  // Add missing methods
-  static async updateSuitcaseItemStatus(
-    itemId: string, 
-    status: string, 
-    saleInfo?: any
-  ) {
-    try {
-      return await SuitcaseModel.updateSuitcaseItemStatus(itemId, status as any, saleInfo);
-    } catch (error: any) {
-      console.error("Erro ao atualizar status do item:", error);
-      throw new Error(error.message || "Erro ao atualizar status do item");
     }
   }
 
@@ -259,12 +237,24 @@ export class SuitcaseController {
 
   static async markItemAsSold(inventoryId: string) {
     try {
-      // Update the inventory status
       await InventoryModel.updateInventoryItemStatus(inventoryId, 'sold');
       return { message: "Item marcado como vendido com sucesso" };
     } catch (error: any) {
       console.error("Erro ao marcar item como vendido:", error);
       throw new Error(error.message || "Erro ao marcar item como vendido");
+    }
+  }
+
+  static async updateSuitcaseItemStatus(
+    itemId: string, 
+    status: string, 
+    saleInfo?: any
+  ) {
+    try {
+      return await SuitcaseModel.updateSuitcaseItemStatus(itemId, status as any, saleInfo);
+    } catch (error: any) {
+      console.error("Erro ao atualizar status do item:", error);
+      throw new Error(error.message || "Erro ao atualizar status do item");
     }
   }
 }
