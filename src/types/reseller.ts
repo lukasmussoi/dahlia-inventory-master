@@ -34,5 +34,5 @@ export interface ResellerInput {
   address?: Address;
   status: ResellerStatus;
   promoterId: string;
-  commissionRate?: number;
+  commissionRate?: number | string; // Permitir ambos os tipos para facilitar o tratamento no formulário
 }

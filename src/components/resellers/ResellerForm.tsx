@@ -172,7 +172,7 @@ export function ResellerForm({ resellerId, onSuccess, isDialog = false }: Resell
     let value = e.target.value.replace(',', '.');
     if (value === '' || !isNaN(parseFloat(value))) {
       // Aqui passamos o valor como string, a transformação para número é feita pelo schema
-      form.setValue("commissionRate", value);
+      form.setValue("commissionRate", value as any);
     }
   };
 
