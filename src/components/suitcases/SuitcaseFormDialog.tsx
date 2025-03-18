@@ -66,6 +66,13 @@ export function SuitcaseFormDialog({
     }
   }, [open]);
 
+  // Efeito para carregar dados da revendedora selecionada
+  useEffect(() => {
+    if (sellerId) {
+      loadSellerAddress(sellerId);
+    }
+  }, [sellerId]);
+
   // Gerar novo código de maleta
   const generateNewCode = async () => {
     try {
@@ -91,6 +98,33 @@ export function SuitcaseFormDialog({
     }
   };
 
+  // Carregar endereço da revendedora selecionada
+  const loadSellerAddress = async (sellerId: string) => {
+    try {
+      const seller = await SuitcaseModel.getSellerById(sellerId);
+      
+      if (seller) {
+        // Processar o endereço (pode vir como string JSON ou objeto)
+        let address = seller.address;
+        
+        if (typeof address === 'string') {
+          try {
+            address = JSON.parse(address);
+          } catch (e) {
+            console.error("Erro ao processar endereço JSON:", e);
+            address = {};
+          }
+        }
+        
+        // Definir cidade e bairro com base no endereço da revendedora
+        setCity(address?.city || "");
+        setNeighborhood(address?.neighborhood || "");
+      }
+    } catch (error) {
+      console.error("Erro ao carregar dados da revendedora:", error);
+    }
+  };
+
   // Lidar com o envio do formulário
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,7 +135,7 @@ export function SuitcaseFormDialog({
     }
 
     if (!city || !neighborhood) {
-      toast.error("Cidade e bairro são obrigatórios");
+      toast.error("A revendedora selecionada não possui cidade e bairro cadastrados");
       return;
     }
 
@@ -158,6 +192,16 @@ export function SuitcaseFormDialog({
                   )}
                 </SelectContent>
               </Select>
+              
+              {/* Exibir cidade e bairro (somente leitura) */}
+              {sellerId && city && neighborhood && (
+                <div className="mt-2 text-sm text-pink-500">
+                  <p className="flex items-center">
+                    <span className="font-medium">Localização:</span>
+                    <span className="ml-1">{city} • {neighborhood}</span>
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -172,28 +216,6 @@ export function SuitcaseFormDialog({
                   <SelectItem value="in_replenishment">Aguardando Reposição</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="city">Cidade</Label>
-              <Input
-                id="city"
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                placeholder="Cidade"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="neighborhood">Bairro</Label>
-              <Input
-                id="neighborhood"
-                value={neighborhood}
-                onChange={(e) => setNeighborhood(e.target.value)}
-                placeholder="Bairro"
-                required
-              />
             </div>
           </div>
 
