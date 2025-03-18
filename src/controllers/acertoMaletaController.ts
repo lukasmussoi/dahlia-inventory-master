@@ -2,7 +2,7 @@
 import { AcertoMaletaModel } from "@/models/acertoMaletaModel";
 import { SuitcaseController } from "@/controllers/suitcaseController";
 import { toast } from "sonner";
-import { Acerto, AcertoItem, SuitcaseItem } from "@/types/suitcase";
+import { Acerto, AcertoItem, AcertoStatus, SuitcaseItem } from "@/types/suitcase";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import jsPDF from "jspdf";
@@ -81,7 +81,7 @@ export class AcertoMaletaController {
         next_settlement_date: data.next_settlement_date,
         total_sales: totalVendas,
         commission_amount: comissao,
-        status: 'pendente',
+        status: 'pendente' as AcertoStatus,
         restock_suggestions: sugestoes
       };
       
@@ -156,8 +156,8 @@ export class AcertoMaletaController {
       const itemsVendidos = acerto.items_vendidos || [];
       let totalVendas = 0;
       
-      itemsVendidos.forEach((item, index) => {
-        const preco = typeof item.price === 'number' ? item.price : parseFloat(item.price.toString());
+      itemsVendidos.forEach((item) => {
+        const preco = typeof item.price === 'number' ? item.price : parseFloat(String(item.price));
         totalVendas += preco;
         
         doc.text(item.product?.sku || 'N/A', 15, yPos);
@@ -181,7 +181,12 @@ export class AcertoMaletaController {
       doc.setFontSize(12);
       doc.text(`Total de Vendas: R$ ${acerto.total_sales.toFixed(2)}`, pageWidth - 80, yPos);
       yPos += 10;
-      doc.text(`Comissão (${(acerto.commission_amount / acerto.total_sales * 100).toFixed(0)}%): R$ ${acerto.commission_amount.toFixed(2)}`, pageWidth - 80, yPos);
+      
+      const comissaoPercentual = acerto.total_sales > 0 
+        ? (acerto.commission_amount / acerto.total_sales * 100).toFixed(0)
+        : "0";
+        
+      doc.text(`Comissão (${comissaoPercentual}%): R$ ${acerto.commission_amount.toFixed(2)}`, pageWidth - 80, yPos);
       
       // Assinaturas
       yPos += 30;
@@ -254,7 +259,7 @@ export class AcertoMaletaController {
     }
   }
 
-  static async updateAcertoStatus(acertoId: string, status: 'pendente' | 'concluido') {
+  static async updateAcertoStatus(acertoId: string, status: AcertoStatus) {
     try {
       await AcertoMaletaModel.updateAcerto(acertoId, { status });
       toast.success(`Status do acerto atualizado para ${status}`);

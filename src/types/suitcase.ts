@@ -125,7 +125,7 @@ export interface Acerto {
   restock_suggestions?: any;
   created_at: string;
   updated_at?: string;
-  suitcase?: Suitcase;
+  suitcase?: Partial<Suitcase>;
   seller?: {
     id: string;
     name: string;

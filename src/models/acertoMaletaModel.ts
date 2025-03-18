@@ -1,6 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { Acerto, AcertoItem, SuitcaseItem } from "@/types/suitcase";
+import { Acerto, AcertoItem, AcertoStatus, SuitcaseItem } from "@/types/suitcase";
 
 export class AcertoMaletaModel {
   // Buscar todos os acertos
@@ -24,7 +24,7 @@ export class AcertoMaletaModel {
     
     if (error) throw error;
     
-    return data || [];
+    return data as unknown as Acerto[] || [];
   }
 
   // Buscar acerto pelo ID
@@ -53,7 +53,7 @@ export class AcertoMaletaModel {
       .maybeSingle();
     
     if (error) throw error;
-    return data;
+    return data as unknown as Acerto;
   }
 
   // Buscar itens vendidos de um acerto
@@ -94,12 +94,21 @@ export class AcertoMaletaModel {
           ...item.product,
           photo_url: photoUrl
         } : undefined
-      };
+      } as AcertoItem;
     });
   }
 
   // Criar um novo acerto
-  static async createAcerto(acertoData: Partial<Acerto>): Promise<Acerto> {
+  static async createAcerto(acertoData: {
+    suitcase_id: string;
+    seller_id: string;
+    settlement_date: string;
+    next_settlement_date?: string;
+    total_sales: number;
+    commission_amount: number;
+    status: AcertoStatus;
+    restock_suggestions?: any;
+  }): Promise<Acerto> {
     const { data, error } = await supabase
       .from('acertos_maleta')
       .insert(acertoData)
@@ -109,11 +118,19 @@ export class AcertoMaletaModel {
     if (error) throw error;
     if (!data) throw new Error("Erro ao criar acerto: nenhum dado retornado");
     
-    return data;
+    return data as Acerto;
   }
 
   // Adicionar itens vendidos ao acerto
-  static async addAcertoItems(items: Partial<AcertoItem>[]): Promise<AcertoItem[]> {
+  static async addAcertoItems(items: {
+    acerto_id: string;
+    suitcase_item_id: string;
+    inventory_id: string;
+    price: number;
+    sale_date: string;
+    customer_name?: string;
+    payment_method?: string;
+  }[]): Promise<AcertoItem[]> {
     if (!items.length) return [];
     
     const { data, error } = await supabase
@@ -122,11 +139,19 @@ export class AcertoMaletaModel {
       .select();
     
     if (error) throw error;
-    return data || [];
+    return data as AcertoItem[] || [];
   }
 
   // Atualizar um acerto
-  static async updateAcerto(id: string, acertoData: Partial<Acerto>): Promise<Acerto> {
+  static async updateAcerto(id: string, acertoData: Partial<{
+    settlement_date: string;
+    next_settlement_date?: string;
+    total_sales: number;
+    commission_amount: number;
+    receipt_url?: string;
+    status: AcertoStatus;
+    restock_suggestions?: any;
+  }>): Promise<Acerto> {
     const { data, error } = await supabase
       .from('acertos_maleta')
       .update(acertoData)
@@ -137,7 +162,7 @@ export class AcertoMaletaModel {
     if (error) throw error;
     if (!data) throw new Error("Erro ao atualizar acerto: nenhum dado retornado");
     
-    return data;
+    return data as Acerto;
   }
 
   // Calcular a comissão com base na taxa da revendedora
