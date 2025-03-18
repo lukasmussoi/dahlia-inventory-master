@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import {
   Dialog,
@@ -15,7 +14,7 @@ import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Edit, Printer, Check, Plus, Search, PlusSquare } from "lucide-react";
+import { Edit, Printer, Check, Plus, Search, PlusSquare, List, DollarSign } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { useReactPrint } from "@/hooks/useReactPrint";
 import {
@@ -49,13 +48,11 @@ export function SuitcaseDetailsDialog({
   const [paymentMethods, setPaymentMethods] = useState<Record<string, string>>({});
   const [searchResults, setSearchResults] = useState<any[]>([]);
 
-  // Imprimir conteúdo
   const handlePrint = useReactPrint({
     contentRef: printRef,
     documentTitle: `Maleta ${suitcase?.code || ''}`
   });
 
-  // Buscar itens da maleta
   const {
     data: suitcaseItems = [],
     isLoading: isLoadingItems,
@@ -69,7 +66,6 @@ export function SuitcaseDetailsDialog({
     enabled: !!suitcase?.id && open,
   });
 
-  // Inicializar estados para cada item
   useEffect(() => {
     const initialStatuses: Record<string, SuitcaseItemStatus> = {};
     const initialClientNames: Record<string, string> = {};
@@ -86,7 +82,6 @@ export function SuitcaseDetailsDialog({
     setPaymentMethods(initialPaymentMethods);
   }, [suitcaseItems]);
 
-  // Buscar produtos com base no termo de busca
   const handleSearch = async () => {
     if (!searchTerm || searchTerm.length < 3) {
       toast.info("Digite pelo menos 3 caracteres para buscar");
@@ -102,7 +97,6 @@ export function SuitcaseDetailsDialog({
     }
   };
 
-  // Adicionar item à maleta
   const handleAddItem = async (inventoryId: string) => {
     if (!suitcase) return;
 
@@ -125,10 +119,8 @@ export function SuitcaseDetailsDialog({
     }
   };
 
-  // Atualizar status do item
   const handleUpdateItemStatus = async (itemId: string, status: string, index: number) => {
     try {
-      // Capturar informações adicionais se for uma venda
       let saleInfo = {};
       if (status === 'sold') {
         saleInfo = {
@@ -151,7 +143,6 @@ export function SuitcaseDetailsDialog({
     }
   };
 
-  // Remover item da maleta
   const handleRemoveItem = async (itemId: string) => {
     if (window.confirm("Tem certeza que deseja remover este item da maleta?")) {
       try {
@@ -165,7 +156,6 @@ export function SuitcaseDetailsDialog({
     }
   };
 
-  // Formatar status
   const getStatusLabel = (status: SuitcaseItemStatus) => {
     switch (status) {
       case 'in_possession': return 'Em posse';
@@ -176,12 +166,24 @@ export function SuitcaseDetailsDialog({
     }
   };
 
-  // Formatar data
   const formatDate = (date: string) => {
     return format(new Date(date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
   };
 
-  // Se não houver maleta selecionada, não mostrar nada
+  const calculateSuitcaseSummary = () => {
+    const totalItems = suitcaseItems.length;
+    const totalValue = suitcaseItems.reduce((sum, item) => {
+      return sum + (item.product?.price || 0);
+    }, 0);
+    
+    return {
+      totalItems,
+      totalValue
+    };
+  };
+
+  const suitcaseSummary = calculateSuitcaseSummary();
+
   if (!suitcase) return null;
 
   return (
@@ -210,7 +212,6 @@ export function SuitcaseDetailsDialog({
               <TabsTrigger value="history">Histórico</TabsTrigger>
             </TabsList>
 
-            {/* Aba de Informações */}
             <TabsContent value="info" className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -273,7 +274,6 @@ export function SuitcaseDetailsDialog({
               </div>
             </TabsContent>
 
-            {/* Aba de Itens */}
             <TabsContent value="items" className="space-y-4">
               <div className="flex items-center mb-4 gap-2">
                 <p className="text-lg font-medium">Itens na Maleta</p>
@@ -282,7 +282,6 @@ export function SuitcaseDetailsDialog({
                 </span>
               </div>
               
-              {/* Campo de pesquisa e botão de adicionar */}
               <div className="flex gap-2 mb-4">
                 <div className="relative flex-1">
                   <Input
@@ -300,7 +299,6 @@ export function SuitcaseDetailsDialog({
                 </Button>
               </div>
               
-              {/* Resultados da pesquisa */}
               {searchResults.length > 0 && (
                 <div className="bg-gray-50 p-3 rounded mb-4 border border-gray-200">
                   <h4 className="text-sm font-medium mb-2">Resultados da pesquisa:</h4>
@@ -371,7 +369,6 @@ export function SuitcaseDetailsDialog({
                           </div>
                         </div>
                         
-                        {/* Detalhes de venda */}
                         <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
                           <div>
                             <Label htmlFor={`status-${item.id}`} className="text-xs">
@@ -452,7 +449,6 @@ export function SuitcaseDetailsDialog({
                           )}
                         </div>
                         
-                        {/* Botão de remover */}
                         <Button 
                           variant="ghost"
                           size="sm"
@@ -466,9 +462,39 @@ export function SuitcaseDetailsDialog({
                   )}
                 </div>
               )}
+              
+              <div className="mt-6 border-t border-gray-200 pt-4">
+                <h3 className="text-lg font-medium mb-3">Resumo da Maleta</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <div className="flex items-center">
+                      <div className="bg-pink-100 p-2 rounded-full mr-3">
+                        <List className="h-5 w-5 text-pink-500" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">Total de peças</p>
+                        <p className="text-xl font-bold">{suitcaseSummary.totalItems} itens</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <div className="flex items-center">
+                      <div className="bg-pink-100 p-2 rounded-full mr-3">
+                        <DollarSign className="h-5 w-5 text-pink-500" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">Valor total da maleta</p>
+                        <p className="text-xl font-bold text-pink-600">
+                          R$ {suitcaseSummary.totalValue.toFixed(2).replace('.', ',')}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </TabsContent>
 
-            {/* Aba de Histórico */}
             <TabsContent value="history" className="space-y-4">
               <div className="border-l-2 border-gray-200 pl-4 ml-2 space-y-6">
                 <div className="relative">
@@ -499,7 +525,6 @@ export function SuitcaseDetailsDialog({
                   </div>
                 )}
                 
-                {/* Itens adicionados */}
                 {suitcaseItems.map((item) => (
                   <div key={item.id} className="relative">
                     <div className="absolute -left-6 mt-1">
@@ -519,7 +544,6 @@ export function SuitcaseDetailsDialog({
           </Tabs>
         </div>
         
-        {/* Área de impressão (invisível até o momento da impressão) */}
         <div className="hidden">
           <div ref={printRef}>
             <div className="p-8">
@@ -550,6 +574,12 @@ export function SuitcaseDetailsDialog({
                   ))}
                 </tbody>
               </table>
+              
+              <div className="mt-4 border-t pt-4">
+                <h2 className="text-xl font-semibold mb-3">Resumo</h2>
+                <p>Total de peças: {suitcaseSummary.totalItems} itens</p>
+                <p className="font-bold">Valor total: R$ {suitcaseSummary.totalValue.toFixed(2)}</p>
+              </div>
             </div>
           </div>
         </div>
