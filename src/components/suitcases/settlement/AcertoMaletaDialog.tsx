@@ -35,6 +35,7 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [createdAcertoId, setCreatedAcertoId] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (open && suitcase) {
@@ -116,35 +117,33 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
     if (!suitcase) return;
     
     try {
-      setLoading(true);
+      setIsSubmitting(true);
       
-      const settlementData = {
+      const presentItemIds = scannedItemsIds;
+      
+      const settlementData: SuitcaseSettlementFormData = {
         suitcase_id: suitcase.id,
         seller_id: suitcase.seller_id,
-        settlement_date: settlementDate,
-        next_settlement_date: nextSettlementDate,
-        items_present: scannedItemsIds,
-        items_sold: []
+        settlement_date: new Date(settlementDate),
+        next_settlement_date: nextSettlementDate ? new Date(nextSettlementDate) : undefined,
+        items_present: presentItemIds,
+        items_sold: [] // Array vazio, pois os itens vendidos são calculados automaticamente
       };
       
       const result = await AcertoMaletaController.createAcerto(settlementData);
-      setCreatedAcertoId(result.id);
       
-      setGeneratingPdf(true);
-      const url = await AcertoMaletaController.generateReceiptPDF(result.id);
-      setPdfUrl(url);
-      
-      toast.success("Acerto da maleta concluído com sucesso!");
+      onOpenChange(false);
       
       if (onSuccess) {
         onSuccess();
       }
-    } catch (error) {
+      
+      toast.success("Acerto realizado com sucesso!");
+    } catch (error: any) {
       console.error("Erro ao finalizar acerto:", error);
-      toast.error("Erro ao finalizar acerto da maleta");
+      toast.error(error.message || "Erro ao finalizar acerto");
     } finally {
-      setLoading(false);
-      setGeneratingPdf(false);
+      setIsSubmitting(false);
     }
   };
 

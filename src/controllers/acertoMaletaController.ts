@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
-import { Acerto, AcertoItem, SuitcaseSettlementFormData } from "@/types/suitcase";
+import { Acerto, AcertoItem, SuitcaseSettlementFormData, PhotoUrl } from "@/types/suitcase";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import { SuitcaseController } from "./suitcaseController";
@@ -68,7 +68,7 @@ export const acertoMaletaController = {
       
       if (itemsError) throw itemsError;
       
-      // Para cada produto, pegar apenas a primeira foto
+      // Para cada produto, processar o formato da foto
       const itemsVendidosProcessados = itemsVendidos?.map(item => {
         let product = item.product;
         if (product && Array.isArray(product.photo_url) && product.photo_url.length > 0) {
@@ -93,7 +93,6 @@ export const acertoMaletaController = {
     }
   },
 
-  // Buscar acertos relacionados a uma maleta específica
   async getAcertosBySuitcase(suitcaseId: string) {
     try {
       const { data: acertos, error } = await supabase
@@ -122,7 +121,7 @@ export const acertoMaletaController = {
           
           if (itemsError) throw itemsError;
           
-          // Para cada produto, pegar apenas a primeira foto
+          // Para cada produto, processar o formato da foto
           const itemsVendidosProcessados = itemsVendidos?.map(item => {
             let product = item.product;
             if (product && Array.isArray(product.photo_url) && product.photo_url.length > 0) {
@@ -316,7 +315,6 @@ export const acertoMaletaController = {
     }
   },
   
-  // Adicionar método para atualizar o status de um acerto
   async updateAcertoStatus(acertoId: string, newStatus: 'pendente' | 'concluido'): Promise<Acerto> {
     try {
       const { data, error } = await supabase
@@ -634,7 +632,7 @@ export const acertoMaletaController = {
         const inventoryId = venda.inventory_id;
         
         if (!itemCounts[inventoryId]) {
-          // Para cada produto, pegar apenas a primeira foto
+          // Para cada produto, processar o formato da foto
           let product = venda.product;
           if (product && Array.isArray(product.photo_url) && product.photo_url.length > 0) {
             product = {

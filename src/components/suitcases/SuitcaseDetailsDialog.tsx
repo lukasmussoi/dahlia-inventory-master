@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -33,7 +32,14 @@ import {
   Clock
 } from "lucide-react";
 import { toast } from "sonner";
-import { Suitcase, SuitcaseStatus, SuitcaseItem, Acerto } from "@/types/suitcase";
+import { Suitcase, 
+  SuitcaseStatus, 
+  SuitcaseItem, 
+  Acerto,
+  SuitcaseStatus,
+  SuitcaseItem,
+  Acerto
+} from "@/types/suitcase";
 import { SuitcaseController } from "@/controllers/suitcaseController";
 import { AcertoMaletaController } from "@/controllers/acertoMaletaController";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -72,38 +78,33 @@ export function SuitcaseDetailsDialog({
   );
   const [isPrintDialogOpen, setIsPrintDialogOpen] = useState(false);
 
-  // Atualizar quando o suitcase mudar
   useEffect(() => {
     if (suitcase) {
-      // Resetar o termo de busca quando a maleta muda
       setSearchTerm("");
       setSearchResults([]);
-      // Atualizar a data de próximo acerto se estiver definida
       setNextSettlementDate(
         suitcase.next_settlement_date ? new Date(suitcase.next_settlement_date) : undefined
       );
     }
   }, [suitcase]);
 
-  // Buscar itens da maleta (apenas itens em posse, não os vendidos)
   const { data: suitcaseItems = [], refetch: refetchItems } = useQuery({
     queryKey: ['suitcase-items', suitcase?.id],
     queryFn: async () => {
       if (!suitcase) return [];
       const items = await SuitcaseController.getSuitcaseItems(suitcase.id);
-      // Filtrar apenas itens que não foram vendidos
       return items.filter(item => item.status === 'in_possession');
     },
     enabled: !!suitcase && open,
   });
 
-  // Buscar histórico de acertos da maleta
   const { data: acertosHistorico = [], isLoading: isLoadingAcertos } = useQuery({
     queryKey: ['suitcase-acertos', suitcase?.id],
     queryFn: async () => {
       if (!suitcase) return [];
       try {
-        return await AcertoMaletaController.getAcertosBySuitcase(suitcase.id);
+        const acertos = await AcertoMaletaController.getAcertosBySuitcase(suitcase.id);
+        return acertos as unknown as Acerto[];
       } catch (error) {
         console.error("Erro ao buscar histórico de acertos:", error);
         return [];
@@ -112,7 +113,6 @@ export function SuitcaseDetailsDialog({
     enabled: !!suitcase && open && activeTab === "historico",
   });
 
-  // Buscar informações da promotora responsável pela revendedora
   const { data: promoterInfo, isLoading: loadingPromoterInfo } = useQuery({
     queryKey: ['promoter-for-reseller', suitcase?.seller_id],
     queryFn: () => suitcase?.seller_id 
@@ -121,7 +121,6 @@ export function SuitcaseDetailsDialog({
     enabled: !!suitcase?.seller_id && open,
   });
 
-  // Realizar busca
   const handleSearch = async (e?: React.KeyboardEvent) => {
     if (e && e.key !== 'Enter') return;
     if (!suitcase) return;
@@ -147,7 +146,6 @@ export function SuitcaseDetailsDialog({
     }
   };
 
-  // Adicionar item à maleta
   const handleAddItem = async (inventoryId: string) => {
     if (!suitcase) return;
     
@@ -156,10 +154,8 @@ export function SuitcaseDetailsDialog({
       
       await SuitcaseController.addItemToSuitcase(suitcase.id, inventoryId);
       
-      // Atualizar lista de resultados para remover o item adicionado
       setSearchResults(prevResults => prevResults.filter(item => item.id !== inventoryId));
       
-      // Atualizar a lista de itens da maleta
       refetchItems();
       
       toast.success("Item adicionado à maleta com sucesso");
@@ -171,7 +167,6 @@ export function SuitcaseDetailsDialog({
     }
   };
 
-  // Atualizar status de um item
   const handleToggleSold = async (item: SuitcaseItem, sold: boolean) => {
     try {
       await SuitcaseController.updateSuitcaseItemStatus(
@@ -179,7 +174,6 @@ export function SuitcaseDetailsDialog({
         sold ? 'sold' : 'in_possession'
       );
       
-      // Atualizar a lista de itens
       refetchItems();
       
       toast.success(`Item ${sold ? 'marcado como vendido' : 'marcado como disponível'}`);
@@ -189,7 +183,6 @@ export function SuitcaseDetailsDialog({
     }
   };
 
-  // Atualizar dados de venda
   const handleUpdateSaleInfo = async (itemId: string, field: string, value: string) => {
     try {
       await SuitcaseController.updateSaleInfo(itemId, field, value);
@@ -200,30 +193,24 @@ export function SuitcaseDetailsDialog({
     }
   };
 
-  // Atualizar data do próximo acerto e criar registro de acerto pendente
   const handleUpdateNextSettlementDate = async (date?: Date) => {
     if (!suitcase) return;
     
     try {
       setNextSettlementDate(date);
       
-      // Atualizar a data na maleta
       await SuitcaseController.updateSuitcase(suitcase.id, {
         next_settlement_date: date ? date.toISOString() : null,
       });
       
-      // Se uma data foi definida, criar um acerto pendente
       if (date) {
-        // Criar acerto pendente
         await SuitcaseController.createPendingSettlement(suitcase.id, date);
         toast.success(`Data do próximo acerto definida para ${format(date, 'dd/MM/yyyy', { locale: ptBR })} e acerto pendente criado`);
       } else {
         toast.info("Data do próximo acerto removida");
       }
       
-      // Atualizar a consulta para refletir as mudanças
       queryClient.invalidateQueries({ queryKey: ['suitcase', suitcase.id] });
-      // Invalidar também a lista de acertos
       queryClient.invalidateQueries({ queryKey: ['acertos'] });
     } catch (error: any) {
       console.error("Erro ao atualizar data do próximo acerto:", error);
@@ -231,7 +218,6 @@ export function SuitcaseDetailsDialog({
     }
   };
 
-  // Formatar preço
   const formatPrice = (price: number): string => {
     return new Intl.NumberFormat('pt-BR', { 
       style: 'currency', 
@@ -239,7 +225,6 @@ export function SuitcaseDetailsDialog({
     }).format(price);
   };
 
-  // Calcular valor total da maleta
   const calculateTotalValue = (): number => {
     return suitcaseItems.reduce((total, item) => {
       const price = item.product?.price || 0;
@@ -248,12 +233,10 @@ export function SuitcaseDetailsDialog({
     }, 0);
   };
 
-  // Formatar o endereço da revendedora
   const getSellerName = (): string => {
     return suitcase?.seller?.name || "Revendedora não informada";
   };
 
-  // Fechar o diálogo
   const handleClose = () => {
     onOpenChange(false);
     if (onRefresh) {
@@ -263,17 +246,14 @@ export function SuitcaseDetailsDialog({
     }
   };
 
-  // Abrir diálogo de impressão
   const handlePrint = () => {
     setIsPrintDialogOpen(true);
   };
 
-  // Formatar data
   const formatDate = (dateString: string) => {
     return format(new Date(dateString), "dd/MM/yyyy", { locale: ptBR });
   };
 
-  // Formatar método de pagamento
   const formatPaymentMethod = (method?: string) => {
     if (!method) return "Não informado";
     
@@ -287,17 +267,27 @@ export function SuitcaseDetailsDialog({
     return methods[method] || method;
   };
 
-  // Editar maleta
   const handleEdit = () => {
     if (!suitcase || !onEdit) return;
     
-    // Fechar este diálogo
     onOpenChange(false);
-    
-    // Abrir o diálogo de edição
     setTimeout(() => {
       onEdit(suitcase);
     }, 100);
+  };
+
+  const getProductPhotoUrl = (photoUrl: any): string => {
+    if (!photoUrl) return '';
+    
+    if (typeof photoUrl === 'string') {
+      return photoUrl;
+    }
+    
+    if (Array.isArray(photoUrl) && photoUrl.length > 0) {
+      return photoUrl[0]?.photo_url || '';
+    }
+    
+    return '';
   };
 
   if (!suitcase) return null;
@@ -658,7 +648,7 @@ export function SuitcaseDetailsDialog({
                     <p className="text-sm text-muted-foreground">Os acertos realizados serão exibidos aqui</p>
                   </div>
                 ) : (
-                  acertosHistorico.map((acerto: Acerto) => (
+                  acertosHistorico.map((acerto) => (
                     <Card key={acerto.id} className="mb-4">
                       <CardHeader className="pb-2">
                         <div className="flex justify-between items-start">
@@ -761,7 +751,6 @@ export function SuitcaseDetailsDialog({
         </DialogContent>
       </Dialog>
 
-      {/* Diálogo de impressão separado */}
       <SuitcasePrintDialog
         open={isPrintDialogOpen}
         onOpenChange={setIsPrintDialogOpen}

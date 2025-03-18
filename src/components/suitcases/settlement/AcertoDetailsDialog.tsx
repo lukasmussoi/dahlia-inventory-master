@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Acerto, AcertoItem } from "@/types/suitcase";
+import { Acerto, AcertoItem, PhotoUrl } from "@/types/suitcase";
 import { AcertoMaletaController } from "@/controllers/acertoMaletaController";
 import { Printer, ShoppingBag, AlertCircle, CheckCircle2 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -37,7 +37,7 @@ export function AcertoDetailsDialog({ open, onOpenChange, acerto, onRefresh }: A
     try {
       setLoading(true);
       const details = await AcertoMaletaController.getAcertoById(acertoId);
-      setAcertoDetails(details);
+      setAcertoDetails(details as Acerto);
     } catch (error) {
       console.error("Erro ao carregar detalhes do acerto:", error);
       toast.error("Erro ao carregar detalhes do acerto");
@@ -93,6 +93,21 @@ export function AcertoDetailsDialog({ open, onOpenChange, acerto, onRefresh }: A
   const formatDate = (dateString?: string) => {
     if (!dateString) return '-';
     return format(new Date(dateString), "dd/MM/yyyy", { locale: ptBR });
+  };
+
+  // Função auxiliar para obter a URL da foto do produto
+  const getProductPhotoUrl = (photoUrl: string | PhotoUrl[] | undefined): string => {
+    if (!photoUrl) return '';
+    
+    if (typeof photoUrl === 'string') {
+      return photoUrl;
+    }
+    
+    if (Array.isArray(photoUrl) && photoUrl.length > 0) {
+      return photoUrl[0].photo_url;
+    }
+    
+    return '';
   };
   
   // Verificar se há uma próxima data de acerto definida
@@ -241,7 +256,7 @@ export function AcertoDetailsDialog({ open, onOpenChange, acerto, onRefresh }: A
                                 <div className="flex items-center gap-3">
                                   {item.product?.photo_url ? (
                                     <img 
-                                      src={item.product.photo_url} 
+                                      src={getProductPhotoUrl(item.product.photo_url)} 
                                       alt={item.product.name}
                                       className="h-10 w-10 rounded object-cover"
                                     />

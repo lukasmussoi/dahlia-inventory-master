@@ -29,9 +29,14 @@ export interface SuitcaseItem {
     sku: string;
     name: string;
     price: number;
-    photo_url?: string;
+    photo_url?: string | PhotoUrl[];
   };
   sales?: SuitcaseItemSale[];
+}
+
+// Interface para facilitar o tratamento de photo_url
+export interface PhotoUrl {
+  photo_url: string;
 }
 
 export interface SuitcaseItemWithSales extends SuitcaseItem {
@@ -57,14 +62,7 @@ export interface Suitcase {
     name: string;
     phone?: string;
     commission_rate?: number;
-    address?: {
-      city?: string;
-      neighborhood?: string;
-      street?: string;
-      number?: string;
-      state?: string;
-      zipCode?: string;
-    } | string; // Permitir string e objeto como tipos válidos
+    address?: any; // Permitir qualquer tipo para address (string, object, number, null)
   };
 }
 
@@ -109,7 +107,7 @@ export interface AcertoItem {
     name: string;
     sku: string;
     price: number;
-    photo_url?: string | { photo_url: string }[]; // Permitir ambos os formatos
+    photo_url?: string | PhotoUrl[]; // Permitir ambos os formatos
   };
 }
 
@@ -131,6 +129,7 @@ export interface Acerto {
     id: string;
     name: string;
     commission_rate?: number;
+    address?: any; // Permitir qualquer tipo para address
   };
   items_vendidos?: AcertoItem[];
 }
