@@ -36,11 +36,20 @@ export function InventoryContent({ isAdmin }: InventoryContentProps) {
   // Função para abrir o modal de edição de item
   const handleEditItem = async (item: InventoryItem) => {
     try {
-      const isInSuitcase = await InventoryModel.checkItemInSuitcase(item.id);
-      if (isInSuitcase) {
-        toast.error("Este item está vinculado a uma maleta ativa e não pode ser editado.");
-        return;
+      // Verificar se o item está em uma maleta ativa (não devolvida)
+      const suitcaseInfo = await InventoryModel.checkItemInSuitcase(item.id);
+      
+      if (suitcaseInfo) {
+        // Verifica se a maleta está em uso (não foi devolvida)
+        const isActiveCase = suitcaseInfo.status === 'in_use' || 
+                             suitcaseInfo.status === 'in_replenishment';
+        
+        if (isActiveCase) {
+          toast.error("Este item está vinculado a uma maleta ativa e não pode ser editado. Devolva a maleta primeiro.");
+          return;
+        }
       }
+      
       setSelectedItem(item);
       setIsItemModalOpen(true);
     } catch (error) {
@@ -68,10 +77,17 @@ export function InventoryContent({ isAdmin }: InventoryContentProps) {
   // Função para deletar um item
   const handleDeleteItem = async (id: string) => {
     try {
-      const isInSuitcase = await InventoryModel.checkItemInSuitcase(id);
-      if (isInSuitcase) {
-        toast.error("Este item está vinculado a uma maleta ativa e não pode ser removido.");
-        return;
+      const suitcaseInfo = await InventoryModel.checkItemInSuitcase(id);
+      
+      if (suitcaseInfo) {
+        // Verifica se a maleta está em uso (não foi devolvida)
+        const isActiveCase = suitcaseInfo.status === 'in_use' || 
+                            suitcaseInfo.status === 'in_replenishment';
+        
+        if (isActiveCase) {
+          toast.error("Este item está vinculado a uma maleta ativa e não pode ser removido. Devolva a maleta primeiro.");
+          return;
+        }
       }
 
       if (window.confirm("Tem certeza que deseja excluir este item?")) {

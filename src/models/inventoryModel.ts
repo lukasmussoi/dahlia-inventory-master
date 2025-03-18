@@ -310,15 +310,43 @@ export class InventoryModel {
   }
 
   // Verificar se um item está em uso em alguma maleta
-  static async checkItemInSuitcase(itemId: string): Promise<boolean> {
-    const { count, error } = await supabase
-      .from('suitcase_items')
-      .select('*', { count: 'exact', head: true })
-      .eq('inventory_id', itemId);
-    
-    if (error) throw error;
-    
-    return (count || 0) > 0;
+  static async checkItemInSuitcase(itemId: string): Promise<any> {
+    try {
+      const { data, error } = await supabase
+        .from('suitcase_items')
+        .select(`
+          id,
+          suitcase_id,
+          suitcases:suitcase_id (
+            id,
+            code,
+            status,
+            seller_id,
+            resellers:seller_id (
+              name
+            )
+          )
+        `)
+        .eq('inventory_id', itemId)
+        .eq('status', 'in_possession')
+        .maybeSingle();
+      
+      if (error) throw error;
+      
+      if (!data) return null;
+      
+      return {
+        id: data.id,
+        suitcase_id: data.suitcase_id,
+        status: data.suitcases?.status,
+        suitcase_code: data.suitcases?.code,
+        seller_id: data.suitcases?.seller_id,
+        seller_name: data.suitcases?.resellers?.name
+      };
+    } catch (error) {
+      console.error("Erro ao verificar se item está em maleta:", error);
+      throw error;
+    }
   }
 
   // CATEGORIAS

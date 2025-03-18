@@ -1,3 +1,4 @@
+
 import { InventoryModel } from "@/models/inventoryModel";
 import { SuitcaseController } from "./suitcaseController";
 
@@ -124,14 +125,17 @@ export const InventoryController = {
   // Verificar se um item está em uma maleta
   async checkItemInSuitcase(inventoryId: string) {
     try {
-      const suitcaseInfo = await SuitcaseController.getItemSuitcaseInfo(inventoryId);
+      const suitcaseInfo = await InventoryModel.checkItemInSuitcase(inventoryId);
       return {
         inSuitcase: !!suitcaseInfo,
+        isActiveCase: suitcaseInfo ? 
+          (suitcaseInfo.status === 'in_use' || suitcaseInfo.status === 'in_replenishment') : 
+          false,
         suitcaseInfo: suitcaseInfo
       };
     } catch (error) {
       console.error("Erro ao verificar se item está em maleta:", error);
-      return { inSuitcase: false };
+      return { inSuitcase: false, isActiveCase: false };
     }
   }
 };
