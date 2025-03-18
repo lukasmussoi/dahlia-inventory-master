@@ -1,287 +1,271 @@
-
-import { useState, useMemo } from "react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { Suitcase, SuitcaseItem, SuitcaseItemStatus } from "@/types/suitcase";
-import { SuitcaseModel } from "@/models/suitcaseModel";
-import { SuitcaseController } from "@/controllers/suitcaseController";
-import { SuitcaseFormDialog } from "@/components/suitcases/SuitcaseFormDialog";
-import { SuitcaseDetailsDialog } from "@/components/suitcases/SuitcaseDetailsDialog";
-import { SuitcasePrintDialog } from "@/components/suitcases/SuitcasePrintDialog";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
-import { useQuery } from "@tanstack/react-query";
-import { Eye, Printer, Edit, Trash2, MoreVertical, MapPin, Calculator } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger
-} from "@/components/ui/dropdown-menu";
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Plus, Edit, Trash, Printer } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Suitcase } from "@/types/suitcase";
+import { deleteSuitcase } from "@/services/suitcaseService";
+import { toast } from "sonner";
+import { MoreDropdown } from "@/components/ui/more-dropdown";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { SuitcaseForm } from "./SuitcaseForm";
+import { SearchBar } from "@/components/ui/search-bar";
+import {
+  Pagination,
+  usePagination,
+} from "@/components/ui/pagination";
+import { cn } from "@/lib/utils";
+import { SuitcaseItem } from "@/types/suitcase";
+import { getSuitcaseItems } from "@/services/suitcaseItemService";
+import { SuitcasePrintDialog } from "./SuitcasePrintDialog";
+import { promoterController } from "@/controllers/promoterController";
 
 interface SuitcaseGridProps {
-  suitcases: Suitcase[];
-  isAdmin?: boolean;
-  onRefresh: () => void;
-  onOpenAcertoDialog?: (suitcase: Suitcase) => void;
+  initialData: Suitcase[];
 }
 
-export function SuitcaseGrid({ suitcases, isAdmin, onRefresh, onOpenAcertoDialog }: SuitcaseGridProps) {
-  const [showSuitcaseFormDialog, setShowSuitcaseFormDialog] = useState(false);
-  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
-  const [showPrintDialog, setShowPrintDialog] = useState(false);
+export function SuitcaseGrid({ initialData }: SuitcaseGridProps) {
+  const router = useRouter();
+  const [data, setData] = useState<Suitcase[]>(initialData);
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedSuitcase, setSelectedSuitcase] = useState<Suitcase | null>(null);
-  const [suitcaseItemsForPrint, setSuitcaseItemsForPrint] = useState<SuitcaseItem[]>([]);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [suitcaseItems, setSuitcaseItems] = useState<SuitcaseItem[]>([]);
+  const [printDialogOpen, setPrintDialogOpen] = useState(false);
+  const [promoterInfo, setPromoterInfo] = useState<any>(null);
 
-  // Buscar todas as contagens de itens para todas as maletas de uma vez
-  // em vez de dentro do loop de renderização
-  const suitcaseIds = useMemo(() => suitcases.map(suitcase => suitcase.id), [suitcases]);
-  
-  const { data: allSuitcaseItems = {} } = useQuery({
-    queryKey: ['all-suitcase-items', suitcaseIds.join(',')],
-    queryFn: async () => {
-      if (suitcaseIds.length === 0) return {};
-      
-      const result: Record<string, SuitcaseItem[]> = {};
-      await Promise.all(
-        suitcaseIds.map(async (id) => {
-          try {
-            const items = await SuitcaseModel.getSuitcaseItems(id);
-            result[id] = items;
-          } catch (error) {
-            console.error(`Erro ao buscar itens da maleta ${id}:`, error);
-            result[id] = [];
-          }
-        })
-      );
-      return result;
-    },
-    enabled: suitcaseIds.length > 0,
+  // Pagination
+  const {
+    currentPage,
+    itemsPerPage,
+    totalItems,
+    setCurrentPage,
+    setVisibleRange,
+  } = usePagination({
+    initialItemsPerPage: 10,
+    initialTotalItems: data.length,
   });
 
-  // Abrir modal de edição
-  const handleEdit = (suitcase: Suitcase) => {
-    setSelectedSuitcase(suitcase);
-    setShowSuitcaseFormDialog(true);
+  const paginatedData = data.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  useEffect(() => {
+    setVisibleRange();
+  }, [currentPage, itemsPerPage, setVisibleRange]);
+
+  const onSearch = (text: string) => {
+    setSearchQuery(text);
   };
 
-  // Abrir modal de detalhes
-  const handleViewDetails = (suitcase: Suitcase) => {
-    setSelectedSuitcase(suitcase);
-    setShowDetailsDialog(true);
-  };
+  const filteredData = searchQuery
+    ? data.filter((suitcase) =>
+        suitcase.code.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : data;
 
-  // Abrir modal de impressão
-  const handlePrint = async (suitcase: Suitcase) => {
-    setSelectedSuitcase(suitcase);
+  useEffect(() => {
+    // Update pagination when data changes
+    setCurrentPage(1);
+  }, [filteredData, setCurrentPage]);
+
+  const handleDelete = async () => {
+    if (!selectedSuitcase) return;
+
     try {
-      const items = await SuitcaseModel.getSuitcaseItems(suitcase.id);
-      setSuitcaseItemsForPrint(items);
-      setShowPrintDialog(true);
+      await deleteSuitcase(selectedSuitcase.id);
+      setData(data.filter((suitcase) => suitcase.id !== selectedSuitcase.id));
+      toast.success("Maleta excluída com sucesso!");
     } catch (error) {
-      console.error("Erro ao carregar itens da maleta para impressão:", error);
-      toast.error("Erro ao carregar itens da maleta para impressão");
+      console.error("Erro ao excluir maleta:", error);
+      toast.error("Erro ao excluir maleta. Tente novamente.");
+    } finally {
+      setIsDeleteDialogOpen(false);
+      setSelectedSuitcase(null);
+      router.refresh();
     }
   };
 
-  // Realizar acerto da maleta
-  const handleSettlement = (suitcase: Suitcase) => {
-    if (onOpenAcertoDialog) {
-      onOpenAcertoDialog(suitcase);
-    }
+  const handleEditClick = (suitcase: Suitcase) => {
+    setSelectedSuitcase(suitcase);
+    setIsEditDialogOpen(true);
   };
 
-  // Excluir maleta
-  const handleDelete = async (suitcase: Suitcase) => {
-    if (window.confirm(`Tem certeza que deseja excluir a maleta ${suitcase.code}?`)) {
+  const handleDeleteClick = (suitcase: Suitcase) => {
+    setSelectedSuitcase(suitcase);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handlePrintClick = async (suitcase: Suitcase) => {
+    setSelectedSuitcase(suitcase);
+    setPrintDialogOpen(true);
+
+    try {
+      const items = await getSuitcaseItems(suitcase.id);
+      setSuitcaseItems(items);
+    } catch (error) {
+      console.error("Erro ao buscar itens da maleta:", error);
+      toast.error("Erro ao buscar itens da maleta");
+    }
+
+    // Buscar informações da promotora associada à revendedora da maleta
+    if (suitcase.seller_id) {
       try {
-        await SuitcaseController.deleteSuitcase(suitcase.id);
-        toast.success("Maleta excluída com sucesso");
-        onRefresh();
-      } catch (error: any) {
-        console.error("Erro ao excluir maleta:", error);
-        toast.error(error.message || "Erro ao excluir maleta");
+        const promoter = await promoterController.getPromoterByResellerId(suitcase.seller_id);
+        setPromoterInfo(promoter);
+      } catch (error) {
+        console.error("Erro ao buscar informações da promotora:", error);
+        toast.error("Erro ao buscar informações da promotora");
+        setPromoterInfo(null);
       }
+    } else {
+      setPromoterInfo(null);
     }
   };
 
-  // Atualizar maleta
-  const handleUpdateSuitcase = async (data: any) => {
-    try {
-      if (!selectedSuitcase) return;
-      
-      await SuitcaseController.updateSuitcase(selectedSuitcase.id, data);
-      toast.success("Maleta atualizada com sucesso");
-      setShowSuitcaseFormDialog(false);
-      onRefresh();
-    } catch (error) {
-      console.error("Erro ao atualizar maleta:", error);
-      toast.error("Erro ao atualizar maleta");
-    }
+  const onClose = () => {
+    setIsEditDialogOpen(false);
+    setSelectedSuitcase(null);
+    router.refresh();
   };
-
-  // Formatar status para exibição
-  const formatStatus = (status: string) => {
-    switch (status) {
-      case 'in_use': return { text: 'Em uso', className: 'bg-green-100 text-green-800' };
-      case 'returned': return { text: 'Devolvida', className: 'bg-blue-100 text-blue-800' };
-      case 'in_replenishment': return { text: 'Aguardando Reposição', className: 'bg-orange-100 text-orange-800' };
-      default: return { text: status, className: 'bg-gray-100 text-gray-800' };
-    }
-  };
-
-  // Formatar data
-  const formatDate = (dateString: string) => {
-    return format(new Date(dateString), "yyyy-MM-dd", { locale: ptBR });
-  };
-
-  // Verificar se há maletas para exibir
-  if (suitcases.length === 0) {
-    return (
-      <div className="text-center py-10">
-        <h3 className="text-lg font-medium text-gray-900">Nenhuma maleta encontrada</h3>
-        <p className="mt-1 text-sm text-gray-500">
-          Crie uma nova maleta para começar a gerenciar seus produtos.
-        </p>
-      </div>
-    );
-  }
 
   return (
     <div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {suitcases.map((suitcase) => {
-          // Obter a contagem de itens a partir do resultado da consulta
-          const suitcaseItems = allSuitcaseItems[suitcase.id] || [];
-          
-          // Formatar status
-          const status = formatStatus(suitcase.status);
-          
-          // Data da última atualização
-          const lastUpdate = formatDate(suitcase.updated_at || suitcase.created_at);
-
-          // Informações de localização da maleta
-          const hasLocation = suitcase.city && suitcase.neighborhood;
-          
-          return (
-            <Card key={suitcase.id} className="overflow-hidden border border-gray-200">
-              <div className="p-4">
-                <div className="flex justify-between items-start mb-2">
-                  <div className="flex items-center">
-                    <svg className="w-5 h-5 mr-2 text-pink-500" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M20 7H4C2.89543 7 2 7.89543 2 9V17C2 18.1046 2.89543 19 4 19H20C21.1046 19 22 18.1046 22 17V9C22 7.89543 21.1046 7 20 7Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M12 12H12.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M16 7V5C16 3.89543 15.1046 3 14 3H10C8.89543 3 8 3.89543 8 5V7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                    <h3 className="text-lg font-bold">{suitcase.code}</h3>
-                  </div>
-                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${status.className}`}>
-                    {status.text}
-                  </span>
-                </div>
-                
-                <h4 className="text-base font-semibold mb-1">{suitcase.seller?.name || "Sem revendedora"}</h4>
-                
-                {/* Exibir cidade e bairro */}
-                {hasLocation && (
-                  <p className="text-sm text-pink-500 mb-2 flex items-center">
-                    <MapPin className="h-3.5 w-3.5 mr-1" />
-                    {suitcase.city} • {suitcase.neighborhood}
-                  </p>
-                )}
-                
-                <div className="mt-2">
-                  <p className="text-sm text-gray-500 mb-1">
-                    {suitcaseItems.length} itens na maleta
-                  </p>
-                  <p className="text-xs text-gray-400">
-                    Última atualização: {lastUpdate}
-                  </p>
-                </div>
-                
-                <div className="mt-3 flex justify-between">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="gap-1"
-                    onClick={() => handleViewDetails(suitcase)}
-                  >
-                    <Eye className="h-4 w-4" />
-                    Detalhes
-                  </Button>
-                  
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handlePrint(suitcase)}>
-                        <Printer className="h-4 w-4 mr-2" />
-                        Imprimir
-                      </DropdownMenuItem>
-                      
-                      {/* Opção de acerto só aparece para maletas em uso */}
-                      {suitcase.status === 'in_use' && (
-                        <DropdownMenuItem onClick={() => handleSettlement(suitcase)}>
-                          <Calculator className="h-4 w-4 mr-2" />
-                          Realizar Acerto
-                        </DropdownMenuItem>
-                      )}
-                      
-                      {isAdmin && (
-                        <>
-                          <DropdownMenuItem onClick={() => handleEdit(suitcase)}>
-                            <Edit className="h-4 w-4 mr-2" />
-                            Editar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            className="text-red-600"
-                            onClick={() => handleDelete(suitcase)}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Excluir
-                          </DropdownMenuItem>
-                        </>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </div>
-            </Card>
-          );
-        })}
+      <div className="flex items-center justify-between">
+        <SearchBar onSearch={onSearch} placeholder="Buscar maleta..." />
+        <Button onClick={() => router.push("/suitcases/new")}>
+          <Plus className="mr-2 h-4 w-4" />
+          Nova Maleta
+        </Button>
       </div>
 
-      {/* Modal de Edição */}
-      <SuitcaseFormDialog
-        open={showSuitcaseFormDialog}
-        onOpenChange={setShowSuitcaseFormDialog}
-        onSubmit={handleUpdateSuitcase}
-        suitcase={selectedSuitcase}
-        mode="edit"
-      />
+      <div className="border rounded-md mt-4 overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Código</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Revendedor</TableHead>
+              <TableHead className="text-right">Ações</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {paginatedData.map((suitcase) => (
+              <TableRow key={suitcase.id}>
+                <TableCell>{suitcase.code}</TableCell>
+                <TableCell>{suitcase.status}</TableCell>
+                <TableCell>{suitcase.seller?.name || "—"}</TableCell>
+                <TableCell className="text-right">
+                  <MoreDropdown>
+                    <button
+                      onClick={() => handleEditClick(suitcase)}
+                      className="flex items-center space-x-2 hover:bg-gray-100 px-3 py-1.5 rounded-md text-sm"
+                    >
+                      <Edit className="h-4 w-4" />
+                      <span>Editar</span>
+                    </button>
+                    <button
+                      onClick={() => handleDeleteClick(suitcase)}
+                      className="flex items-center space-x-2 hover:bg-gray-100 px-3 py-1.5 rounded-md text-sm"
+                    >
+                      <Trash className="h-4 w-4" />
+                      <span>Excluir</span>
+                    </button>
+                    <button
+                      onClick={() => handlePrintClick(suitcase)}
+                      className="flex items-center space-x-2 hover:bg-gray-100 px-3 py-1.5 rounded-md text-sm"
+                    >
+                      <Printer className="h-4 w-4" />
+                      <span>Imprimir</span>
+                    </button>
+                  </MoreDropdown>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
 
-      {/* Modal de Detalhes */}
-      <SuitcaseDetailsDialog
-        open={showDetailsDialog}
-        onOpenChange={setShowDetailsDialog}
-        suitcase={selectedSuitcase}
-        onOpenAcertoDialog={onOpenAcertoDialog}
-        onRefresh={onRefresh}
-        isAdmin={isAdmin}
-        onEdit={handleEdit}
-      />
+      <div className={cn("flex items-center justify-between py-4", data.length === 0 && "hidden")}>
+        <div className="flex-1 text-sm text-muted-foreground">
+          {totalItems > 0 ? `${setVisibleRange().start} - ${setVisibleRange().end} de ${totalItems} ` : "Nenhum resultado encontrado"}
+        </div>
+        {data.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            itemsPerPage={itemsPerPage}
+            totalItems={totalItems}
+            onPageChange={setCurrentPage}
+          />
+        )}
+      </div>
 
-      {/* Modal de Impressão */}
-      <SuitcasePrintDialog
-        open={showPrintDialog}
-        onOpenChange={setShowPrintDialog}
-        suitcase={selectedSuitcase}
-        suitcaseItems={suitcaseItemsForPrint}
-      />
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Editar Maleta</DialogTitle>
+          </DialogHeader>
+          {selectedSuitcase ? (
+            <SuitcaseForm suitcase={selectedSuitcase} onClose={onClose} />
+          ) : (
+            <div>Carregando...</div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Alert Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação irá excluir a maleta permanentemente. Tem certeza que
+              deseja continuar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>Excluir</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {selectedSuitcase && (
+        <SuitcasePrintDialog
+          open={printDialogOpen}
+          onOpenChange={setPrintDialogOpen}
+          suitcase={selectedSuitcase}
+          suitcaseItems={suitcaseItems}
+          promoterInfo={promoterInfo}
+        />
+      )}
     </div>
   );
 }
