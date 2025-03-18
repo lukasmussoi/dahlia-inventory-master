@@ -4,6 +4,7 @@ import { Acerto, AcertoItem, SuitcaseSettlementFormData, PhotoUrl } from "@/type
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import { SuitcaseController } from "./suitcaseController";
+import { getProductPhotoUrl } from "@/utils/photoUtils";
 
 export const acertoMaletaController = {
   async getAllAcertos(filters?: any) {
@@ -74,7 +75,7 @@ export const acertoMaletaController = {
         if (product && Array.isArray(product.photo_url) && product.photo_url.length > 0) {
           product = {
             ...product,
-            photo_url: product.photo_url[0]?.photo_url
+            photo_url: product.photo_url
           };
         }
         return {
@@ -127,7 +128,7 @@ export const acertoMaletaController = {
             if (product && Array.isArray(product.photo_url) && product.photo_url.length > 0) {
               product = {
                 ...product,
-                photo_url: product.photo_url[0]?.photo_url
+                photo_url: product.photo_url
               };
             }
             return {
@@ -637,7 +638,7 @@ export const acertoMaletaController = {
           if (product && Array.isArray(product.photo_url) && product.photo_url.length > 0) {
             product = {
               ...product,
-              photo_url: product.photo_url[0]?.photo_url
+              photo_url: product.photo_url
             };
           }
           

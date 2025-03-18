@@ -32,13 +32,12 @@ import {
   Clock
 } from "lucide-react";
 import { toast } from "sonner";
-import { Suitcase, 
+import { 
+  Suitcase, 
   SuitcaseStatus, 
   SuitcaseItem, 
   Acerto,
-  SuitcaseStatus,
-  SuitcaseItem,
-  Acerto
+  PhotoUrl
 } from "@/types/suitcase";
 import { SuitcaseController } from "@/controllers/suitcaseController";
 import { AcertoMaletaController } from "@/controllers/acertoMaletaController";
@@ -47,6 +46,7 @@ import { cn } from "@/lib/utils";
 import { SuitcasePrintDialog } from "./SuitcasePrintDialog";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getProductPhotoUrl } from "@/utils/photoUtils";
 
 interface SuitcaseDetailsDialogProps {
   open: boolean;

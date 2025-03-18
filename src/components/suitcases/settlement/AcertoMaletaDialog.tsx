@@ -16,6 +16,8 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { SuitcaseSettlementFormData } from "@/types/suitcase";
+import { getProductPhotoUrl } from "@/utils/photoUtils";
 
 interface AcertoMaletaDialogProps {
   open: boolean;
@@ -119,18 +121,21 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
     try {
       setIsSubmitting(true);
       
-      const presentItemIds = scannedItemsIds;
-      
-      const settlementData: SuitcaseSettlementFormData = {
+      const formData: SuitcaseSettlementFormData = {
         suitcase_id: suitcase.id,
         seller_id: suitcase.seller_id,
-        settlement_date: new Date(settlementDate),
-        next_settlement_date: nextSettlementDate ? new Date(nextSettlementDate) : undefined,
-        items_present: presentItemIds,
-        items_sold: [] // Array vazio, pois os itens vendidos são calculados automaticamente
+        settlement_date: selectedDate,
+        next_settlement_date: nextSettlementDate,
+        items_present: scannedItemsIds,
+        items_sold: [] // Array vazio para items_sold, serão detectados pelo backend
       };
       
-      const result = await AcertoMaletaController.createAcerto(settlementData);
+      const result = await AcertoMaletaController.createAcerto(formData);
+      
+      toast.success("Acerto da maleta realizado com sucesso!");
+      
+      queryClient.invalidateQueries({ queryKey: ['suitcases'] });
+      queryClient.invalidateQueries({ queryKey: ['acertos'] });
       
       onOpenChange(false);
       
@@ -138,10 +143,9 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
         onSuccess();
       }
       
-      toast.success("Acerto realizado com sucesso!");
     } catch (error: any) {
-      console.error("Erro ao finalizar acerto:", error);
-      toast.error(error.message || "Erro ao finalizar acerto");
+      console.error("Erro ao realizar acerto:", error);
+      toast.error(error.message || "Erro ao realizar acerto da maleta");
     } finally {
       setIsSubmitting(false);
     }
@@ -379,9 +383,9 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
                                       <div className="flex-shrink-0 h-10 w-10">
                                         {item.product?.photo_url ? (
                                           <img
-                                            className="h-10 w-10 rounded-full object-cover"
-                                            src={item.product.photo_url}
-                                            alt={item.product.name}
+                                            src={getProductPhotoUrl(item.product?.photo_url)} 
+                                            alt={item.product?.name || "Produto"} 
+                                            className="w-full h-full object-cover rounded-md" 
                                           />
                                         ) : (
                                           <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">

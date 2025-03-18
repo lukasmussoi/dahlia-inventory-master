@@ -1,4 +1,3 @@
-
 import { useRef } from "react";
 import { Suitcase, SuitcaseItem } from "@/types/suitcase";
 import { format } from "date-fns";
@@ -13,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { useReactPrint } from "@/hooks/useReactPrint";
 import { Printer, Package } from "lucide-react";
+import { getProductPhotoUrl } from "@/utils/photoUtils";
 
 interface SuitcasePrintDialogProps {
   open: boolean;
@@ -31,7 +31,6 @@ export function SuitcasePrintDialog({
 }: SuitcasePrintDialogProps) {
   const printRef = useRef<HTMLDivElement>(null);
 
-  // Usar o hook personalizado para impressão
   const handlePrint = useReactPrint({
     contentRef: printRef,
     pageStyle: `
@@ -74,7 +73,6 @@ export function SuitcasePrintDialog({
     return format(new Date(date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
   };
 
-  // Formatar preço
   const formatPrice = (price: number): string => {
     return new Intl.NumberFormat('pt-BR', { 
       style: 'currency', 
@@ -161,7 +159,11 @@ export function SuitcasePrintDialog({
                   <div className="flex">
                     <div className="w-16 h-16 bg-gray-100 rounded-md mr-3 flex-shrink-0 item-image">
                       {item.product?.photo_url ? (
-                        <img src={item.product.photo_url} alt={item.product?.name} className="w-full h-full object-cover rounded-md" />
+                        <img 
+                          src={getProductPhotoUrl(item.product?.photo_url)} 
+                          alt={item.product?.name} 
+                          className="w-full h-full object-cover rounded-md" 
+                        />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-gray-400">
                           <Package className="h-8 w-8" />
