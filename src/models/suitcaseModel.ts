@@ -326,28 +326,42 @@ export class SuitcaseModel {
   static async updateSuitcase(id: string, updates: Partial<Suitcase>): Promise<Suitcase> {
     if (!id) throw new Error("ID da maleta é necessário");
     
-    const { data, error } = await supabase
-      .from('suitcases')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .maybeSingle();
-    
-    if (error) throw error;
-    if (!data) throw new Error("Erro ao atualizar maleta: nenhum dado retornado");
-    
-    return {
-      id: data.id,
-      code: data.code || '',
-      seller_id: data.seller_id,
-      status: data.status as SuitcaseStatus,
-      city: data.city,
-      neighborhood: data.neighborhood,
-      created_at: data.created_at,
-      updated_at: data.updated_at,
-      next_settlement_date: data.next_settlement_date,
-      sent_at: data.sent_at
-    };
+    try {
+      // Remover campos que não devem ser enviados ao banco
+      const cleanUpdates = { ...updates };
+      // Remover campos calculados ou relacionamentos que não existem na tabela
+      if ('seller' in cleanUpdates) delete cleanUpdates.seller;
+      
+      const { data, error } = await supabase
+        .from('suitcases')
+        .update(cleanUpdates)
+        .eq('id', id)
+        .select()
+        .maybeSingle();
+      
+      if (error) {
+        console.error("Erro ao atualizar maleta:", error);
+        throw error;
+      }
+      
+      if (!data) throw new Error("Erro ao atualizar maleta: nenhum dado retornado");
+      
+      return {
+        id: data.id,
+        code: data.code || '',
+        seller_id: data.seller_id,
+        status: data.status as SuitcaseStatus,
+        city: data.city,
+        neighborhood: data.neighborhood,
+        created_at: data.created_at,
+        updated_at: data.updated_at,
+        next_settlement_date: data.next_settlement_date,
+        sent_at: data.sent_at
+      };
+    } catch (error) {
+      console.error("Erro detalhado ao atualizar maleta:", error);
+      throw error;
+    }
   }
 
   // Excluir maleta

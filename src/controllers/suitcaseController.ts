@@ -1,3 +1,4 @@
+
 import { SuitcaseModel } from "@/models/suitcaseModel";
 import { SuitcaseItemStatus, InventoryItemSuitcaseInfo } from "@/types/suitcase";
 import { acertoMaletaController } from "@/controllers/acertoMaletaController";
@@ -42,6 +43,14 @@ export const suitcaseController = {
 
   async updateSuitcase(id: string, data: any) {
     try {
+      // Se estiver alterando para status "returned" (Devolvida), vamos verificar 
+      // se existem acertos registrados para não causar travamento
+      if (data.status === 'returned') {
+        // Não precisa de verificação específica, apenas garantir que a atualização
+        // seja processada corretamente sem tentar excluir registros relacionados
+        console.log("Alterando status da maleta para Devolvida:", id);
+      }
+      
       const updatedSuitcase = await SuitcaseModel.updateSuitcase(id, data);
       return updatedSuitcase;
     } catch (error) {
