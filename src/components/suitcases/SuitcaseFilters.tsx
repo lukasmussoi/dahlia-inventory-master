@@ -1,104 +1,105 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
-import { Search, FilterX } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Search, X } from "lucide-react";
 
 interface SuitcaseFiltersProps {
   filters: {
     search: string;
     status: string;
-    city: string;
-    neighborhood: string;
+    city?: string;
+    neighborhood?: string;
   };
   onSearch: (filters: any) => void;
   onClear: () => void;
 }
 
-export function SuitcaseFilters({ filters, onSearch, onClear }: SuitcaseFiltersProps) {
-  const [localFilters, setLocalFilters] = useState(filters);
+export function SuitcaseFilters({ 
+  filters,
+  onSearch,
+  onClear
+}: SuitcaseFiltersProps) {
+  const [searchTerm, setSearchTerm] = useState(filters.search || '');
+  const [status, setStatus] = useState(filters.status || 'todos');
 
-  const handleChange = (field: string, value: string) => {
-    setLocalFilters(prev => ({ ...prev, [field]: value }));
-  };
+  // Atualizar valores quando os filtros mudam
+  useEffect(() => {
+    setSearchTerm(filters.search || '');
+    setStatus(filters.status || 'todos');
+  }, [filters]);
 
-  const handleSearch = () => {
-    onSearch(localFilters);
-  };
-
-  const handleClear = () => {
-    setLocalFilters({
-      search: "",
-      status: "todos",
-      city: "",
-      neighborhood: ""
+  // Aplicar filtros
+  const handleApplyFilters = () => {
+    onSearch({
+      ...filters,
+      search: searchTerm,
+      status: status
     });
+  };
+
+  // Limpar filtros
+  const handleClearFilters = () => {
+    setSearchTerm('');
+    setStatus('todos');
     onClear();
   };
 
+  // Pesquisar ao pressionar Enter
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleApplyFilters();
+    }
+  };
+
   return (
-    <div className="bg-white rounded-lg shadow p-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        <div className="col-span-1 lg:col-span-2">
-          <Input
-            placeholder="Buscar por código ou revendedora..."
-            value={localFilters.search}
-            onChange={(e) => handleChange('search', e.target.value)}
-          />
-        </div>
-
-        <div>
-          <Select
-            value={localFilters.status}
-            onValueChange={(value) => handleChange('status', value)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos os status</SelectItem>
-              <SelectItem value="in_use">Em Uso</SelectItem>
-              <SelectItem value="returned">Devolvida</SelectItem>
-              <SelectItem value="in_replenishment">Aguardando Reposição</SelectItem>
-              <SelectItem value="lost">Perdida</SelectItem>
-              <SelectItem value="in_audit">Em Auditoria</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div>
-          <Input
-            placeholder="Cidade"
-            value={localFilters.city}
-            onChange={(e) => handleChange('city', e.target.value)}
-          />
-        </div>
-
-        <div>
-          <Input
-            placeholder="Bairro"
-            value={localFilters.neighborhood}
-            onChange={(e) => handleChange('neighborhood', e.target.value)}
-          />
-        </div>
-
-        <div className="flex gap-2 lg:col-span-5 md:justify-end">
-          <Button onClick={handleSearch} className="flex-1 md:flex-none">
-            <Search className="h-4 w-4 mr-2" />
-            Buscar
-          </Button>
-          <Button variant="outline" onClick={handleClear}>
-            <FilterX className="h-4 w-4 mr-2" />
-            Limpar
-          </Button>
-        </div>
+    <div className="flex flex-col sm:flex-row gap-2">
+      <div className="relative flex-1">
+        <Input
+          type="text"
+          placeholder="Buscar por nome ou código..."
+          className="pl-10"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          onKeyDown={handleKeyDown}
+        />
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+      </div>
+      
+      <div className="w-full sm:w-64">
+        <Select
+          value={status}
+          onValueChange={setStatus}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Filtrar por status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todos os status</SelectItem>
+            <SelectItem value="in_use">Em uso</SelectItem>
+            <SelectItem value="returned">Devolvida</SelectItem>
+            <SelectItem value="in_replenishment">Aguardando Reposição</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      
+      <div className="flex gap-2">
+        <Button variant="outline" onClick={handleApplyFilters}>
+          <Search className="h-4 w-4 mr-2" />
+          Buscar
+        </Button>
+        
+        <Button variant="ghost" onClick={handleClearFilters}>
+          <X className="h-4 w-4 mr-2" />
+          Limpar
+        </Button>
       </div>
     </div>
   );

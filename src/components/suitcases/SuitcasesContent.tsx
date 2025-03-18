@@ -99,7 +99,7 @@ export function SuitcasesContent({ isAdmin, userProfile }: SuitcasesContentProps
   if (isLoadingSuitcases || isLoadingSummary) {
     return (
       <div className="flex-1 p-8 flex justify-center items-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-gold"></div>
+        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-pink-500"></div>
       </div>
     );
   }
@@ -110,13 +110,20 @@ export function SuitcasesContent({ isAdmin, userProfile }: SuitcasesContentProps
         {/* Cabeçalho */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-2xl font-bold mb-1">Maletas</h1>
-            <p className="text-muted-foreground">
-              Gerencie as maletas de produtos das revendedoras
-            </p>
+            <h1 className="text-2xl font-bold mb-1 flex items-center">
+              <svg className="w-6 h-6 mr-2 text-pink-500" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M20 7H4C2.89543 7 2 7.89543 2 9V17C2 18.1046 2.89543 19 4 19H20C21.1046 19 22 18.1046 22 17V9C22 7.89543 21.1046 7 20 7Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M12 12H12.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M16 7V5C16 3.89543 15.1046 3 14 3H10C8.89543 3 8 3.89543 8 5V7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              Maletas das Revendedoras
+            </h1>
           </div>
           
-          <Button onClick={() => setShowNewSuitcaseDialog(true)} className="whitespace-nowrap">
+          <Button 
+            onClick={() => setShowNewSuitcaseDialog(true)} 
+            className="bg-pink-500 hover:bg-pink-600 text-white whitespace-nowrap"
+          >
             <Plus className="h-4 w-4 mr-2" /> 
             Criar Nova Maleta
           </Button>
@@ -134,6 +141,7 @@ export function SuitcasesContent({ isAdmin, userProfile }: SuitcasesContentProps
         
         {/* Lista de Maletas */}
         <SuitcaseGrid 
+          suitcases={suitcases}
           isAdmin={isAdmin}
           onRefresh={refreshData}
         />

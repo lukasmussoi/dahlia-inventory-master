@@ -16,9 +16,9 @@ export function useReactPrint({
 } & Omit<Parameters<typeof useReactToPrintOriginal>[0], "content">) {
   // Usar o hook original com as opções corretas
   const handlePrint = useReactToPrintOriginal({
-    ...restOptions,
-    documentTitle: restOptions.documentTitle || 'Documento',
     content: () => contentRef.current,
+    documentTitle: restOptions.documentTitle || 'Documento',
+    ...restOptions
   } as Parameters<typeof useReactToPrintOriginal>[0]);
 
   // Retornar uma função sem parâmetros que invoca handlePrint

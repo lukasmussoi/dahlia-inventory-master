@@ -36,6 +36,7 @@ export function SuitcaseFormDialog({
   const [sellerId, setSellerId] = useState<string>("");
   const [city, setCity] = useState<string>("");
   const [neighborhood, setNeighborhood] = useState<string>("");
+  const [status, setStatus] = useState<string>("in_use");
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [sellers, setSellers] = useState<any[]>([]);
 
@@ -46,12 +47,14 @@ export function SuitcaseFormDialog({
       setSellerId(suitcase.seller_id || "");
       setCity(suitcase.city || "");
       setNeighborhood(suitcase.neighborhood || "");
+      setStatus(suitcase.status || "in_use");
     } else if (mode === 'create') {
       // Limpar formulário e gerar novo código
       setCode("");
       setSellerId("");
       setCity("");
       setNeighborhood("");
+      setStatus("in_use");
       generateNewCode();
     }
   }, [suitcase, mode, open]);
@@ -81,8 +84,8 @@ export function SuitcaseFormDialog({
       const data = await SuitcaseModel.getAllSellers();
       setSellers(data);
     } catch (error) {
-      console.error("Erro ao carregar revendedores:", error);
-      toast.error("Erro ao carregar revendedores");
+      console.error("Erro ao carregar revendedoras:", error);
+      toast.error("Erro ao carregar revendedoras");
     } finally {
       setIsLoading(false);
     }
@@ -107,7 +110,7 @@ export function SuitcaseFormDialog({
       seller_id: sellerId,
       city,
       neighborhood,
-      status: mode === 'create' ? 'in_use' : undefined
+      status: status || "in_use"
     };
 
     onSubmit(formData);
@@ -158,6 +161,20 @@ export function SuitcaseFormDialog({
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="status">Status</Label>
+              <Select value={status} onValueChange={setStatus}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="in_use">Em Uso</SelectItem>
+                  <SelectItem value="returned">Devolvida</SelectItem>
+                  <SelectItem value="in_replenishment">Aguardando Reposição</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="city">Cidade</Label>
               <Input
                 id="city"
@@ -184,7 +201,7 @@ export function SuitcaseFormDialog({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit">
+            <Button type="submit" className="bg-pink-500 hover:bg-pink-600">
               {mode === 'create' ? "Criar Maleta" : "Salvar Alterações"}
             </Button>
           </div>
