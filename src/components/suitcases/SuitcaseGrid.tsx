@@ -1,4 +1,3 @@
-
 import { useState, useMemo } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -33,9 +32,8 @@ export function SuitcaseGrid({ suitcases, isAdmin, onRefresh, onOpenAcertoDialog
   const [showPrintDialog, setShowPrintDialog] = useState(false);
   const [selectedSuitcase, setSelectedSuitcase] = useState<Suitcase | null>(null);
   const [suitcaseItemsForPrint, setSuitcaseItemsForPrint] = useState<SuitcaseItem[]>([]);
+  const [promoterInfo, setPromoterInfo] = useState<any>(null);
 
-  // Buscar todas as contagens de itens para todas as maletas de uma vez
-  // em vez de dentro do loop de renderização
   const suitcaseIds = useMemo(() => suitcases.map(suitcase => suitcase.id), [suitcases]);
   
   const { data: allSuitcaseItems = {} } = useQuery({
@@ -60,24 +58,29 @@ export function SuitcaseGrid({ suitcases, isAdmin, onRefresh, onOpenAcertoDialog
     enabled: suitcaseIds.length > 0,
   });
 
-  // Abrir modal de edição
   const handleEdit = (suitcase: Suitcase) => {
     setSelectedSuitcase(suitcase);
     setShowSuitcaseFormDialog(true);
   };
 
-  // Abrir modal de detalhes
   const handleViewDetails = (suitcase: Suitcase) => {
     setSelectedSuitcase(suitcase);
     setShowDetailsDialog(true);
   };
 
-  // Abrir modal de impressão
   const handlePrint = async (suitcase: Suitcase) => {
     setSelectedSuitcase(suitcase);
     try {
       const items = await SuitcaseModel.getSuitcaseItems(suitcase.id);
       setSuitcaseItemsForPrint(items);
+      
+      if (suitcase.seller_id) {
+        const promoter = await SuitcaseController.getPromoterForReseller(suitcase.seller_id);
+        setPromoterInfo(promoter);
+      } else {
+        setPromoterInfo(null);
+      }
+      
       setShowPrintDialog(true);
     } catch (error) {
       console.error("Erro ao carregar itens da maleta para impressão:", error);
@@ -85,14 +88,12 @@ export function SuitcaseGrid({ suitcases, isAdmin, onRefresh, onOpenAcertoDialog
     }
   };
 
-  // Realizar acerto da maleta
   const handleSettlement = (suitcase: Suitcase) => {
     if (onOpenAcertoDialog) {
       onOpenAcertoDialog(suitcase);
     }
   };
 
-  // Excluir maleta
   const handleDelete = async (suitcase: Suitcase) => {
     if (window.confirm(`Tem certeza que deseja excluir a maleta ${suitcase.code}?`)) {
       try {
@@ -106,7 +107,6 @@ export function SuitcaseGrid({ suitcases, isAdmin, onRefresh, onOpenAcertoDialog
     }
   };
 
-  // Atualizar maleta
   const handleUpdateSuitcase = async (data: any) => {
     try {
       if (!selectedSuitcase) return;
@@ -121,7 +121,6 @@ export function SuitcaseGrid({ suitcases, isAdmin, onRefresh, onOpenAcertoDialog
     }
   };
 
-  // Formatar status para exibição
   const formatStatus = (status: string) => {
     switch (status) {
       case 'in_use': return { text: 'Em uso', className: 'bg-green-100 text-green-800' };
@@ -131,12 +130,10 @@ export function SuitcaseGrid({ suitcases, isAdmin, onRefresh, onOpenAcertoDialog
     }
   };
 
-  // Formatar data
   const formatDate = (dateString: string) => {
     return format(new Date(dateString), "yyyy-MM-dd", { locale: ptBR });
   };
 
-  // Verificar se há maletas para exibir
   if (suitcases.length === 0) {
     return (
       <div className="text-center py-10">
@@ -152,16 +149,12 @@ export function SuitcaseGrid({ suitcases, isAdmin, onRefresh, onOpenAcertoDialog
     <div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {suitcases.map((suitcase) => {
-          // Obter a contagem de itens a partir do resultado da consulta
           const suitcaseItems = allSuitcaseItems[suitcase.id] || [];
           
-          // Formatar status
           const status = formatStatus(suitcase.status);
           
-          // Data da última atualização
           const lastUpdate = formatDate(suitcase.updated_at || suitcase.created_at);
 
-          // Informações de localização da maleta
           const hasLocation = suitcase.city && suitcase.neighborhood;
           
           return (
@@ -183,7 +176,6 @@ export function SuitcaseGrid({ suitcases, isAdmin, onRefresh, onOpenAcertoDialog
                 
                 <h4 className="text-base font-semibold mb-1">{suitcase.seller?.name || "Sem revendedora"}</h4>
                 
-                {/* Exibir cidade e bairro */}
                 {hasLocation && (
                   <p className="text-sm text-pink-500 mb-2 flex items-center">
                     <MapPin className="h-3.5 w-3.5 mr-1" />
@@ -223,7 +215,6 @@ export function SuitcaseGrid({ suitcases, isAdmin, onRefresh, onOpenAcertoDialog
                         Imprimir
                       </DropdownMenuItem>
                       
-                      {/* Opção de acerto só aparece para maletas em uso */}
                       {suitcase.status === 'in_use' && (
                         <DropdownMenuItem onClick={() => handleSettlement(suitcase)}>
                           <Calculator className="h-4 w-4 mr-2" />
@@ -255,7 +246,6 @@ export function SuitcaseGrid({ suitcases, isAdmin, onRefresh, onOpenAcertoDialog
         })}
       </div>
 
-      {/* Modal de Edição */}
       <SuitcaseFormDialog
         open={showSuitcaseFormDialog}
         onOpenChange={setShowSuitcaseFormDialog}
@@ -264,7 +254,6 @@ export function SuitcaseGrid({ suitcases, isAdmin, onRefresh, onOpenAcertoDialog
         mode="edit"
       />
 
-      {/* Modal de Detalhes */}
       <SuitcaseDetailsDialog
         open={showDetailsDialog}
         onOpenChange={setShowDetailsDialog}
@@ -275,12 +264,12 @@ export function SuitcaseGrid({ suitcases, isAdmin, onRefresh, onOpenAcertoDialog
         onEdit={handleEdit}
       />
 
-      {/* Modal de Impressão */}
       <SuitcasePrintDialog
         open={showPrintDialog}
         onOpenChange={setShowPrintDialog}
         suitcase={selectedSuitcase}
         suitcaseItems={suitcaseItemsForPrint}
+        promoterInfo={promoterInfo}
       />
     </div>
   );

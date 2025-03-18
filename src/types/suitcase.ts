@@ -56,6 +56,7 @@ export interface Suitcase {
     id: string;
     name: string;
     phone?: string;
+    commission_rate?: number;
     address?: {
       city?: string;
       neighborhood?: string;
