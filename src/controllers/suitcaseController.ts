@@ -1,8 +1,8 @@
-
 import { SuitcaseModel } from "@/models/suitcaseModel";
 import { SuitcaseItemStatus, InventoryItemSuitcaseInfo } from "@/types/suitcase";
 import { acertoMaletaController } from "@/controllers/acertoMaletaController";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export const suitcaseController = {
   async getAllSuitcases(filters?: any) {
@@ -52,11 +52,68 @@ export const suitcaseController = {
 
   async deleteSuitcase(id: string) {
     try {
+      // Verificar se a maleta possui acertos registrados
+      const { data: acertos, error: acertosError } = await supabase
+        .from('acertos_maleta')
+        .select('id')
+        .eq('suitcase_id', id);
+      
+      if (acertosError) throw acertosError;
+      
+      if (acertos && acertos.length > 0) {
+        throw new Error("Não é possível excluir esta maleta pois ela possui acertos registrados. Você pode mudar o status da maleta para 'Devolvida' em vez de excluí-la.");
+      }
+      
+      // Verificar itens com vendas registradas
+      const { data: suitcaseItems, error: itemsError } = await supabase
+        .from('suitcase_items')
+        .select('id')
+        .eq('suitcase_id', id);
+      
+      if (itemsError) throw itemsError;
+      
+      if (suitcaseItems && suitcaseItems.length > 0) {
+        // Verificar se algum item tem vendas
+        const itemIds = suitcaseItems.map(item => item.id);
+        
+        const { data: sales, error: salesError } = await supabase
+          .from('suitcase_item_sales')
+          .select('id')
+          .in('suitcase_item_id', itemIds);
+        
+        if (salesError) throw salesError;
+        
+        if (sales && sales.length > 0) {
+          throw new Error("Não é possível excluir esta maleta pois ela possui itens com vendas registradas. Você pode mudar o status da maleta para 'Devolvida' em vez de excluí-la.");
+        }
+        
+        // Excluir todos os itens da maleta primeiro
+        const { error: deleteItemsError } = await supabase
+          .from('suitcase_items')
+          .delete()
+          .eq('suitcase_id', id);
+        
+        if (deleteItemsError) throw deleteItemsError;
+      }
+      
+      // Agora podemos excluir a maleta com segurança
       await SuitcaseModel.deleteSuitcase(id);
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao excluir maleta:", error);
-      throw new Error("Erro ao excluir maleta");
+      
+      // Verificar se é um erro de chave estrangeira
+      if (error.code === '23503') {
+        if (error.details.includes('acertos_maleta')) {
+          throw new Error("Não é possível excluir esta maleta pois ela possui acertos registrados. Você pode mudar o status da maleta para 'Devolvida' em vez de excluí-la.");
+        } else if (error.details.includes('suitcase_item_sales')) {
+          throw new Error("Não é possível excluir esta maleta pois ela possui itens com vendas registradas. Você pode mudar o status da maleta para 'Devolvida' em vez de excluí-la.");
+        } else {
+          throw new Error("Não é possível excluir esta maleta pois ela possui registros relacionados. Você pode mudar o status da maleta para 'Devolvida' em vez de excluí-la.");
+        }
+      }
+      
+      throw error;
     }
   },
 

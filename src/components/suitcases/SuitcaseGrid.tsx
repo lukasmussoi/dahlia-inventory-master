@@ -99,9 +99,9 @@ export function SuitcaseGrid({ suitcases, isAdmin, onRefresh, onOpenAcertoDialog
         await SuitcaseController.deleteSuitcase(suitcase.id);
         toast.success("Maleta excluída com sucesso");
         onRefresh();
-      } catch (error) {
+      } catch (error: any) {
         console.error("Erro ao excluir maleta:", error);
-        toast.error("Erro ao excluir maleta");
+        toast.error(error.message || "Erro ao excluir maleta");
       }
     }
   };
