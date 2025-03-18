@@ -190,6 +190,11 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
   // Calcular total de vendas estimado
   const soldItems = suitcaseItems.filter(item => !scannedItemsIds.includes(item.id));
   const totalSaleValue = soldItems.reduce((sum, item) => sum + (item.product?.price || 0), 0);
+  
+  // Calcular comissão da revendedora (usando a taxa padrão ou a taxa específica da revendedora)
+  const commissionRate = suitcase?.seller?.commission_rate || 0.3; // 30% é a taxa padrão
+  const commissionAmount = totalSaleValue * commissionRate;
+  const solvedPieces = soldItems.length;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -527,10 +532,20 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
                         <span className="text-slate-600">Itens vendidos (não verificados):</span>
                         <span className="font-medium text-pink-600">{missingSoldItems}</span>
                       </div>
-                      <div className="flex justify-between border-t pt-2 mt-2">
+                      <div className="flex justify-between">
+                        <span className="text-slate-600">Peças vendidas:</span>
+                        <span className="font-medium text-pink-600">{solvedPieces}</span>
+                      </div>
+                      <div className="flex justify-between">
                         <span className="text-slate-600">Valor total das vendas:</span>
                         <span className="font-semibold">
                           {AcertoMaletaController.formatCurrency(totalSaleValue)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between border-t pt-2 mt-2">
+                        <span className="text-slate-600">Comissão da revendedora ({(commissionRate * 100).toFixed(0)}%):</span>
+                        <span className="font-semibold text-green-600">
+                          {AcertoMaletaController.formatCurrency(commissionAmount)}
                         </span>
                       </div>
                     </div>
@@ -571,3 +586,4 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
     </Dialog>
   );
 }
+
