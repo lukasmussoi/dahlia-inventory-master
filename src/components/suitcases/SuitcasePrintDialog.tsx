@@ -31,7 +31,7 @@ export function SuitcasePrintDialog({
 
   // Usar o hook personalizado para impressão
   const handlePrint = useReactPrint({
-    content: () => printRef.current,
+    contentRef: printRef,
     pageStyle: `
       @page {
         size: A4;
@@ -167,7 +167,7 @@ export function SuitcasePrintDialog({
             Fechar
           </Button>
           <Button 
-            onClick={() => handlePrint()} 
+            onClick={handlePrint} 
             className="gap-2"
           >
             <Printer className="h-4 w-4" />

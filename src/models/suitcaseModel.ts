@@ -1,6 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { SuitcaseStatus, SuitcaseItemStatus, Suitcase, SuitcaseItem, SuitcaseItemSale } from "@/types/suitcase";
+import { Json } from "@/integrations/supabase/types";
 
 export class SuitcaseModel {
   // Buscar total de maletas ativas
@@ -12,6 +13,43 @@ export class SuitcaseModel {
     
     if (error) throw error;
     return data?.length || 0;
+  }
+
+  // Função auxiliar para processar o endereço que pode vir como string JSON
+  private static processSellerAddress(address: any): { 
+    city?: string;
+    neighborhood?: string;
+    street?: string;
+    number?: string;
+    state?: string;
+    zipCode?: string;
+  } {
+    let addressObj = {};
+
+    if (!address) return addressObj;
+
+    // Se for uma string, tentar converter para objeto
+    if (typeof address === 'string') {
+      try {
+        addressObj = JSON.parse(address);
+      } catch (e) {
+        console.error("Erro ao processar endereço JSON:", e);
+        return addressObj;
+      }
+    } else if (typeof address === 'object') {
+      // Se já for um objeto, usar diretamente
+      addressObj = address;
+    }
+
+    // Garantir que as propriedades existam
+    return {
+      city: addressObj?.['city'] || '',
+      neighborhood: addressObj?.['neighborhood'] || '',
+      street: addressObj?.['street'] || '',
+      number: addressObj?.['number'] || '',
+      state: addressObj?.['state'] || '',
+      zipCode: addressObj?.['zipCode'] || ''
+    };
   }
 
   // Buscar todas as maletas
@@ -33,15 +71,8 @@ export class SuitcaseModel {
     
     // Converter os resultados para se adequar à interface Suitcase
     return (data || []).map(item => {
-      // Processar o endereço do vendedor que vem como JSON para um objeto estruturado
-      let sellerAddress = item.seller?.address ? item.seller.address : {};
-      if (typeof sellerAddress === 'string') {
-        try {
-          sellerAddress = JSON.parse(sellerAddress);
-        } catch (e) {
-          sellerAddress = {};
-        }
-      }
+      // Processar o endereço do vendedor
+      const sellerAddress = this.processSellerAddress(item.seller?.address);
       
       return {
         id: item.id,
@@ -58,14 +89,7 @@ export class SuitcaseModel {
           id: item.seller.id,
           name: item.seller.name,
           phone: item.seller.phone,
-          address: {
-            city: sellerAddress.city,
-            neighborhood: sellerAddress.neighborhood,
-            street: sellerAddress.street,
-            number: sellerAddress.number,
-            state: sellerAddress.state,
-            zipCode: sellerAddress.zipCode
-          }
+          address: sellerAddress
         } : undefined
       };
     });
@@ -115,15 +139,8 @@ export class SuitcaseModel {
     if (error) throw error;
     if (!data) return null;
     
-    // Processar o endereço do vendedor que vem como JSON para um objeto estruturado
-    let sellerAddress = data.seller?.address ? data.seller.address : {};
-    if (typeof sellerAddress === 'string') {
-      try {
-        sellerAddress = JSON.parse(sellerAddress);
-      } catch (e) {
-        sellerAddress = {};
-      }
-    }
+    // Processar o endereço do vendedor
+    const sellerAddress = this.processSellerAddress(data.seller?.address);
     
     return {
       id: data.id,
@@ -140,14 +157,7 @@ export class SuitcaseModel {
         id: data.seller.id,
         name: data.seller.name,
         phone: data.seller.phone,
-        address: {
-          city: sellerAddress.city,
-          neighborhood: sellerAddress.neighborhood,
-          street: sellerAddress.street,
-          number: sellerAddress.number,
-          state: sellerAddress.state,
-          zipCode: sellerAddress.zipCode
-        }
+        address: sellerAddress
       } : undefined
     };
   }
@@ -174,6 +184,17 @@ export class SuitcaseModel {
     if (error) throw error;
     if (!data) return null;
     
+    // Extrair URL da foto, garantindo que é uma string válida
+    let photoUrl;
+    if (data.product?.photos && 
+        Array.isArray(data.product.photos) && 
+        data.product.photos.length > 0) {
+      // Verificar se o item da array é um objeto com photo_url
+      if (data.product.photos[0] && typeof data.product.photos[0] === 'object') {
+        photoUrl = data.product.photos[0].photo_url;
+      }
+    }
+    
     return {
       id: data.id,
       suitcase_id: data.suitcase_id,
@@ -188,8 +209,7 @@ export class SuitcaseModel {
         name: data.product.name,
         price: data.product.price,
         sku: data.product.sku,
-        photo_url: data.product.photos && data.product.photos.length > 0 ? 
-          data.product.photos[0].photo_url : undefined
+        photo_url: photoUrl
       } : undefined,
       sales: []
     };
@@ -231,8 +251,8 @@ export class SuitcaseModel {
           }
         }
         
-        // Buscar vendas relacionadas a este item
-        const sales: SuitcaseItemSale[] = []; // Isso seria preenchido com uma consulta adicional
+        // Garantir que added_at existe
+        const added_at = item.created_at || new Date().toISOString();
         
         // Retornar o objeto com a estrutura correta
         return {
@@ -240,7 +260,7 @@ export class SuitcaseModel {
           suitcase_id: item.suitcase_id,
           inventory_id: item.inventory_id,
           status: item.status as SuitcaseItemStatus,
-          added_at: item.created_at || new Date().toISOString(),
+          added_at: added_at,
           created_at: item.created_at,
           updated_at: item.updated_at,
           quantity: item.quantity,
@@ -251,7 +271,7 @@ export class SuitcaseModel {
             sku: item.product.sku,
             photo_url: photoUrl
           } : undefined,
-          sales: sales
+          sales: []
         };
       });
       
@@ -275,13 +295,13 @@ export class SuitcaseModel {
     if (!suitcaseData.city || !suitcaseData.neighborhood) throw new Error("Cidade e Bairro são obrigatórios");
     
     // Certificar-se de que status é um valor válido
-    const validStatus = suitcaseData.status || 'in_use';
+    const validStatus: SuitcaseStatus = suitcaseData.status || 'in_use';
     
     const { data, error } = await supabase
       .from('suitcases')
       .insert({
         ...suitcaseData,
-        status: validStatus as SuitcaseStatus
+        status: validStatus
       })
       .select()
       .maybeSingle();
@@ -362,12 +382,14 @@ export class SuitcaseModel {
     if (error) throw error;
     if (!data) throw new Error("Erro ao adicionar peça à maleta: nenhum dado retornado");
     
+    const added_at = data.created_at || new Date().toISOString();
+    
     return {
       id: data.id,
       suitcase_id: data.suitcase_id,
       inventory_id: data.inventory_id,
       status: data.status as SuitcaseItemStatus,
-      added_at: data.created_at || new Date().toISOString(),
+      added_at: added_at,
       created_at: data.created_at,
       updated_at: data.updated_at,
       quantity: data.quantity,
@@ -406,12 +428,14 @@ export class SuitcaseModel {
       if (saleError) throw saleError;
     }
     
+    const added_at = data.created_at || new Date().toISOString();
+    
     return {
       id: data.id,
       suitcase_id: data.suitcase_id,
       inventory_id: data.inventory_id,
       status: data.status as SuitcaseItemStatus,
-      added_at: data.created_at || new Date().toISOString(),
+      added_at: added_at,
       created_at: data.created_at,
       updated_at: data.updated_at,
       quantity: data.quantity,
@@ -430,17 +454,22 @@ export class SuitcaseModel {
     
     if (error) throw error;
     
-    return (data || []).map(sale => ({
-      id: sale.id,
-      suitcase_item_id: sale.suitcase_item_id,
-      client_name: sale.customer_name,
-      payment_method: sale.payment_method,
-      sale_date: sale.sold_at || sale.created_at, // Use sold_at ou created_at como sale_date
-      customer_name: sale.customer_name,
-      sold_at: sale.sold_at,
-      created_at: sale.created_at,
-      updated_at: sale.updated_at
-    }));
+    return (data || []).map(sale => {
+      // Garantir que sale_date existe
+      const sale_date = sale.sold_at || sale.created_at || new Date().toISOString();
+      
+      return {
+        id: sale.id,
+        suitcase_item_id: sale.suitcase_item_id,
+        client_name: sale.customer_name,
+        payment_method: sale.payment_method,
+        sale_date: sale_date, 
+        customer_name: sale.customer_name,
+        sold_at: sale.sold_at,
+        created_at: sale.created_at,
+        updated_at: sale.updated_at
+      };
+    });
   }
 
   // Buscar maletas filtradas
@@ -489,15 +518,8 @@ export class SuitcaseModel {
     
     // Converter os resultados para se adequar à interface Suitcase
     return (data || []).map(item => {
-      // Processar o endereço do vendedor que vem como JSON para um objeto estruturado
-      let sellerAddress = item.seller?.address ? item.seller.address : {};
-      if (typeof sellerAddress === 'string') {
-        try {
-          sellerAddress = JSON.parse(sellerAddress);
-        } catch (e) {
-          sellerAddress = {};
-        }
-      }
+      // Processar o endereço do vendedor
+      const sellerAddress = this.processSellerAddress(item.seller?.address);
       
       return {
         id: item.id,
@@ -514,14 +536,7 @@ export class SuitcaseModel {
           id: item.seller.id,
           name: item.seller.name,
           phone: item.seller.phone,
-          address: {
-            city: sellerAddress.city,
-            neighborhood: sellerAddress.neighborhood,
-            street: sellerAddress.street,
-            number: sellerAddress.number,
-            state: sellerAddress.state,
-            zipCode: sellerAddress.zipCode
-          }
+          address: sellerAddress
         } : undefined
       };
     });
@@ -598,7 +613,11 @@ export class SuitcaseModel {
     // Processar para obter a primeira foto de cada item
     return (data || []).map(item => {
       const photos = item.photos || [];
-      const primaryPhoto = photos.find((p: any) => p.is_primary) || photos[0];
+      let primaryPhoto = null;
+      
+      if (Array.isArray(photos) && photos.length > 0) {
+        primaryPhoto = photos.find((p: any) => p.is_primary) || photos[0];
+      }
       
       return {
         ...item,

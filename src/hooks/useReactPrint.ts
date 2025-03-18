@@ -1,19 +1,16 @@
 
-import { useReactToPrint, type UseReactToPrintOptions } from "react-to-print";
+import { useReactToPrint } from "react-to-print";
 
-// Definindo nossa interface estendida
-export interface UseReactToPrintOptions extends Omit<UseReactToPrintOptions, 'content'> {
-  content: () => HTMLElement | null;
-}
-
-// Hook personalizado que aceita nossa interface estendida
-export function useReactPrint(options: UseReactToPrintOptions) {
-  // Extrair a função content das opções
-  const { content, ...restOptions } = options;
-  
+/**
+ * Hook personalizado para impressão de componentes React
+ * 
+ * @param options Opções de configuração para impressão
+ * @returns Função para disparar a impressão
+ */
+export function useReactPrint({ contentRef, ...restOptions }) {
   // Usar o hook original com as opções corretas
   return useReactToPrint({
+    content: () => contentRef.current,
     ...restOptions,
-    content: content, // Passando a função content diretamente
   });
 }
