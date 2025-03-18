@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import {
   Dialog,
@@ -305,11 +306,24 @@ export function SuitcaseDetailsDialog({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     {searchResults.map((item) => (
                       <div key={item.id} className="flex justify-between items-center p-2 bg-white rounded border">
-                        <div>
-                          <p className="font-medium">{item.name}</p>
-                          <p className="text-sm text-gray-500">
-                            {item.sku || "Sem código"} - R$ {item.price.toFixed(2)}
-                          </p>
+                        <div className="flex items-center space-x-3">
+                          <div className="flex-shrink-0 w-12 h-12 bg-gray-100 rounded-md flex items-center justify-center overflow-hidden">
+                            {item.photo_url ? (
+                              <img 
+                                src={item.photo_url} 
+                                alt={item.name} 
+                                className="max-w-full max-h-full object-contain"
+                              />
+                            ) : (
+                              <div className="text-gray-400 text-xs text-center">Sem imagem</div>
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-medium">{item.name}</p>
+                            <p className="text-sm text-gray-500">
+                              {item.sku || "Sem código"} - R$ {item.price.toFixed(2)}
+                            </p>
+                          </div>
                         </div>
                         <Button 
                           size="sm" 
