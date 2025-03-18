@@ -1,0 +1,573 @@
+
+import { useState, useEffect } from "react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { Calendar as CalendarIcon, Check, X, BarcodeIcon, ShoppingBag, FileText, Printer } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { SuitcaseItem, Suitcase } from "@/types/suitcase";
+import { SuitcaseController } from "@/controllers/suitcaseController";
+import { AcertoMaletaController } from "@/controllers/acertoMaletaController";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+
+interface AcertoMaletaDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  suitcase: Suitcase | null;
+  onSuccess?: () => void;
+}
+
+export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: AcertoMaletaDialogProps) {
+  const [suitcaseItems, setSuitcaseItems] = useState<SuitcaseItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [scannedItemsIds, setScannedItemsIds] = useState<string[]>([]);
+  const [barcodeInput, setBarcodeInput] = useState("");
+  const [settlementDate, setSettlementDate] = useState<Date>(new Date());
+  const [nextSettlementDate, setNextSettlementDate] = useState<Date | undefined>(undefined);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [createdAcertoId, setCreatedAcertoId] = useState<string | null>(null);
+
+  // Buscar itens da maleta
+  useEffect(() => {
+    if (open && suitcase) {
+      loadSuitcaseItems();
+    } else {
+      // Resetar estados quando o modal for fechado
+      setSuitcaseItems([]);
+      setScannedItemsIds([]);
+      setBarcodeInput("");
+      setSettlementDate(new Date());
+      setNextSettlementDate(undefined);
+      setPdfUrl(null);
+      setCreatedAcertoId(null);
+    }
+  }, [open, suitcase]);
+
+  const loadSuitcaseItems = async () => {
+    if (!suitcase) return;
+    
+    try {
+      setLoading(true);
+      const items = await SuitcaseController.getSuitcaseItems(suitcase.id);
+      // Filtrar apenas itens que estão em posse da revendedora
+      const activeItems = items.filter(item => item.status === 'in_possession');
+      setSuitcaseItems(activeItems);
+    } catch (error) {
+      console.error("Erro ao carregar itens da maleta:", error);
+      toast.error("Erro ao carregar itens da maleta");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Processar código de barras escaneado
+  const handleBarcodeScanned = (barcode: string) => {
+    const matchedItem = suitcaseItems.find(item => 
+      item.product?.sku === barcode || 
+      item.inventory_id === barcode
+    );
+
+    if (matchedItem) {
+      if (!scannedItemsIds.includes(matchedItem.id)) {
+        setScannedItemsIds(prev => [...prev, matchedItem.id]);
+        toast.success(`Item "${matchedItem.product?.name}" verificado com sucesso!`);
+      } else {
+        toast.info("Este item já foi escaneado.");
+      }
+    } else {
+      toast.error("Item não encontrado nesta maleta.");
+    }
+
+    // Limpar campo de entrada
+    setBarcodeInput("");
+  };
+
+  // Manipular entrada manual do código de barras
+  const handleBarcodeInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleBarcodeScanned(barcodeInput);
+    }
+  };
+
+  // Iniciar modo de escaneamento
+  const startScanning = () => {
+    setScanning(true);
+    // Aqui também poderia inicializar um scanner de código de barras real
+    setTimeout(() => {
+      document.getElementById('barcode-input')?.focus();
+    }, 100);
+  };
+
+  // Parar modo de escaneamento
+  const stopScanning = () => {
+    setScanning(false);
+    setBarcodeInput("");
+  };
+
+  // Verificar manualmente um item
+  const checkItemManually = (itemId: string) => {
+    if (scannedItemsIds.includes(itemId)) {
+      setScannedItemsIds(prev => prev.filter(id => id !== itemId));
+    } else {
+      setScannedItemsIds(prev => [...prev, itemId]);
+    }
+  };
+
+  // Finalizar acerto
+  const handleFinishSettlement = async () => {
+    if (!suitcase) return;
+    
+    try {
+      setLoading(true);
+      
+      // Preparar dados para o acerto
+      const settlementData = {
+        suitcase_id: suitcase.id,
+        settlement_date: settlementDate.toISOString(),
+        next_settlement_date: nextSettlementDate ? nextSettlementDate.toISOString() : undefined,
+        items_present: scannedItemsIds
+      };
+      
+      // Criar acerto
+      const result = await AcertoMaletaController.createAcerto(settlementData);
+      setCreatedAcertoId(result.id);
+      
+      // Gerar PDF após criar acerto
+      setGeneratingPdf(true);
+      const url = await AcertoMaletaController.generateReceiptPDF(result.id);
+      setPdfUrl(url);
+      
+      toast.success("Acerto da maleta concluído com sucesso!");
+      
+      // Callback de sucesso se fornecido
+      if (onSuccess) {
+        onSuccess();
+      }
+    } catch (error) {
+      console.error("Erro ao finalizar acerto:", error);
+      toast.error("Erro ao finalizar acerto da maleta");
+    } finally {
+      setLoading(false);
+      setGeneratingPdf(false);
+    }
+  };
+
+  // Verificar todos os itens
+  const checkAllItems = () => {
+    const allItemIds = suitcaseItems.map(item => item.id);
+    setScannedItemsIds(allItemIds);
+    toast.success("Todos os itens verificados");
+  };
+
+  // Limpar todos os itens verificados
+  const clearAllChecked = () => {
+    setScannedItemsIds([]);
+    toast.info("Verificação de itens limpa");
+  };
+
+  // Imprimir recibo
+  const handlePrintReceipt = () => {
+    if (pdfUrl) {
+      window.open(pdfUrl, '_blank');
+    }
+  };
+
+  // Calcular estatísticas do acerto
+  const totalItems = suitcaseItems.length;
+  const scannedItems = scannedItemsIds.length;
+  const missingSoldItems = totalItems - scannedItems;
+  
+  // Calcular total de vendas estimado
+  const soldItems = suitcaseItems.filter(item => !scannedItemsIds.includes(item.id));
+  const totalSaleValue = soldItems.reduce((sum, item) => sum + (item.product?.price || 0), 0);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Acerto da Maleta</DialogTitle>
+          <DialogDescription>
+            {suitcase ? (
+              <div className="flex flex-col gap-1 mt-2">
+                <p><span className="font-semibold">Maleta:</span> {suitcase.code}</p>
+                <p><span className="font-semibold">Revendedora:</span> {suitcase.seller?.name}</p>
+                <p><span className="font-semibold">Cidade:</span> {suitcase.city}, {suitcase.neighborhood}</p>
+              </div>
+            ) : (
+              <p>Carregando informações da maleta...</p>
+            )}
+          </DialogDescription>
+        </DialogHeader>
+
+        {loading ? (
+          <div className="flex justify-center items-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-pink-500"></div>
+          </div>
+        ) : createdAcertoId ? (
+          <div className="flex flex-col gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-center text-green-600">Acerto Concluído com Sucesso!</CardTitle>
+                <CardDescription className="text-center">
+                  O acerto da maleta foi registrado com sucesso.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col">
+                    <span className="text-sm text-muted-foreground">Total de Itens:</span>
+                    <span className="font-semibold">{totalItems}</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm text-muted-foreground">Itens Vendidos:</span>
+                    <span className="font-semibold">{missingSoldItems}</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm text-muted-foreground">Total em Vendas:</span>
+                    <span className="font-semibold">{AcertoMaletaController.formatCurrency(totalSaleValue)}</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm text-muted-foreground">Data do Acerto:</span>
+                    <span className="font-semibold">{format(settlementDate, "dd/MM/yyyy", { locale: ptBR })}</span>
+                  </div>
+                </div>
+
+                {generatingPdf ? (
+                  <div className="flex flex-col items-center gap-2 py-4">
+                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-pink-500"></div>
+                    <p>Gerando recibo em PDF...</p>
+                  </div>
+                ) : pdfUrl ? (
+                  <div className="flex justify-center">
+                    <Button 
+                      className="w-full md:w-auto" 
+                      onClick={handlePrintReceipt}
+                    >
+                      <Printer className="h-4 w-4 mr-2" />
+                      Visualizar/Imprimir Recibo
+                    </Button>
+                  </div>
+                ) : null}
+              </CardContent>
+              <CardFooter className="flex justify-end">
+                <Button variant="outline" onClick={() => onOpenChange(false)}>
+                  Fechar
+                </Button>
+              </CardFooter>
+            </Card>
+          </div>
+        ) : (
+          <Tabs defaultValue="items">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="items">Verificação de Itens</TabsTrigger>
+              <TabsTrigger value="settlement">Detalhes do Acerto</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="items">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Verificação de Itens na Maleta</CardTitle>
+                  <CardDescription>
+                    Escaneie os itens presentes na maleta ou marque-os manualmente. Os itens não verificados
+                    serão considerados como vendidos no acerto.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Estatísticas rápidas */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-4">
+                    <div className="bg-slate-100 p-3 rounded-lg">
+                      <p className="text-sm text-slate-600">Total de Itens</p>
+                      <p className="text-lg font-bold">{totalItems}</p>
+                    </div>
+                    <div className="bg-green-100 p-3 rounded-lg">
+                      <p className="text-sm text-green-600">Itens Verificados</p>
+                      <p className="text-lg font-bold">{scannedItems}</p>
+                    </div>
+                    <div className="bg-pink-100 p-3 rounded-lg">
+                      <p className="text-sm text-pink-600">Itens Vendidos</p>
+                      <p className="text-lg font-bold">{missingSoldItems}</p>
+                    </div>
+                  </div>
+                  
+                  {scanning ? (
+                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                      <div className="flex justify-between items-center mb-2">
+                        <h3 className="font-medium text-blue-700 flex items-center">
+                          <BarcodeIcon className="h-4 w-4 mr-2" />
+                          Modo Escaneamento
+                        </h3>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={stopScanning}
+                          className="text-blue-700"
+                        >
+                          <X className="h-4 w-4 mr-1" />
+                          Parar
+                        </Button>
+                      </div>
+                      <p className="text-sm text-blue-600 mb-3">
+                        Escaneie o código de barras ou insira o código do produto manualmente
+                      </p>
+                      <Input
+                        id="barcode-input"
+                        value={barcodeInput}
+                        onChange={(e) => setBarcodeInput(e.target.value)}
+                        onKeyDown={handleBarcodeInputKeyDown}
+                        placeholder="Código do produto ou código de barras"
+                        className="bg-white"
+                        autoFocus
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex space-x-2">
+                      <Button 
+                        onClick={startScanning} 
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        <BarcodeIcon className="h-4 w-4 mr-2" />
+                        Iniciar Escaneamento
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        onClick={checkAllItems}
+                      >
+                        <Check className="h-4 w-4 mr-2" />
+                        Verificar Todos
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        onClick={clearAllChecked}
+                      >
+                        <X className="h-4 w-4 mr-2" />
+                        Limpar
+                      </Button>
+                    </div>
+                  )}
+                  
+                  {/* Lista de itens */}
+                  <div className="mt-4">
+                    <h3 className="font-medium mb-2">Itens na Maleta</h3>
+                    
+                    {suitcaseItems.length === 0 ? (
+                      <p className="text-slate-500 italic">Nenhum item encontrado nesta maleta</p>
+                    ) : (
+                      <div className="border rounded-md overflow-hidden">
+                        <table className="min-w-full divide-y divide-gray-200">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Item
+                              </th>
+                              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Código
+                              </th>
+                              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Preço
+                              </th>
+                              <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Status
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {suitcaseItems.map((item) => {
+                              const isChecked = scannedItemsIds.includes(item.id);
+                              return (
+                                <tr 
+                                  key={item.id}
+                                  className={cn(
+                                    "hover:bg-gray-50 cursor-pointer",
+                                    isChecked ? "bg-green-50" : ""
+                                  )}
+                                  onClick={() => checkItemManually(item.id)}
+                                >
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    <div className="flex items-center">
+                                      <div className="flex-shrink-0 h-10 w-10">
+                                        {item.product?.photo_url ? (
+                                          <img
+                                            className="h-10 w-10 rounded-full object-cover"
+                                            src={item.product.photo_url}
+                                            alt={item.product.name}
+                                          />
+                                        ) : (
+                                          <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                            <ShoppingBag className="h-5 w-5 text-gray-500" />
+                                          </div>
+                                        )}
+                                      </div>
+                                      <div className="ml-4">
+                                        <div className="text-sm font-medium text-gray-900">
+                                          {item.product?.name || "Produto sem nome"}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    <div className="text-sm text-gray-900">{item.product?.sku || "-"}</div>
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    <div className="text-sm text-gray-900">
+                                      {item.product ? AcertoMaletaController.formatCurrency(item.product.price) : "-"}
+                                    </div>
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-right">
+                                    {isChecked ? (
+                                      <Badge className="bg-green-100 text-green-800 hover:bg-green-200">
+                                        <Check className="h-3 w-3 mr-1" />
+                                        Presente
+                                      </Badge>
+                                    ) : (
+                                      <Badge className="bg-pink-100 text-pink-800 hover:bg-pink-200">
+                                        Vendido
+                                      </Badge>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="settlement">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Detalhes do Acerto</CardTitle>
+                  <CardDescription>
+                    Configure as datas e revise os detalhes do acerto antes de finalizar.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Data do Acerto */}
+                    <div className="space-y-2">
+                      <Label htmlFor="settlement-date">Data do Acerto</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            id="settlement-date"
+                            variant="outline"
+                            className="w-full justify-start text-left font-normal"
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {settlementDate ? format(settlementDate, "PPP", { locale: ptBR }) : "Selecione uma data"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                          <Calendar
+                            mode="single"
+                            selected={settlementDate}
+                            onSelect={(date) => date && setSettlementDate(date)}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                    
+                    {/* Próxima Data de Acerto */}
+                    <div className="space-y-2">
+                      <Label htmlFor="next-settlement-date">Próxima Data de Acerto</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            id="next-settlement-date"
+                            variant="outline"
+                            className="w-full justify-start text-left font-normal"
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {nextSettlementDate 
+                              ? format(nextSettlementDate, "PPP", { locale: ptBR }) 
+                              : "Selecione uma data"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                          <Calendar
+                            mode="single"
+                            selected={nextSettlementDate}
+                            onSelect={setNextSettlementDate}
+                            initialFocus
+                            disabled={(date) => date < new Date()}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+                  
+                  {/* Resumo do Acerto */}
+                  <div className="bg-slate-50 p-4 rounded-lg mt-4 border border-slate-200">
+                    <h3 className="font-medium mb-3">Resumo do Acerto</h3>
+                    
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-slate-600">Total de itens na maleta:</span>
+                        <span className="font-medium">{totalItems}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-600">Itens verificados (presentes):</span>
+                        <span className="font-medium">{scannedItems}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-600">Itens vendidos (não verificados):</span>
+                        <span className="font-medium text-pink-600">{missingSoldItems}</span>
+                      </div>
+                      <div className="flex justify-between border-t pt-2 mt-2">
+                        <span className="text-slate-600">Valor total das vendas:</span>
+                        <span className="font-semibold">
+                          {AcertoMaletaController.formatCurrency(totalSaleValue)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Alerta sobre regras do acerto */}
+                  <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200 text-sm text-yellow-800 mt-2">
+                    <p className="flex items-start">
+                      <span className="mr-2">⚠️</span>
+                      <span>
+                        Os itens não verificados serão marcados como <strong>vendidos</strong>. 
+                        Certifique-se de verificar todos os itens presentes na maleta antes de finalizar o acerto.
+                      </span>
+                    </p>
+                  </div>
+                </CardContent>
+                <CardFooter className="flex justify-between">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => onOpenChange(false)}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button 
+                    onClick={handleFinishSettlement}
+                    disabled={loading || (nextSettlementDate === undefined)}
+                    className="bg-pink-500 hover:bg-pink-600"
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    Finalizar Acerto
+                  </Button>
+                </CardFooter>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}

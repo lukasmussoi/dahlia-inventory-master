@@ -1,6 +1,7 @@
 
 export type SuitcaseStatus = 'in_use' | 'returned' | 'in_replenishment' | 'lost' | 'in_audit';
 export type SuitcaseItemStatus = 'in_possession' | 'sold' | 'returned' | 'lost';
+export type AcertoStatus = 'pendente' | 'concluido';
 
 export interface SuitcaseItemSale {
   id: string;
@@ -91,3 +92,59 @@ export interface InventoryItemSuitcaseInfo {
   seller_name?: string;
 }
 
+export interface AcertoItem {
+  id: string;
+  acerto_id: string;
+  suitcase_item_id: string;
+  inventory_id: string;
+  price: number;
+  sale_date: string;
+  customer_name?: string;
+  payment_method?: string;
+  created_at?: string;
+  updated_at?: string;
+  product?: {
+    id: string;
+    name: string;
+    sku: string;
+    price: number;
+    photo_url?: string;
+  };
+}
+
+export interface Acerto {
+  id: string;
+  suitcase_id: string;
+  seller_id: string;
+  settlement_date: string;
+  next_settlement_date?: string;
+  total_sales: number;
+  commission_amount: number;
+  receipt_url?: string;
+  status: AcertoStatus;
+  restock_suggestions?: any;
+  created_at: string;
+  updated_at?: string;
+  suitcase?: Suitcase;
+  seller?: {
+    id: string;
+    name: string;
+    commission_rate?: number;
+  };
+  items_vendidos?: AcertoItem[];
+}
+
+export interface SuitcaseSettlementFormData {
+  suitcase_id: string;
+  seller_id: string;
+  settlement_date: Date;
+  next_settlement_date?: Date;
+  items_present: string[]; // IDs dos itens escaneados/confirmados como presentes
+  items_sold: {
+    suitcase_item_id: string;
+    inventory_id: string;
+    price: number;
+    customer_name?: string;
+    payment_method?: string;
+  }[];
+}

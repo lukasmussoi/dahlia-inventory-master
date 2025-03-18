@@ -1,5 +1,8 @@
+
 import { SuitcaseModel } from "@/models/suitcaseModel";
 import { SuitcaseItemStatus, InventoryItemSuitcaseInfo } from "@/types/suitcase";
+import { acertoMaletaController } from "@/controllers/acertoMaletaController";
+import { toast } from "sonner";
 
 export const suitcaseController = {
   async getAllSuitcases(filters?: any) {
@@ -24,6 +27,11 @@ export const suitcaseController = {
 
   async createSuitcase(data: any) {
     try {
+      // Se não houver código, gerar um
+      if (!data.code) {
+        data.code = await SuitcaseModel.generateSuitcaseCode();
+      }
+
       const newSuitcase = await SuitcaseModel.createSuitcase(data);
       return newSuitcase;
     } catch (error) {
@@ -64,6 +72,11 @@ export const suitcaseController = {
 
   async addItemToSuitcase(suitcaseId: string, inventoryId: string) {
     try {
+      const suitcase = await SuitcaseModel.getSuitcaseById(suitcaseId);
+      if (!suitcase) {
+        throw new Error("Maleta não encontrada");
+      }
+
       const availability = await SuitcaseModel.checkItemAvailability(inventoryId);
       
       if (!availability.available) {
@@ -71,6 +84,30 @@ export const suitcaseController = {
           throw new Error(`Item "${availability.item_info?.name}" já está na maleta ${availability.in_suitcase.suitcase_code} (${availability.in_suitcase.seller_name})`);
         } else {
           throw new Error(`Item "${availability.item_info?.name}" não está disponível no estoque`);
+        }
+      }
+      
+      // Verificar histórico de vendas e mostrar sugestão
+      if (suitcase.seller_id) {
+        try {
+          const salesFrequency = await acertoMaletaController.getItemSalesFrequency(inventoryId, suitcase.seller_id);
+          
+          if (salesFrequency.count > 0) {
+            let message = "";
+            if (salesFrequency.frequency === "alta") {
+              message = `Ótima escolha! Este item foi vendido ${salesFrequency.count} vezes nos últimos 90 dias por esta revendedora.`;
+              toast.success(message, { duration: 5000 });
+            } else if (salesFrequency.frequency === "média") {
+              message = `Este item foi vendido ${salesFrequency.count} vezes nos últimos 90 dias por esta revendedora.`;
+              toast.info(message, { duration: 4000 });
+            } else {
+              message = `Este item foi vendido apenas ${salesFrequency.count} vez nos últimos 90 dias por esta revendedora.`;
+              toast(message, { duration: 3000 });
+            }
+          }
+        } catch (error) {
+          console.error("Erro ao buscar histórico de vendas:", error);
+          // Não interromper o fluxo se houver erro na sugestão
         }
       }
       

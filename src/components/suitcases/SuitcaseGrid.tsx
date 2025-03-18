@@ -12,7 +12,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
-import { Eye, Printer, Edit, Trash2, MoreVertical, MapPin } from "lucide-react";
+import { Eye, Printer, Edit, Trash2, MoreVertical, MapPin, Calculator } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,9 +24,10 @@ interface SuitcaseGridProps {
   suitcases: Suitcase[];
   isAdmin?: boolean;
   onRefresh: () => void;
+  onOpenAcertoDialog?: (suitcase: Suitcase) => void;
 }
 
-export function SuitcaseGrid({ suitcases, isAdmin, onRefresh }: SuitcaseGridProps) {
+export function SuitcaseGrid({ suitcases, isAdmin, onRefresh, onOpenAcertoDialog }: SuitcaseGridProps) {
   const [showSuitcaseFormDialog, setShowSuitcaseFormDialog] = useState(false);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [showPrintDialog, setShowPrintDialog] = useState(false);
@@ -55,6 +56,13 @@ export function SuitcaseGrid({ suitcases, isAdmin, onRefresh }: SuitcaseGridProp
     } catch (error) {
       console.error("Erro ao carregar itens da maleta para impressão:", error);
       toast.error("Erro ao carregar itens da maleta para impressão");
+    }
+  };
+
+  // Realizar acerto da maleta
+  const handleSettlement = (suitcase: Suitcase) => {
+    if (onOpenAcertoDialog) {
+      onOpenAcertoDialog(suitcase);
     }
   };
 
@@ -192,6 +200,15 @@ export function SuitcaseGrid({ suitcases, isAdmin, onRefresh }: SuitcaseGridProp
                         <Printer className="h-4 w-4 mr-2" />
                         Imprimir
                       </DropdownMenuItem>
+                      
+                      {/* Opção de acerto só aparece para maletas em uso */}
+                      {suitcase.status === 'in_use' && (
+                        <DropdownMenuItem onClick={() => handleSettlement(suitcase)}>
+                          <Calculator className="h-4 w-4 mr-2" />
+                          Realizar Acerto
+                        </DropdownMenuItem>
+                      )}
+                      
                       {isAdmin && (
                         <>
                           <DropdownMenuItem onClick={() => handleEdit(suitcase)}>

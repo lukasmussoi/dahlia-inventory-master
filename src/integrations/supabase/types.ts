@@ -9,6 +9,134 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      acerto_itens_vendidos: {
+        Row: {
+          acerto_id: string
+          created_at: string
+          customer_name: string | null
+          id: string
+          inventory_id: string
+          payment_method: string | null
+          price: number
+          sale_date: string
+          suitcase_item_id: string
+          updated_at: string
+        }
+        Insert: {
+          acerto_id: string
+          created_at?: string
+          customer_name?: string | null
+          id?: string
+          inventory_id: string
+          payment_method?: string | null
+          price: number
+          sale_date?: string
+          suitcase_item_id: string
+          updated_at?: string
+        }
+        Update: {
+          acerto_id?: string
+          created_at?: string
+          customer_name?: string | null
+          id?: string
+          inventory_id?: string
+          payment_method?: string | null
+          price?: number
+          sale_date?: string
+          suitcase_item_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "acerto_itens_vendidos_acerto_id_fkey"
+            columns: ["acerto_id"]
+            isOneToOne: false
+            referencedRelation: "acertos_maleta"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "acerto_itens_vendidos_inventory_id_fkey"
+            columns: ["inventory_id"]
+            isOneToOne: false
+            referencedRelation: "inventory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "acerto_itens_vendidos_suitcase_item_id_fkey"
+            columns: ["suitcase_item_id"]
+            isOneToOne: false
+            referencedRelation: "suitcase_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      acertos_maleta: {
+        Row: {
+          commission_amount: number
+          created_at: string
+          id: string
+          next_settlement_date: string | null
+          receipt_url: string | null
+          restock_suggestions: Json | null
+          seller_id: string
+          settlement_date: string
+          status: Database["public"]["Enums"]["acerto_status"]
+          suitcase_id: string
+          total_sales: number
+          updated_at: string
+        }
+        Insert: {
+          commission_amount?: number
+          created_at?: string
+          id?: string
+          next_settlement_date?: string | null
+          receipt_url?: string | null
+          restock_suggestions?: Json | null
+          seller_id: string
+          settlement_date?: string
+          status?: Database["public"]["Enums"]["acerto_status"]
+          suitcase_id: string
+          total_sales?: number
+          updated_at?: string
+        }
+        Update: {
+          commission_amount?: number
+          created_at?: string
+          id?: string
+          next_settlement_date?: string | null
+          receipt_url?: string | null
+          restock_suggestions?: Json | null
+          seller_id?: string
+          settlement_date?: string
+          status?: Database["public"]["Enums"]["acerto_status"]
+          suitcase_id?: string
+          total_sales?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "acertos_maleta_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "resellers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "acertos_maleta_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "seller_commission_rates"
+            referencedColumns: ["seller_id"]
+          },
+          {
+            foreignKeyName: "acertos_maleta_suitcase_id_fkey"
+            columns: ["suitcase_id"]
+            isOneToOne: false
+            referencedRelation: "suitcases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       etiquetas_custom: {
         Row: {
           altura: number
@@ -409,6 +537,7 @@ export type Database = {
       resellers: {
         Row: {
           address: Json | null
+          commission_rate: number | null
           cpf_cnpj: string
           created_at: string
           email: string | null
@@ -421,6 +550,7 @@ export type Database = {
         }
         Insert: {
           address?: Json | null
+          commission_rate?: number | null
           cpf_cnpj: string
           created_at?: string
           email?: string | null
@@ -433,6 +563,7 @@ export type Database = {
         }
         Update: {
           address?: Json | null
+          commission_rate?: number | null
           cpf_cnpj?: string
           created_at?: string
           email?: string | null
@@ -581,6 +712,13 @@ export type Database = {
             referencedRelation: "resellers"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "suitcases_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "seller_commission_rates"
+            referencedColumns: ["seller_id"]
+          },
         ]
       }
       suppliers: {
@@ -630,7 +768,24 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      seller_commission_rates: {
+        Row: {
+          commission_rate: number | null
+          seller_id: string | null
+          seller_name: string | null
+        }
+        Insert: {
+          commission_rate?: never
+          seller_id?: string | null
+          seller_name?: string | null
+        }
+        Update: {
+          commission_rate?: never
+          seller_id?: string | null
+          seller_name?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       admin_update_user_password: {
@@ -678,6 +833,7 @@ export type Database = {
       }
     }
     Enums: {
+      acerto_status: "pendente" | "concluido"
       plating_type: "ouro" | "prata" | "rose" | "rhodium" | "sem_banho"
       reseller_status: "Ativa" | "Inativa"
       suitcase_item_status: "in_possession" | "sold" | "returned" | "lost"

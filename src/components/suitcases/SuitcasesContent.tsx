@@ -7,8 +7,13 @@ import { SuitcaseFilters } from "@/components/suitcases/SuitcaseFilters";
 import { SuitcaseSummary } from "@/components/suitcases/SuitcaseSummary";
 import { SuitcaseFormDialog } from "@/components/suitcases/SuitcaseFormDialog";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Plus, Briefcase, Calculator } from "lucide-react";
 import { toast } from "sonner";
+import { AcertoMaletaDialog } from "@/components/suitcases/settlement/AcertoMaletaDialog";
+import { AcertosList } from "@/components/suitcases/settlement/AcertosList";
+import { AcertoDetailsDialog } from "@/components/suitcases/settlement/AcertoDetailsDialog";
+import { Acerto, Suitcase } from "@/types/suitcase";
 
 interface SuitcasesContentProps {
   isAdmin?: boolean;
@@ -18,6 +23,11 @@ interface SuitcasesContentProps {
 export function SuitcasesContent({ isAdmin, userProfile }: SuitcasesContentProps) {
   const [isSearching, setIsSearching] = useState(false);
   const [showNewSuitcaseDialog, setShowNewSuitcaseDialog] = useState(false);
+  const [showAcertoDialog, setShowAcertoDialog] = useState(false);
+  const [showAcertoDetailsDialog, setShowAcertoDetailsDialog] = useState(false);
+  const [selectedSuitcase, setSelectedSuitcase] = useState<Suitcase | null>(null);
+  const [selectedAcerto, setSelectedAcerto] = useState<Acerto | null>(null);
+  const [activeTab, setActiveTab] = useState("suitcases");
   const [filters, setFilters] = useState({
     search: "",
     status: "todos",
@@ -96,6 +106,18 @@ export function SuitcasesContent({ isAdmin, userProfile }: SuitcasesContentProps
     }
   };
 
+  // Abrir o modal de acerto da maleta para uma maleta específica
+  const handleOpenAcertoDialog = (suitcase: Suitcase) => {
+    setSelectedSuitcase(suitcase);
+    setShowAcertoDialog(true);
+  };
+
+  // Abrir o modal de detalhes de um acerto
+  const handleViewAcertoDetails = (acerto: Acerto) => {
+    setSelectedAcerto(acerto);
+    setShowAcertoDetailsDialog(true);
+  };
+
   if (isLoadingSuitcases || isLoadingSummary) {
     return (
       <div className="flex-1 p-8 flex justify-center items-center">
@@ -120,31 +142,63 @@ export function SuitcasesContent({ isAdmin, userProfile }: SuitcasesContentProps
             </h1>
           </div>
           
-          <Button 
-            onClick={() => setShowNewSuitcaseDialog(true)} 
-            className="bg-pink-500 hover:bg-pink-600 text-white whitespace-nowrap"
-          >
-            <Plus className="h-4 w-4 mr-2" /> 
-            Criar Nova Maleta
-          </Button>
+          <div className="flex flex-col md:flex-row gap-2">
+            {activeTab === "suitcases" && (
+              <Button 
+                onClick={() => setShowNewSuitcaseDialog(true)} 
+                className="bg-pink-500 hover:bg-pink-600 text-white whitespace-nowrap"
+              >
+                <Plus className="h-4 w-4 mr-2" /> 
+                Criar Nova Maleta
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Cards de Resumo */}
         <SuitcaseSummary summary={summary} />
         
-        {/* Filtros */}
-        <SuitcaseFilters 
-          filters={filters}
-          onSearch={handleSearch}
-          onClear={handleClearFilters}
-        />
-        
-        {/* Lista de Maletas */}
-        <SuitcaseGrid 
-          suitcases={suitcases}
-          isAdmin={isAdmin}
-          onRefresh={refreshData}
-        />
+        {/* Abas para alternar entre maletas e acertos */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-6">
+            <TabsTrigger value="suitcases" className="flex gap-2 items-center">
+              <Briefcase className="h-4 w-4" />
+              Maletas
+            </TabsTrigger>
+            <TabsTrigger value="settlements" className="flex gap-2 items-center">
+              <Calculator className="h-4 w-4" />
+              Acertos
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="suitcases" className="mt-0">
+            {/* Filtros de Maletas */}
+            <SuitcaseFilters 
+              filters={filters}
+              onSearch={handleSearch}
+              onClear={handleClearFilters}
+            />
+            
+            {/* Lista de Maletas */}
+            <SuitcaseGrid 
+              suitcases={suitcases}
+              isAdmin={isAdmin}
+              onRefresh={refreshData}
+              onOpenAcertoDialog={handleOpenAcertoDialog}
+            />
+          </TabsContent>
+          
+          <TabsContent value="settlements" className="mt-0">
+            {/* Lista de Acertos */}
+            <AcertosList 
+              onViewAcerto={handleViewAcertoDetails}
+              onRefresh={() => {
+                // Atualizar os dados quando a lista de acertos for atualizada
+                setActiveTab("settlements");
+              }}
+            />
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Modal para criar nova maleta */}
@@ -153,6 +207,29 @@ export function SuitcasesContent({ isAdmin, userProfile }: SuitcasesContentProps
         onOpenChange={setShowNewSuitcaseDialog}
         onSubmit={handleCreateSuitcase}
         mode="create"
+      />
+      
+      {/* Modal para realizar acerto da maleta */}
+      <AcertoMaletaDialog
+        open={showAcertoDialog}
+        onOpenChange={setShowAcertoDialog}
+        suitcase={selectedSuitcase}
+        onSuccess={() => {
+          refreshData();
+          // Mudar para a aba de acertos após concluir um acerto
+          setActiveTab("settlements");
+        }}
+      />
+      
+      {/* Modal para visualizar detalhes de um acerto */}
+      <AcertoDetailsDialog
+        open={showAcertoDetailsDialog}
+        onOpenChange={setShowAcertoDetailsDialog}
+        acerto={selectedAcerto}
+        onRefresh={() => {
+          // Atualizar a lista de acertos após qualquer alteração
+          setActiveTab("settlements");
+        }}
       />
     </div>
   );
