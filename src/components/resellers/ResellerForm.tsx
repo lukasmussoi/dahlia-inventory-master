@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -170,6 +171,7 @@ export function ResellerForm({ resellerId, onSuccess, isDialog = false }: Resell
   const handleCommissionRateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value.replace(',', '.');
     if (value === '' || !isNaN(parseFloat(value))) {
+      // Aqui passamos o valor como string, a transformação para número é feita pelo schema
       form.setValue("commissionRate", value);
     }
   };
