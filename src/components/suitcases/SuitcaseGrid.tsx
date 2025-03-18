@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import {
   Table,
@@ -10,11 +11,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Plus, Edit, Trash, Printer } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useNavigate } from "react-router-dom";
 import { Suitcase } from "@/types/suitcase";
-import { deleteSuitcase } from "@/services/suitcaseService";
 import { toast } from "sonner";
-import { MoreDropdown } from "@/components/ui/more-dropdown";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,24 +31,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { SuitcaseForm } from "./SuitcaseForm";
-import { SearchBar } from "@/components/ui/search-bar";
-import {
-  Pagination,
-  usePagination,
-} from "@/components/ui/pagination";
 import { cn } from "@/lib/utils";
 import { SuitcaseItem } from "@/types/suitcase";
-import { getSuitcaseItems } from "@/services/suitcaseItemService";
 import { SuitcasePrintDialog } from "./SuitcasePrintDialog";
 import { promoterController } from "@/controllers/promoterController";
+import { suitcaseController } from "@/controllers/suitcaseController";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { MoreHorizontal } from "lucide-react";
 
 interface SuitcaseGridProps {
   initialData: Suitcase[];
+  onRefresh?: () => void;
 }
 
-export function SuitcaseGrid({ initialData }: SuitcaseGridProps) {
-  const router = useRouter();
+export function SuitcaseGrid({ initialData, onRefresh }: SuitcaseGridProps) {
+  const navigate = useNavigate();
   const [data, setData] = useState<Suitcase[]>(initialData);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSuitcase, setSelectedSuitcase] = useState<Suitcase | null>(null);
@@ -60,25 +56,20 @@ export function SuitcaseGrid({ initialData }: SuitcaseGridProps) {
   const [promoterInfo, setPromoterInfo] = useState<any>(null);
 
   // Pagination
-  const {
-    currentPage,
-    itemsPerPage,
-    totalItems,
-    setCurrentPage,
-    setVisibleRange,
-  } = usePagination({
-    initialItemsPerPage: 10,
-    initialTotalItems: data.length,
-  });
-
-  const paginatedData = data.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
+  const [totalItems, setTotalItems] = useState(data.length);
 
   useEffect(() => {
-    setVisibleRange();
-  }, [currentPage, itemsPerPage, setVisibleRange]);
+    setData(initialData);
+    setTotalItems(initialData.length);
+  }, [initialData]);
+
+  const calculateVisibleRange = () => {
+    const start = (currentPage - 1) * itemsPerPage + 1;
+    const end = Math.min(currentPage * itemsPerPage, totalItems);
+    return { start, end };
+  };
 
   const onSearch = (text: string) => {
     setSearchQuery(text);
@@ -93,22 +84,25 @@ export function SuitcaseGrid({ initialData }: SuitcaseGridProps) {
   useEffect(() => {
     // Update pagination when data changes
     setCurrentPage(1);
-  }, [filteredData, setCurrentPage]);
+    setTotalItems(filteredData.length);
+  }, [filteredData]);
 
   const handleDelete = async () => {
     if (!selectedSuitcase) return;
 
     try {
-      await deleteSuitcase(selectedSuitcase.id);
+      await suitcaseController.deleteSuitcase(selectedSuitcase.id);
       setData(data.filter((suitcase) => suitcase.id !== selectedSuitcase.id));
       toast.success("Maleta excluída com sucesso!");
+      if (onRefresh) {
+        onRefresh();
+      }
     } catch (error) {
       console.error("Erro ao excluir maleta:", error);
       toast.error("Erro ao excluir maleta. Tente novamente.");
     } finally {
       setIsDeleteDialogOpen(false);
       setSelectedSuitcase(null);
-      router.refresh();
     }
   };
 
@@ -127,7 +121,7 @@ export function SuitcaseGrid({ initialData }: SuitcaseGridProps) {
     setPrintDialogOpen(true);
 
     try {
-      const items = await getSuitcaseItems(suitcase.id);
+      const items = await suitcaseController.getSuitcaseItems(suitcase.id);
       setSuitcaseItems(items);
     } catch (error) {
       console.error("Erro ao buscar itens da maleta:", error);
@@ -152,14 +146,28 @@ export function SuitcaseGrid({ initialData }: SuitcaseGridProps) {
   const onClose = () => {
     setIsEditDialogOpen(false);
     setSelectedSuitcase(null);
-    router.refresh();
+    if (onRefresh) {
+      onRefresh();
+    }
   };
+
+  // Calculate the paginated data
+  const paginatedData = filteredData.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   return (
     <div>
-      <div className="flex items-center justify-between">
-        <SearchBar onSearch={onSearch} placeholder="Buscar maleta..." />
-        <Button onClick={() => router.push("/suitcases/new")}>
+      <div className="flex items-center justify-between mb-4">
+        <div className="w-full max-w-sm">
+          <Input
+            placeholder="Buscar maleta..."
+            value={searchQuery}
+            onChange={(e) => onSearch(e.target.value)}
+          />
+        </div>
+        <Button onClick={() => navigate("/dashboard/suitcases/new")}>
           <Plus className="mr-2 h-4 w-4" />
           Nova Maleta
         </Button>
@@ -182,29 +190,28 @@ export function SuitcaseGrid({ initialData }: SuitcaseGridProps) {
                 <TableCell>{suitcase.status}</TableCell>
                 <TableCell>{suitcase.seller?.name || "—"}</TableCell>
                 <TableCell className="text-right">
-                  <MoreDropdown>
-                    <button
-                      onClick={() => handleEditClick(suitcase)}
-                      className="flex items-center space-x-2 hover:bg-gray-100 px-3 py-1.5 rounded-md text-sm"
-                    >
-                      <Edit className="h-4 w-4" />
-                      <span>Editar</span>
-                    </button>
-                    <button
-                      onClick={() => handleDeleteClick(suitcase)}
-                      className="flex items-center space-x-2 hover:bg-gray-100 px-3 py-1.5 rounded-md text-sm"
-                    >
-                      <Trash className="h-4 w-4" />
-                      <span>Excluir</span>
-                    </button>
-                    <button
-                      onClick={() => handlePrintClick(suitcase)}
-                      className="flex items-center space-x-2 hover:bg-gray-100 px-3 py-1.5 rounded-md text-sm"
-                    >
-                      <Printer className="h-4 w-4" />
-                      <span>Imprimir</span>
-                    </button>
-                  </MoreDropdown>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="h-8 w-8 p-0">
+                        <span className="sr-only">Abrir menu</span>
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleEditClick(suitcase)}>
+                        <Edit className="h-4 w-4 mr-2" />
+                        <span>Editar</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleDeleteClick(suitcase)}>
+                        <Trash className="h-4 w-4 mr-2" />
+                        <span>Excluir</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handlePrintClick(suitcase)}>
+                        <Printer className="h-4 w-4 mr-2" />
+                        <span>Imprimir</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </TableCell>
               </TableRow>
             ))}
@@ -214,31 +221,32 @@ export function SuitcaseGrid({ initialData }: SuitcaseGridProps) {
 
       <div className={cn("flex items-center justify-between py-4", data.length === 0 && "hidden")}>
         <div className="flex-1 text-sm text-muted-foreground">
-          {totalItems > 0 ? `${setVisibleRange().start} - ${setVisibleRange().end} de ${totalItems} ` : "Nenhum resultado encontrado"}
+          {totalItems > 0 ? `${calculateVisibleRange().start} - ${calculateVisibleRange().end} de ${totalItems} ` : "Nenhum resultado encontrado"}
         </div>
         {data.length > 0 && (
-          <Pagination
-            currentPage={currentPage}
-            itemsPerPage={itemsPerPage}
-            totalItems={totalItems}
-            onPageChange={setCurrentPage}
-          />
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+            >
+              Anterior
+            </Button>
+            <div className="text-sm">
+              Página {currentPage} de {Math.ceil(totalItems / itemsPerPage)}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(totalItems / itemsPerPage)))}
+              disabled={currentPage >= Math.ceil(totalItems / itemsPerPage)}
+            >
+              Próxima
+            </Button>
+          </div>
         )}
       </div>
-
-      {/* Edit Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Editar Maleta</DialogTitle>
-          </DialogHeader>
-          {selectedSuitcase ? (
-            <SuitcaseForm suitcase={selectedSuitcase} onClose={onClose} />
-          ) : (
-            <div>Carregando...</div>
-          )}
-        </DialogContent>
-      </Dialog>
 
       {/* Delete Alert Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
