@@ -38,6 +38,7 @@ interface SuitcaseDetailsDialogProps {
   onOpenAcertoDialog?: (suitcase: Suitcase) => void;
   onRefresh?: () => void;
   isAdmin?: boolean;
+  onEdit?: (suitcase: Suitcase) => void;
 }
 
 export function SuitcaseDetailsDialog({
@@ -46,7 +47,8 @@ export function SuitcaseDetailsDialog({
   suitcase,
   onOpenAcertoDialog,
   onRefresh,
-  isAdmin = false
+  isAdmin = false,
+  onEdit
 }: SuitcaseDetailsDialogProps) {
   const queryClient = useQueryClient();
   const [status, setStatus] = useState<SuitcaseStatus>(suitcase?.status || 'in_use');
@@ -164,6 +166,19 @@ export function SuitcaseDetailsDialog({
     // Abrir o diálogo de acerto
     setTimeout(() => {
       onOpenAcertoDialog(suitcase);
+    }, 100);
+  };
+
+  // Editar maleta
+  const handleEdit = () => {
+    if (!suitcase || !onEdit) return;
+    
+    // Fechar este diálogo
+    onOpenChange(false);
+    
+    // Abrir o diálogo de edição
+    setTimeout(() => {
+      onEdit(suitcase);
     }, 100);
   };
 

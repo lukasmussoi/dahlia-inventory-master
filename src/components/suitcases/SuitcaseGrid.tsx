@@ -269,6 +269,9 @@ export function SuitcaseGrid({ suitcases, isAdmin, onRefresh, onOpenAcertoDialog
         open={showDetailsDialog}
         onOpenChange={setShowDetailsDialog}
         suitcase={selectedSuitcase}
+        onOpenAcertoDialog={onOpenAcertoDialog}
+        onRefresh={onRefresh}
+        isAdmin={isAdmin}
         onEdit={handleEdit}
       />
 
