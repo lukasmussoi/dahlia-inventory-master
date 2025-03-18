@@ -1,7 +1,6 @@
 
 import { useReactToPrint as useReactToPrintOriginal } from "react-to-print";
 import { RefObject } from "react";
-import type { PrintOptions } from "react-to-print";
 
 /**
  * Hook personalizado para impressão de componentes React
@@ -12,14 +11,14 @@ import type { PrintOptions } from "react-to-print";
 export function useReactPrint({ 
   contentRef, 
   ...restOptions 
-}: Omit<PrintOptions, "documentTitle"> & { 
+}: { 
   contentRef: RefObject<HTMLElement> 
-}) {
+} & Omit<Parameters<typeof useReactToPrintOriginal>[0], "content">) {
   // Usar o hook original com as opções corretas
-  const handlePrint = useReactToPrintOriginal(options => ({
-    ...restOptions,
+  const handlePrint = useReactToPrintOriginal({
     content: () => contentRef.current,
-  }));
+    ...restOptions,
+  });
 
   // Retornar uma função sem parâmetros que invoca handlePrint
   return () => handlePrint();
