@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Promoter, PromoterInput } from "@/types/promoter";
 
@@ -168,7 +167,10 @@ export const promoterController = {
           promoters (
             id,
             name,
-            phone
+            phone,
+            email,
+            cpf_cnpj,
+            status
           )
         `)
         .eq('id', resellerId)
@@ -184,9 +186,9 @@ export const promoterController = {
         id: data.promoters.id,
         name: data.promoters.name,
         phone: data.promoters.phone,
-        // Valores padrão para os outros campos obrigatórios
-        cpfCnpj: "",
-        status: "Ativa" as const,
+        email: data.promoters.email || "",
+        cpfCnpj: data.promoters.cpf_cnpj,
+        status: data.promoters.status,
         createdAt: ""
       };
     } catch (error) {

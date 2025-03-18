@@ -280,6 +280,54 @@ export const suitcaseController = {
     }
   },
 
+  async createPendingSettlement(suitcaseId: string, settlementDate: Date) {
+    try {
+      // Verificar se a maleta existe
+      const suitcase = await SuitcaseModel.getSuitcaseById(suitcaseId);
+      if (!suitcase) {
+        throw new Error("Maleta não encontrada");
+      }
+
+      // Verificar se já existe um acerto pendente para esta maleta com a mesma data
+      const { data: existingSettlements, error: checkError } = await supabase
+        .from('acertos_maleta')
+        .select('id')
+        .eq('suitcase_id', suitcaseId)
+        .eq('status', 'pendente')
+        .gte('settlement_date', new Date(settlementDate.setHours(0, 0, 0, 0)).toISOString())
+        .lt('settlement_date', new Date(settlementDate.setHours(23, 59, 59, 999)).toISOString());
+
+      if (checkError) throw checkError;
+
+      // Se já existe um acerto pendente para esta data, não criar um novo
+      if (existingSettlements && existingSettlements.length > 0) {
+        console.log("Já existe um acerto pendente para esta data.");
+        return existingSettlements[0].id;
+      }
+
+      // Criar um novo acerto pendente
+      const { data: newSettlement, error } = await supabase
+        .from('acertos_maleta')
+        .insert({
+          suitcase_id: suitcaseId,
+          seller_id: suitcase.seller_id,
+          settlement_date: settlementDate.toISOString(),
+          status: 'pendente',
+          total_sales: 0,
+          commission_amount: 0
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      return newSettlement.id;
+    } catch (error) {
+      console.error("Erro ao criar acerto pendente:", error);
+      throw new Error("Erro ao criar acerto pendente");
+    }
+  },
+
   async getSuitcaseSummary() {
     try {
       const summary = await SuitcaseModel.getSuitcaseSummary();
