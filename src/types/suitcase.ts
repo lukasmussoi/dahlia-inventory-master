@@ -84,3 +84,10 @@ export interface InventoryFilters {
   searchTerm?: string;
   category?: string;
 }
+
+export interface InventoryItemSuitcaseInfo {
+  suitcase_id: string;
+  suitcase_code: string;
+  seller_name?: string;
+}
+

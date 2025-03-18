@@ -1,6 +1,5 @@
-
 import { SuitcaseModel } from "@/models/suitcaseModel";
-import { SuitcaseItemStatus } from "@/types/suitcase";
+import { SuitcaseItemStatus, InventoryItemSuitcaseInfo } from "@/types/suitcase";
 
 export const suitcaseController = {
   async getAllSuitcases(filters?: any) {
@@ -65,6 +64,16 @@ export const suitcaseController = {
 
   async addItemToSuitcase(suitcaseId: string, inventoryId: string) {
     try {
+      const availability = await SuitcaseModel.checkItemAvailability(inventoryId);
+      
+      if (!availability.available) {
+        if (availability.in_suitcase) {
+          throw new Error(`Item "${availability.item_info?.name}" já está na maleta ${availability.in_suitcase.suitcase_code} (${availability.in_suitcase.seller_name})`);
+        } else {
+          throw new Error(`Item "${availability.item_info?.name}" não está disponível no estoque`);
+        }
+      }
+      
       const newItem = await SuitcaseModel.addItemToSuitcase({
         suitcase_id: suitcaseId,
         inventory_id: inventoryId,
@@ -73,7 +82,7 @@ export const suitcaseController = {
       return newItem;
     } catch (error) {
       console.error("Erro ao adicionar item à maleta:", error);
-      throw new Error("Erro ao adicionar item à maleta");
+      throw error;
     }
   },
 
@@ -89,7 +98,6 @@ export const suitcaseController = {
 
   async updateSuitcaseItemStatus(itemId: string, status: SuitcaseItemStatus) {
     try {
-      // Garantir que apenas status válidos sejam utilizados
       const validStatus = ["in_possession", "sold", "returned", "lost"] as const;
       
       if (!validStatus.includes(status as any)) {
@@ -162,6 +170,16 @@ export const suitcaseController = {
     } catch (error) {
       console.error("Erro ao buscar itens:", error);
       throw new Error("Erro ao buscar itens");
+    }
+  },
+
+  async getItemSuitcaseInfo(inventoryId: string): Promise<InventoryItemSuitcaseInfo | null> {
+    try {
+      const suitcaseInfo = await SuitcaseModel.getItemSuitcaseInfo(inventoryId);
+      return suitcaseInfo;
+    } catch (error) {
+      console.error("Erro ao buscar informações da maleta que contém o item:", error);
+      throw error;
     }
   }
 };

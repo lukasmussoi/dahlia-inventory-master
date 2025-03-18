@@ -1,5 +1,5 @@
-
 import { InventoryModel } from "@/models/inventoryModel";
+import { SuitcaseController } from "./suitcaseController";
 
 export const InventoryController = {
   // Buscar todos os itens do inventário
@@ -79,7 +79,24 @@ export const InventoryController = {
       
       // Usar o método getAllItems com o filtro de busca
       const items = await InventoryModel.getAllItems({ search: searchTerm });
-      return items;
+      
+      // Para cada item, verificar se está em alguma maleta
+      const itemsWithSuitcaseInfo = await Promise.all(
+        items.map(async (item) => {
+          try {
+            const suitcaseInfo = await SuitcaseController.getItemSuitcaseInfo(item.id);
+            return {
+              ...item,
+              suitcase_info: suitcaseInfo
+            };
+          } catch (error) {
+            console.error(`Erro ao buscar informações da maleta para o item ${item.id}:`, error);
+            return item;
+          }
+        })
+      );
+      
+      return itemsWithSuitcaseInfo;
     } catch (error) {
       console.error("Erro ao buscar itens:", error);
       throw error;
@@ -102,6 +119,20 @@ export const InventoryController = {
   // Verificar se o estoque está abaixo do mínimo
   isLowStock(quantity: number, minStock: number = 0) {
     return quantity <= minStock;
+  },
+
+  // Verificar se um item está em uma maleta
+  async checkItemInSuitcase(inventoryId: string) {
+    try {
+      const suitcaseInfo = await SuitcaseController.getItemSuitcaseInfo(inventoryId);
+      return {
+        inSuitcase: !!suitcaseInfo,
+        suitcaseInfo: suitcaseInfo
+      };
+    } catch (error) {
+      console.error("Erro ao verificar se item está em maleta:", error);
+      return { inSuitcase: false };
+    }
   }
 };
 

@@ -8,11 +8,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2, AlertTriangle, Image as ImageIcon } from "lucide-react";
+import { Edit, Trash2, AlertTriangle, Image as ImageIcon, Briefcase } from "lucide-react";
 import { InventoryItem } from "@/models/inventoryModel";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useQuery } from "@tanstack/react-query";
 import { InventoryModel } from "@/models/inventoryModel";
+import { Badge } from "@/components/ui/badge";
+import { SuitcaseController } from "@/controllers/suitcaseController";
 
 interface InventoryTableProps {
   items: InventoryItem[];
@@ -45,10 +47,16 @@ export function InventoryTable({ items, isLoading, onEdit, onDelete }: Inventory
     }).format(value);
   };
 
-  const TableRowWithPhotos = ({ item }: { item: InventoryItem }) => {
+  const TableRowWithPhotos = ({ item }: { item: InventoryItem & { suitcase_info?: any } }) => {
     const { data: photos } = useQuery({
       queryKey: ['item-photos', item.id],
       queryFn: () => InventoryModel.getItemPhotos(item.id),
+    });
+
+    const { data: suitcaseInfo } = useQuery({
+      queryKey: ['item-suitcase', item.id],
+      queryFn: () => SuitcaseController.getItemSuitcaseInfo(item.id),
+      enabled: item.quantity === 1, // Só executar para itens com quantidade 1 para otimizar
     });
 
     // Fixed: Changed isPrimary to is_primary
@@ -74,6 +82,14 @@ export function InventoryTable({ items, isLoading, onEdit, onDelete }: Inventory
           <div className="space-y-1">
             <div className="font-medium">{item.name}</div>
             <div className="text-sm text-gray-500">{item.sku}</div>
+            {(item.suitcase_info || suitcaseInfo) && (
+              <Badge variant="outline" className="flex items-center gap-1 mt-1 text-xs">
+                <Briefcase className="h-3 w-3" />
+                <span>
+                  Maleta: {(item.suitcase_info || suitcaseInfo)?.suitcase_code} ({(item.suitcase_info || suitcaseInfo)?.seller_name})
+                </span>
+              </Badge>
+            )}
           </div>
         </TableCell>
         <TableCell>{item.category_name}</TableCell>

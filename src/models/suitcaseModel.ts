@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { SuitcaseStatus, SuitcaseItemStatus, Suitcase, SuitcaseItem, SuitcaseItemSale } from "@/types/suitcase";
+import { SuitcaseStatus, SuitcaseItemStatus, Suitcase, SuitcaseItem, SuitcaseItemSale, InventoryItemSuitcaseInfo } from "@/types/suitcase";
 import { Json } from "@/integrations/supabase/types";
 
 export class SuitcaseModel {
@@ -362,6 +362,89 @@ export class SuitcaseModel {
     if (error) throw error;
   }
 
+  // Verificar se um item está disponível para adição à maleta
+  static async checkItemAvailability(inventory_id: string): Promise<{
+    available: boolean;
+    quantity: number;
+    item_info?: {
+      name: string;
+      sku: string;
+    };
+    in_suitcase?: InventoryItemSuitcaseInfo;
+  }> {
+    // Buscar a quantidade disponível em estoque
+    const { data: inventoryData, error: inventoryError } = await supabase
+      .from('inventory')
+      .select('quantity, name, sku')
+      .eq('id', inventory_id)
+      .maybeSingle();
+    
+    if (inventoryError) throw inventoryError;
+    if (!inventoryData) return { available: false, quantity: 0 };
+    
+    // Se não há estoque disponível, retornar indisponível
+    if (inventoryData.quantity <= 0) {
+      return { 
+        available: false, 
+        quantity: 0,
+        item_info: { 
+          name: inventoryData.name,
+          sku: inventoryData.sku
+        }
+      };
+    }
+    
+    // Para peças com apenas uma unidade em estoque, verificar se já está em alguma maleta
+    if (inventoryData.quantity === 1) {
+      const { data: suitcaseItems, error: suitcaseError } = await supabase
+        .from('suitcase_items')
+        .select(`
+          id,
+          suitcase_id,
+          suitcases:suitcase_id (
+            id,
+            code,
+            resellers:seller_id (
+              name
+            )
+          )
+        `)
+        .eq('inventory_id', inventory_id)
+        .eq('status', 'in_possession');
+      
+      if (suitcaseError) throw suitcaseError;
+      
+      // Se já está em uma maleta, retornar indisponível junto com a informação da maleta
+      if (suitcaseItems && suitcaseItems.length > 0) {
+        const suitcaseItem = suitcaseItems[0];
+        
+        return {
+          available: false,
+          quantity: 1,
+          item_info: {
+            name: inventoryData.name,
+            sku: inventoryData.sku
+          },
+          in_suitcase: {
+            suitcase_id: suitcaseItem.suitcase_id,
+            suitcase_code: suitcaseItem.suitcases?.code || '',
+            seller_name: suitcaseItem.suitcases?.resellers?.name || ''
+          }
+        };
+      }
+    }
+    
+    // Se não está em nenhuma maleta ou tem mais de uma unidade, está disponível
+    return {
+      available: true,
+      quantity: inventoryData.quantity,
+      item_info: { 
+        name: inventoryData.name,
+        sku: inventoryData.sku
+      }
+    };
+  }
+
   // Adicionar peça à maleta
   static async addItemToSuitcase(itemData: {
     suitcase_id: string;
@@ -371,6 +454,17 @@ export class SuitcaseModel {
   }): Promise<SuitcaseItem> {
     if (!itemData.suitcase_id) throw new Error("ID da maleta é necessário");
     if (!itemData.inventory_id) throw new Error("ID do inventário é necessário");
+    
+    // Verificar disponibilidade do item
+    const availability = await this.checkItemAvailability(itemData.inventory_id);
+    
+    if (!availability.available) {
+      if (availability.in_suitcase) {
+        throw new Error(`Item "${availability.item_info?.name}" já está na maleta ${availability.in_suitcase.suitcase_code} (${availability.in_suitcase.seller_name})`);
+      } else {
+        throw new Error(`Item "${availability.item_info?.name}" não está disponível no estoque`);
+      }
+    }
     
     const { data, error } = await supabase
       .from('suitcase_items')
@@ -625,5 +719,35 @@ export class SuitcaseModel {
       };
     });
   }
-}
 
+  // Obter informações de em qual maleta o item está
+  static async getItemSuitcaseInfo(inventoryId: string): Promise<InventoryItemSuitcaseInfo | null> {
+    if (!inventoryId) throw new Error("ID do item é necessário");
+    
+    const { data, error } = await supabase
+      .from('suitcase_items')
+      .select(`
+        suitcase_id,
+        suitcases:suitcase_id (
+          id,
+          code,
+          resellers:seller_id (
+            name
+          )
+        )
+      `)
+      .eq('inventory_id', inventoryId)
+      .eq('status', 'in_possession')
+      .maybeSingle();
+    
+    if (error) throw error;
+    
+    if (!data) return null;
+    
+    return {
+      suitcase_id: data.suitcase_id,
+      suitcase_code: data.suitcases?.code || '',
+      seller_name: data.suitcases?.resellers?.name || ''
+    };
+  }
+}
