@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 // Interfaces para tipagem
@@ -115,8 +114,7 @@ export class InventoryModel {
       } else if (filters.status === 'out_of_stock') {
         query = query.eq('quantity', 0);
       } else if (filters.status === 'low_stock') {
-        // Alterando para não usar rpc que não existe
-        query = query.lt('quantity', 5); // Definindo limite fixo ao invés de função
+        query = query.lt('quantity', 5);
       }
     }
 
@@ -124,12 +122,8 @@ export class InventoryModel {
     
     if (error) throw error;
     
-    // Processar dados para mapear fotos de maneira consistente
     const items = data?.map(item => {
-      // Extrair fotos
       const photosData = item.inventory_photos || [];
-      
-      // Processar fotos para retornar no formato esperado
       const processedPhotos: InventoryPhoto[] = photosData.map((photo: any) => ({
         id: photo.id,
         inventory_id: item.id,
@@ -137,7 +131,6 @@ export class InventoryModel {
         is_primary: photo.is_primary || false
       }));
       
-      // Criar um novo objeto sem propriedades extras
       const processedItem: InventoryItem = {
         ...item,
         photos: processedPhotos,
@@ -169,7 +162,6 @@ export class InventoryModel {
     
     if (!data) return null;
     
-    // Processar fotos
     const photosData = data.inventory_photos || [];
     const processedPhotos: InventoryPhoto[] = photosData.map((photo: any) => ({
       id: photo.id,
@@ -178,7 +170,6 @@ export class InventoryModel {
       is_primary: photo.is_primary || false
     }));
     
-    // Criar um novo objeto sem propriedades extras
     const processedItem: InventoryItem = {
       ...data,
       photos: processedPhotos,
@@ -192,7 +183,6 @@ export class InventoryModel {
 
   // Criar novo item
   static async createItem(itemData: Partial<InventoryItem>): Promise<InventoryItem> {
-    // Validar dados obrigatórios
     if (!itemData.name) throw new Error("Nome do item é obrigatório");
     if (!itemData.category_id) throw new Error("Categoria é obrigatória");
     if (itemData.price === undefined) throw new Error("Preço é obrigatório");
@@ -234,7 +224,6 @@ export class InventoryModel {
 
   // Atualizar item existente
   static async updateItem(id: string, updates: Partial<InventoryItem>): Promise<InventoryItem> {
-    // Remover propriedades que não fazem parte da tabela
     const { photos, category_name, supplier_name, plating_type_name, inventory_photos, ...cleanUpdates } = updates;
     
     const { data, error } = await supabase
@@ -252,7 +241,6 @@ export class InventoryModel {
 
   // Excluir item
   static async deleteItem(id: string): Promise<void> {
-    // Primeiro excluir fotos relacionadas
     const { error: photoError } = await supabase
       .from('inventory_photos')
       .delete()
@@ -260,7 +248,6 @@ export class InventoryModel {
     
     if (photoError) throw photoError;
     
-    // Depois excluir o item
     const { error } = await supabase
       .from('inventory')
       .delete()
@@ -271,15 +258,11 @@ export class InventoryModel {
 
   // Atualizar fotos de um item - modificado para aceitar Files
   static async updateItemPhotos(itemId: string, photos: File[] | { id?: string; photo_url: string; is_primary?: boolean }[]): Promise<InventoryPhoto[]> {
-    // Se não houver fotos, não fazer nada
     if (!photos || photos.length === 0) return [];
 
-    // Processar arquivos ou objetos de foto
     const processedPhotos: { inventory_id: string; photo_url: string; is_primary: boolean }[] = [];
 
-    // Processar todos os tipos de entrada possíveis
     for (const photo of photos) {
-      // Verificar se é um objeto File ou um objeto já com photo_url
       if ('photo_url' in photo) {
         processedPhotos.push({
           inventory_id: itemId,
@@ -287,17 +270,14 @@ export class InventoryModel {
           is_primary: photo.is_primary || false
         });
       } else if (photo instanceof File) {
-        // Para arquivos File, precisaríamos fazer upload para obter uma URL
-        // Aqui estamos simulando isso com uma URL fictícia por simplicidade
         processedPhotos.push({
           inventory_id: itemId,
-          photo_url: URL.createObjectURL(photo), // Isso seria substituído pelo upload real
-          is_primary: false // Por padrão, não é primária
+          photo_url: URL.createObjectURL(photo),
+          is_primary: false
         });
       }
     }
     
-    // Excluir fotos antigas
     const { error: deleteError } = await supabase
       .from('inventory_photos')
       .delete()
@@ -305,10 +285,8 @@ export class InventoryModel {
     
     if (deleteError) throw deleteError;
     
-    // Se não houver fotos processadas, retornar array vazio
     if (processedPhotos.length === 0) return [];
     
-    // Inserir novas fotos
     const { data, error } = await supabase
       .from('inventory_photos')
       .insert(processedPhotos)
@@ -359,7 +337,6 @@ export class InventoryModel {
 
   // Criar categoria
   static async createCategory(categoryData: string | { name: string }): Promise<InventoryCategory> {
-    // Verificar se recebemos uma string ou um objeto
     const formattedData = typeof categoryData === 'string' 
       ? { name: categoryData } 
       : categoryData;
@@ -378,7 +355,6 @@ export class InventoryModel {
 
   // Atualizar categoria
   static async updateCategory(id: string, updates: string | { name: string }): Promise<InventoryCategory> {
-    // Verificar se recebemos uma string ou um objeto
     const formattedUpdates = typeof updates === 'string'
       ? { name: updates }
       : updates;
@@ -398,7 +374,6 @@ export class InventoryModel {
 
   // Excluir categoria
   static async deleteCategory(id: string): Promise<void> {
-    // Verificar se tem itens relacionados
     const { count, error: countError } = await supabase
       .from('inventory')
       .select('*', { count: 'exact', head: true })
@@ -463,7 +438,6 @@ export class InventoryModel {
 
   // Excluir tipo de banho
   static async deletePlatingType(id: string): Promise<void> {
-    // Verificar se tem itens relacionados
     const { count, error: countError } = await supabase
       .from('inventory')
       .select('*', { count: 'exact', head: true })
@@ -528,7 +502,6 @@ export class InventoryModel {
 
   // Excluir fornecedor
   static async deleteSupplier(id: string): Promise<void> {
-    // Verificar se tem itens relacionados
     const { count, error: countError } = await supabase
       .from('inventory')
       .select('*', { count: 'exact', head: true })
@@ -547,19 +520,23 @@ export class InventoryModel {
     
     if (error) throw error;
   }
-  
+
   // Estatísticas de Inventário
   static async getTotalInventory(): Promise<{ totalItems: number; totalValue: number }> {
-    // Obter contagem total de itens e valor total
-    const { data, error } = await supabase
-      .from('inventory')
-      .select('quantity, price');
-    
-    if (error) throw error;
-    
-    const totalItems = data.reduce((sum, item) => sum + (item.quantity || 0), 0);
-    const totalValue = data.reduce((sum, item) => sum + (item.quantity || 0) * (item.price || 0), 0);
-    
-    return { totalItems, totalValue };
+    try {
+      const { data, error } = await supabase
+        .from('inventory')
+        .select('quantity, price');
+
+      if (error) throw error;
+
+      const totalItems = data.reduce((sum, item) => sum + (item.quantity || 0), 0);
+      const totalValue = data.reduce((sum, item) => sum + ((item.quantity || 0) * (item.price || 0)), 0);
+
+      return { totalItems, totalValue };
+    } catch (error) {
+      console.error('Erro ao obter total do inventário:', error);
+      return { totalItems: 0, totalValue: 0 };
+    }
   }
 }

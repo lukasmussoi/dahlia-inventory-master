@@ -1,7 +1,6 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { dashboardController } from "@/controllers/dashboardController";
+import { DashboardController } from "@/controllers/dashboardController";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -19,11 +18,13 @@ export function DashboardContent() {
   // Buscar métricas do dashboard
   const { data: metrics, isLoading } = useQuery({
     queryKey: ["dashboard-metrics"],
-    queryFn: dashboardController.getDashboardMetrics,
+    queryFn: () => DashboardController.getDashboardData(),
   });
 
   // Valor padrão para evitar erro de undefined
-  const inventoryStats = metrics?.inventoryStats || { totalItems: 0, totalValue: 0 };
+  const inventoryStats = metrics?.totalInventory 
+    ? { totalItems: metrics.totalInventory.totalItems || 0, totalValue: metrics.totalInventory.totalValue || 0 }
+    : { totalItems: 0, totalValue: 0 };
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -79,10 +80,10 @@ export function DashboardContent() {
                 <ShoppingBag className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{metrics?.activeSuitcases || 0}</div>
+                <div className="text-2xl font-bold">{metrics?.activeSuitcasesCount || 0}</div>
                 <p className="text-xs text-muted-foreground">
                   {metrics?.suitcasesGrowth > 0 ? "+" : ""}
-                  {metrics?.suitcasesGrowth}% em relação ao período anterior
+                  {metrics?.suitcasesGrowth || 0}% em relação ao período anterior
                 </p>
               </CardContent>
             </Card>
@@ -108,7 +109,7 @@ export function DashboardContent() {
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{metrics?.totalResellers || 0}</div>
+                <div className="text-2xl font-bold">{metrics?.activeUsersCount || 0}</div>
                 <p className="text-xs text-muted-foreground">
                   {metrics?.newResellers || 0} novas no último mês
                 </p>
