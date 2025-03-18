@@ -1,5 +1,5 @@
 
-import { useReactToPrint, UseReactToPrintOptions } from "react-to-print";
+import { useReactToPrint as useReactToPrintOriginal } from "react-to-print";
 import { RefObject } from "react";
 
 /**
@@ -11,9 +11,11 @@ import { RefObject } from "react";
 export function useReactPrint({ 
   contentRef, 
   ...restOptions 
-}: UseReactToPrintOptions & { contentRef: RefObject<HTMLElement> }) {
+}: Omit<Parameters<typeof useReactToPrintOriginal>[0], 'content'> & { 
+  contentRef: RefObject<HTMLElement> 
+}) {
   // Usar o hook original com as opções corretas
-  return useReactToPrint({
+  return useReactToPrintOriginal({
     ...restOptions,
     content: () => contentRef.current,
   });
