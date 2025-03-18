@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Suitcase, SuitcaseItem, SuitcaseItemStatus } from "@/types/suitcase";
@@ -33,6 +33,32 @@ export function SuitcaseGrid({ suitcases, isAdmin, onRefresh, onOpenAcertoDialog
   const [showPrintDialog, setShowPrintDialog] = useState(false);
   const [selectedSuitcase, setSelectedSuitcase] = useState<Suitcase | null>(null);
   const [suitcaseItemsForPrint, setSuitcaseItemsForPrint] = useState<SuitcaseItem[]>([]);
+
+  // Buscar todas as contagens de itens para todas as maletas de uma vez
+  // em vez de dentro do loop de renderização
+  const suitcaseIds = useMemo(() => suitcases.map(suitcase => suitcase.id), [suitcases]);
+  
+  const { data: allSuitcaseItems = {} } = useQuery({
+    queryKey: ['all-suitcase-items', suitcaseIds.join(',')],
+    queryFn: async () => {
+      if (suitcaseIds.length === 0) return {};
+      
+      const result: Record<string, SuitcaseItem[]> = {};
+      await Promise.all(
+        suitcaseIds.map(async (id) => {
+          try {
+            const items = await SuitcaseModel.getSuitcaseItems(id);
+            result[id] = items;
+          } catch (error) {
+            console.error(`Erro ao buscar itens da maleta ${id}:`, error);
+            result[id] = [];
+          }
+        })
+      );
+      return result;
+    },
+    enabled: suitcaseIds.length > 0,
+  });
 
   // Abrir modal de edição
   const handleEdit = (suitcase: Suitcase) => {
@@ -126,13 +152,9 @@ export function SuitcaseGrid({ suitcases, isAdmin, onRefresh, onOpenAcertoDialog
     <div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {suitcases.map((suitcase) => {
-          // Obter contagem de itens e última atualização
-          const { data: suitcaseItems = [] } = useQuery({
-            queryKey: ['suitcase-items', suitcase.id],
-            queryFn: () => SuitcaseModel.getSuitcaseItems(suitcase.id),
-            enabled: !!suitcase.id,
-          });
-
+          // Obter a contagem de itens a partir do resultado da consulta
+          const suitcaseItems = allSuitcaseItems[suitcase.id] || [];
+          
           // Formatar status
           const status = formatStatus(suitcase.status);
           
