@@ -12,7 +12,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
-import { Eye, Printer, Edit, Trash2, MoreVertical } from "lucide-react";
+import { Eye, Printer, Edit, Trash2, MoreVertical, MapPin } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -130,6 +130,9 @@ export function SuitcaseGrid({ suitcases, isAdmin, onRefresh }: SuitcaseGridProp
           
           // Data da última atualização
           const lastUpdate = formatDate(suitcase.updated_at || suitcase.created_at);
+
+          // Informações de localização da maleta
+          const hasLocation = suitcase.city && suitcase.neighborhood;
           
           return (
             <Card key={suitcase.id} className="overflow-hidden border border-gray-200">
@@ -149,6 +152,14 @@ export function SuitcaseGrid({ suitcases, isAdmin, onRefresh }: SuitcaseGridProp
                 </div>
                 
                 <h4 className="text-base font-semibold mb-1">{suitcase.seller?.name || "Sem revendedora"}</h4>
+                
+                {/* Exibir cidade e bairro */}
+                {hasLocation && (
+                  <p className="text-sm text-pink-500 mb-2 flex items-center">
+                    <MapPin className="h-3.5 w-3.5 mr-1" />
+                    {suitcase.city} • {suitcase.neighborhood}
+                  </p>
+                )}
                 
                 <div className="mt-2">
                   <p className="text-sm text-gray-500 mb-1">
