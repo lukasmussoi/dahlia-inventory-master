@@ -15,11 +15,11 @@ export function useReactPrint({
   contentRef: RefObject<HTMLElement> 
 } & Omit<Parameters<typeof useReactToPrintOriginal>[0], "content">) {
   // Usar o hook original com as opções corretas
-  const handlePrint = useReactToPrintOriginal(options => ({
+  const handlePrint = useReactToPrintOriginal({
     ...restOptions,
     // A propriedade content deve ser uma função que retorna o elemento
     content: () => contentRef.current,
-  }));
+  });
 
   // Retornar uma função sem parâmetros que invoca handlePrint
   return () => handlePrint();
