@@ -64,7 +64,7 @@ export interface Suitcase {
       number?: string;
       state?: string;
       zipCode?: string;
-    };
+    } | string; // Permitir string e objeto como tipos válidos
   };
 }
 
@@ -109,7 +109,7 @@ export interface AcertoItem {
     name: string;
     sku: string;
     price: number;
-    photo_url?: string;
+    photo_url?: string | { photo_url: string }[]; // Permitir ambos os formatos
   };
 }
 

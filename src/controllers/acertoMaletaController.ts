@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { Acerto, AcertoItem, SuitcaseSettlementFormData } from "@/types/suitcase";
@@ -313,6 +312,28 @@ export const acertoMaletaController = {
       return await this.getAcertoById(acertoId);
     } catch (error) {
       console.error("Erro ao criar acerto:", error);
+      throw error;
+    }
+  },
+  
+  // Adicionar método para atualizar o status de um acerto
+  async updateAcertoStatus(acertoId: string, newStatus: 'pendente' | 'concluido'): Promise<Acerto> {
+    try {
+      const { data, error } = await supabase
+        .from('acertos_maleta')
+        .update({ status: newStatus })
+        .eq('id', acertoId)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error("Erro ao atualizar status do acerto:", error);
+        throw new Error("Erro ao atualizar status do acerto");
+      }
+      
+      return await this.getAcertoById(acertoId);
+    } catch (error) {
+      console.error("Erro ao atualizar status do acerto:", error);
       throw error;
     }
   },

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { SuitcaseItem, SuitcaseItemStatus, SuitcaseStatus } from "@/types/suitcase";
 import { SuitcaseController } from "@/controllers/suitcaseController";
@@ -48,12 +47,10 @@ export function SuitcaseItemList({
   const [editingQuantity, setEditingQuantity] = useState<string | null>(null);
   const [newQuantity, setNewQuantity] = useState<number>(1);
 
-  // Carregar itens
   const fetchItems = async () => {
     try {
       setLoading(true);
       const fetchedItems = await SuitcaseController.getSuitcaseItems(suitcaseId);
-      // Filtrar apenas itens em posse (não vendidos)
       const activeItems = fetchedItems.filter(item => item.status === 'in_possession');
       setItems(activeItems);
     } catch (error: any) {
@@ -64,22 +61,18 @@ export function SuitcaseItemList({
     }
   };
 
-  // Carregar itens ao montar o componente
   useEffect(() => {
     fetchItems();
   }, [suitcaseId]);
 
-  // Atualizar status de um item
   const handleUpdateStatus = async (itemId: string, newStatus: SuitcaseItemStatus) => {
     try {
       setUpdating(prev => ({ ...prev, [itemId]: true }));
       
       await SuitcaseController.updateSuitcaseItemStatus(itemId, newStatus);
       
-      // Atualizar a lista de itens
       await fetchItems();
       
-      // Notificar o componente pai
       if (onItemsChanged) onItemsChanged();
       
       toast.success(`Item ${newStatus === 'sold' ? 'marcado como vendido' : newStatus === 'lost' ? 'marcado como perdido' : 'atualizado'} com sucesso`);
@@ -91,17 +84,14 @@ export function SuitcaseItemList({
     }
   };
 
-  // Remover um item da maleta
   const handleRemoveItem = async (itemId: string) => {
     try {
       setUpdating(prev => ({ ...prev, [itemId]: true }));
       
       await SuitcaseController.removeItemFromSuitcase(itemId);
       
-      // Atualizar a lista de itens
       await fetchItems();
       
-      // Notificar o componente pai
       if (onItemsChanged) onItemsChanged();
       
       toast.success("Item removido da maleta com sucesso");
@@ -113,28 +103,23 @@ export function SuitcaseItemList({
     }
   };
 
-  // Iniciar edição de quantidade
   const handleStartEditQuantity = (itemId: string, currentQuantity: number = 1) => {
     setEditingQuantity(itemId);
     setNewQuantity(currentQuantity);
   };
 
-  // Cancelar edição de quantidade
   const handleCancelEditQuantity = () => {
     setEditingQuantity(null);
   };
 
-  // Salvar nova quantidade
   const handleSaveQuantity = async (itemId: string) => {
     try {
       setUpdating(prev => ({ ...prev, [itemId]: true }));
       
       await SuitcaseController.updateSuitcaseItemQuantity(itemId, newQuantity);
       
-      // Atualizar a lista de itens
       await fetchItems();
       
-      // Notificar o componente pai
       if (onItemsChanged) onItemsChanged();
       
       toast.success("Quantidade atualizada com sucesso");
@@ -147,7 +132,6 @@ export function SuitcaseItemList({
     }
   };
 
-  // Formatar preço
   const formatPrice = (price: number | undefined) => {
     if (price === undefined) return "R$ 0,00";
     return new Intl.NumberFormat('pt-BR', { 
@@ -156,7 +140,6 @@ export function SuitcaseItemList({
     }).format(price);
   };
 
-  // Formatador de status
   const formatStatus = (status: SuitcaseItemStatus): { label: string, color: string } => {
     switch (status) {
       case 'in_possession':

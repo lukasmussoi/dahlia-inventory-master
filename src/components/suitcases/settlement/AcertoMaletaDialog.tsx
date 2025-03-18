@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -37,12 +36,10 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [createdAcertoId, setCreatedAcertoId] = useState<string | null>(null);
 
-  // Buscar itens da maleta
   useEffect(() => {
     if (open && suitcase) {
       loadSuitcaseItems();
     } else {
-      // Resetar estados quando o modal for fechado
       setSuitcaseItems([]);
       setScannedItemsIds([]);
       setBarcodeInput("");
@@ -59,7 +56,6 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
     try {
       setLoading(true);
       const items = await SuitcaseController.getSuitcaseItems(suitcase.id);
-      // Filtrar apenas itens que estão em posse da revendedora
       const activeItems = items.filter(item => item.status === 'in_possession');
       setSuitcaseItems(activeItems);
     } catch (error) {
@@ -70,7 +66,6 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
     }
   };
 
-  // Processar código de barras escaneado
   const handleBarcodeScanned = (barcode: string) => {
     const matchedItem = suitcaseItems.find(item => 
       item.product?.sku === barcode || 
@@ -88,33 +83,27 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
       toast.error("Item não encontrado nesta maleta.");
     }
 
-    // Limpar campo de entrada
     setBarcodeInput("");
   };
 
-  // Manipular entrada manual do código de barras
   const handleBarcodeInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       handleBarcodeScanned(barcodeInput);
     }
   };
 
-  // Iniciar modo de escaneamento
   const startScanning = () => {
     setScanning(true);
-    // Aqui também poderia inicializar um scanner de código de barras real
     setTimeout(() => {
       document.getElementById('barcode-input')?.focus();
     }, 100);
   };
 
-  // Parar modo de escaneamento
   const stopScanning = () => {
     setScanning(false);
     setBarcodeInput("");
   };
 
-  // Verificar manualmente um item
   const checkItemManually = (itemId: string) => {
     if (scannedItemsIds.includes(itemId)) {
       setScannedItemsIds(prev => prev.filter(id => id !== itemId));
@@ -123,33 +112,30 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
     }
   };
 
-  // Finalizar acerto
   const handleFinishSettlement = async () => {
     if (!suitcase) return;
     
     try {
       setLoading(true);
       
-      // Preparar dados para o acerto
       const settlementData = {
         suitcase_id: suitcase.id,
-        settlement_date: settlementDate.toISOString(),
-        next_settlement_date: nextSettlementDate ? nextSettlementDate.toISOString() : undefined,
-        items_present: scannedItemsIds
+        seller_id: suitcase.seller_id,
+        settlement_date: settlementDate,
+        next_settlement_date: nextSettlementDate,
+        items_present: scannedItemsIds,
+        items_sold: []
       };
       
-      // Criar acerto
       const result = await AcertoMaletaController.createAcerto(settlementData);
       setCreatedAcertoId(result.id);
       
-      // Gerar PDF após criar acerto
       setGeneratingPdf(true);
       const url = await AcertoMaletaController.generateReceiptPDF(result.id);
       setPdfUrl(url);
       
       toast.success("Acerto da maleta concluído com sucesso!");
       
-      // Callback de sucesso se fornecido
       if (onSuccess) {
         onSuccess();
       }
@@ -162,37 +148,31 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
     }
   };
 
-  // Verificar todos os itens
   const checkAllItems = () => {
     const allItemIds = suitcaseItems.map(item => item.id);
     setScannedItemsIds(allItemIds);
     toast.success("Todos os itens verificados");
   };
 
-  // Limpar todos os itens verificados
   const clearAllChecked = () => {
     setScannedItemsIds([]);
     toast.info("Verificação de itens limpa");
   };
 
-  // Imprimir recibo
   const handlePrintReceipt = () => {
     if (pdfUrl) {
       window.open(pdfUrl, '_blank');
     }
   };
 
-  // Calcular estatísticas do acerto
   const totalItems = suitcaseItems.length;
   const scannedItems = scannedItemsIds.length;
   const missingSoldItems = totalItems - scannedItems;
   
-  // Calcular total de vendas estimado
   const soldItems = suitcaseItems.filter(item => !scannedItemsIds.includes(item.id));
   const totalSaleValue = soldItems.reduce((sum, item) => sum + (item.product?.price || 0), 0);
   
-  // Calcular comissão da revendedora (usando a taxa padrão ou a taxa específica da revendedora)
-  const commissionRate = suitcase?.seller?.commission_rate || 0.3; // 30% é a taxa padrão
+  const commissionRate = suitcase?.seller?.commission_rate || 0.3;
   const commissionAmount = totalSaleValue * commissionRate;
   const solvedPieces = soldItems.length;
 
@@ -288,7 +268,6 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {/* Estatísticas rápidas */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-4">
                     <div className="bg-slate-100 p-3 rounded-lg">
                       <p className="text-sm text-slate-600">Total de Itens</p>
@@ -360,7 +339,6 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
                     </div>
                   )}
                   
-                  {/* Lista de itens */}
                   <div className="mt-4">
                     <h3 className="font-medium mb-2">Itens na Maleta</h3>
                     
@@ -461,7 +439,6 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Data do Acerto */}
                     <div className="space-y-2">
                       <Label htmlFor="settlement-date">Data do Acerto</Label>
                       <Popover>
@@ -486,7 +463,6 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
                       </Popover>
                     </div>
                     
-                    {/* Próxima Data de Acerto */}
                     <div className="space-y-2">
                       <Label htmlFor="next-settlement-date">Próxima Data de Acerto</Label>
                       <Popover>
@@ -515,7 +491,6 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
                     </div>
                   </div>
                   
-                  {/* Resumo do Acerto */}
                   <div className="bg-slate-50 p-4 rounded-lg mt-4 border border-slate-200">
                     <h3 className="font-medium mb-3">Resumo do Acerto</h3>
                     
@@ -551,7 +526,6 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
                     </div>
                   </div>
                   
-                  {/* Alerta sobre regras do acerto */}
                   <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200 text-sm text-yellow-800 mt-2">
                     <p className="flex items-start">
                       <span className="mr-2">⚠️</span>
@@ -586,4 +560,3 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
     </Dialog>
   );
 }
-
