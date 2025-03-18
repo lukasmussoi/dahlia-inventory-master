@@ -13,11 +13,12 @@ export function useReactPrint({
   ...restOptions 
 }: { 
   contentRef: RefObject<HTMLElement> 
-} & Omit<Parameters<typeof useReactToPrintOriginal>[0], "content">) {
+} & Parameters<typeof useReactToPrintOriginal>[0]) {
   // Usar o hook original com as opções corretas
   const handlePrint = useReactToPrintOriginal({
     ...restOptions,
-    // A propriedade content deve ser uma função que retorna o elemento
+    documentTitle: restOptions.documentTitle || 'Documento',
+    // Função que retorna o elemento de referência
     content: () => contentRef.current,
   });
 
