@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -40,6 +39,20 @@ const formSchema = z.object({
   email: z.string().email("Email inválido").optional().or(z.literal("")),
   status: z.enum(["Ativa", "Inativa"]),
   promoterId: z.string().uuid("Selecione uma promotora"),
+  commissionRate: z.union([
+    z.number().min(0, "A comissão não pode ser negativa").max(1, "A comissão deve ser um valor entre 0 e 1 (ex: 0.3 para 30%)"),
+    z.string().transform((val, ctx) => {
+      const parsed = parseFloat(val.replace(',', '.'));
+      if (isNaN(parsed)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Comissão inválida",
+        });
+        return z.NEVER;
+      }
+      return parsed;
+    })
+  ]).optional(),
   street: z.string().optional(),
   number: z.string().optional(),
   complement: z.string().optional(),
@@ -70,6 +83,7 @@ export function ResellerForm({ resellerId, onSuccess, isDialog = false }: Resell
       email: "",
       status: "Ativa",
       promoterId: "",
+      commissionRate: 0.3,
       street: "",
       number: "",
       complement: "",
@@ -112,6 +126,7 @@ export function ResellerForm({ resellerId, onSuccess, isDialog = false }: Resell
             email: data.email || "",
             status: data.status,
             promoterId: data.promoterId,
+            commissionRate: data.commissionRate || 0.3,
             street: data.address?.street || "",
             number: data.address?.number || "",
             complement: data.address?.complement || "",
@@ -132,25 +147,31 @@ export function ResellerForm({ resellerId, onSuccess, isDialog = false }: Resell
     }
   }, [resellerId, form]);
 
-  // Lidar com a formatação de CPF/CNPJ
+  // Funções de formatação
   const handleCpfCnpjChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     const formattedValue = formatCPFOrCNPJ(value);
     form.setValue("cpfCnpj", formattedValue);
   };
 
-  // Lidar com a formatação de telefone
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     const formattedValue = formatPhone(value);
     form.setValue("phone", formattedValue);
   };
 
-  // Lidar com a formatação de CEP
   const handleZipCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     const formattedValue = formatZipCode(value);
     form.setValue("zipCode", formattedValue);
+  };
+
+  // Lidar com a formatação de porcentagem
+  const handleCommissionRateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value.replace(',', '.');
+    if (value === '' || !isNaN(parseFloat(value))) {
+      form.setValue("commissionRate", value);
+    }
   };
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
@@ -177,6 +198,9 @@ export function ResellerForm({ resellerId, onSuccess, isDialog = false }: Resell
         status: values.status,
         promoterId: values.promoterId,
         address,
+        commissionRate: typeof values.commissionRate === 'string' 
+          ? parseFloat(values.commissionRate) 
+          : values.commissionRate,
       };
 
       if (resellerId) {
@@ -210,7 +234,7 @@ export function ResellerForm({ resellerId, onSuccess, isDialog = false }: Resell
       </CardHeader>
       <CardContent>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" id="resellerForm">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -272,6 +296,28 @@ export function ResellerForm({ resellerId, onSuccess, isDialog = false }: Resell
                       <Input {...field} placeholder="email@exemplo.com" type="email" />
                     </FormControl>
                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="commissionRate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Comissão</FormLabel>
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        placeholder="0.3" 
+                        type="text"
+                        onChange={handleCommissionRateChange}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                    <div className="text-xs text-muted-foreground">
+                      Exemplo: 0.3 para 30% de comissão
+                    </div>
                   </FormItem>
                 )}
               />
@@ -453,7 +499,7 @@ export function ResellerForm({ resellerId, onSuccess, isDialog = false }: Resell
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isLoading}>
+              <Button type="submit" disabled={isLoading} form="resellerForm">
                 {isLoading ? "Salvando..." : "Salvar"}
               </Button>
             </div>

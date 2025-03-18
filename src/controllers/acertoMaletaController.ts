@@ -1,4 +1,3 @@
-
 import { AcertoMaletaModel } from "@/models/acertoMaletaModel";
 import { SuitcaseController } from "@/controllers/suitcaseController";
 import { toast } from "sonner";
@@ -182,9 +181,9 @@ export class AcertoMaletaController {
       doc.text(`Total de Vendas: R$ ${acerto.total_sales.toFixed(2)}`, pageWidth - 80, yPos);
       yPos += 10;
       
-      const comissaoPercentual = acerto.total_sales > 0 
-        ? (acerto.commission_amount / acerto.total_sales * 100).toFixed(0)
-        : "0";
+      const comissaoPercentual = acerto.seller?.commission_rate 
+        ? (acerto.seller.commission_rate * 100).toFixed(0) 
+        : "30";
         
       doc.text(`Comissão (${comissaoPercentual}%): R$ ${acerto.commission_amount.toFixed(2)}`, pageWidth - 80, yPos);
       

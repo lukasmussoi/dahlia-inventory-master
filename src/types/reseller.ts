@@ -21,6 +21,7 @@ export interface Reseller {
   status: ResellerStatus;
   promoterId: string;
   promoterName?: string;
+  commissionRate?: number;
   createdAt: string;
   updatedAt?: string;
 }
@@ -33,4 +34,5 @@ export interface ResellerInput {
   address?: Address;
   status: ResellerStatus;
   promoterId: string;
+  commissionRate?: number;
 }

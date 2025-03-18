@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Reseller, ResellerInput, Address } from "@/types/reseller";
 
@@ -26,6 +27,7 @@ export class ResellerModel {
         address: reseller.address ? this.mapAddressFromJson(reseller.address) : undefined,
         promoterId: reseller.promoter_id,
         promoterName: reseller.promoters?.name || "",
+        commissionRate: reseller.commission_rate || 0.3,
         createdAt: reseller.created_at,
         updatedAt: reseller.updated_at
       }));
@@ -64,6 +66,7 @@ export class ResellerModel {
         address: data.address ? this.mapAddressFromJson(data.address) : undefined,
         promoterId: data.promoter_id,
         promoterName: data.promoters?.name || "",
+        commissionRate: data.commission_rate || 0.3,
         createdAt: data.created_at,
         updatedAt: data.updated_at
       };
@@ -84,7 +87,8 @@ export class ResellerModel {
         email: data.email,
         status: data.status,
         address: data.address ? this.mapAddressToJson(data.address) : null,
-        promoter_id: data.promoterId
+        promoter_id: data.promoterId,
+        commission_rate: data.commissionRate || 0.3
       };
 
       const { data: newData, error } = await supabase
@@ -111,6 +115,7 @@ export class ResellerModel {
         address: reseller.address ? this.mapAddressFromJson(reseller.address) : undefined,
         promoterId: reseller.promoter_id,
         promoterName: reseller.promoters?.name || "",
+        commissionRate: reseller.commission_rate || 0.3,
         createdAt: reseller.created_at,
         updatedAt: reseller.updated_at
       };
@@ -131,7 +136,8 @@ export class ResellerModel {
         email: data.email,
         status: data.status,
         address: data.address ? this.mapAddressToJson(data.address) : null,
-        promoter_id: data.promoterId
+        promoter_id: data.promoterId,
+        commission_rate: data.commissionRate || 0.3
       };
 
       const { data: updatedData, error } = await supabase
@@ -159,6 +165,7 @@ export class ResellerModel {
         address: reseller.address ? this.mapAddressFromJson(reseller.address) : undefined,
         promoterId: reseller.promoter_id,
         promoterName: reseller.promoters?.name || "",
+        commissionRate: reseller.commission_rate || 0.3,
         createdAt: reseller.created_at,
         updatedAt: reseller.updated_at
       };

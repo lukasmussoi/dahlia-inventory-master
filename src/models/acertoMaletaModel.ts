@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Acerto, AcertoItem, AcertoStatus, SuitcaseItem } from "@/types/suitcase";
 
@@ -24,7 +23,32 @@ export class AcertoMaletaModel {
     
     if (error) throw error;
     
-    return data as unknown as Acerto[] || [];
+    return (data || []).map(item => ({
+      id: item.id,
+      suitcase_id: item.suitcase_id,
+      seller_id: item.seller_id,
+      settlement_date: item.settlement_date,
+      next_settlement_date: item.next_settlement_date,
+      total_sales: item.total_sales,
+      commission_amount: item.commission_amount,
+      receipt_url: item.receipt_url,
+      status: item.status as AcertoStatus,
+      restock_suggestions: item.restock_suggestions,
+      created_at: item.created_at,
+      updated_at: item.updated_at,
+      suitcase: item.suitcase ? {
+        id: item.suitcase.id,
+        code: item.suitcase.code,
+        status: item.suitcase.status,
+        seller_id: '', // Preenchido para satisfazer o tipo
+        created_at: '' // Preenchido para satisfazer o tipo
+      } : undefined,
+      seller: item.seller ? {
+        id: item.seller.id,
+        name: item.seller.name,
+        commission_rate: item.seller.commission_rate
+      } : undefined
+    }));
   }
 
   // Buscar acerto pelo ID
@@ -53,7 +77,35 @@ export class AcertoMaletaModel {
       .maybeSingle();
     
     if (error) throw error;
-    return data as unknown as Acerto;
+    if (!data) return null;
+    
+    return {
+      id: data.id,
+      suitcase_id: data.suitcase_id,
+      seller_id: data.seller_id,
+      settlement_date: data.settlement_date,
+      next_settlement_date: data.next_settlement_date,
+      total_sales: data.total_sales,
+      commission_amount: data.commission_amount,
+      receipt_url: data.receipt_url,
+      status: data.status as AcertoStatus,
+      restock_suggestions: data.restock_suggestions,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+      suitcase: data.suitcase ? {
+        id: data.suitcase.id,
+        code: data.suitcase.code,
+        status: data.suitcase.status,
+        seller_id: '', // Preenchido para satisfazer o tipo
+        created_at: '', // Preenchido para satisfazer o tipo
+        seller: data.suitcase.seller
+      } : undefined,
+      seller: data.seller ? {
+        id: data.seller.id,
+        name: data.seller.name,
+        commission_rate: data.seller.commission_rate
+      } : undefined
+    };
   }
 
   // Buscar itens vendidos de um acerto
@@ -118,7 +170,20 @@ export class AcertoMaletaModel {
     if (error) throw error;
     if (!data) throw new Error("Erro ao criar acerto: nenhum dado retornado");
     
-    return data as Acerto;
+    return {
+      id: data.id,
+      suitcase_id: data.suitcase_id,
+      seller_id: data.seller_id,
+      settlement_date: data.settlement_date,
+      next_settlement_date: data.next_settlement_date,
+      total_sales: data.total_sales,
+      commission_amount: data.commission_amount,
+      receipt_url: data.receipt_url,
+      status: data.status as AcertoStatus,
+      restock_suggestions: data.restock_suggestions,
+      created_at: data.created_at,
+      updated_at: data.updated_at
+    };
   }
 
   // Adicionar itens vendidos ao acerto
@@ -143,15 +208,15 @@ export class AcertoMaletaModel {
   }
 
   // Atualizar um acerto
-  static async updateAcerto(id: string, acertoData: Partial<{
-    settlement_date: string;
+  static async updateAcerto(id: string, acertoData: {
+    settlement_date?: string;
     next_settlement_date?: string;
-    total_sales: number;
-    commission_amount: number;
+    total_sales?: number;
+    commission_amount?: number;
     receipt_url?: string;
-    status: AcertoStatus;
+    status?: AcertoStatus;
     restock_suggestions?: any;
-  }>): Promise<Acerto> {
+  }): Promise<Acerto> {
     const { data, error } = await supabase
       .from('acertos_maleta')
       .update(acertoData)
@@ -162,16 +227,29 @@ export class AcertoMaletaModel {
     if (error) throw error;
     if (!data) throw new Error("Erro ao atualizar acerto: nenhum dado retornado");
     
-    return data as Acerto;
+    return {
+      id: data.id,
+      suitcase_id: data.suitcase_id,
+      seller_id: data.seller_id,
+      settlement_date: data.settlement_date,
+      next_settlement_date: data.next_settlement_date,
+      total_sales: data.total_sales,
+      commission_amount: data.commission_amount,
+      receipt_url: data.receipt_url,
+      status: data.status as AcertoStatus,
+      restock_suggestions: data.restock_suggestions,
+      created_at: data.created_at,
+      updated_at: data.updated_at
+    };
   }
 
   // Calcular a comissão com base na taxa da revendedora
   static async calcularComissao(sellerId: string, totalVendas: number): Promise<number> {
-    // Buscar a taxa de comissão da revendedora na view
+    // Buscar a taxa de comissão da revendedora
     const { data, error } = await supabase
-      .from('seller_commission_rates')
+      .from('resellers')
       .select('commission_rate')
-      .eq('seller_id', sellerId)
+      .eq('id', sellerId)
       .maybeSingle();
     
     if (error) throw error;
