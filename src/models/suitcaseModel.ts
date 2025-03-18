@@ -864,37 +864,28 @@ export class SuitcaseModel {
       
       if (updateError) throw updateError;
       
-      // Incrementar a quantidade no estoque
+      // Incrementar a quantidade no estoque - sem usar a função RPC
       const quantidade = item.quantity || 1;
-      const { error: inventoryError } = await supabase.rpc('increment_inventory_quantity', { 
-        inventory_id: item.inventory_id, 
-        increment_value: quantidade 
-      });
       
-      if (inventoryError) {
-        // Se a função RPC não existir, fazer manualmente
-        console.log("Função RPC não encontrada, fazendo atualização manual...");
+      // Buscar quantidade atual no estoque
+      const { data: inventoryData, error: getError } = await supabase
+        .from('inventory')
+        .select('quantity')
+        .eq('id', item.inventory_id)
+        .maybeSingle();
+      
+      if (getError) throw getError;
+      
+      if (inventoryData) {
+        const newQuantity = (inventoryData.quantity || 0) + quantidade;
         
-        // Buscar quantidade atual
-        const { data: inventoryData, error: getError } = await supabase
+        // Atualizar quantidade
+        const { error: updateInventoryError } = await supabase
           .from('inventory')
-          .select('quantity')
-          .eq('id', item.inventory_id)
-          .maybeSingle();
+          .update({ quantity: newQuantity })
+          .eq('id', item.inventory_id);
         
-        if (getError) throw getError;
-        
-        if (inventoryData) {
-          const newQuantity = (inventoryData.quantity || 0) + quantidade;
-          
-          // Atualizar quantidade
-          const { error: updateInventoryError } = await supabase
-            .from('inventory')
-            .update({ quantity: newQuantity })
-            .eq('id', item.inventory_id);
-          
-          if (updateInventoryError) throw updateInventoryError;
-        }
+        if (updateInventoryError) throw updateInventoryError;
       }
       
       console.log(`Item ${itemId} devolvido ao estoque com sucesso`);
