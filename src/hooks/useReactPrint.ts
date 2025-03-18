@@ -19,7 +19,7 @@ export function useReactPrint({
     ...restOptions,
     documentTitle: restOptions.documentTitle || 'Documento',
     content: () => contentRef.current,
-  });
+  } as Parameters<typeof useReactToPrintOriginal>[0]);
 
   // Retornar uma função sem parâmetros que invoca handlePrint
   return () => handlePrint();
