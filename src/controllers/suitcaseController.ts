@@ -1,6 +1,7 @@
 import { SuitcaseModel } from "@/models/suitcaseModel";
 import { SuitcaseItemStatus, InventoryItemSuitcaseInfo } from "@/types/suitcase";
 import { acertoMaletaController } from "@/controllers/acertoMaletaController";
+import { promoterController } from "@/controllers/promoterController";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -344,6 +345,20 @@ export const suitcaseController = {
     } catch (error) {
       console.error("Erro ao buscar informações da maleta que contém o item:", error);
       throw error;
+    }
+  },
+
+  async getPromoterForReseller(resellerId: string) {
+    try {
+      if (!resellerId) {
+        throw new Error("ID da revendedora é necessário");
+      }
+      
+      const promoter = await promoterController.getPromoterByResellerId(resellerId);
+      return promoter;
+    } catch (error) {
+      console.error("Erro ao buscar promotora responsável:", error);
+      return null;
     }
   }
 };

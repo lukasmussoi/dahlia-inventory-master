@@ -1,72 +1,132 @@
+import { supabase } from "@/integrations/supabase/client";
 
-import { PromoterModel } from "@/models/promoterModel";
-import { Promoter, PromoterInput } from "@/types/promoter";
-
-export class PromoterController {
-  static async getAllPromoters(): Promise<Promoter[]> {
+export const promoterController = {
+  async getAllPromoters() {
     try {
-      console.log("Controller: Buscando todas as promotoras");
-      return await PromoterModel.getAll();
-    } catch (error) {
-      console.error('Erro ao buscar promotoras:', error);
-      throw error;
-    }
-  }
-
-  static async getPromoterById(id: string): Promise<Promoter> {
-    try {
-      console.log(`Controller: Buscando promotora com ID ${id}`);
-      return await PromoterModel.getById(id);
-    } catch (error) {
-      console.error(`Erro ao buscar promotora ${id}:`, error);
-      throw error;
-    }
-  }
-
-  static async createPromoter(promoter: PromoterInput): Promise<any> {
-    try {
-      console.log("Controller: Criando nova promotora", promoter.name);
-      return await PromoterModel.create(promoter);
-    } catch (error) {
-      console.error('Erro ao criar promotora:', error);
-      throw error;
-    }
-  }
-
-  static async updatePromoter(id: string, promoter: PromoterInput): Promise<any> {
-    try {
-      console.log(`Controller: Atualizando promotora ${id}`, promoter.name);
-      return await PromoterModel.update(id, promoter);
-    } catch (error) {
-      console.error(`Erro ao atualizar promotora ${id}:`, error);
-      throw error;
-    }
-  }
-
-  static async deletePromoter(id: string): Promise<boolean> {
-    try {
-      console.log(`Controller: Excluindo promotora ${id}`);
+      const { data, error } = await supabase
+        .from('promoters')
+        .select('*');
       
-      // Primeiro verificar se tem revendedoras associadas
-      const hasResellers = await PromoterModel.hasAssociatedResellers(id);
-      if (hasResellers) {
-        throw new Error("Não é possível excluir esta promotora pois existem revendedoras associadas a ela");
+      if (error) {
+        console.error("Erro ao buscar promotoras:", error);
+        throw new Error("Erro ao buscar promotoras");
       }
       
-      return await PromoterModel.delete(id);
+      return data || [];
     } catch (error) {
-      console.error(`Erro ao excluir promotora ${id}:`, error);
-      throw error;
+      console.error("Erro ao buscar promotoras:", error);
+      throw new Error("Erro ao buscar promotoras");
     }
-  }
-
-  static async searchPromoters(query: string, status?: string): Promise<Promoter[]> {
+  },
+  
+  async getPromoterById(id: string) {
     try {
-      console.log("Controller: Pesquisando promotoras com filtros:", { query, status });
-      return await PromoterModel.searchPromoters(query, status);
+      const { data, error } = await supabase
+        .from('promoters')
+        .select('*')
+        .eq('id', id)
+        .single();
+      
+      if (error) {
+        console.error("Erro ao buscar promotora:", error);
+        throw new Error("Erro ao buscar promotora");
+      }
+      
+      return data;
     } catch (error) {
-      console.error('Erro ao buscar promotoras:', error);
-      throw error;
+      console.error("Erro ao buscar promotora:", error);
+      throw new Error("Erro ao buscar promotora");
     }
-  }
-}
+  },
+  
+  async createPromoter(promoterData: any) {
+    try {
+      const { data, error } = await supabase
+        .from('promoters')
+        .insert([promoterData])
+        .select()
+        .single();
+      
+      if (error) {
+        console.error("Erro ao criar promotora:", error);
+        throw new Error("Erro ao criar promotora");
+      }
+      
+      return data;
+    } catch (error) {
+      console.error("Erro ao criar promotora:", error);
+      throw new Error("Erro ao criar promotora");
+    }
+  },
+  
+  async updatePromoter(id: string, promoterData: any) {
+    try {
+      const { data, error } = await supabase
+        .from('promoters')
+        .update(promoterData)
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error("Erro ao atualizar promotora:", error);
+        throw new Error("Erro ao atualizar promotora");
+      }
+      
+      return data;
+    } catch (error) {
+      console.error("Erro ao atualizar promotora:", error);
+      throw new Error("Erro ao atualizar promotora");
+    }
+  },
+  
+  async deletePromoter(id: string) {
+    try {
+      const { error } = await supabase
+        .from('promoters')
+        .delete()
+        .eq('id', id);
+      
+      if (error) {
+        console.error("Erro ao excluir promotora:", error);
+        throw new Error("Erro ao excluir promotora");
+      }
+      
+      return true;
+    } catch (error) {
+      console.error("Erro ao excluir promotora:", error);
+      throw new Error("Erro ao excluir promotora");
+    }
+  },
+  
+  async getPromoterByResellerId(resellerId: string) {
+    try {
+      const { data, error } = await supabase
+        .from('resellers')
+        .select(`
+          promoter_id,
+          promoters (
+            id,
+            name,
+            phone
+          )
+        `)
+        .eq('id', resellerId)
+        .maybeSingle();
+        
+      if (error) throw error;
+      
+      if (!data || !data.promoter_id) {
+        return null;
+      }
+      
+      return data.promoters;
+    } catch (error) {
+      console.error("Erro ao buscar promotora da revendedora:", error);
+      return null;
+    }
+  },
+};
+
+// Exportar alias para manter compatibilidade
+export const PromoterController = promoterController;

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Calendar } from "@/components/ui/calendar";
 import { 
   Select, 
   SelectContent, 
@@ -12,17 +13,26 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { format } from "date-fns";
 import { 
   Package, 
   Briefcase,
   Search,
   Plus,
-  Printer
+  Printer,
+  Calendar as CalendarIcon,
+  User
 } from "lucide-react";
 import { toast } from "sonner";
 import { Suitcase, SuitcaseStatus, SuitcaseItem } from "@/types/suitcase";
 import { SuitcaseController } from "@/controllers/suitcaseController";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { cn } from "@/lib/utils";
 
 interface SuitcaseDetailsDialogProps {
   open: boolean;
@@ -49,6 +59,9 @@ export function SuitcaseDetailsDialog({
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isAdding, setIsAdding] = useState<{ [key: string]: boolean }>({});
+  const [nextSettlementDate, setNextSettlementDate] = useState<Date | undefined>(
+    suitcase?.next_settlement_date ? new Date(suitcase.next_settlement_date) : undefined
+  );
 
   // Atualizar quando o suitcase mudar
   useEffect(() => {
@@ -56,6 +69,10 @@ export function SuitcaseDetailsDialog({
       // Resetar o termo de busca quando a maleta muda
       setSearchTerm("");
       setSearchResults([]);
+      // Atualizar a data de próximo acerto se estiver definida
+      setNextSettlementDate(
+        suitcase.next_settlement_date ? new Date(suitcase.next_settlement_date) : undefined
+      );
     }
   }, [suitcase]);
 
@@ -64,6 +81,15 @@ export function SuitcaseDetailsDialog({
     queryKey: ['suitcase-items', suitcase?.id],
     queryFn: () => suitcase ? SuitcaseController.getSuitcaseItems(suitcase.id) : Promise.resolve([]),
     enabled: !!suitcase && open,
+  });
+
+  // Buscar informações da promotora responsável pela revendedora
+  const { data: promoterInfo, isLoading: loadingPromoterInfo } = useQuery({
+    queryKey: ['promoter-for-reseller', suitcase?.seller_id],
+    queryFn: () => suitcase?.seller_id 
+      ? SuitcaseController.getPromoterForReseller(suitcase.seller_id) 
+      : Promise.resolve(null),
+    enabled: !!suitcase?.seller_id && open,
   });
 
   // Realizar busca
@@ -137,13 +163,36 @@ export function SuitcaseDetailsDialog({
   // Atualizar dados de venda
   const handleUpdateSaleInfo = async (itemId: string, field: string, value: string) => {
     try {
-      // Implementar a lógica para atualizar informações de venda
-      // Esta função precisará ser implementada no controlador
-      // await SuitcaseController.updateSaleInfo(itemId, field, value);
+      await SuitcaseController.updateSaleInfo(itemId, field, value);
       refetchItems();
     } catch (error: any) {
       console.error("Erro ao atualizar informações de venda:", error);
       toast.error(error.message || "Erro ao atualizar informações de venda");
+    }
+  };
+
+  // Atualizar data do próximo acerto
+  const handleUpdateNextSettlementDate = async (date?: Date) => {
+    if (!suitcase) return;
+    
+    try {
+      setNextSettlementDate(date);
+      
+      await SuitcaseController.updateSuitcase(suitcase.id, {
+        next_settlement_date: date ? date.toISOString() : null,
+      });
+      
+      if (date) {
+        toast.success(`Data do próximo acerto definida para ${format(date, 'dd/MM/yyyy')}`);
+      } else {
+        toast.info("Data do próximo acerto removida");
+      }
+      
+      // Atualizar a consulta para refletir as mudanças
+      queryClient.invalidateQueries({ queryKey: ['suitcase', suitcase.id] });
+    } catch (error: any) {
+      console.error("Erro ao atualizar data do próximo acerto:", error);
+      toast.error(error.message || "Erro ao atualizar data do próximo acerto");
     }
   };
 
@@ -218,9 +267,16 @@ export function SuitcaseDetailsDialog({
               &times;
             </Button>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Informações detalhadas sobre a maleta da revendedora {getSellerName()}.
-          </p>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+            <p>Revendedora: <span className="font-medium text-foreground">{getSellerName()}</span></p>
+            
+            {promoterInfo && (
+              <div className="flex items-center gap-1">
+                <User className="h-3.5 w-3.5" />
+                <p>Promotora: <span className="font-medium text-foreground">{promoterInfo.name}</span></p>
+              </div>
+            )}
+          </div>
         </div>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -275,6 +331,46 @@ export function SuitcaseDetailsDialog({
                     <span className="text-sm text-gray-500">Criada em:</span>
                     <p className="font-medium">{new Date(suitcase.created_at).toLocaleDateString('pt-BR')}</p>
                   </div>
+                  <div className="pt-2">
+                    <span className="text-sm text-gray-500 block mb-1">Próximo acerto:</span>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant={"outline"}
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !nextSettlementDate && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {nextSettlementDate ? (
+                            format(nextSettlementDate, "dd/MM/yyyy")
+                          ) : (
+                            <span>Definir data</span>
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={nextSettlementDate}
+                          onSelect={handleUpdateNextSettlementDate}
+                          initialFocus
+                          className={cn("p-3 pointer-events-auto")}
+                          disabled={(date) => date < new Date()}
+                        />
+                        <div className="p-3 border-t border-border">
+                          <Button
+                            variant="ghost"
+                            className="w-full justify-center text-sm"
+                            onClick={() => handleUpdateNextSettlementDate(undefined)}
+                          >
+                            Limpar
+                          </Button>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
                 </div>
               </div>
               
@@ -292,6 +388,16 @@ export function SuitcaseDetailsDialog({
                   <div>
                     <span className="text-sm text-gray-500">Localização:</span>
                     <p className="font-medium">{suitcase.city || "Não informado"}, {suitcase.neighborhood || "Não informado"}</p>
+                  </div>
+                  <div>
+                    <span className="text-sm text-gray-500">Promotora responsável:</span>
+                    <p className="font-medium">
+                      {loadingPromoterInfo ? (
+                        <span className="inline-block w-24 h-4 bg-gray-200 animate-pulse rounded"></span>
+                      ) : (
+                        promoterInfo?.name || "Não atribuída"
+                      )}
+                    </p>
                   </div>
                 </div>
               </div>
