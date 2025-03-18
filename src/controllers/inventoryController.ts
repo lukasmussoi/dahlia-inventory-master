@@ -1,4 +1,3 @@
-
 import { InventoryModel } from "@/models/inventoryModel";
 import { SuitcaseController } from "./suitcaseController";
 
@@ -57,7 +56,7 @@ export const InventoryController = {
       throw error;
     }
   },
-
+  
   // Buscar itens com filtros
   async getFilteredItems(filters: any) {
     try {

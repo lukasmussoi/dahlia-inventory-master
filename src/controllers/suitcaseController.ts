@@ -237,6 +237,48 @@ export const suitcaseController = {
     }
   },
 
+  async updateSaleInfo(itemId: string, field: string, value: string) {
+    try {
+      // Verificar se já existe uma venda para este item
+      const { data: existingSales, error: salesError } = await supabase
+        .from('suitcase_item_sales')
+        .select('*')
+        .eq('suitcase_item_id', itemId);
+      
+      if (salesError) throw salesError;
+      
+      // Se já existe uma venda, atualizar
+      if (existingSales && existingSales.length > 0) {
+        const { error: updateError } = await supabase
+          .from('suitcase_item_sales')
+          .update({ [field]: value })
+          .eq('id', existingSales[0].id);
+        
+        if (updateError) throw updateError;
+        
+        return existingSales[0].id;
+      } 
+      // Se não existe venda, criar uma nova
+      else {
+        const { data: newSale, error: createError } = await supabase
+          .from('suitcase_item_sales')
+          .insert({ 
+            suitcase_item_id: itemId, 
+            [field]: value 
+          })
+          .select()
+          .single();
+        
+        if (createError) throw createError;
+        
+        return newSale.id;
+      }
+    } catch (error) {
+      console.error("Erro ao atualizar informações de venda:", error);
+      throw new Error("Erro ao atualizar informações de venda");
+    }
+  },
+
   async getSuitcaseSummary() {
     try {
       const summary = await SuitcaseModel.getSuitcaseSummary();
