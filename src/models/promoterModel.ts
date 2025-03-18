@@ -13,20 +13,16 @@ export class PromoterModel {
 
     // Mapear os resultados para o formato esperado
     return data.map((promoter: any) => ({
-      ...promoter,
+      id: promoter.id,
+      name: promoter.name,
       cpfCnpj: promoter.cpf_cnpj,
+      phone: promoter.phone,
+      email: promoter.email || "",
+      status: promoter.status,
       createdAt: promoter.created_at,
       updatedAt: promoter.updated_at,
       // Converter o endereço de JSON para objeto, com verificação de tipo
-      address: promoter.address ? {
-        street: typeof promoter.address === 'object' && 'street' in promoter.address ? String(promoter.address.street || '') : '',
-        number: typeof promoter.address === 'object' && 'number' in promoter.address ? String(promoter.address.number || '') : '',
-        complement: typeof promoter.address === 'object' && 'complement' in promoter.address ? String(promoter.address.complement || '') : '',
-        neighborhood: typeof promoter.address === 'object' && 'neighborhood' in promoter.address ? String(promoter.address.neighborhood || '') : '',
-        city: typeof promoter.address === 'object' && 'city' in promoter.address ? String(promoter.address.city || '') : '',
-        state: typeof promoter.address === 'object' && 'state' in promoter.address ? String(promoter.address.state || '') : '',
-        zipCode: typeof promoter.address === 'object' && 'zipCode' in promoter.address ? String(promoter.address.zipCode || '') : ''
-      } : undefined
+      address: promoter.address ? this.mapAddressFromJson(promoter.address) : undefined
     })) as Promoter[];
   }
 
@@ -40,19 +36,15 @@ export class PromoterModel {
     if (error) throw error;
 
     return {
-      ...data,
+      id: data.id,
+      name: data.name,
       cpfCnpj: data.cpf_cnpj,
+      phone: data.phone,
+      email: data.email || "",
+      status: data.status,
       createdAt: data.created_at,
       updatedAt: data.updated_at,
-      address: data.address ? {
-        street: typeof data.address === 'object' && 'street' in data.address ? String(data.address.street || '') : '',
-        number: typeof data.address === 'object' && 'number' in data.address ? String(data.address.number || '') : '',
-        complement: typeof data.address === 'object' && 'complement' in data.address ? String(data.address.complement || '') : '',
-        neighborhood: typeof data.address === 'object' && 'neighborhood' in data.address ? String(data.address.neighborhood || '') : '',
-        city: typeof data.address === 'object' && 'city' in data.address ? String(data.address.city || '') : '',
-        state: typeof data.address === 'object' && 'state' in data.address ? String(data.address.state || '') : '',
-        zipCode: typeof data.address === 'object' && 'zipCode' in data.address ? String(data.address.zipCode || '') : ''
-      } : undefined
+      address: data.address ? this.mapAddressFromJson(data.address) : undefined
     } as Promoter;
   }
 
@@ -77,7 +69,18 @@ export class PromoterModel {
       throw error;
     }
 
-    return data[0];
+    const createdPromoter = data[0];
+    return {
+      id: createdPromoter.id,
+      name: createdPromoter.name,
+      cpfCnpj: createdPromoter.cpf_cnpj,
+      phone: createdPromoter.phone,
+      email: createdPromoter.email || "",
+      status: createdPromoter.status,
+      createdAt: createdPromoter.created_at,
+      updatedAt: createdPromoter.updated_at,
+      address: createdPromoter.address ? this.mapAddressFromJson(createdPromoter.address) : undefined
+    } as Promoter;
   }
 
   static async update(id: string, promoter: PromoterInput): Promise<any> {
@@ -102,7 +105,18 @@ export class PromoterModel {
       throw error;
     }
 
-    return data[0];
+    const updatedPromoter = data[0];
+    return {
+      id: updatedPromoter.id,
+      name: updatedPromoter.name,
+      cpfCnpj: updatedPromoter.cpf_cnpj,
+      phone: updatedPromoter.phone,
+      email: updatedPromoter.email || "",
+      status: updatedPromoter.status,
+      createdAt: updatedPromoter.created_at,
+      updatedAt: updatedPromoter.updated_at,
+      address: updatedPromoter.address ? this.mapAddressFromJson(updatedPromoter.address) : undefined
+    } as Promoter;
   }
 
   static async delete(id: string): Promise<boolean> {
@@ -148,19 +162,15 @@ export class PromoterModel {
 
     // Mapear os resultados para o formato esperado
     return data.map((promoter: any) => ({
-      ...promoter,
+      id: promoter.id,
+      name: promoter.name,
       cpfCnpj: promoter.cpf_cnpj,
+      phone: promoter.phone,
+      email: promoter.email || "",
+      status: promoter.status,
       createdAt: promoter.created_at,
       updatedAt: promoter.updated_at,
-      address: promoter.address ? {
-        street: typeof promoter.address === 'object' && 'street' in promoter.address ? String(promoter.address.street || '') : '',
-        number: typeof promoter.address === 'object' && 'number' in promoter.address ? String(promoter.address.number || '') : '',
-        complement: typeof promoter.address === 'object' && 'complement' in promoter.address ? String(promoter.address.complement || '') : '',
-        neighborhood: typeof promoter.address === 'object' && 'neighborhood' in promoter.address ? String(promoter.address.neighborhood || '') : '',
-        city: typeof promoter.address === 'object' && 'city' in promoter.address ? String(promoter.address.city || '') : '',
-        state: typeof promoter.address === 'object' && 'state' in promoter.address ? String(promoter.address.state || '') : '',
-        zipCode: typeof promoter.address === 'object' && 'zipCode' in promoter.address ? String(promoter.address.zipCode || '') : ''
-      } : undefined
+      address: promoter.address ? this.mapAddressFromJson(promoter.address) : undefined
     })) as Promoter[];
   }
 
@@ -173,5 +183,19 @@ export class PromoterModel {
     if (error) throw error;
 
     return count !== null && count > 0;
+  }
+
+  private static mapAddressFromJson(addressJson: any) {
+    if (!addressJson) return undefined;
+    
+    return {
+      street: typeof addressJson === 'object' && 'street' in addressJson ? String(addressJson.street || '') : '',
+      number: typeof addressJson === 'object' && 'number' in addressJson ? String(addressJson.number || '') : '',
+      complement: typeof addressJson === 'object' && 'complement' in addressJson ? String(addressJson.complement || '') : '',
+      neighborhood: typeof addressJson === 'object' && 'neighborhood' in addressJson ? String(addressJson.neighborhood || '') : '',
+      city: typeof addressJson === 'object' && 'city' in addressJson ? String(addressJson.city || '') : '',
+      state: typeof addressJson === 'object' && 'state' in addressJson ? String(addressJson.state || '') : '',
+      zipCode: typeof addressJson === 'object' && 'zipCode' in addressJson ? String(addressJson.zipCode || '') : ''
+    };
   }
 }
