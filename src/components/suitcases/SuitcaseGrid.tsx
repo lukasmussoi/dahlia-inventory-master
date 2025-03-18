@@ -296,7 +296,7 @@ export function SuitcaseGrid({ isAdmin, onRefresh }: SuitcaseGridProps) {
                 <SelectValue placeholder="Todos os status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos os status</SelectItem>
+                <SelectItem value="todos">Todos os status</SelectItem>
                 <SelectItem value="in_use">Em uso</SelectItem>
                 <SelectItem value="returned">Devolvida</SelectItem>
                 <SelectItem value="in_replenishment">Em reposição</SelectItem>
