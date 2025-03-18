@@ -53,7 +53,9 @@ export function SuitcaseItemList({
     try {
       setLoading(true);
       const fetchedItems = await SuitcaseController.getSuitcaseItems(suitcaseId);
-      setItems(fetchedItems);
+      // Filtrar apenas itens em posse (não vendidos)
+      const activeItems = fetchedItems.filter(item => item.status === 'in_possession');
+      setItems(activeItems);
     } catch (error: any) {
       console.error("Erro ao carregar itens da maleta:", error);
       toast.error("Erro ao carregar itens da maleta");

@@ -1,3 +1,4 @@
+
 import { useState, useMemo } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -45,8 +46,10 @@ export function SuitcaseGrid({ suitcases, isAdmin, onRefresh, onOpenAcertoDialog
       await Promise.all(
         suitcaseIds.map(async (id) => {
           try {
+            // Buscar todos os itens da maleta
             const items = await SuitcaseModel.getSuitcaseItems(id);
-            result[id] = items;
+            // Filtrar apenas itens em posse (não vendidos)
+            result[id] = items.filter(item => item.status === 'in_possession');
           } catch (error) {
             console.error(`Erro ao buscar itens da maleta ${id}:`, error);
             result[id] = [];
@@ -71,7 +74,10 @@ export function SuitcaseGrid({ suitcases, isAdmin, onRefresh, onOpenAcertoDialog
   const handlePrint = async (suitcase: Suitcase) => {
     setSelectedSuitcase(suitcase);
     try {
-      const items = await SuitcaseModel.getSuitcaseItems(suitcase.id);
+      // Buscar todos os itens da maleta
+      const allItems = await SuitcaseModel.getSuitcaseItems(suitcase.id);
+      // Filtrar apenas itens em posse (não vendidos)
+      const items = allItems.filter(item => item.status === 'in_possession');
       setSuitcaseItemsForPrint(items);
       
       if (suitcase.seller_id) {

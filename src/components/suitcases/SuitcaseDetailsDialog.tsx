@@ -27,14 +27,20 @@ import {
   Plus,
   Printer,
   Calendar as CalendarIcon,
-  User
+  User,
+  History,
+  CreditCard,
+  Clock
 } from "lucide-react";
 import { toast } from "sonner";
-import { Suitcase, SuitcaseStatus, SuitcaseItem } from "@/types/suitcase";
+import { Suitcase, SuitcaseStatus, SuitcaseItem, Acerto } from "@/types/suitcase";
 import { SuitcaseController } from "@/controllers/suitcaseController";
+import { AcertoMaletaController } from "@/controllers/acertoMaletaController";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { SuitcasePrintDialog } from "./SuitcasePrintDialog";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface SuitcaseDetailsDialogProps {
   open: boolean;
@@ -79,11 +85,31 @@ export function SuitcaseDetailsDialog({
     }
   }, [suitcase]);
 
-  // Buscar itens da maleta
+  // Buscar itens da maleta (apenas itens em posse, não os vendidos)
   const { data: suitcaseItems = [], refetch: refetchItems } = useQuery({
     queryKey: ['suitcase-items', suitcase?.id],
-    queryFn: () => suitcase ? SuitcaseController.getSuitcaseItems(suitcase.id) : Promise.resolve([]),
+    queryFn: async () => {
+      if (!suitcase) return [];
+      const items = await SuitcaseController.getSuitcaseItems(suitcase.id);
+      // Filtrar apenas itens que não foram vendidos
+      return items.filter(item => item.status === 'in_possession');
+    },
     enabled: !!suitcase && open,
+  });
+
+  // Buscar histórico de acertos da maleta
+  const { data: acertosHistorico = [], isLoading: isLoadingAcertos } = useQuery({
+    queryKey: ['suitcase-acertos', suitcase?.id],
+    queryFn: async () => {
+      if (!suitcase) return [];
+      try {
+        return await AcertoMaletaController.getAcertosBySuitcase(suitcase.id);
+      } catch (error) {
+        console.error("Erro ao buscar histórico de acertos:", error);
+        return [];
+      }
+    },
+    enabled: !!suitcase && open && activeTab === "historico",
   });
 
   // Buscar informações da promotora responsável pela revendedora
@@ -240,6 +266,25 @@ export function SuitcaseDetailsDialog({
   // Abrir diálogo de impressão
   const handlePrint = () => {
     setIsPrintDialogOpen(true);
+  };
+
+  // Formatar data
+  const formatDate = (dateString: string) => {
+    return format(new Date(dateString), "dd/MM/yyyy", { locale: ptBR });
+  };
+
+  // Formatar método de pagamento
+  const formatPaymentMethod = (method?: string) => {
+    if (!method) return "Não informado";
+    
+    const methods: Record<string, string> = {
+      'cash': 'Dinheiro',
+      'credit': 'Cartão de Crédito',
+      'debit': 'Cartão de Débito',
+      'pix': 'PIX'
+    };
+    
+    return methods[method] || method;
   };
 
   // Editar maleta
@@ -596,8 +641,108 @@ export function SuitcaseDetailsDialog({
             </TabsContent>
             
             <TabsContent value="historico" className="p-6">
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">Histórico de acertos e movimentações em desenvolvimento</p>
+              <div className="space-y-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <History className="h-5 w-5 text-pink-500" />
+                  <h3 className="text-lg font-medium">Histórico de Acertos</h3>
+                </div>
+                
+                {isLoadingAcertos ? (
+                  <div className="flex justify-center py-10">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-500"></div>
+                  </div>
+                ) : acertosHistorico.length === 0 ? (
+                  <div className="text-center py-6 border rounded-md">
+                    <History className="mx-auto h-12 w-12 text-gray-300" />
+                    <p className="mt-2 text-muted-foreground">Nenhum acerto realizado</p>
+                    <p className="text-sm text-muted-foreground">Os acertos realizados serão exibidos aqui</p>
+                  </div>
+                ) : (
+                  acertosHistorico.map((acerto: Acerto) => (
+                    <Card key={acerto.id} className="mb-4">
+                      <CardHeader className="pb-2">
+                        <div className="flex justify-between items-start">
+                          <CardTitle className="text-lg flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-pink-500" />
+                            Acerto de {formatDate(acerto.settlement_date)}
+                          </CardTitle>
+                          <Badge 
+                            variant={acerto.status === 'concluido' ? 'default' : 'outline'}
+                            className={acerto.status === 'concluido' 
+                              ? 'bg-green-100 text-green-800 hover:bg-green-200 border-green-300' 
+                              : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border-yellow-300'}
+                          >
+                            {acerto.status === 'concluido' ? 'Concluído' : 'Pendente'}
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                          <div>
+                            <p className="text-sm text-muted-foreground">Total em vendas:</p>
+                            <p className="font-semibold text-lg">{formatPrice(acerto.total_sales)}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Comissão da revendedora:</p>
+                            <p className="font-semibold text-lg text-green-600">{formatPrice(acerto.commission_amount)}</p>
+                          </div>
+                        </div>
+                        
+                        {acerto.items_vendidos && acerto.items_vendidos.length > 0 ? (
+                          <div>
+                            <h4 className="font-medium mb-2 mt-4 flex items-center gap-1">
+                              <Package className="h-4 w-4" />
+                              Itens Vendidos ({acerto.items_vendidos.length})
+                            </h4>
+                            <div className="space-y-2 max-h-60 overflow-y-auto">
+                              {acerto.items_vendidos.map((item) => (
+                                <div key={item.id} className="border rounded p-3 flex items-center justify-between">
+                                  <div>
+                                    <p className="font-medium">{item.product?.name}</p>
+                                    <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                                      <span>Código: {item.product?.sku}</span>
+                                      <span>Preço: {formatPrice(item.price)}</span>
+                                    </div>
+                                    <div className="mt-1 text-xs text-muted-foreground flex items-center gap-2">
+                                      {item.customer_name && (
+                                        <span className="flex items-center gap-1">
+                                          <User className="h-3 w-3" />
+                                          Cliente: {item.customer_name}
+                                        </span>
+                                      )}
+                                      {item.payment_method && (
+                                        <span className="flex items-center gap-1">
+                                          <CreditCard className="h-3 w-3" />
+                                          Pagamento: {formatPaymentMethod(item.payment_method)}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground italic">Nenhum item registrado neste acerto.</p>
+                        )}
+                        
+                        {acerto.receipt_url && (
+                          <div className="mt-4">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => window.open(acerto.receipt_url, '_blank')}
+                              className="w-full sm:w-auto"
+                            >
+                              <Printer className="h-4 w-4 mr-2" />
+                              Visualizar Comprovante
+                            </Button>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
               </div>
             </TabsContent>
           </Tabs>
