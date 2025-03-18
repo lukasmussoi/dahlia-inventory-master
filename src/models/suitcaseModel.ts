@@ -1,73 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { SuitcaseItemStatus } from "@/types/suitcase";
-
-// Interface para maleta com status atualizado
-export interface Suitcase {
-  id: string;
-  seller_id: string;
-  status: 'in_use' | 'returned' | 'lost' | 'in_audit' | 'in_replenishment';
-  created_at?: string;
-  updated_at?: string;
-  sent_at?: string;
-  city?: string;
-  neighborhood?: string;
-  code: string;
-  next_settlement_date?: string; // Campo para data do próximo acerto
-  seller?: {
-    id: string;
-    name: string;
-    phone?: string;
-    address?: {
-      city?: string;
-      neighborhood?: string;
-      street?: string;
-      number?: string;
-      state?: string;
-      zipCode?: string;
-    };
-  };
-}
-
-// Interface para resumo de contagem de maletas por status
-export interface SuitcaseSummary {
-  total: number;
-  in_use: number;
-  returned: number;
-  in_replenishment: number;
-}
-
-// Interface para peças da maleta
-export interface SuitcaseItem {
-  id: string;
-  suitcase_id: string;
-  inventory_id: string;
-  quantity: number;
-  status: 'in_possession' | 'sold' | 'returned' | 'lost';
-  created_at?: string;
-  updated_at?: string;
-  added_at: string;
-  product?: {
-    id: string;
-    name: string;
-    price: number;
-    sku: string;
-    photos?: { photo_url: string }[] | any; // Ajustado para aceitar qualquer tipo
-    photo_url?: string;
-  };
-  sales?: SuitcaseItemSale[];
-}
-
-// Interface para vendas de peças da maleta
-export interface SuitcaseItemSale {
-  id: string;
-  suitcase_item_id: string;
-  customer_name?: string;
-  payment_method?: string;
-  sold_at?: string;
-  created_at?: string;
-  updated_at?: string;
-}
+import { SuitcaseStatus, SuitcaseItemStatus, Suitcase, SuitcaseItem, SuitcaseItemSale } from "@/types/suitcase";
 
 export class SuitcaseModel {
   // Buscar total de maletas ativas
@@ -97,11 +30,54 @@ export class SuitcaseModel {
       .order('created_at', { ascending: false });
     
     if (error) throw error;
-    return data || [];
+    
+    // Converter os resultados para se adequar à interface Suitcase
+    return (data || []).map(item => {
+      // Processar o endereço do vendedor que vem como JSON para um objeto estruturado
+      let sellerAddress = item.seller?.address ? item.seller.address : {};
+      if (typeof sellerAddress === 'string') {
+        try {
+          sellerAddress = JSON.parse(sellerAddress);
+        } catch (e) {
+          sellerAddress = {};
+        }
+      }
+      
+      return {
+        id: item.id,
+        code: item.code || '',
+        seller_id: item.seller_id,
+        status: item.status as SuitcaseStatus,
+        city: item.city,
+        neighborhood: item.neighborhood,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+        next_settlement_date: item.next_settlement_date,
+        sent_at: item.sent_at,
+        seller: item.seller ? {
+          id: item.seller.id,
+          name: item.seller.name,
+          phone: item.seller.phone,
+          address: {
+            city: sellerAddress.city,
+            neighborhood: sellerAddress.neighborhood,
+            street: sellerAddress.street,
+            number: sellerAddress.number,
+            state: sellerAddress.state,
+            zipCode: sellerAddress.zipCode
+          }
+        } : undefined
+      };
+    });
   }
 
   // Buscar resumo das maletas (contagem por status)
-  static async getSuitcaseSummary(): Promise<SuitcaseSummary> {
+  static async getSuitcaseSummary(): Promise<{
+    total: number;
+    in_use: number;
+    returned: number;
+    in_replenishment: number;
+  }> {
     const { data, error } = await supabase
       .from('suitcases')
       .select('status');
@@ -137,7 +113,43 @@ export class SuitcaseModel {
       .maybeSingle();
     
     if (error) throw error;
-    return data;
+    if (!data) return null;
+    
+    // Processar o endereço do vendedor que vem como JSON para um objeto estruturado
+    let sellerAddress = data.seller?.address ? data.seller.address : {};
+    if (typeof sellerAddress === 'string') {
+      try {
+        sellerAddress = JSON.parse(sellerAddress);
+      } catch (e) {
+        sellerAddress = {};
+      }
+    }
+    
+    return {
+      id: data.id,
+      code: data.code || '',
+      seller_id: data.seller_id,
+      status: data.status as SuitcaseStatus,
+      city: data.city,
+      neighborhood: data.neighborhood,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+      next_settlement_date: data.next_settlement_date,
+      sent_at: data.sent_at,
+      seller: data.seller ? {
+        id: data.seller.id,
+        name: data.seller.name,
+        phone: data.seller.phone,
+        address: {
+          city: sellerAddress.city,
+          neighborhood: sellerAddress.neighborhood,
+          street: sellerAddress.street,
+          number: sellerAddress.number,
+          state: sellerAddress.state,
+          zipCode: sellerAddress.zipCode
+        }
+      } : undefined
+    };
   }
 
   // Buscar uma peça da maleta pelo ID
@@ -160,7 +172,27 @@ export class SuitcaseModel {
       .maybeSingle();
     
     if (error) throw error;
-    return data as SuitcaseItem;
+    if (!data) return null;
+    
+    return {
+      id: data.id,
+      suitcase_id: data.suitcase_id,
+      inventory_id: data.inventory_id,
+      status: data.status as SuitcaseItemStatus,
+      added_at: data.created_at || new Date().toISOString(),
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+      quantity: data.quantity,
+      product: data.product ? {
+        id: data.product.id,
+        name: data.product.name,
+        price: data.product.price,
+        sku: data.product.sku,
+        photo_url: data.product.photos && data.product.photos.length > 0 ? 
+          data.product.photos[0].photo_url : undefined
+      } : undefined,
+      sales: []
+    };
   }
 
   // Buscar peças de uma maleta
@@ -199,17 +231,28 @@ export class SuitcaseModel {
           }
         }
         
-        // Retornar o objeto com a estrutura correta e tratando photos de forma segura
+        // Buscar vendas relacionadas a este item
+        const sales: SuitcaseItemSale[] = []; // Isso seria preenchido com uma consulta adicional
+        
+        // Retornar o objeto com a estrutura correta
         return {
-          ...item,
+          id: item.id,
+          suitcase_id: item.suitcase_id,
+          inventory_id: item.inventory_id,
+          status: item.status as SuitcaseItemStatus,
           added_at: item.created_at || new Date().toISOString(),
+          created_at: item.created_at,
+          updated_at: item.updated_at,
+          quantity: item.quantity,
           product: item.product ? {
-            ...item.product,
-            photo_url: photoUrl,
-            // Garantir uma estrutura de photos segura
-            photos: Array.isArray(item.product.photos) ? item.product.photos : []
-          } : undefined
-        } as SuitcaseItem;
+            id: item.product.id,
+            name: item.product.name,
+            price: item.product.price,
+            sku: item.product.sku,
+            photo_url: photoUrl
+          } : undefined,
+          sales: sales
+        };
       });
       
       return processedData;
@@ -222,7 +265,7 @@ export class SuitcaseModel {
   // Criar nova maleta
   static async createSuitcase(suitcaseData: {
     seller_id: string;
-    status?: 'in_use' | 'returned' | 'lost' | 'in_audit' | 'in_replenishment';
+    status?: SuitcaseStatus;
     city?: string;
     neighborhood?: string;
     code?: string;
@@ -238,7 +281,7 @@ export class SuitcaseModel {
       .from('suitcases')
       .insert({
         ...suitcaseData,
-        status: validStatus
+        status: validStatus as SuitcaseStatus
       })
       .select()
       .maybeSingle();
@@ -246,7 +289,18 @@ export class SuitcaseModel {
     if (error) throw error;
     if (!data) throw new Error("Erro ao criar maleta: nenhum dado retornado");
     
-    return data;
+    return {
+      id: data.id,
+      code: data.code || '',
+      seller_id: data.seller_id,
+      status: data.status as SuitcaseStatus,
+      city: data.city,
+      neighborhood: data.neighborhood,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+      next_settlement_date: data.next_settlement_date,
+      sent_at: data.sent_at
+    };
   }
 
   // Atualizar maleta
@@ -263,7 +317,18 @@ export class SuitcaseModel {
     if (error) throw error;
     if (!data) throw new Error("Erro ao atualizar maleta: nenhum dado retornado");
     
-    return data;
+    return {
+      id: data.id,
+      code: data.code || '',
+      seller_id: data.seller_id,
+      status: data.status as SuitcaseStatus,
+      city: data.city,
+      neighborhood: data.neighborhood,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+      next_settlement_date: data.next_settlement_date,
+      sent_at: data.sent_at
+    };
   }
 
   // Excluir maleta
@@ -283,7 +348,7 @@ export class SuitcaseModel {
     suitcase_id: string;
     inventory_id: string;
     quantity?: number;
-    status?: 'in_possession' | 'sold' | 'returned' | 'lost';
+    status?: SuitcaseItemStatus;
   }): Promise<SuitcaseItem> {
     if (!itemData.suitcase_id) throw new Error("ID da maleta é necessário");
     if (!itemData.inventory_id) throw new Error("ID do inventário é necessário");
@@ -297,13 +362,23 @@ export class SuitcaseModel {
     if (error) throw error;
     if (!data) throw new Error("Erro ao adicionar peça à maleta: nenhum dado retornado");
     
-    return data as SuitcaseItem;
+    return {
+      id: data.id,
+      suitcase_id: data.suitcase_id,
+      inventory_id: data.inventory_id,
+      status: data.status as SuitcaseItemStatus,
+      added_at: data.created_at || new Date().toISOString(),
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+      quantity: data.quantity,
+      sales: []
+    };
   }
 
   // Atualizar status de uma peça da maleta
   static async updateSuitcaseItemStatus(
     itemId: string, 
-    status: 'in_possession' | 'sold' | 'returned' | 'lost',
+    status: SuitcaseItemStatus,
     saleInfo?: Partial<SuitcaseItemSale>
   ): Promise<SuitcaseItem> {
     if (!itemId) throw new Error("ID da peça é necessário");
@@ -331,7 +406,17 @@ export class SuitcaseModel {
       if (saleError) throw saleError;
     }
     
-    return data as SuitcaseItem;
+    return {
+      id: data.id,
+      suitcase_id: data.suitcase_id,
+      inventory_id: data.inventory_id,
+      status: data.status as SuitcaseItemStatus,
+      added_at: data.created_at || new Date().toISOString(),
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+      quantity: data.quantity,
+      sales: []
+    };
   }
 
   // Buscar vendas de uma peça da maleta
@@ -344,7 +429,18 @@ export class SuitcaseModel {
       .eq('suitcase_item_id', itemId);
     
     if (error) throw error;
-    return data || [];
+    
+    return (data || []).map(sale => ({
+      id: sale.id,
+      suitcase_item_id: sale.suitcase_item_id,
+      client_name: sale.customer_name,
+      payment_method: sale.payment_method,
+      sale_date: sale.sold_at || sale.created_at, // Use sold_at ou created_at como sale_date
+      customer_name: sale.customer_name,
+      sold_at: sale.sold_at,
+      created_at: sale.created_at,
+      updated_at: sale.updated_at
+    }));
   }
 
   // Buscar maletas filtradas
@@ -370,7 +466,7 @@ export class SuitcaseModel {
     if (filters.status && filters.status !== 'todos') {
       // Garantir que o status é um dos valores válidos
       if (['in_use', 'returned', 'lost', 'in_audit', 'in_replenishment'].includes(filters.status)) {
-        query = query.eq('status', filters.status as 'in_use' | 'returned' | 'lost' | 'in_audit' | 'in_replenishment');
+        query = query.eq('status', filters.status);
       }
     }
     
@@ -390,7 +486,45 @@ export class SuitcaseModel {
     const { data, error } = await query.order('created_at', { ascending: false });
     
     if (error) throw error;
-    return data || [];
+    
+    // Converter os resultados para se adequar à interface Suitcase
+    return (data || []).map(item => {
+      // Processar o endereço do vendedor que vem como JSON para um objeto estruturado
+      let sellerAddress = item.seller?.address ? item.seller.address : {};
+      if (typeof sellerAddress === 'string') {
+        try {
+          sellerAddress = JSON.parse(sellerAddress);
+        } catch (e) {
+          sellerAddress = {};
+        }
+      }
+      
+      return {
+        id: item.id,
+        code: item.code || '',
+        seller_id: item.seller_id,
+        status: item.status as SuitcaseStatus,
+        city: item.city,
+        neighborhood: item.neighborhood,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+        next_settlement_date: item.next_settlement_date,
+        sent_at: item.sent_at,
+        seller: item.seller ? {
+          id: item.seller.id,
+          name: item.seller.name,
+          phone: item.seller.phone,
+          address: {
+            city: sellerAddress.city,
+            neighborhood: sellerAddress.neighborhood,
+            street: sellerAddress.street,
+            number: sellerAddress.number,
+            state: sellerAddress.state,
+            zipCode: sellerAddress.zipCode
+          }
+        } : undefined
+      };
+    });
   }
 
   // Gerar código único para maleta

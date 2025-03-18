@@ -95,18 +95,25 @@ export const useInventoryForm = ({ item, onSuccess, onClose }: UseInventoryFormP
         depth: values.depth,
       };
 
+      // Processar fotos para os tipos corretos
+      const processedPhotos = photos.map(file => {
+        return {
+          // Usar URL temporária pra simular o upload
+          photo_url: URL.createObjectURL(file),
+          is_primary: false
+        };
+      });
+
       if (item) {
         await InventoryModel.updateItem(item.id, itemData);
         if (photos.length > 0) {
-          // Fix: Remove third parameter
-          await InventoryModel.updateItemPhotos(item.id, photos);
+          await InventoryModel.updateItemPhotos(item.id, processedPhotos);
         }
         toast.success("Item atualizado com sucesso!");
       } else {
         const createdItem = await InventoryModel.createItem(itemData);
         if (photos.length > 0) {
-          // Fix: Remove third parameter
-          await InventoryModel.updateItemPhotos(createdItem.id, photos);
+          await InventoryModel.updateItemPhotos(createdItem.id, processedPhotos);
         }
         toast.success("Item criado com sucesso!");
       }

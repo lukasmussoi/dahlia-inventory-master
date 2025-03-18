@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -34,7 +33,7 @@ import {
   SuitcaseFilters,
   SuitcaseItem,
   SuitcaseItemStatus,
-  SuitcaseItemSale,
+  SuitcaseStatus
 } from "@/types/suitcase";
 import { SuitcaseModel } from "@/models/suitcaseModel";
 import { format } from "date-fns";
@@ -73,7 +72,15 @@ export function SuitcaseGrid({ isAdmin, onRefresh }: SuitcaseGridProps) {
   // Buscar dados dos itens da maleta
   const { data: suitcaseItems = [], refetch: refetchSuitcaseItems } = useQuery({
     queryKey: ["suitcase-items", selectedSuitcase?.id],
-    queryFn: () => selectedSuitcase?.id ? SuitcaseModel.getSuitcaseItems(selectedSuitcase.id) : [],
+    queryFn: async () => {
+      if (!selectedSuitcase?.id) return [];
+      
+      // Obter itens da maleta
+      const items = await SuitcaseModel.getSuitcaseItems(selectedSuitcase.id);
+      
+      // Retornar os itens diretamente, garantindo que todos os campos necessários estejam presentes
+      return items;
+    },
     enabled: !!selectedSuitcase?.id,
   });
 
@@ -150,10 +157,13 @@ export function SuitcaseGrid({ isAdmin, onRefresh }: SuitcaseGridProps) {
         toast.error("Nenhuma maleta selecionada.");
         return;
       }
+      
+      // Corrigir uso de addItemToSuitcase
       await SuitcaseModel.addItemToSuitcase({
         suitcase_id: selectedSuitcase.id,
         inventory_id: inventoryId
       });
+      
       toast.success("Item adicionado à maleta com sucesso!");
       closeItemModal();
       refetchSuitcaseItems();
@@ -169,6 +179,7 @@ export function SuitcaseGrid({ isAdmin, onRefresh }: SuitcaseGridProps) {
   const handleRemoveItem = async (itemId: string) => {
     if (window.confirm("Tem certeza que deseja remover este item da maleta?")) {
       try {
+        // Corrigir uso de removeSuitcaseItem
         await SuitcaseModel.removeSuitcaseItem(itemId);
         toast.success("Item removido da maleta com sucesso!");
         refetchSuitcaseItems();
@@ -183,16 +194,14 @@ export function SuitcaseGrid({ isAdmin, onRefresh }: SuitcaseGridProps) {
   const handleUpdateItemStatus = async (itemId: string, status: SuitcaseItemStatus) => {
     try {
       // Garantir que só status válidos sejam enviados
-      const validStatus = ["in_possession", "sold", "returned", "lost"] as const;
-      if (!validStatus.includes(status as any)) {
+      const validStatus: SuitcaseItemStatus[] = ["in_possession", "sold", "returned", "lost"];
+      
+      if (!validStatus.includes(status)) {
         toast.error(`Status inválido: ${status}`);
         return;
       }
       
-      await SuitcaseModel.updateSuitcaseItemStatus(
-        itemId, 
-        status as "in_possession" | "sold" | "returned" | "lost"
-      );
+      await SuitcaseModel.updateSuitcaseItemStatus(itemId, status);
       toast.success("Status do item atualizado com sucesso!");
       refetchSuitcaseItems();
     } catch (error) {
@@ -242,6 +251,7 @@ export function SuitcaseGrid({ isAdmin, onRefresh }: SuitcaseGridProps) {
   // Buscar vendedor
   const fetchSeller = async (sellerId: string) => {
     try {
+      // Corrigir uso de getSellerById
       const seller = await SuitcaseModel.getSellerById(sellerId);
       return seller;
     } catch (error) {

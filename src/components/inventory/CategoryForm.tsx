@@ -50,10 +50,12 @@ export function CategoryForm({ category, isOpen, onClose, onSuccess }: CategoryF
     try {
       setIsSubmitting(true);
       if (category) {
-        await InventoryModel.updateCategory(category.id, values.name);
+        // Como a função updateCategory agora aceita um objeto, passamos o objeto completo
+        await InventoryModel.updateCategory(category.id, { name: values.name });
         toast.success("Categoria atualizada com sucesso!");
       } else {
-        await InventoryModel.createCategory(values.name);
+        // Como a função createCategory agora aceita um objeto, passamos o objeto completo
+        await InventoryModel.createCategory({ name: values.name });
         toast.success("Categoria criada com sucesso!");
       }
       onSuccess?.();

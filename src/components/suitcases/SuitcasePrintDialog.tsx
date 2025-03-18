@@ -1,5 +1,8 @@
 
 import { useRef } from "react";
+import { Suitcase, SuitcaseItem } from "@/types/suitcase";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -8,126 +11,167 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Printer, Loader2 } from "lucide-react";
-import { toast } from "sonner";
 import { useReactPrint } from "@/hooks/useReactPrint";
+import { Printer } from "lucide-react";
 
 interface SuitcasePrintDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  suitcase: any;
-  suitcaseItems: any[];
+  suitcase: Suitcase | null;
+  suitcaseItems: SuitcaseItem[];
 }
 
 export function SuitcasePrintDialog({
   open,
   onOpenChange,
   suitcase,
-  suitcaseItems = [],
+  suitcaseItems,
 }: SuitcasePrintDialogProps) {
   const printRef = useRef<HTMLDivElement>(null);
 
-  // Configurar impressão usando o hook personalizado
+  // Usar o hook personalizado para impressão
   const handlePrint = useReactPrint({
-    documentTitle: `Maleta_${suitcase?.code || ""}`,
-    onPrintError: () => toast.error("Erro ao imprimir maleta"),
-    onAfterPrint: () => toast.success("Maleta impressa com sucesso"),
     content: () => printRef.current,
+    pageStyle: `
+      @page {
+        size: A4;
+        margin: 16mm;
+      }
+      @media print {
+        body {
+          margin: 0;
+          padding: 0;
+          font-family: Arial, sans-serif;
+        }
+        .print-container {
+          width: 100%;
+          padding: 0;
+        }
+        .no-print {
+          display: none !important;
+        }
+      }
+    `,
   });
 
-  if (!suitcase) {
-    return null;
-  }
+  if (!suitcase) return null;
+
+  const formatDate = (date: string) => {
+    return format(new Date(date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Imprimir Maleta</DialogTitle>
+          <DialogTitle className="text-xl">
+            Imprimir Maleta: {suitcase.code}
+          </DialogTitle>
         </DialogHeader>
 
-        <div className="py-4 flex justify-center">
-          {suitcaseItems.length === 0 ? (
-            <div className="flex flex-col items-center justify-center p-8">
-              <Loader2 className="h-8 w-8 animate-spin text-gold" />
-              <p className="mt-4">Carregando itens da maleta...</p>
-            </div>
-          ) : (
-            <div
-              ref={printRef}
-              className="w-full max-w-2xl p-6 border rounded-md"
-            >
-              <div className="text-center mb-8">
-                <h1 className="text-2xl font-bold">Maleta: {suitcase.code}</h1>
-                <p>Revendedora: {suitcase.seller?.name || "Não especificada"}</p>
-                <p>
-                  Local: {suitcase.city || "Não especificado"}{" "}
-                  {suitcase.neighborhood
-                    ? `- ${suitcase.neighborhood}`
-                    : ""}
+        <div ref={printRef} className="print-container p-4">
+          <div className="mb-6 border-b pb-4">
+            <h1 className="text-2xl font-bold">Maleta: {suitcase.code}</h1>
+            <div className="grid grid-cols-2 gap-4 mt-4">
+              <div>
+                <p className="text-sm text-gray-500">Revendedora</p>
+                <p className="font-medium">{suitcase.seller?.name || "—"}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Data de criação</p>
+                <p className="font-medium">{formatDate(suitcase.created_at)}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Cidade</p>
+                <p className="font-medium">{suitcase.city || "—"}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Bairro</p>
+                <p className="font-medium">{suitcase.neighborhood || "—"}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Status</p>
+                <p className="font-medium">
+                  {suitcase.status === "in_use"
+                    ? "Em uso"
+                    : suitcase.status === "returned"
+                    ? "Devolvida"
+                    : suitcase.status === "in_replenishment"
+                    ? "Em reposição"
+                    : suitcase.status}
                 </p>
               </div>
+              {suitcase.next_settlement_date && (
+                <div>
+                  <p className="text-sm text-gray-500">Próximo acerto</p>
+                  <p className="font-medium">
+                    {formatDate(suitcase.next_settlement_date)}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
 
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="border-b">
-                    <th className="py-2 text-left">Item</th>
-                    <th className="py-2 text-right">Código</th>
-                    <th className="py-2 text-right">Preço</th>
-                    <th className="py-2 text-right">Status</th>
+          <h2 className="text-xl font-semibold mb-4">Itens da Maleta</h2>
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="p-2 text-left border">Item</th>
+                <th className="p-2 text-left border">SKU</th>
+                <th className="p-2 text-left border">Preço</th>
+                <th className="p-2 text-left border">Status</th>
+                <th className="p-2 text-center border">Observações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {suitcaseItems.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="p-4 text-center border">
+                    Nenhum item encontrado na maleta
+                  </td>
+                </tr>
+              ) : (
+                suitcaseItems.map((item) => (
+                  <tr key={item.id} className="border-b">
+                    <td className="p-2 border">{item.product?.name || "—"}</td>
+                    <td className="p-2 border">{item.product?.sku || "—"}</td>
+                    <td className="p-2 border">
+                      {item.product?.price
+                        ? `R$ ${item.product.price.toFixed(2)}`
+                        : "—"}
+                    </td>
+                    <td className="p-2 border">
+                      {item.status === "in_possession"
+                        ? "Em posse"
+                        : item.status === "sold"
+                        ? "Vendido"
+                        : item.status === "returned"
+                        ? "Devolvido"
+                        : "Perdido"}
+                    </td>
+                    <td className="p-2 border h-8"></td>
                   </tr>
-                </thead>
-                <tbody>
-                  {suitcaseItems.map((item) => (
-                    <tr key={item.id} className="border-b">
-                      <td className="py-3">{item.product?.name || "N/A"}</td>
-                      <td className="py-3 text-right">{item.product?.sku || "N/A"}</td>
-                      <td className="py-3 text-right">
-                        R$ {item.product?.price?.toFixed(2).replace(".", ",") || "0,00"}
-                      </td>
-                      <td className="py-3 text-right">
-                        {item.status === "sold" ? "Vendido" : "Disponível"}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              <div className="mt-6 border-t pt-4">
-                <p className="text-right font-semibold">
-                  Total de Itens: {suitcaseItems.length}
-                </p>
-                <p className="text-right font-semibold">
-                  Valor Total: R${" "}
-                  {suitcaseItems
-                    .reduce(
-                      (total, item) => total + (item.product?.price || 0),
-                      0
-                    )
-                    .toFixed(2)
-                    .replace(".", ",")}
-                </p>
-              </div>
-
-              <div className="mt-12 border-t pt-6">
-                <p className="text-center text-sm">
-                  Assinatura da Revendedora:
-                </p>
-                <div className="h-8 border-b mt-8 mx-8"></div>
-              </div>
-            </div>
-          )}
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancelar
+        <DialogFooter className="no-print">
+          <Button
+            type="button"
+            variant="outline"
+            className="mr-2"
+            onClick={() => onOpenChange(false)}
+          >
+            Fechar
           </Button>
           <Button 
-            onClick={() => handlePrint()}
-            className="gap-1"
+            onClick={() => handlePrint()} 
+            className="gap-2"
           >
-            <Printer className="h-4 w-4" /> Imprimir
+            <Printer className="h-4 w-4" />
+            Imprimir
           </Button>
         </DialogFooter>
       </DialogContent>

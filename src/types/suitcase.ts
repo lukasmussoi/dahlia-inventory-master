@@ -1,5 +1,5 @@
 
-export type SuitcaseStatus = 'in_use' | 'returned' | 'in_replenishment';
+export type SuitcaseStatus = 'in_use' | 'returned' | 'in_replenishment' | 'lost' | 'in_audit';
 export type SuitcaseItemStatus = 'in_possession' | 'sold' | 'returned' | 'lost';
 
 export interface SuitcaseItemSale {
@@ -8,6 +8,10 @@ export interface SuitcaseItemSale {
   client_name?: string;
   payment_method?: string;
   sale_date: string;
+  customer_name?: string;
+  sold_at?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface SuitcaseItem {
@@ -16,6 +20,9 @@ export interface SuitcaseItem {
   inventory_id: string;
   status: SuitcaseItemStatus;
   added_at: string;
+  quantity?: number;
+  created_at?: string;
+  updated_at?: string;
   product?: {
     id: string;
     sku: string;
@@ -43,10 +50,19 @@ export interface Suitcase {
   created_at: string;
   updated_at?: string;
   next_settlement_date?: string;
+  sent_at?: string;
   seller?: {
     id: string;
     name: string;
     phone?: string;
+    address?: {
+      city?: string;
+      neighborhood?: string;
+      street?: string;
+      number?: string;
+      state?: string;
+      zipCode?: string;
+    };
   };
 }
 
@@ -63,4 +79,8 @@ export interface InventoryFilters {
   category_id?: string;
   min_price?: number;
   max_price?: number;
+  minQuantity?: number;
+  maxQuantity?: number;
+  searchTerm?: string;
+  category?: string;
 }

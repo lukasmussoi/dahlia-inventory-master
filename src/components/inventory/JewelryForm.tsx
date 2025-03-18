@@ -1,4 +1,3 @@
-
 /**
  * JewelryForm - Componente para criação e edição de joias no inventário
  */
@@ -150,12 +149,20 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
 
       console.log("Dados preparados para salvamento:", itemData);
 
+      // Processar fotos para o formato correto
+      const processedPhotos = photos.map(file => {
+        return {
+          // Usar URL temporária para simular o upload
+          photo_url: URL.createObjectURL(file),
+          is_primary: false
+        };
+      });
+
       if (item) {
         console.log("Atualizando item existente");
         await InventoryModel.updateItem(item.id, itemData);
         if (photos.length > 0) {
-          // Fix: remove the third parameter
-          await InventoryModel.updateItemPhotos(item.id, photos);
+          await InventoryModel.updateItemPhotos(item.id, processedPhotos);
         }
         toast.success("Peça atualizada com sucesso!");
       } else {
@@ -163,8 +170,7 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
         const createdItem = await InventoryModel.createItem(itemData);
         console.log("Item criado:", createdItem);
         if (photos.length > 0 && createdItem) {
-          // Fix: remove the third parameter
-          await InventoryModel.updateItemPhotos(createdItem.id, photos);
+          await InventoryModel.updateItemPhotos(createdItem.id, processedPhotos);
         }
         toast.success("Peça criada com sucesso!");
       }

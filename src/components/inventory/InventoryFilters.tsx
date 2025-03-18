@@ -65,7 +65,10 @@ export function InventoryFilters({ categories, onFilter }: InventoryFiltersProps
             type="text"
             placeholder="Nome ou categoria..."
             value={filters.search || ''}
-            onChange={(e) => updateFilters({ search: e.target.value, searchTerm: e.target.value })}
+            onChange={(e) => updateFilters({ 
+              search: e.target.value, 
+              searchTerm: e.target.value
+            })}
           />
         </div>
 

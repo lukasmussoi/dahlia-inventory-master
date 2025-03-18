@@ -1,103 +1,174 @@
 
-import { Card } from "@/components/ui/card";
-import { Users, Package, Briefcase } from "lucide-react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { DashboardController } from "@/controllers/dashboardController";
+import { dashboardController } from "@/controllers/dashboardController";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Activity,
+  Users,
+  ShoppingBag,
+  Package,
+  DollarSign,
+  TrendingUp,
+} from "lucide-react";
 
 export function DashboardContent() {
-  const { data: dashboardData, isLoading } = useQuery({
-    queryKey: ['dashboard-data'],
-    queryFn: () => DashboardController.getDashboardData(),
+  const [activeTab, setActiveTab] = useState("overview");
+
+  // Buscar métricas do dashboard
+  const { data: metrics, isLoading } = useQuery({
+    queryKey: ["dashboard-metrics"],
+    queryFn: dashboardController.getDashboardMetrics,
   });
 
-  return (
-    <main className="flex-1 p-6 md:p-8 overflow-x-hidden animate-fadeIn">
-      <div className="max-w-7xl mx-auto space-y-8">
-        <div className="space-y-2">
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900">
-            Bem-vindo ao Dália Manager
-          </h1>
-          <p className="text-gray-600">
-            Confira os principais indicadores do seu negócio
-          </p>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Card className="p-6 hover:shadow-lg transition-shadow duration-300 bg-white/50 backdrop-blur-sm border border-white/20">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-purple-100 rounded-full">
-                <Users className="h-6 w-6 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-600">Usuárias Ativas</p>
-                <p className="text-2xl font-semibold text-gray-900">
-                  {isLoading ? '...' : (dashboardData?.activeUsersCount ?? 0)}
-                </p>
-              </div>
-            </div>
-          </Card>
+  // Valor padrão para evitar erro de undefined
+  const inventoryStats = metrics?.inventoryStats || { totalItems: 0, totalValue: 0 };
 
-          <Card className="p-6 hover:shadow-lg transition-shadow duration-300 bg-white/50 backdrop-blur-sm border border-white/20">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-rose-100 rounded-full">
-                <Package className="h-6 w-6 text-rose-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-600">Peças em Estoque</p>
-                <p className="text-2xl font-semibold text-gray-900">
-                  {isLoading ? '...' : (dashboardData?.totalInventory ?? 0)}
-                </p>
-              </div>
-            </div>
-          </Card>
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(value);
+  };
 
-          <Card className="p-6 hover:shadow-lg transition-shadow duration-300 bg-white/50 backdrop-blur-sm border border-white/20">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-gold/20 rounded-full">
-                <Briefcase className="h-6 w-6 text-gold" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-600">Maletas Ativas</p>
-                <p className="text-2xl font-semibold text-gray-900">
-                  {isLoading ? '...' : (dashboardData?.activeSuitcasesCount ?? 0)}
-                </p>
-              </div>
-            </div>
-          </Card>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="p-6 bg-white/50 backdrop-blur-sm border border-white/20">
-            <h2 className="text-xl font-semibold mb-4">Últimas Atividades</h2>
-            {isLoading ? (
-              <div className="animate-pulse space-y-4">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-12 bg-gray-200 rounded"></div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-gray-600">
-                Implementação futura do histórico de atividades...
-              </div>
-            )}
-          </Card>
-
-          <Card className="p-6 bg-white/50 backdrop-blur-sm border border-white/20">
-            <h2 className="text-xl font-semibold mb-4">Resumo Financeiro</h2>
-            {isLoading ? (
-              <div className="animate-pulse space-y-4">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-12 bg-gray-200 rounded"></div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-gray-600">
-                Implementação futura do resumo financeiro...
-              </div>
-            )}
-          </Card>
-        </div>
+  if (isLoading) {
+    return (
+      <div className="flex-1 p-8 flex justify-center items-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-gold"></div>
       </div>
-    </main>
+    );
+  }
+
+  return (
+    <div className="flex-1 space-y-4 p-4 lg:p-8 pt-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+      </div>
+
+      <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="overview">Visão Geral</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="reports">Relatórios</TabsTrigger>
+        </TabsList>
+        <TabsContent value="overview" className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Vendas Totais
+                </CardTitle>
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {formatCurrency(metrics?.totalSales || 0)}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {metrics?.salesGrowth > 0 ? "+" : ""}
+                  {metrics?.salesGrowth}% em relação ao período anterior
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Maletas Ativas
+                </CardTitle>
+                <ShoppingBag className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{metrics?.activeSuitcases || 0}</div>
+                <p className="text-xs text-muted-foreground">
+                  {metrics?.suitcasesGrowth > 0 ? "+" : ""}
+                  {metrics?.suitcasesGrowth}% em relação ao período anterior
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Total de Peças
+                </CardTitle>
+                <Package className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{inventoryStats.totalItems}</div>
+                <p className="text-xs text-muted-foreground">
+                  {formatCurrency(inventoryStats.totalValue)} em valor de estoque
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Revendedoras
+                </CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{metrics?.totalResellers || 0}</div>
+                <p className="text-xs text-muted-foreground">
+                  {metrics?.newResellers || 0} novas no último mês
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+            <Card className="col-span-4">
+              <CardHeader>
+                <CardTitle>Vendas Recentes</CardTitle>
+              </CardHeader>
+              <CardContent className="pl-2">
+                <div className="h-80 flex items-center justify-center text-gray-400">
+                  <Activity className="mr-2 h-5 w-5" />
+                  Gráfico de vendas será exibido aqui
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="col-span-3">
+              <CardHeader>
+                <CardTitle>Top Produtos</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-80 flex items-center justify-center text-gray-400">
+                  <TrendingUp className="mr-2 h-5 w-5" />
+                  Lista de top produtos será exibida aqui
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+        <TabsContent value="analytics" className="space-y-4">
+          <div className="h-[600px] w-full flex items-center justify-center border rounded-lg bg-white">
+            <div className="text-center text-gray-400">
+              <TrendingUp className="h-12 w-12 mx-auto mb-4" />
+              <h3 className="text-lg font-medium mb-2">
+                Analytics em Desenvolvimento
+              </h3>
+              <p className="max-w-md">
+                Módulo de analytics estará disponível em breve, com gráficos
+                detalhados e métricas avançadas.
+              </p>
+            </div>
+          </div>
+        </TabsContent>
+        <TabsContent value="reports" className="space-y-4">
+          <div className="h-[600px] w-full flex items-center justify-center border rounded-lg bg-white">
+            <div className="text-center text-gray-400">
+              <Activity className="h-12 w-12 mx-auto mb-4" />
+              <h3 className="text-lg font-medium mb-2">
+                Relatórios em Desenvolvimento
+              </h3>
+              <p className="max-w-md">
+                Módulo de relatórios estará disponível em breve, permitindo
+                exportação de dados e análises personalizadas.
+              </p>
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }
