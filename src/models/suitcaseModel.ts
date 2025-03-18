@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { SuitcaseStatus, SuitcaseItemStatus, Suitcase, SuitcaseItem, SuitcaseItemSale } from "@/types/suitcase";
 import { Json } from "@/integrations/supabase/types";
@@ -494,8 +493,9 @@ export class SuitcaseModel {
     // Aplicar filtros se fornecidos
     if (filters.status && filters.status !== 'todos') {
       // Garantir que o status é um dos valores válidos
-      if (['in_use', 'returned', 'lost', 'in_audit', 'in_replenishment'].includes(filters.status)) {
-        query = query.eq('status', filters.status);
+      const validStatuses = ['in_use', 'returned', 'lost', 'in_audit', 'in_replenishment'];
+      if (validStatuses.includes(filters.status)) {
+        query = query.eq('status', filters.status as SuitcaseStatus);
       }
     }
     
@@ -626,3 +626,4 @@ export class SuitcaseModel {
     });
   }
 }
+
