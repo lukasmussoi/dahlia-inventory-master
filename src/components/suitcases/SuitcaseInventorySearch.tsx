@@ -19,6 +19,7 @@ export function SuitcaseInventorySearch({ suitcaseId, onItemAdded }: SuitcaseInv
   const [isSearching, setIsSearching] = useState(false);
   const [isAdding, setIsAdding] = useState<{ [key: string]: boolean }>({});
   const [error, setError] = useState<string | null>(null);
+  const [quantity, setQuantity] = useState<{ [key: string]: number }>({});
 
   // Realizar busca
   const handleSearch = async () => {
@@ -32,6 +33,13 @@ export function SuitcaseInventorySearch({ suitcaseId, onItemAdded }: SuitcaseInv
       setError(null);
       const results = await SuitcaseController.searchInventoryItems(searchTerm);
       setSearchResults(results);
+      
+      // Inicializar as quantidades para cada item
+      const initialQuantities: { [key: string]: number } = {};
+      results.forEach(item => {
+        initialQuantities[item.id] = 1;
+      });
+      setQuantity(initialQuantities);
       
       if (results.length === 0) {
         setError("Nenhum item encontrado");
@@ -49,7 +57,9 @@ export function SuitcaseInventorySearch({ suitcaseId, onItemAdded }: SuitcaseInv
     try {
       setIsAdding(prev => ({ ...prev, [inventoryId]: true }));
       
-      await SuitcaseController.addItemToSuitcase(suitcaseId, inventoryId);
+      const itemQuantity = quantity[inventoryId] || 1;
+      
+      await SuitcaseController.addItemToSuitcase(suitcaseId, inventoryId, itemQuantity);
       
       // Atualizar lista de resultados para remover o item adicionado
       setSearchResults(prevResults => prevResults.filter(item => item.id !== inventoryId));
@@ -64,6 +74,23 @@ export function SuitcaseInventorySearch({ suitcaseId, onItemAdded }: SuitcaseInv
     } finally {
       setIsAdding(prev => ({ ...prev, [inventoryId]: false }));
     }
+  };
+
+  // Alterar quantidade do item a ser adicionado
+  const handleQuantityChange = (inventoryId: string, newValue: number) => {
+    if (newValue < 1) newValue = 1;
+    
+    // Garantir que a quantidade não exceda o estoque disponível
+    const item = searchResults.find(item => item.id === inventoryId);
+    if (item && newValue > item.quantity) {
+      newValue = item.quantity;
+      toast.info(`Quantidade limitada ao estoque disponível (${item.quantity})`);
+    }
+    
+    setQuantity(prev => ({
+      ...prev,
+      [inventoryId]: newValue
+    }));
   };
 
   // Formatar preço
@@ -110,7 +137,8 @@ export function SuitcaseInventorySearch({ suitcaseId, onItemAdded }: SuitcaseInv
                 <TableHead className="w-[80px]">SKU</TableHead>
                 <TableHead>Produto</TableHead>
                 <TableHead className="text-right">Preço</TableHead>
-                <TableHead className="text-right">Estoque</TableHead>
+                <TableHead className="text-right w-[80px]">Estoque</TableHead>
+                <TableHead className="w-[80px]">Qtd</TableHead>
                 <TableHead className="w-[100px]">Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -118,6 +146,7 @@ export function SuitcaseInventorySearch({ suitcaseId, onItemAdded }: SuitcaseInv
               {searchResults.map((item) => {
                 const isItemAdding = isAdding[item.id] || false;
                 const hasStock = item.quantity > 0;
+                const itemQuantity = quantity[item.id] || 1;
                 
                 return (
                   <TableRow key={item.id}>
@@ -130,6 +159,17 @@ export function SuitcaseInventorySearch({ suitcaseId, onItemAdded }: SuitcaseInv
                       <Badge variant={hasStock ? "outline" : "destructive"} className="ml-auto">
                         {item.quantity}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={item.quantity}
+                        value={itemQuantity}
+                        onChange={(e) => handleQuantityChange(item.id, parseInt(e.target.value) || 1)}
+                        disabled={!hasStock || isItemAdding}
+                        className="w-16 h-8"
+                      />
                     </TableCell>
                     <TableCell>
                       <Button

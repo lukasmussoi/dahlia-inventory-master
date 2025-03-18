@@ -19,12 +19,14 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { 
   Trash2, 
   ShoppingBag, 
-  ArrowLeftRight,
-  AlertTriangle
+  Edit,
+  Save,
+  X
 } from "lucide-react";
 
 interface SuitcaseItemListProps {
@@ -43,6 +45,8 @@ export function SuitcaseItemList({
   const [items, setItems] = useState<SuitcaseItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<{ [key: string]: boolean }>({});
+  const [editingQuantity, setEditingQuantity] = useState<string | null>(null);
+  const [newQuantity, setNewQuantity] = useState<number>(1);
 
   // Carregar itens
   const fetchItems = async () => {
@@ -107,6 +111,40 @@ export function SuitcaseItemList({
     }
   };
 
+  // Iniciar edição de quantidade
+  const handleStartEditQuantity = (itemId: string, currentQuantity: number = 1) => {
+    setEditingQuantity(itemId);
+    setNewQuantity(currentQuantity);
+  };
+
+  // Cancelar edição de quantidade
+  const handleCancelEditQuantity = () => {
+    setEditingQuantity(null);
+  };
+
+  // Salvar nova quantidade
+  const handleSaveQuantity = async (itemId: string) => {
+    try {
+      setUpdating(prev => ({ ...prev, [itemId]: true }));
+      
+      await SuitcaseController.updateSuitcaseItemQuantity(itemId, newQuantity);
+      
+      // Atualizar a lista de itens
+      await fetchItems();
+      
+      // Notificar o componente pai
+      if (onItemsChanged) onItemsChanged();
+      
+      toast.success("Quantidade atualizada com sucesso");
+      setEditingQuantity(null);
+    } catch (error: any) {
+      console.error("Erro ao atualizar quantidade do item:", error);
+      toast.error(error.message || "Erro ao atualizar quantidade do item");
+    } finally {
+      setUpdating(prev => ({ ...prev, [itemId]: false }));
+    }
+  };
+
   // Formatar preço
   const formatPrice = (price: number | undefined) => {
     if (price === undefined) return "R$ 0,00";
@@ -162,14 +200,16 @@ export function SuitcaseItemList({
             <TableHead className="w-[50px]">SKU</TableHead>
             <TableHead>Produto</TableHead>
             <TableHead className="text-right">Preço</TableHead>
+            <TableHead className="w-[80px]">Qtd</TableHead>
             <TableHead className="w-[120px]">Status</TableHead>
-            {!readOnly && <TableHead className="w-[100px]">Ações</TableHead>}
+            {!readOnly && <TableHead className="w-[120px]">Ações</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
           {items.map((item) => {
             const statusInfo = formatStatus(item.status);
             const isUpdating = updating[item.id] || false;
+            const isEditing = editingQuantity === item.id;
             
             return (
               <TableRow key={item.id}>
@@ -177,6 +217,50 @@ export function SuitcaseItemList({
                 <TableCell>{item.product?.name || "Produto não encontrado"}</TableCell>
                 <TableCell className="text-right font-medium">
                   {formatPrice(item.product?.price)}
+                </TableCell>
+                <TableCell>
+                  {isEditing ? (
+                    <div className="flex items-center space-x-1">
+                      <Input
+                        type="number"
+                        value={newQuantity}
+                        onChange={(e) => setNewQuantity(parseInt(e.target.value) || 1)}
+                        min={1}
+                        className="w-14 h-8 p-1 text-center"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleSaveQuantity(item.id)}
+                        disabled={isUpdating}
+                        className="h-6 w-6"
+                      >
+                        <Save className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={handleCancelEditQuantity}
+                        className="h-6 w-6"
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between">
+                      <span>{item.quantity || 1}</span>
+                      {!readOnly && item.status === 'in_possession' && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleStartEditQuantity(item.id, item.quantity)}
+                          className="h-6 w-6 ml-1"
+                        >
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </TableCell>
                 <TableCell>
                   {readOnly ? (

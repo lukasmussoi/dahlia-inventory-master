@@ -1,4 +1,3 @@
-
 import { SuitcaseModel } from "@/models/suitcaseModel";
 import { SuitcaseItemStatus, InventoryItemSuitcaseInfo } from "@/types/suitcase";
 import { acertoMaletaController } from "@/controllers/acertoMaletaController";
@@ -28,7 +27,6 @@ export const suitcaseController = {
 
   async createSuitcase(data: any) {
     try {
-      // Se não houver código, gerar um
       if (!data.code) {
         data.code = await SuitcaseModel.generateSuitcaseCode();
       }
@@ -43,12 +41,22 @@ export const suitcaseController = {
 
   async updateSuitcase(id: string, data: any) {
     try {
-      // Se estiver alterando para status "returned" (Devolvida), vamos verificar 
-      // se existem acertos registrados para não causar travamento
       if (data.status === 'returned') {
-        // Não precisa de verificação específica, apenas garantir que a atualização
-        // seja processada corretamente sem tentar excluir registros relacionados
-        console.log("Alterando status da maleta para Devolvida:", id);
+        console.log("Processando devolução de maleta:", id);
+        
+        const items = await SuitcaseModel.getSuitcaseItems(id);
+        const itemsInPossession = items.filter(item => item.status === 'in_possession');
+        
+        console.log(`Devolvendo ${itemsInPossession.length} itens ao estoque...`);
+        
+        for (const item of itemsInPossession) {
+          try {
+            await SuitcaseModel.returnItemToInventory(item.id);
+            console.log(`Item ${item.id} devolvido ao estoque com sucesso.`);
+          } catch (error) {
+            console.error(`Erro ao retornar item ${item.id} ao estoque:`, error);
+          }
+        }
       }
       
       const updatedSuitcase = await SuitcaseModel.updateSuitcase(id, data);
@@ -61,7 +69,6 @@ export const suitcaseController = {
 
   async deleteSuitcase(id: string) {
     try {
-      // Verificar se a maleta possui acertos registrados
       const { data: acertos, error: acertosError } = await supabase
         .from('acertos_maleta')
         .select('id')
@@ -73,7 +80,6 @@ export const suitcaseController = {
         throw new Error("Não é possível excluir esta maleta pois ela possui acertos registrados. Você pode mudar o status da maleta para 'Devolvida' em vez de excluí-la.");
       }
       
-      // Verificar itens com vendas registradas
       const { data: suitcaseItems, error: itemsError } = await supabase
         .from('suitcase_items')
         .select('id')
@@ -82,7 +88,6 @@ export const suitcaseController = {
       if (itemsError) throw itemsError;
       
       if (suitcaseItems && suitcaseItems.length > 0) {
-        // Verificar se algum item tem vendas
         const itemIds = suitcaseItems.map(item => item.id);
         
         const { data: sales, error: salesError } = await supabase
@@ -96,7 +101,6 @@ export const suitcaseController = {
           throw new Error("Não é possível excluir esta maleta pois ela possui itens com vendas registradas. Você pode mudar o status da maleta para 'Devolvida' em vez de excluí-la.");
         }
         
-        // Excluir todos os itens da maleta primeiro
         const { error: deleteItemsError } = await supabase
           .from('suitcase_items')
           .delete()
@@ -105,13 +109,11 @@ export const suitcaseController = {
         if (deleteItemsError) throw deleteItemsError;
       }
       
-      // Agora podemos excluir a maleta com segurança
       await SuitcaseModel.deleteSuitcase(id);
       return true;
     } catch (error: any) {
       console.error("Erro ao excluir maleta:", error);
       
-      // Verificar se é um erro de chave estrangeira
       if (error.code === '23503') {
         if (error.details.includes('acertos_maleta')) {
           throw new Error("Não é possível excluir esta maleta pois ela possui acertos registrados. Você pode mudar o status da maleta para 'Devolvida' em vez de excluí-la.");
@@ -136,7 +138,7 @@ export const suitcaseController = {
     }
   },
 
-  async addItemToSuitcase(suitcaseId: string, inventoryId: string) {
+  async addItemToSuitcase(suitcaseId: string, inventoryId: string, quantity: number = 1) {
     try {
       const suitcase = await SuitcaseModel.getSuitcaseById(suitcaseId);
       if (!suitcase) {
@@ -153,7 +155,10 @@ export const suitcaseController = {
         }
       }
       
-      // Verificar histórico de vendas e mostrar sugestão
+      if (availability.quantity < quantity) {
+        throw new Error(`Quantidade solicitada (${quantity}) excede o estoque disponível (${availability.quantity})`);
+      }
+      
       if (suitcase.seller_id) {
         try {
           const salesFrequency = await acertoMaletaController.getItemSalesFrequency(inventoryId, suitcase.seller_id);
@@ -173,13 +178,13 @@ export const suitcaseController = {
           }
         } catch (error) {
           console.error("Erro ao buscar histórico de vendas:", error);
-          // Não interromper o fluxo se houver erro na sugestão
         }
       }
       
       const newItem = await SuitcaseModel.addItemToSuitcase({
         suitcase_id: suitcaseId,
         inventory_id: inventoryId,
+        quantity: quantity,
         status: "in_possession"
       });
       return newItem;
@@ -215,6 +220,20 @@ export const suitcaseController = {
     } catch (error) {
       console.error("Erro ao atualizar status do item:", error);
       throw new Error("Erro ao atualizar status do item");
+    }
+  },
+
+  async updateSuitcaseItemQuantity(itemId: string, quantity: number) {
+    try {
+      if (quantity < 1) {
+        throw new Error("A quantidade deve ser maior que zero");
+      }
+      
+      const updatedItem = await SuitcaseModel.updateSuitcaseItemQuantity(itemId, quantity);
+      return updatedItem;
+    } catch (error: any) {
+      console.error("Erro ao atualizar quantidade do item:", error);
+      throw new Error(error.message || "Erro ao atualizar quantidade do item");
     }
   },
 
