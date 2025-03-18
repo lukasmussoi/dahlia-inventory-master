@@ -23,14 +23,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { SuitcaseItem } from "@/types/suitcase";
 import { SuitcasePrintDialog } from "./SuitcasePrintDialog";
@@ -40,13 +33,22 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { MoreHorizontal } from "lucide-react";
 
 interface SuitcaseGridProps {
-  initialData: Suitcase[];
+  initialData?: Suitcase[];
+  suitcases?: Suitcase[];
+  isAdmin?: boolean;
   onRefresh?: () => void;
+  onOpenAcertoDialog?: (suitcase: Suitcase) => void;
 }
 
-export function SuitcaseGrid({ initialData, onRefresh }: SuitcaseGridProps) {
+export function SuitcaseGrid({ 
+  initialData = [], 
+  suitcases, 
+  isAdmin, 
+  onRefresh, 
+  onOpenAcertoDialog 
+}: SuitcaseGridProps) {
   const navigate = useNavigate();
-  const [data, setData] = useState<Suitcase[]>(initialData);
+  const [data, setData] = useState<Suitcase[]>(suitcases || initialData);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSuitcase, setSelectedSuitcase] = useState<Suitcase | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -61,9 +63,10 @@ export function SuitcaseGrid({ initialData, onRefresh }: SuitcaseGridProps) {
   const [totalItems, setTotalItems] = useState(data.length);
 
   useEffect(() => {
-    setData(initialData);
-    setTotalItems(initialData.length);
-  }, [initialData]);
+    // Update data when either initialData or suitcases changes
+    setData(suitcases || initialData);
+    setTotalItems((suitcases || initialData).length);
+  }, [initialData, suitcases]);
 
   const calculateVisibleRange = () => {
     const start = (currentPage - 1) * itemsPerPage + 1;
@@ -143,6 +146,12 @@ export function SuitcaseGrid({ initialData, onRefresh }: SuitcaseGridProps) {
     }
   };
 
+  const handleAcertoClick = (suitcase: Suitcase) => {
+    if (onOpenAcertoDialog) {
+      onOpenAcertoDialog(suitcase);
+    }
+  };
+
   const onClose = () => {
     setIsEditDialogOpen(false);
     setSelectedSuitcase(null);
@@ -210,6 +219,11 @@ export function SuitcaseGrid({ initialData, onRefresh }: SuitcaseGridProps) {
                         <Printer className="h-4 w-4 mr-2" />
                         <span>Imprimir</span>
                       </DropdownMenuItem>
+                      {onOpenAcertoDialog && (
+                        <DropdownMenuItem onClick={() => handleAcertoClick(suitcase)}>
+                          <span>Realizar Acerto</span>
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>
