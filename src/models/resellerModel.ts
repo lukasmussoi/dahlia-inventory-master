@@ -79,6 +79,11 @@ export class ResellerModel {
   // Criar uma nova revendedora
   static async create(data: ResellerInput) {
     try {
+      // Converter commission_rate para number, se for string
+      const commissionRate = typeof data.commissionRate === 'string' 
+        ? parseFloat(data.commissionRate) 
+        : data.commissionRate;
+
       // Mapear os dados para o formato do banco de dados
       const dbData = {
         name: data.name,
@@ -88,12 +93,12 @@ export class ResellerModel {
         status: data.status,
         address: data.address ? this.mapAddressToJson(data.address) : null,
         promoter_id: data.promoterId,
-        commission_rate: data.commissionRate || 0.3
+        commission_rate: commissionRate || 0.3
       };
 
       const { data: newData, error } = await supabase
         .from("resellers")
-        .insert([dbData])
+        .insert(dbData)
         .select(`
           *,
           promoters(name)
@@ -128,6 +133,11 @@ export class ResellerModel {
   // Atualizar uma revendedora existente
   static async update(id: string, data: ResellerInput) {
     try {
+      // Converter commission_rate para number, se for string
+      const commissionRate = typeof data.commissionRate === 'string' 
+        ? parseFloat(data.commissionRate) 
+        : data.commissionRate;
+
       // Mapear os dados para o formato do banco de dados
       const dbData = {
         name: data.name,
@@ -137,7 +147,7 @@ export class ResellerModel {
         status: data.status,
         address: data.address ? this.mapAddressToJson(data.address) : null,
         promoter_id: data.promoterId,
-        commission_rate: data.commissionRate || 0.3
+        commission_rate: commissionRate || 0.3
       };
 
       const { data: updatedData, error } = await supabase
