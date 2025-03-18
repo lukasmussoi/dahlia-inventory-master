@@ -60,7 +60,8 @@ export const InventoryController = {
   // Buscar itens com filtros
   async getFilteredItems(filters: any) {
     try {
-      const items = await InventoryModel.getFilteredItems(filters);
+      // Usar o método getAllItems com os filtros, já que não existe getFilteredItems
+      const items = await InventoryModel.getAllItems(filters);
       return items;
     } catch (error) {
       console.error("Erro ao buscar itens filtrados:", error);
@@ -76,7 +77,8 @@ export const InventoryController = {
         throw new Error("O termo de busca deve ter pelo menos 3 caracteres");
       }
       
-      const items = await InventoryModel.searchItems(searchTerm);
+      // Usar o método getAllItems com o filtro de busca
+      const items = await InventoryModel.getAllItems({ search: searchTerm });
       return items;
     } catch (error) {
       console.error("Erro ao buscar itens:", error);
