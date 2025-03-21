@@ -1,4 +1,3 @@
-
 import { SuitcaseSettlementFormData } from "@/types/suitcase";
 import { supabase } from "@/integrations/supabase/client";
 import { SuitcaseController } from "./suitcaseController";
@@ -27,11 +26,11 @@ export const acertoMaletaController = {
       ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
       const ninetyDaysAgoISO = ninetyDaysAgo.toISOString();
 
-      // Simplificar a consulta para evitar o problema de tipagem
-      // Ao invés de puxar todos os dados, apenas fazemos uma contagem
-      const { error, count } = await supabase
+      // Abordagem alternativa para evitar problemas de tipagem
+      // Fazemos uma contagem apenas, sem retornar dados completos
+      const { data, error } = await supabase
         .from('acerto_itens_vendidos')
-        .select('id', { count: 'exact', head: true })
+        .select('id', { count: 'exact' })
         .eq('inventory_id', inventoryId)
         .eq('seller_id', sellerId)
         .gte('sale_date', ninetyDaysAgoISO);
@@ -41,8 +40,8 @@ export const acertoMaletaController = {
         return { count: 0, frequency: "baixa" };
       }
       
-      // Garantir que count seja um número
-      const safeCount = typeof count === 'number' ? count : 0;
+      // Determinar a contagem com base no comprimento do array de resultados
+      const safeCount = data?.length || 0;
       let frequency = "baixa";
       
       if (safeCount > 5) {
@@ -310,3 +309,4 @@ export const acertoMaletaController = {
 };
 
 export const AcertoMaletaController = acertoMaletaController;
+
