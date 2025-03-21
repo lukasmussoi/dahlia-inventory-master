@@ -98,7 +98,7 @@ export function AcertoDetailsDialog({
       doc.text(`Total em vendas: ${formatCurrency(currentAcerto.total_sales)}`, 14, 50);
       doc.text(`Comissão da revendedora: ${formatCurrency(currentAcerto.commission_amount)}`, 14, 55);
       
-      if (currentAcerto.net_profit) {
+      if (currentAcerto.net_profit !== undefined) {
         doc.text(`Lucro líquido: ${formatCurrency(currentAcerto.net_profit)}`, 14, 60);
       }
       
@@ -235,7 +235,7 @@ export function AcertoDetailsDialog({
                                     Pagamento: {formatPaymentMethod(item.payment_method)}
                                   </span>
                                 )}
-                                {item.commission_value > 0 && (
+                                {item.commission_value !== undefined && item.commission_value > 0 && (
                                   <span className="flex items-center gap-1">
                                     <DollarSign className="h-3 w-3" />
                                     Comissão: {formatCurrency(item.commission_value)} ({formatPercent(item.commission_rate || 0.3)})

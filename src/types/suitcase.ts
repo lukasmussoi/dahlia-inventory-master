@@ -102,6 +102,10 @@ export interface AcertoItem {
   payment_method?: string;
   created_at?: string;
   updated_at?: string;
+  commission_value?: number;  // Adicionando campo de valor da comissão
+  commission_rate?: number;   // Adicionando campo de taxa da comissão
+  net_profit?: number;        // Adicionando campo de lucro líquido
+  unit_cost?: number;         // Adicionando campo de custo unitário
   product?: {
     id: string;
     name: string;
@@ -124,6 +128,8 @@ export interface Acerto {
   restock_suggestions?: any;
   created_at: string;
   updated_at?: string;
+  total_cost?: number;        // Adicionando campo de custo total
+  net_profit?: number;        // Adicionando campo de lucro líquido
   suitcase?: Partial<Suitcase>;
   seller?: {
     id: string;
