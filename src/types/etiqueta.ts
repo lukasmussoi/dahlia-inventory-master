@@ -11,6 +11,7 @@ export interface CampoEtiqueta {
   alinhamento?: 'left' | 'center' | 'right';
   fonte?: string;
   valor?: string;
+  text?: string; // Adicionando a propriedade text para compatibilidade
 }
 
 export interface ModeloEtiqueta {
