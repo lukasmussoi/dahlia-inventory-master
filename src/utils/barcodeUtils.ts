@@ -29,3 +29,46 @@ export async function generateBarcode(text: string): Promise<string> {
     resolve(dataUrl);
   });
 }
+
+/**
+ * Processa uma lista de códigos de barras escaneados para uso no acerto da maleta
+ * @param scannedCodes Lista de códigos escaneados
+ * @returns Array de códigos únicos e processados
+ */
+export function processScannedCodes(scannedCodes: string[]): string[] {
+  // Remover códigos duplicados
+  const uniqueCodes = [...new Set(scannedCodes)];
+  
+  // Remover espaços em branco e caracteres não alfanuméricos
+  return uniqueCodes.map(code => {
+    return code.trim().replace(/[^a-zA-Z0-9]/g, '');
+  }).filter(code => code.length > 0);
+}
+
+/**
+ * Compara listas de códigos para identificar itens vendidos e retornados
+ * @param originalItems Lista de todos os itens originais
+ * @param scannedCodes Lista de códigos escaneados (retornados)
+ * @returns Objeto com arrays de itens vendidos e retornados
+ */
+export function compareItemsWithScannedCodes(originalItems: any[], scannedCodes: string[]) {
+  // Converter para Set para busca mais rápida
+  const scannedCodesSet = new Set(scannedCodes);
+  
+  // Identificar itens retornados (encontrados no scan)
+  const returnedItems = originalItems.filter(item => {
+    const itemCode = item.product?.barcode || item.product?.sku;
+    return itemCode && scannedCodesSet.has(itemCode);
+  });
+  
+  // Identificar itens vendidos (não encontrados no scan)
+  const soldItems = originalItems.filter(item => {
+    const itemCode = item.product?.barcode || item.product?.sku;
+    return itemCode && !scannedCodesSet.has(itemCode);
+  });
+  
+  return {
+    returnedItems,
+    soldItems
+  };
+}
