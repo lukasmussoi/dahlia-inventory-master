@@ -225,11 +225,7 @@ export function SuitcasesContent({ isAdmin, userProfile }: SuitcasesContentProps
       <AcertoDetailsDialog
         open={showAcertoDetailsDialog}
         onOpenChange={setShowAcertoDetailsDialog}
-        acerto={selectedAcerto}
-        onRefresh={() => {
-          // Atualizar a lista de acertos após qualquer alteração
-          setActiveTab("settlements");
-        }}
+        acertoId={selectedAcerto?.id}
       />
     </div>
   );

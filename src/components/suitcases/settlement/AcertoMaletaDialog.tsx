@@ -18,6 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { SuitcaseSettlementFormData } from "@/types/suitcase";
 import { getProductPhotoUrl } from "@/utils/photoUtils";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface AcertoMaletaDialogProps {
   open: boolean;
@@ -27,6 +28,7 @@ interface AcertoMaletaDialogProps {
 }
 
 export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: AcertoMaletaDialogProps) {
+  const queryClient = useQueryClient();
   const [suitcaseItems, setSuitcaseItems] = useState<SuitcaseItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [scanning, setScanning] = useState(false);
@@ -124,7 +126,7 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
       const formData: SuitcaseSettlementFormData = {
         suitcase_id: suitcase.id,
         seller_id: suitcase.seller_id,
-        settlement_date: selectedDate,
+        settlement_date: settlementDate,
         next_settlement_date: nextSettlementDate,
         items_present: scannedItemsIds,
         items_sold: [] // Array vazio para items_sold, serão detectados pelo backend

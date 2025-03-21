@@ -536,7 +536,7 @@ export function SuitcaseDetailsDialog({
                               <div className="flex">
                                 <div className="w-16 h-16 bg-gray-100 rounded-md mr-3 flex-shrink-0">
                                   {image ? (
-                                    <img src={image} alt={item.product?.name} className="w-full h-full object-cover rounded-md" />
+                                    <img src={getProductPhotoUrl(image)} alt={item.product?.name} className="w-full h-full object-cover rounded-md" />
                                   ) : (
                                     <div className="w-full h-full flex items-center justify-center text-gray-400">
                                       <Package className="h-8 w-8" />
