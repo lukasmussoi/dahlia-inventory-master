@@ -64,39 +64,51 @@ export async function generateEtiquetaPDF(
     }
   }
   
-  // Considerar a orientação da página - CORREÇÃO aqui
-  let larguraEfetiva = larguraPagina;
-  let alturaEfetiva = alturaPagina;
+  console.log("Dimensões originais da página:", { larguraPagina, alturaPagina });
   
-  if (orientacao === "paisagem") {
-    larguraEfetiva = alturaPagina;
-    alturaEfetiva = larguraPagina;
-  }
-  
-  console.log("Dimensões da página:", { 
-    larguraPagina, 
-    alturaPagina, 
-    larguraEfetiva,
-    alturaEfetiva,
-    orientacao 
-  });
-  
-  // Validar dimensões da etiqueta em relação à página
+  // Para o cálculo da área útil, precisamos considerar a orientação
+  // mas não inverter as dimensões para manter coerência no cálculo
   const margemSuperior = modelo.margemSuperior || 10;
   const margemInferior = modelo.margemInferior || 10;
   const margemEsquerda = modelo.margemEsquerda || 10;
   const margemDireita = modelo.margemDireita || 10;
   
-  // CORREÇÃO: Usar larguraEfetiva e alturaEfetiva aqui
-  const areaUtilLargura = larguraEfetiva - margemEsquerda - margemDireita;
-  const areaUtilAltura = alturaEfetiva - margemSuperior - margemInferior;
+  // Aqui é importante: jsPDF inverte automaticamente as dimensões para paisagem
+  // então precisamos trabalhar com as dimensões corretas para o cálculo
+  const docWidth = orientacao === "paisagem" ? alturaPagina : larguraPagina;
+  const docHeight = orientacao === "paisagem" ? larguraPagina : alturaPagina;
   
+  console.log("Dimensões do documento PDF:", { docWidth, docHeight, orientacao });
+  
+  // Calcular área útil
+  const areaUtilLargura = docWidth - margemEsquerda - margemDireita;
+  const areaUtilAltura = docHeight - margemSuperior - margemInferior;
+  
+  console.log("Área útil calculada:", { areaUtilLargura, areaUtilAltura });
+  
+  // Validar dimensões da etiqueta
   if (modelo.largura > areaUtilLargura) {
-    throw new Error(`A largura da etiqueta (${modelo.largura}mm) é maior que a área útil disponível (${areaUtilLargura}mm).`);
+    const mensagemErro = `A largura da etiqueta (${modelo.largura}mm) é maior que a área útil disponível (${areaUtilLargura}mm).`;
+    console.error(mensagemErro, {
+      larguraEtiqueta: modelo.largura,
+      areaUtilLargura,
+      larguraPagina,
+      orientacao,
+      margens: { esquerda: margemEsquerda, direita: margemDireita }
+    });
+    throw new Error(mensagemErro);
   }
   
   if (modelo.altura > areaUtilAltura) {
-    throw new Error(`A altura da etiqueta (${modelo.altura}mm) é maior que a área útil disponível (${areaUtilAltura}mm).`);
+    const mensagemErro = `A altura da etiqueta (${modelo.altura}mm) é maior que a área útil disponível (${areaUtilAltura}mm).`;
+    console.error(mensagemErro, {
+      alturaEtiqueta: modelo.altura,
+      areaUtilAltura,
+      alturaPagina,
+      orientacao,
+      margens: { superior: margemSuperior, inferior: margemInferior }
+    });
+    throw new Error(mensagemErro);
   }
   
   // Calcular quantas etiquetas cabem por página
@@ -112,6 +124,10 @@ export async function generateEtiquetaPDF(
     areaUtilLargura,
     areaUtilAltura
   });
+  
+  if (etiquetasPorLinha <= 0 || etiquetasPorColuna <= 0) {
+    throw new Error("Não é possível calcular o layout: dimensões inválidas ou etiqueta maior que a área útil da página.");
+  }
   
   // Criar documento PDF
   const doc = new jsPDF({

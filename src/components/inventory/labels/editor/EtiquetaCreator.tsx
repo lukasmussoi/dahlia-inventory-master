@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react"
 import { 
   AlignCenter, 
@@ -680,6 +679,46 @@ export default function EtiquetaCreator({
     setIsGeneratingPdf(true);
     
     try {
+      // Verificar se as dimensões são válidas antes de gerar o PDF
+      const orientacaoAtual = pageOrientation;
+      
+      // Calcular área útil disponível (considerar orientação correta)
+      let larguraDisponivel = pageSize.width;
+      let alturaDisponivel = pageSize.height;
+      
+      // Margens padrão (podem ser configuráveis no futuro)
+      const margemSuperior = 10;
+      const margemInferior = 10;
+      const margemEsquerda = 10;
+      const margemDireita = 10;
+      
+      // Área útil
+      const areaUtilLargura = larguraDisponivel - margemEsquerda - margemDireita;
+      const areaUtilAltura = alturaDisponivel - margemSuperior - margemInferior;
+      
+      console.log("Verificando dimensões:", {
+        etiqueta: { largura: labels[0].width, altura: labels[0].height },
+        pagina: { 
+          largura: pageSize.width, 
+          altura: pageSize.height,
+          orientacao: pageOrientation
+        },
+        areaUtil: { largura: areaUtilLargura, altura: areaUtilAltura }
+      });
+      
+      // Verificar se a etiqueta cabe na área útil
+      if (labels[0].width > areaUtilLargura) {
+        toast.error(`A largura da etiqueta (${labels[0].width}mm) excede a área útil disponível (${areaUtilLargura}mm).`);
+        setIsGeneratingPdf(false);
+        return;
+      }
+      
+      if (labels[0].height > areaUtilAltura) {
+        toast.error(`A altura da etiqueta (${labels[0].height}mm) excede a área útil disponível (${areaUtilAltura}mm).`);
+        setIsGeneratingPdf(false);
+        return;
+      }
+      
       // Criar um objeto modelo temporário para a pré-visualização
       const tempModelo: ModeloEtiqueta = {
         nome: modelName || "Modelo sem nome",
@@ -688,10 +727,10 @@ export default function EtiquetaCreator({
         altura: labels[0].height,
         formatoPagina: pageFormat,
         orientacao: pageOrientation,
-        margemSuperior: 10,
-        margemInferior: 10,
-        margemEsquerda: 10,
-        margemDireita: 10,
+        margemSuperior: margemSuperior,
+        margemInferior: margemInferior,
+        margemEsquerda: margemEsquerda,
+        margemDireita: margemDireita,
         espacamentoHorizontal: 2,
         espacamentoVertical: 2,
         larguraPagina: pageSize.width,
@@ -705,6 +744,8 @@ export default function EtiquetaCreator({
           tamanhoFonte: el.fontSize
         }))
       };
+      
+      console.log("Gerando prévia com modelo:", tempModelo);
       
       // Gerar PDF de pré-visualização
       const pdfUrl = await generatePreviewPDF(tempModelo);

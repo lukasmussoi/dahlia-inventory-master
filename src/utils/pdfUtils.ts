@@ -1,4 +1,3 @@
-
 import { jsPDF } from "jspdf";
 import { generateBarcode } from "./barcodeUtils";
 import { toast } from "sonner";
@@ -93,7 +92,10 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
             console.error("Etiqueta maior que área útil:", {
               larguraEtiqueta: modeloCustom.largura,
               areaUtilLargura,
-              orientacao: modeloCustom.orientacao
+              larguraEfetiva,
+              orientacao: modeloCustom.orientacao,
+              margemEsquerda: modeloCustom.margemEsquerda,
+              margemDireita: modeloCustom.margemDireita
             });
             
             const sugestaoLarguraEtiqueta = Math.floor(areaUtilLargura * 0.9);
@@ -109,7 +111,10 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
             console.error("Etiqueta maior que área útil:", {
               alturaEtiqueta: modeloCustom.altura,
               areaUtilAltura,
-              orientacao: modeloCustom.orientacao
+              alturaEfetiva,
+              orientacao: modeloCustom.orientacao,
+              margemSuperior: modeloCustom.margemSuperior,
+              margemInferior: modeloCustom.margemInferior
             });
             
             const sugestaoAlturaEtiqueta = Math.floor(areaUtilAltura * 0.9);
@@ -295,4 +300,3 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
     throw error;
   }
 }
-

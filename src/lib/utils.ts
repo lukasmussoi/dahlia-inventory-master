@@ -84,18 +84,29 @@ export function validarDimensoesEtiqueta(
     orientacao?: 'retrato' | 'paisagem'
   }
 ): { valido: boolean, mensagem?: string } {
-  // Ajustar dimensões com base na orientação
+  console.log("Validando dimensões:", {
+    etiqueta: { largura: etiquetaLargura, altura: etiquetaAltura },
+    pagina: { ...pagina }
+  });
+  
+  // Para evitar confusão, vamos trabalhar com a página já na orientação correta
   let larguraEfetiva = pagina.largura;
   let alturaEfetiva = pagina.altura;
-  
-  if (pagina.orientacao === 'paisagem') {
-    larguraEfetiva = pagina.altura;
-    alturaEfetiva = pagina.largura;
-  }
   
   // Calcular área útil da página
   const areaUtilLargura = larguraEfetiva - pagina.margemEsquerda - pagina.margemDireita;
   const areaUtilAltura = alturaEfetiva - pagina.margemSuperior - pagina.margemInferior;
+
+  console.log("Área útil calculada:", { 
+    areaUtilLargura, 
+    areaUtilAltura,
+    margens: {
+      esquerda: pagina.margemEsquerda,
+      direita: pagina.margemDireita,
+      superior: pagina.margemSuperior,
+      inferior: pagina.margemInferior
+    }
+  });
 
   // Verificar se as margens são válidas
   if (areaUtilLargura <= 0) {
