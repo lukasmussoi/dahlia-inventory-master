@@ -276,7 +276,64 @@ export function EtiquetaCreator({
           campos: elementos
         };
         
-        generatePreviewPDF(dadosEtiqueta);
+        // Converter dados para o formato esperado pelo gerador de PDF
+        const labels = [{
+          x: 0,
+          y: 0,
+          width: etiquetaLargura,
+          height: etiquetaAltura,
+          elements: elementos.map(el => ({
+            type: el.type,
+            x: el.x,
+            y: el.y,
+            width: el.width,
+            height: el.height,
+            fontSize: el.fontSize,
+            align: el.align
+          }))
+        }];
+        
+        const pageSize = {
+          width: formatoPagina === "Personalizado" ? larguraPagina : 
+                 formatoPagina === "A4" ? 210 : 
+                 formatoPagina === "A5" ? 148 : 
+                 formatoPagina === "Letter" ? 216 : 210,
+          height: formatoPagina === "Personalizado" ? alturaPagina : 
+                  formatoPagina === "A4" ? 297 : 
+                  formatoPagina === "A5" ? 210 : 
+                  formatoPagina === "Letter" ? 279 : 297
+        };
+        
+        const margins = {
+          top: margemSuperior,
+          right: margemDireita,
+          bottom: margemInferior,
+          left: margemEsquerda
+        };
+        
+        const spacing = {
+          horizontal: espacamentoHorizontal,
+          vertical: espacamentoVertical
+        };
+        
+        generatePreviewPDF(
+          etiquetaNome,
+          labels,
+          formatoPagina,
+          pageSize,
+          margins,
+          spacing,
+          autoAdjustDimensions,
+          orientacaoPagina
+        ).then(pdfUrl => {
+          const previewFrame = document.getElementById('previewFrame') as HTMLIFrameElement;
+          if (previewFrame) {
+            previewFrame.src = pdfUrl;
+          }
+        }).catch(error => {
+          console.error("Erro ao gerar preview:", error);
+          toast.error("Erro ao gerar preview da etiqueta");
+        });
       } catch (error) {
         console.error("Erro ao gerar preview:", error);
         toast.error("Erro ao gerar preview da etiqueta");

@@ -1,6 +1,8 @@
 
 import { jsPDF } from "jspdf";
 import { ensureString } from "@/lib/utils";
+import { generateBarcode } from "./barcodeUtils";
+import type { ModeloEtiqueta } from "@/types/etiqueta";
 
 export async function generatePreviewPDF(
   modelName: string,
@@ -117,6 +119,200 @@ export async function generatePreviewPDF(
     return pdfUrl;
   } catch (error) {
     console.error("Erro ao gerar PDF:", error);
+    throw error;
+  }
+}
+
+// Adicionar a função generateEtiquetaPDF
+export async function generateEtiquetaPDF(
+  modelo: ModeloEtiqueta,
+  items: any[],
+  options: {
+    startRow?: number;
+    startColumn?: number;
+    copias?: number;
+  } = {}
+): Promise<string> {
+  try {
+    const { 
+      largura, 
+      altura, 
+      formatoPagina, 
+      orientacao, 
+      margemSuperior, 
+      margemInferior,
+      margemEsquerda, 
+      margemDireita, 
+      espacamentoHorizontal, 
+      espacamentoVertical,
+      larguraPagina, 
+      alturaPagina,
+      campos 
+    } = modelo;
+
+    // Configurar orientação do documento
+    const isLandscape = orientacao === "paisagem";
+    
+    // Determinar dimensões da página
+    let pageWidth = 210; // A4 padrão
+    let pageHeight = 297;
+    
+    if (formatoPagina === "Personalizado" && larguraPagina && alturaPagina) {
+      pageWidth = larguraPagina;
+      pageHeight = alturaPagina;
+    } else {
+      // Definir dimensões com base no formato de página
+      switch (formatoPagina) {
+        case "A4":
+          pageWidth = 210;
+          pageHeight = 297;
+          break;
+        case "A5":
+          pageWidth = 148;
+          pageHeight = 210;
+          break;
+        case "Letter":
+          pageWidth = 216;
+          pageHeight = 279;
+          break;
+        case "Legal":
+          pageWidth = 216;
+          pageHeight = 356;
+          break;
+      }
+    }
+    
+    // Se a orientação for paisagem, inverter largura e altura
+    if (isLandscape) {
+      [pageWidth, pageHeight] = [pageHeight, pageWidth];
+    }
+    
+    // Criar novo documento PDF
+    const doc = new jsPDF({
+      orientation: isLandscape ? "landscape" : "portrait",
+      unit: "mm",
+      format: [pageWidth, pageHeight]
+    });
+    
+    // Calcular quantas etiquetas cabem por página
+    const etiquetasPerRow = Math.floor((pageWidth - margemEsquerda - margemDireita) / (largura + espacamentoHorizontal));
+    const etiquetasPerColumn = Math.floor((pageHeight - margemSuperior - margemInferior) / (altura + espacamentoVertical));
+    
+    if (etiquetasPerRow <= 0 || etiquetasPerColumn <= 0) {
+      throw new Error("Configurações inválidas: as dimensões da etiqueta e margens não permitem caber pelo menos uma etiqueta na página.");
+    }
+    
+    console.log("Etiquetas por página:", etiquetasPerRow, "x", etiquetasPerColumn);
+    
+    // Posição inicial
+    let currentRow = options.startRow ? options.startRow - 1 : 0;
+    let currentColumn = options.startColumn ? options.startColumn - 1 : 0;
+    let currentPage = 0;
+    
+    // Número de cópias
+    const copias = options.copias || 1;
+    const totalLabels = items.length * copias;
+    
+    // Gerar códigos de barras para todos os itens uma vez só
+    const barcodesPromises = items.map(async (item) => {
+      const barcodeText = ensureString(item.barcode || item.sku || item.codigo || "0000000000");
+      return { 
+        item, 
+        barcodeData: await generateBarcode(barcodeText) 
+      };
+    });
+    
+    const itemsWithBarcodes = await Promise.all(barcodesPromises);
+    
+    // Contador para etiquetas processadas
+    let processedLabels = 0;
+    
+    // Para cada item...
+    for (let itemIndex = 0; itemIndex < itemsWithBarcodes.length; itemIndex++) {
+      const { item, barcodeData } = itemsWithBarcodes[itemIndex];
+      
+      // Para cada cópia...
+      for (let copy = 0; copy < copias; copy++) {
+        // Verificar se precisa de nova página
+        if (currentRow >= etiquetasPerColumn) {
+          currentRow = 0;
+          currentColumn++;
+        }
+        
+        if (currentColumn >= etiquetasPerRow) {
+          currentColumn = 0;
+          doc.addPage();
+          currentPage++;
+        }
+        
+        // Calcular posição da etiqueta
+        const x = margemEsquerda + currentColumn * (largura + espacamentoHorizontal);
+        const y = margemSuperior + currentRow * (altura + espacamentoVertical);
+        
+        // Desenhar cada elemento na etiqueta
+        for (const campo of campos) {
+          // Posição do elemento dentro da etiqueta
+          const elementX = x + campo.x;
+          const elementY = y + campo.y;
+          
+          // Desenhar o elemento adequado
+          switch (campo.tipo) {
+            case "nome":
+              doc.setFontSize(campo.tamanhoFonte);
+              doc.setFont("helvetica", "normal");
+              doc.text(
+                ensureString(item.name || item.nome || "Sem nome"), 
+                elementX, 
+                elementY + campo.tamanhoFonte * 0.3
+              );
+              break;
+              
+            case "codigo":
+              // Desenhar código de barras se disponível
+              if (barcodeData) {
+                doc.addImage(
+                  barcodeData, 
+                  "PNG", 
+                  elementX, 
+                  elementY, 
+                  campo.largura, 
+                  campo.altura
+                );
+              } else {
+                doc.setFontSize(campo.tamanhoFonte);
+                doc.text(
+                  ensureString(item.sku || item.codigo || "0000000000"), 
+                  elementX, 
+                  elementY + campo.tamanhoFonte * 0.3
+                );
+              }
+              break;
+              
+            case "preco":
+              doc.setFontSize(campo.tamanhoFonte);
+              doc.setFont("helvetica", "bold");
+              const preco = typeof item.price === 'number' ? 
+                          item.price.toFixed(2).replace('.', ',') : 
+                          (item.preco || '0,00');
+              doc.text(
+                `R$ ${ensureString(preco)}`, 
+                elementX, 
+                elementY + campo.tamanhoFonte * 0.3
+              );
+              break;
+          }
+        }
+        
+        currentRow++;
+        processedLabels++;
+      }
+    }
+    
+    // Gerar URL do arquivo temporário
+    const pdfBlob = doc.output("blob");
+    return URL.createObjectURL(pdfBlob);
+  } catch (error) {
+    console.error("Erro ao gerar PDF de etiquetas:", error);
     throw error;
   }
 }
