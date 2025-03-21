@@ -227,7 +227,7 @@ export const acertoMaletaController = {
     }
   },
 
-  // Métodos adicionados para resolver os erros
+  // Método adicionado: buscar todos os acertos
   async getAllAcertos() {
     try {
       const { data, error } = await supabase
@@ -255,6 +255,7 @@ export const acertoMaletaController = {
     }
   },
 
+  // Método adicionado: buscar acertos de uma maleta específica
   async getAcertosBySuitcase(suitcaseId: string) {
     try {
       const { data, error } = await supabase
@@ -278,6 +279,7 @@ export const acertoMaletaController = {
     }
   },
 
+  // Método adicionado: gerar PDF do recibo
   async generateReceiptPDF(acertoId: string): Promise<string> {
     try {
       // Em um sistema real, aqui seria implementada a lógica para gerar o PDF

@@ -56,7 +56,7 @@ export interface Suitcase {
   updated_at?: string;
   next_settlement_date?: string;
   sent_at?: string;
-  is_empty?: boolean;  // Novo campo para indicar se a maleta está vazia
+  is_empty?: boolean;  // Adicionado campo para indicar se a maleta está vazia
   seller?: {
     id: string;
     name: string;

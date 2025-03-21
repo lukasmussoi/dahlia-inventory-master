@@ -691,6 +691,7 @@ export type Database = {
           code: string | null
           created_at: string
           id: string
+          is_empty: boolean | null
           neighborhood: string | null
           next_settlement_date: string | null
           seller_id: string
@@ -703,6 +704,7 @@ export type Database = {
           code?: string | null
           created_at?: string
           id?: string
+          is_empty?: boolean | null
           neighborhood?: string | null
           next_settlement_date?: string | null
           seller_id: string
@@ -715,6 +717,7 @@ export type Database = {
           code?: string | null
           created_at?: string
           id?: string
+          is_empty?: boolean | null
           neighborhood?: string | null
           next_settlement_date?: string | null
           seller_id?: string
