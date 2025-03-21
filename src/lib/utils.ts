@@ -24,7 +24,7 @@ export function getPageDimensions(
   let largura: number = 0;
   let altura: number = 0;
 
-  if (formatoPagina === 'Personalizado') {
+  if (formatoPagina === 'Personalizado' || formatoPagina === 'Custom') {
     largura = larguraPagina || 210;
     altura = alturaPagina || 297;
   } else {
@@ -120,5 +120,6 @@ export function validateLabelFitsPage(
 export function ensureString(value: any): string {
   if (value === null || value === undefined) return '';
   if (typeof value === 'string') return value;
+  if (typeof value === 'object' && value._type === 'undefined') return '';
   return String(value);
 }

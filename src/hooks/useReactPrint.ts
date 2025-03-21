@@ -45,6 +45,13 @@ export function useReactPrint({
         size: ${widthInInches}in ${heightInInches}in;
         margin: 0;
       }
+      @media print {
+        body {
+          transform-origin: top left;
+          width: ${widthInInches}in !important;
+          height: ${heightInInches}in !important;
+        }
+      }
     `,
     ...restOptions
   } as Parameters<typeof useReactToPrintOriginal>[0]);
