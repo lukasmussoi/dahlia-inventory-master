@@ -1,3 +1,4 @@
+
 export type SuitcaseStatus = 'in_use' | 'returned' | 'in_replenishment' | 'lost' | 'in_audit';
 export type SuitcaseItemStatus = 'in_possession' | 'sold' | 'returned' | 'lost';
 export type AcertoStatus = 'pendente' | 'concluido';
@@ -28,12 +29,12 @@ export interface SuitcaseItem {
     sku: string;
     name: string;
     price: number;
-    unit_cost?: number;
     photo_url?: string | PhotoUrl[];
   };
   sales?: SuitcaseItemSale[];
 }
 
+// Interface para facilitar o tratamento de photo_url
 export interface PhotoUrl {
   photo_url: string;
 }
@@ -56,7 +57,6 @@ export interface Suitcase {
   updated_at?: string;
   next_settlement_date?: string;
   sent_at?: string;
-  is_empty?: boolean;  // Adicionado campo para indicar se a maleta está vazia
   seller?: {
     id: string;
     name: string;
@@ -102,10 +102,6 @@ export interface AcertoItem {
   payment_method?: string;
   created_at?: string;
   updated_at?: string;
-  commission_value?: number;  // Adicionando campo de valor da comissão
-  commission_rate?: number;   // Adicionando campo de taxa da comissão
-  net_profit?: number;        // Adicionando campo de lucro líquido
-  unit_cost?: number;         // Adicionando campo de custo unitário
   product?: {
     id: string;
     name: string;
@@ -128,8 +124,6 @@ export interface Acerto {
   restock_suggestions?: any;
   created_at: string;
   updated_at?: string;
-  total_cost?: number;        // Adicionando campo de custo total
-  net_profit?: number;        // Adicionando campo de lucro líquido
   suitcase?: Partial<Suitcase>;
   seller?: {
     id: string;
@@ -153,6 +147,4 @@ export interface SuitcaseSettlementFormData {
     customer_name?: string;
     payment_method?: string;
   }[];
-  customer_name?: string;
-  payment_method?: string;
 }

@@ -12,50 +12,38 @@ export type Database = {
       acerto_itens_vendidos: {
         Row: {
           acerto_id: string
-          commission_rate: number | null
-          commission_value: number | null
           created_at: string
           customer_name: string | null
           id: string
           inventory_id: string
-          net_profit: number | null
           payment_method: string | null
           price: number
           sale_date: string
           suitcase_item_id: string
-          unit_cost: number | null
           updated_at: string
         }
         Insert: {
           acerto_id: string
-          commission_rate?: number | null
-          commission_value?: number | null
           created_at?: string
           customer_name?: string | null
           id?: string
           inventory_id: string
-          net_profit?: number | null
           payment_method?: string | null
           price: number
           sale_date?: string
           suitcase_item_id: string
-          unit_cost?: number | null
           updated_at?: string
         }
         Update: {
           acerto_id?: string
-          commission_rate?: number | null
-          commission_value?: number | null
           created_at?: string
           customer_name?: string | null
           id?: string
           inventory_id?: string
-          net_profit?: number | null
           payment_method?: string | null
           price?: number
           sale_date?: string
           suitcase_item_id?: string
-          unit_cost?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -87,7 +75,6 @@ export type Database = {
           commission_amount: number
           created_at: string
           id: string
-          net_profit: number | null
           next_settlement_date: string | null
           receipt_url: string | null
           restock_suggestions: Json | null
@@ -95,7 +82,6 @@ export type Database = {
           settlement_date: string
           status: Database["public"]["Enums"]["acerto_status"]
           suitcase_id: string
-          total_cost: number | null
           total_sales: number
           updated_at: string
         }
@@ -103,7 +89,6 @@ export type Database = {
           commission_amount?: number
           created_at?: string
           id?: string
-          net_profit?: number | null
           next_settlement_date?: string | null
           receipt_url?: string | null
           restock_suggestions?: Json | null
@@ -111,7 +96,6 @@ export type Database = {
           settlement_date?: string
           status?: Database["public"]["Enums"]["acerto_status"]
           suitcase_id: string
-          total_cost?: number | null
           total_sales?: number
           updated_at?: string
         }
@@ -119,7 +103,6 @@ export type Database = {
           commission_amount?: number
           created_at?: string
           id?: string
-          net_profit?: number | null
           next_settlement_date?: string | null
           receipt_url?: string | null
           restock_suggestions?: Json | null
@@ -127,7 +110,6 @@ export type Database = {
           settlement_date?: string
           status?: Database["public"]["Enums"]["acerto_status"]
           suitcase_id?: string
-          total_cost?: number | null
           total_sales?: number
           updated_at?: string
         }
@@ -691,7 +673,6 @@ export type Database = {
           code: string | null
           created_at: string
           id: string
-          is_empty: boolean | null
           neighborhood: string | null
           next_settlement_date: string | null
           seller_id: string
@@ -704,7 +685,6 @@ export type Database = {
           code?: string | null
           created_at?: string
           id?: string
-          is_empty?: boolean | null
           neighborhood?: string | null
           next_settlement_date?: string | null
           seller_id: string
@@ -717,7 +697,6 @@ export type Database = {
           code?: string | null
           created_at?: string
           id?: string
-          is_empty?: boolean | null
           neighborhood?: string | null
           next_settlement_date?: string | null
           seller_id?: string
@@ -821,14 +800,6 @@ export type Database = {
           user_id: string
         }
         Returns: boolean
-      }
-      count_item_sales: {
-        Args: {
-          inventory_id_param: string
-          seller_id_param: string
-          date_threshold: string
-        }
-        Returns: number
       }
       has_role:
         | {

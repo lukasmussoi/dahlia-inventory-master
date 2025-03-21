@@ -356,8 +356,7 @@ export class SuitcaseModel {
         created_at: data.created_at,
         updated_at: data.updated_at,
         next_settlement_date: data.next_settlement_date,
-        sent_at: data.sent_at,
-        is_empty: data.is_empty
+        sent_at: data.sent_at
       };
     } catch (error) {
       console.error("Erro detalhado ao atualizar maleta:", error);
@@ -470,7 +469,7 @@ export class SuitcaseModel {
     if (!itemData.suitcase_id) throw new Error("ID da maleta é necessário");
     if (!itemData.inventory_id) throw new Error("ID do inventário é necessário");
     
-    // Garantir que quantidade seja vlida
+    // Garantir que quantidade seja v��lida
     const quantity = itemData.quantity && itemData.quantity > 0 ? itemData.quantity : 1;
     
     // Verificar disponibilidade do item

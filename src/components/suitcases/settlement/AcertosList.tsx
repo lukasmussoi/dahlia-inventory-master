@@ -12,7 +12,6 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AcertoMaletaController } from "@/controllers/acertoMaletaController";
 import { Acerto } from "@/types/suitcase";
-import { toast } from "sonner";
 
 interface AcertosListProps {
   onViewAcerto: (acerto: Acerto) => void;
@@ -73,7 +72,6 @@ export function AcertosList({ onViewAcerto, onRefresh }: AcertosListProps) {
       window.open(pdfUrl, '_blank');
     } catch (error) {
       console.error("Erro ao gerar PDF do acerto:", error);
-      toast.error("Não foi possível gerar o PDF do acerto no momento.");
     }
   };
 
