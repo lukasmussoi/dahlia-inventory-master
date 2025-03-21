@@ -141,6 +141,17 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
       
       setCreatedAcertoId(result);
       
+      try {
+        setGeneratingPdf(true);
+        const pdfUrl = await AcertoMaletaController.generateReceiptPDF(result);
+        setPdfUrl(pdfUrl);
+      } catch (error) {
+        console.error("Erro ao gerar PDF:", error);
+        toast.error("O acerto foi realizado, mas não foi possível gerar o recibo PDF");
+      } finally {
+        setGeneratingPdf(false);
+      }
+      
       if (onSuccess) {
         onSuccess();
       }
@@ -566,3 +577,4 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
     </Dialog>
   );
 }
+

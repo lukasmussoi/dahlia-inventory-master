@@ -1,8 +1,8 @@
-
 import { SuitcaseSettlementFormData } from "@/types/suitcase";
 import { supabase } from "@/integrations/supabase/client";
 import { SuitcaseController } from "./suitcaseController";
 import { SuitcaseModel } from "@/models/suitcaseModel";
+import { generateAcertoReceipt } from "@/utils/reportGenerator";
 
 export const acertoMaletaController = {
   formatCurrency(value: number): string {
@@ -27,7 +27,6 @@ export const acertoMaletaController = {
       ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
       const ninetyDaysAgoISO = ninetyDaysAgo.toISOString();
 
-      // Chamando a função RPC criada no banco de dados
       const { data, error } = await supabase
         .rpc('count_item_sales', {
           inventory_id_param: inventoryId,
@@ -40,7 +39,6 @@ export const acertoMaletaController = {
         return { count: 0, frequency: "baixa" };
       }
       
-      // A quantidade de vendas vem como resultado da função RPC
       const safeCount = data as number || 0;
       let frequency = "baixa";
       
@@ -154,10 +152,16 @@ export const acertoMaletaController = {
       for (const soldItem of soldItemIds) {
         const item = items.find(i => i.id === soldItem.suitcase_item_id);
         if (item) {
-          const commissionRate = item?.product && item.product.price ? item.product.price * 0.3 : 0.3;
+          const seller = await supabase
+            .from('resellers')
+            .select('commission_rate')
+            .eq('id', formData.seller_id)
+            .maybeSingle();
+          
+          const commissionRate = seller.data?.commission_rate || 0.3;
           const commissionValue = soldItem.price * commissionRate;
-          const unitCost = item?.product?.price || 0;
-          const netProfit = soldItem.price - unitCost - commissionValue;
+          const unitCost = item?.product?.unit_cost || 0;
+          const netProfit = soldItem.price - commissionValue - unitCost;
 
           totalSales += soldItem.price;
           totalCommission += commissionValue;
@@ -174,7 +178,8 @@ export const acertoMaletaController = {
             commission_value: commissionValue,
             commission_rate: commissionRate,
             unit_cost: unitCost,
-            net_profit: netProfit
+            net_profit: netProfit,
+            customer_name: formData.customer_name || ''
           });
         }
       }
@@ -189,7 +194,8 @@ export const acertoMaletaController = {
           total_sales: totalSales,
           commission_amount: totalCommission,
           total_cost: totalCost,
-          net_profit: totalProfit
+          net_profit: totalProfit,
+          status: 'concluido'
         })
         .select()
         .single();
@@ -198,19 +204,31 @@ export const acertoMaletaController = {
 
       const acertoId = newAcerto.id;
 
-      for (const item of acertoItemsToInsert) {
-        item.acerto_id = acertoId;
+      if (acertoItemsToInsert.length > 0) {
+        for (const item of acertoItemsToInsert) {
+          item.acerto_id = acertoId;
+        }
+
+        const { error: itemsError } = await supabase
+          .from('acerto_itens_vendidos')
+          .insert(acertoItemsToInsert);
+
+        if (itemsError) throw itemsError;
       }
-
-      const { error: itemsError } = await supabase
-        .from('acerto_itens_vendidos')
-        .insert(acertoItemsToInsert);
-
-      if (itemsError) throw itemsError;
       
       await this.emptyMaletaAfterAcerto(formData.suitcase_id);
       
-      return newAcerto.id;
+      const acertoCompleto = await this.getAcertoById(acertoId);
+      if (acertoCompleto) {
+        try {
+          const receiptUrl = generateAcertoReceipt(acertoCompleto);
+          await this.storeReceiptUrl(acertoId, receiptUrl);
+        } catch (error) {
+          console.error("Erro ao gerar recibo PDF:", error);
+        }
+      }
+      
+      return acertoId;
     } catch (error: any) {
       console.error("Erro ao criar acerto:", error);
       throw new Error(error.message || "Erro ao criar acerto da maleta");
@@ -244,6 +262,20 @@ export const acertoMaletaController = {
     } catch (error) {
       console.error("Erro ao esvaziar maleta após acerto:", error);
       throw error;
+    }
+  },
+
+  async storeReceiptUrl(acertoId: string, receiptUrl: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('acertos_maleta')
+        .update({ receipt_url: receiptUrl })
+        .eq('id', acertoId);
+      
+      if (error) throw error;
+    } catch (error) {
+      console.error("Erro ao armazenar URL do recibo:", error);
+      throw new Error("Erro ao armazenar URL do recibo");
     }
   },
 
@@ -299,8 +331,17 @@ export const acertoMaletaController = {
 
   async generateReceiptPDF(acertoId: string): Promise<string> {
     try {
-      console.log(`Gerando PDF do acerto ${acertoId}...`);
-      return `https://exemplo.com/recibos/${acertoId}.pdf`;
+      const acerto = await this.getAcertoById(acertoId);
+      if (!acerto) {
+        throw new Error("Acerto não encontrado");
+      }
+      
+      const receiptUrl = generateAcertoReceipt(acerto);
+      
+      await this.storeReceiptUrl(acertoId, receiptUrl);
+      
+      console.log(`PDF do acerto ${acertoId} gerado com sucesso`);
+      return receiptUrl;
     } catch (error) {
       console.error("Erro ao gerar PDF do acerto:", error);
       throw new Error("Erro ao gerar PDF do acerto");
