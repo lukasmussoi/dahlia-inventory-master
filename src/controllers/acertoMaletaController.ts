@@ -172,14 +172,14 @@ export const acertoMaletaController = {
             acerto_id: '',
             suitcase_item_id: soldItem.suitcase_item_id,
             inventory_id: soldItem.inventory_id,
-            seller_id: formData.seller_id,
             price: soldItem.price,
             sale_date: formData.settlement_date.toISOString(),
             commission_value: commissionValue,
             commission_rate: commissionRate,
             unit_cost: unitCost,
             net_profit: netProfit,
-            customer_name: formData.customer_name || ''
+            customer_name: formData.customer_name || '',
+            payment_method: formData.payment_method || ''
           });
         }
       }
@@ -350,3 +350,4 @@ export const acertoMaletaController = {
 };
 
 export const AcertoMaletaController = acertoMaletaController;
+
