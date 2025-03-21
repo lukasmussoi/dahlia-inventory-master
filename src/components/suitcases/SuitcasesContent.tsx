@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { suitcaseController } from "@/controllers/suitcaseController";
 import { SuitcaseGrid } from "@/components/suitcases/SuitcaseGrid";
@@ -26,7 +26,7 @@ export function SuitcasesContent({ isAdmin, userProfile }: SuitcasesContentProps
   const [showAcertoDialog, setShowAcertoDialog] = useState(false);
   const [showAcertoDetailsDialog, setShowAcertoDetailsDialog] = useState(false);
   const [selectedSuitcase, setSelectedSuitcase] = useState<Suitcase | null>(null);
-  const [selectedAcerto, setSelectedAcerto] = useState<Acerto | null>(null);
+  const [selectedAcertoId, setSelectedAcertoId] = useState<string | undefined>(undefined);
   const [activeTab, setActiveTab] = useState("suitcases");
   const [filters, setFilters] = useState({
     search: "",
@@ -36,14 +36,14 @@ export function SuitcasesContent({ isAdmin, userProfile }: SuitcasesContentProps
   });
 
   // Default empty summary if data is not yet loaded
-  const defaultSummary = {
+  const defaultSummary = useMemo(() => ({
     total: 0,
     in_use: 0,
     returned: 0,
     in_replenishment: 0
-  };
+  }), []);
 
-  // Buscar maletas usando React Query
+  // Buscar maletas usando React Query com otimizações
   const { 
     data: suitcases = [], 
     isLoading: isLoadingSuitcases,
@@ -57,9 +57,11 @@ export function SuitcasesContent({ isAdmin, userProfile }: SuitcasesContentProps
         return suitcaseController.getAllSuitcases();
       }
     },
+    staleTime: 30000, // Cache por 30 segundos
+    refetchOnWindowFocus: false // Não recarregar ao focar na janela
   });
 
-  // Buscar resumo das maletas
+  // Buscar resumo das maletas com otimizações
   const { 
     data: summary = defaultSummary, 
     isLoading: isLoadingSummary,
@@ -67,23 +69,25 @@ export function SuitcasesContent({ isAdmin, userProfile }: SuitcasesContentProps
   } = useQuery({
     queryKey: ['suitcases-summary'],
     queryFn: () => suitcaseController.getSuitcaseSummary(),
+    staleTime: 60000, // Cache por 1 minuto
+    refetchOnWindowFocus: false
   });
 
-  // Refazer consultas quando necessário
-  const refreshData = () => {
+  // Refazer consultas quando necessário - otimizado com useCallback
+  const refreshData = useCallback(() => {
     refetchSuitcases();
     refetchSummary();
     toast.success("Dados atualizados com sucesso");
-  };
+  }, [refetchSuitcases, refetchSummary]);
 
-  // Lidar com busca
-  const handleSearch = (newFilters: any) => {
+  // Lidar com busca - otimizado com useCallback
+  const handleSearch = useCallback((newFilters: any) => {
     setFilters(newFilters);
     setIsSearching(true);
-  };
+  }, []);
 
-  // Limpar filtros
-  const handleClearFilters = () => {
+  // Limpar filtros - otimizado com useCallback
+  const handleClearFilters = useCallback(() => {
     setFilters({
       search: "",
       status: "todos",
@@ -91,10 +95,10 @@ export function SuitcasesContent({ isAdmin, userProfile }: SuitcasesContentProps
       neighborhood: ""
     });
     setIsSearching(false);
-  };
+  }, []);
 
-  // Lidar com criação de nova maleta
-  const handleCreateSuitcase = async (data: any) => {
+  // Lidar com criação de nova maleta - otimizado com useCallback
+  const handleCreateSuitcase = useCallback(async (data: any) => {
     try {
       await suitcaseController.createSuitcase(data);
       setShowNewSuitcaseDialog(false);
@@ -104,19 +108,34 @@ export function SuitcasesContent({ isAdmin, userProfile }: SuitcasesContentProps
       console.error("Erro ao criar maleta:", error);
       toast.error("Erro ao criar maleta");
     }
-  };
+  }, [refreshData]);
 
-  // Abrir o modal de acerto da maleta para uma maleta específica
-  const handleOpenAcertoDialog = (suitcase: Suitcase) => {
+  // Abrir o modal de acerto da maleta para uma maleta específica - otimizado com useCallback
+  const handleOpenAcertoDialog = useCallback((suitcase: Suitcase) => {
     setSelectedSuitcase(suitcase);
     setShowAcertoDialog(true);
-  };
+  }, []);
 
-  // Abrir o modal de detalhes de um acerto
-  const handleViewAcertoDetails = (acerto: Acerto) => {
-    setSelectedAcerto(acerto);
+  // Abrir o modal de detalhes de um acerto - otimizado com useCallback
+  const handleViewAcertoDetails = useCallback((acerto: Acerto) => {
+    setSelectedAcertoId(acerto.id);
     setShowAcertoDetailsDialog(true);
-  };
+  }, []);
+
+  // Manipulador para Dialog de Acerto atualizado para usar o ID
+  const handleAcertoDialogOpenChange = useCallback((open: boolean) => {
+    setShowAcertoDetailsDialog(open);
+    if (!open) {
+      // Limpar o ID selecionado quando o diálogo é fechado
+      setTimeout(() => setSelectedAcertoId(undefined), 300);
+    }
+  }, []);
+
+  const handleSuccessAcerto = useCallback(() => {
+    refreshData();
+    // Mudar para a aba de acertos após concluir um acerto
+    setActiveTab("settlements");
+  }, [refreshData]);
 
   if (isLoadingSuitcases || isLoadingSummary) {
     return (
@@ -214,18 +233,14 @@ export function SuitcasesContent({ isAdmin, userProfile }: SuitcasesContentProps
         open={showAcertoDialog}
         onOpenChange={setShowAcertoDialog}
         suitcase={selectedSuitcase}
-        onSuccess={() => {
-          refreshData();
-          // Mudar para a aba de acertos após concluir um acerto
-          setActiveTab("settlements");
-        }}
+        onSuccess={handleSuccessAcerto}
       />
       
       {/* Modal para visualizar detalhes de um acerto */}
       <AcertoDetailsDialog
         open={showAcertoDetailsDialog}
-        onOpenChange={setShowAcertoDetailsDialog}
-        acertoId={selectedAcerto?.id}
+        onOpenChange={handleAcertoDialogOpenChange}
+        acertoId={selectedAcertoId}
       />
     </div>
   );

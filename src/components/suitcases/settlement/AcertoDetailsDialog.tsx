@@ -1,6 +1,6 @@
 
-import { useState, useEffect } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { useState, useEffect, useCallback, memo } from "react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -30,17 +30,8 @@ interface AcertoDetailsDialogProps {
   acertoId?: string;
 }
 
-export function AcertoDetailsDialog({
-  open,
-  onOpenChange,
-  acertoId
-}: AcertoDetailsDialogProps) {
-  const [currentAcerto, setCurrentAcerto] = useState<Acerto | null>(null);
-
-  const formatDate = (dateString: string) => {
-    return format(new Date(dateString), "dd/MM/yyyy", { locale: ptBR });
-  };
-
+// Memorizamos o componente de venda para evitar re-renderizações desnecessárias
+const AcertoItemCard = memo(({ item }: { item: any }) => {
   const formatPaymentMethod = (method?: string) => {
     if (!method) return "Não informado";
     
@@ -53,25 +44,109 @@ export function AcertoDetailsDialog({
     
     return methods[method] || method;
   };
+  
+  return (
+    <div className="border rounded p-3 flex items-center justify-between">
+      <div>
+        <p className="font-medium">{item.product?.name}</p>
+        <div className="flex items-center gap-3 text-sm text-muted-foreground">
+          <span>Código: {item.product?.sku}</span>
+          <span>Preço: {formatCurrency(item.price)}</span>
+        </div>
+        <div className="mt-1 text-xs text-muted-foreground flex items-center gap-2 flex-wrap">
+          {item.customer_name && (
+            <span className="flex items-center gap-1">
+              <User className="h-3 w-3" />
+              Cliente: {item.customer_name}
+            </span>
+          )}
+          {item.payment_method && (
+            <span className="flex items-center gap-1">
+              <CreditCard className="h-3 w-3" />
+              Pagamento: {formatPaymentMethod(item.payment_method)}
+            </span>
+          )}
+          {item.commission_value !== undefined && item.commission_value > 0 && (
+            <span className="flex items-center gap-1">
+              <DollarSign className="h-3 w-3" />
+              Comissão: {formatCurrency(item.commission_value)} ({formatPercent(item.commission_rate || 0.3)})
+            </span>
+          )}
+          {item.net_profit !== undefined && (
+            <span className="flex items-center gap-1">
+              <Calculator className="h-3 w-3" />
+              Lucro: {formatCurrency(item.net_profit)}
+            </span>
+          )}
+        </div>
+      </div>
+      <div className="w-16 h-16 bg-gray-100 rounded-md mr-3 flex-shrink-0">
+        {item.product?.photo_url ? (
+          <img 
+            src={getProductPhotoUrl(item.product?.photo_url)}
+            alt={item.product?.name} 
+            className="w-full h-full object-cover rounded-md" 
+            loading="lazy"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-gray-400">
+            <Package className="h-8 w-8" />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+});
 
-  // A versão mais recente do TanStack Query não suporta onSuccess diretamente nas opções
-  const { data: acerto, isLoading } = useQuery({
+// Memorizamos o componente de sugestão para evitar re-renderizações desnecessárias
+const RestockSuggestionCard = memo(({ suggestion, index }: { suggestion: any, index: number }) => {
+  return (
+    <div key={index} className="border rounded-md p-3">
+      <p className="font-medium">{suggestion.message}</p>
+      {suggestion.items && suggestion.items.length > 0 && (
+        <div className="mt-2 grid gap-2">
+          {suggestion.items.map((item: any, idx: number) => (
+            <div key={idx} className="text-sm flex justify-between items-center">
+              <span>{item.name}</span>
+              <Badge variant="secondary">{item.action}</Badge>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+});
+
+export function AcertoDetailsDialog({
+  open,
+  onOpenChange,
+  acertoId
+}: AcertoDetailsDialogProps) {
+  const [currentAcerto, setCurrentAcerto] = useState<Acerto | null>(null);
+
+  const formatDate = useCallback((dateString: string) => {
+    return format(new Date(dateString), "dd/MM/yyyy", { locale: ptBR });
+  }, []);
+
+  // Otimizamos usando a versão mais recente do tanstack/react-query
+  const { data: acerto, isLoading, isError } = useQuery({
     queryKey: ['acerto', acertoId],
     queryFn: async () => {
-      const data = await AcertoMaletaController.getAcertoById(acertoId);
-      return data as Acerto;
+      if (!acertoId) return null;
+      return await AcertoMaletaController.getAcertoById(acertoId) as Acerto;
     },
-    enabled: !!acertoId && open
+    enabled: !!acertoId && open,
+    staleTime: 60000, // Cache por 1 minuto para evitar requisições desnecessárias
   });
 
-  // Usar useEffect para setar o estado quando os dados chegarem
+  // Atualizar o estado quando os dados mudarem
   useEffect(() => {
     if (acerto) {
       setCurrentAcerto(acerto);
     }
   }, [acerto]);
 
-  const handleGeneratePDF = () => {
+  const handleGeneratePDF = useCallback(() => {
     if (!currentAcerto) return;
 
     try {
@@ -107,24 +182,37 @@ export function AcertoDetailsDialog({
         // Cabeçalho da tabela de itens
         const tableHeaders = [["Produto", "Código", "Preço", "Comissão", "Lucro"]];
         
-        // Dados da tabela
-        const tableData = currentAcerto.items_vendidos.map(item => [
-          item.product?.name || "Produto não encontrado",
-          item.product?.sku || "-",
-          formatCurrency(item.price),
-          formatCurrency(item.commission_value || 0),
-          formatCurrency(item.net_profit || 0)
-        ]);
+        // Limitamos a 50 itens por página para evitar problemas de memória
+        const itemsPerPage = 50;
+        const items = currentAcerto.items_vendidos.slice(0, Math.min(currentAcerto.items_vendidos.length, 200)); 
         
-        // Criar tabela
-        (doc as any).autoTable({
-          head: tableHeaders,
-          body: tableData,
-          startY: 70,
-          theme: 'striped',
-          styles: { fontSize: 10 },
-          headStyles: { fillColor: [233, 30, 99] }
-        });
+        for (let i = 0; i < items.length; i += itemsPerPage) {
+          const pageItems = items.slice(i, i + itemsPerPage);
+          
+          // Dados da tabela
+          const tableData = pageItems.map(item => [
+            item.product?.name || "Produto não encontrado",
+            item.product?.sku || "-",
+            formatCurrency(item.price),
+            formatCurrency(item.commission_value || 0),
+            formatCurrency(item.net_profit || 0)
+          ]);
+          
+          // Criar tabela
+          (doc as any).autoTable({
+            head: i === 0 ? tableHeaders : [], // Só mostra o cabeçalho na primeira página
+            body: tableData,
+            startY: i === 0 ? 70 : 10,
+            theme: 'striped',
+            styles: { fontSize: 10 },
+            headStyles: { fillColor: [233, 30, 99] }
+          });
+          
+          // Adicionar nova página se não for a última iteração
+          if (i + itemsPerPage < items.length) {
+            doc.addPage();
+          }
+        }
       }
       
       // Adicionar informações adicionais
@@ -138,7 +226,7 @@ export function AcertoDetailsDialog({
       console.error("Erro ao gerar PDF:", error);
       toast.error("Erro ao gerar o relatório PDF");
     }
-  };
+  }, [currentAcerto, formatDate]);
 
   if (!acertoId) return null;
 
@@ -146,20 +234,10 @@ export function AcertoDetailsDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-auto p-0">
         <div className="p-6 pb-2">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-pink-500" />
-              <h2 className="text-xl font-semibold">Detalhes do Acerto</h2>
-            </div>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-8 w-8" 
-              onClick={() => onOpenChange(false)}
-            >
-              &times;
-            </Button>
-          </div>
+          <DialogTitle className="text-xl font-semibold flex items-center gap-2">
+            <Clock className="h-5 w-5 text-pink-500" />
+            Detalhes do Acerto
+          </DialogTitle>
         </div>
         
         <div className="p-6">
@@ -167,7 +245,7 @@ export function AcertoDetailsDialog({
             <div className="flex justify-center py-10">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-500"></div>
             </div>
-          ) : !acerto ? (
+          ) : isError || !acerto ? (
             <div className="text-center py-6 border rounded-md">
               <Clock className="mx-auto h-12 w-12 text-gray-300" />
               <p className="mt-2 text-muted-foreground">Acerto não encontrado</p>
@@ -214,56 +292,14 @@ export function AcertoDetailsDialog({
                         Itens Vendidos ({acerto.items_vendidos.length})
                       </h4>
                       <div className="space-y-2 max-h-60 overflow-y-auto">
-                        {acerto.items_vendidos.map((item) => (
-                          <div key={item.id} className="border rounded p-3 flex items-center justify-between">
-                            <div>
-                              <p className="font-medium">{item.product?.name}</p>
-                              <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                                <span>Código: {item.product?.sku}</span>
-                                <span>Preço: {formatCurrency(item.price)}</span>
-                              </div>
-                              <div className="mt-1 text-xs text-muted-foreground flex items-center gap-2 flex-wrap">
-                                {item.customer_name && (
-                                  <span className="flex items-center gap-1">
-                                    <User className="h-3 w-3" />
-                                    Cliente: {item.customer_name}
-                                  </span>
-                                )}
-                                {item.payment_method && (
-                                  <span className="flex items-center gap-1">
-                                    <CreditCard className="h-3 w-3" />
-                                    Pagamento: {formatPaymentMethod(item.payment_method)}
-                                  </span>
-                                )}
-                                {item.commission_value !== undefined && item.commission_value > 0 && (
-                                  <span className="flex items-center gap-1">
-                                    <DollarSign className="h-3 w-3" />
-                                    Comissão: {formatCurrency(item.commission_value)} ({formatPercent(item.commission_rate || 0.3)})
-                                  </span>
-                                )}
-                                {item.net_profit !== undefined && (
-                                  <span className="flex items-center gap-1">
-                                    <Calculator className="h-3 w-3" />
-                                    Lucro: {formatCurrency(item.net_profit)}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            <div className="w-16 h-16 bg-gray-100 rounded-md mr-3 flex-shrink-0">
-                              {item.product?.photo_url ? (
-                                <img 
-                                  src={getProductPhotoUrl(item.product?.photo_url)}
-                                  alt={item.product?.name} 
-                                  className="w-full h-full object-cover rounded-md" 
-                                />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center text-gray-400">
-                                  <Package className="h-8 w-8" />
-                                </div>
-                              )}
-                            </div>
-                          </div>
+                        {acerto.items_vendidos.slice(0, 20).map((item) => (
+                          <AcertoItemCard key={item.id} item={item} />
                         ))}
+                        {acerto.items_vendidos.length > 20 && (
+                          <div className="text-center py-2 text-sm text-muted-foreground">
+                            + {acerto.items_vendidos.length - 20} outros itens
+                          </div>
+                        )}
                       </div>
                     </div>
                   ) : (
@@ -307,21 +343,14 @@ export function AcertoDetailsDialog({
                   <CardContent>
                     {Array.isArray(acerto.restock_suggestions) && acerto.restock_suggestions.length > 0 ? (
                       <div className="space-y-2">
-                        {acerto.restock_suggestions.map((suggestion, index) => (
-                          <div key={index} className="border rounded-md p-3">
-                            <p className="font-medium">{suggestion.message}</p>
-                            {suggestion.items && suggestion.items.length > 0 && (
-                              <div className="mt-2 grid gap-2">
-                                {suggestion.items.map((item, idx) => (
-                                  <div key={idx} className="text-sm flex justify-between items-center">
-                                    <span>{item.name}</span>
-                                    <Badge variant="secondary">{item.action}</Badge>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
+                        {acerto.restock_suggestions.slice(0, 5).map((suggestion, index) => (
+                          <RestockSuggestionCard key={index} suggestion={suggestion} index={index} />
                         ))}
+                        {acerto.restock_suggestions.length > 5 && (
+                          <div className="text-center py-2 text-sm text-muted-foreground">
+                            + {acerto.restock_suggestions.length - 5} outras sugestões
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <p className="text-sm text-muted-foreground italic">Nenhuma sugestão de reposição disponível.</p>

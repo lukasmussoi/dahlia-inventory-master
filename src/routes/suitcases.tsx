@@ -1,28 +1,34 @@
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { SuitcasesContent } from "@/components/suitcases/SuitcasesContent";
 import { AuthController } from "@/controllers/authController";
 import { useQuery } from "@tanstack/react-query";
+import { LoadingIndicator } from "@/components/shared/LoadingIndicator";
 
 const Suitcases = () => {
-  // Verificar autenticação ao carregar a página
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Verificar autenticação ao carregar a página - apenas uma vez
   useEffect(() => {
-    AuthController.checkAuth();
+    const checkAuth = async () => {
+      await AuthController.checkAuth();
+      setIsInitialized(true);
+    };
+    checkAuth();
   }, []);
 
-  // Buscar perfil e permissões do usuário
+  // Buscar perfil e permissões do usuário com otimizações para evitar recargas
   const { data: userProfile, isLoading: isLoadingProfile } = useQuery({
     queryKey: ['user-profile'],
     queryFn: () => AuthController.getUserProfileWithRoles(),
+    staleTime: 300000, // Cache por 5 minutos
+    refetchOnWindowFocus: false, // Não recarregar ao focar na janela
+    enabled: isInitialized, // Só buscar após a inicialização
   });
 
-  // Se estiver carregando, mostrar loading
-  if (isLoadingProfile) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-pink-500"></div>
-      </div>
-    );
+  // Se estiver carregando, mostrar loading otimizado
+  if (isLoadingProfile || !isInitialized) {
+    return <LoadingIndicator />;
   }
 
   return (
