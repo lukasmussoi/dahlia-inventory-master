@@ -27,10 +27,11 @@ export const acertoMaletaController = {
       ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
       const ninetyDaysAgoISO = ninetyDaysAgo.toISOString();
 
-      // Usar approach mais direto para evitar o erro de tipo excessivamente profundo
-      const { count, error } = await supabase
+      // Simplificar a consulta para evitar o problema de tipagem
+      // Ao invés de puxar todos os dados, apenas fazemos uma contagem
+      const { error, count } = await supabase
         .from('acerto_itens_vendidos')
-        .select('*', { count: 'exact', head: true })
+        .select('id', { count: 'exact', head: true })
         .eq('inventory_id', inventoryId)
         .eq('seller_id', sellerId)
         .gte('sale_date', ninetyDaysAgoISO);
@@ -40,8 +41,8 @@ export const acertoMaletaController = {
         return { count: 0, frequency: "baixa" };
       }
       
-      // Valor padrão caso count seja null ou undefined
-      const safeCount = count || 0;
+      // Garantir que count seja um número
+      const safeCount = typeof count === 'number' ? count : 0;
       let frequency = "baixa";
       
       if (safeCount > 5) {

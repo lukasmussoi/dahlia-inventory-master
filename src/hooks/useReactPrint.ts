@@ -19,11 +19,13 @@ export function useReactPrint({
   pageStyle?: string
 }) {
   // Usar o hook original com as opções corretas e tipos compatíveis
+  // Importante: o hook original usa diferentes propriedades e tipagem
   const handlePrint = useReactToPrintOriginal({
+    // Essas são propriedades válidas na tipagem do useReactToPrint
     documentTitle: restOptions.documentTitle || 'Documento',
     onAfterPrint: restOptions.onAfterPrint,
     pageStyle: restOptions.pageStyle,
-    // O hook original espera um getter para o elemento, não uma ref direta
+    // Esta é a forma correta de especificar o conteúdo para impressão
     content: () => contentRef.current
   });
 
