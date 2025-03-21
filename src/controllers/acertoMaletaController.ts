@@ -1,3 +1,4 @@
+
 import { SuitcaseSettlementFormData } from "@/types/suitcase";
 import { supabase } from "@/integrations/supabase/client";
 import { SuitcaseController } from "./suitcaseController";
@@ -26,13 +27,18 @@ export const acertoMaletaController = {
       ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
       const ninetyDaysAgoISO = ninetyDaysAgo.toISOString();
 
-      // Abordagem mais simples para evitar problemas de tipo profundo
-      const { count } = await supabase
+      // Usando abordagem diferente para evitar o erro de tipo
+      const { error, count } = await supabase
         .from('acerto_itens_vendidos')
-        .select('*', { count: 'exact', head: false })
+        .select('*', { count: 'exact', head: true })
         .eq('inventory_id', inventoryId)
         .eq('seller_id', sellerId)
         .gte('sale_date', ninetyDaysAgoISO);
+      
+      if (error) {
+        console.error("Erro ao buscar frequência de vendas:", error);
+        return { count: 0, frequency: "baixa" };
+      }
       
       let frequency = "baixa";
       

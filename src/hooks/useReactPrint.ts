@@ -21,10 +21,9 @@ export function useReactPrint({
   // Usar o hook original com as opções corretas
   const handlePrint = useReactToPrintOriginal({
     documentTitle: restOptions.documentTitle || 'Documento',
-    // Passamos as funções e propriedades diretamente para o hook original
     onAfterPrint: restOptions.onAfterPrint,
-    pageStyle: restOptions.pageStyle,
-    // A propriedade content é obrigatória para o hook original
+    onBeforeGetContent: restOptions.onBeforeGetContent,
+    // A propriedade content é necessária para o hook original
     content: () => contentRef.current
   });
 
