@@ -24,7 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { ReloadIcon } from "lucide-react";
+import { Loader, RefreshCw } from "lucide-react";
 import { SuitcaseSettlementFormData } from "@/types/suitcase";
 
 const formSchema = z.object({
@@ -317,7 +317,7 @@ export function AcertoMaletaDialog({ suitcaseId, open, onOpenChange, onAcertoCom
                 disabled={isScanning}
               >
                 {isScanning ? (
-                  <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
                   "Simular Scan"
                 )}
@@ -365,7 +365,7 @@ export function AcertoMaletaDialog({ suitcaseId, open, onOpenChange, onAcertoCom
             {isSubmitting ? (
               <>
                 Finalizando...
-                <ReloadIcon className="ml-2 h-4 w-4 animate-spin" />
+                <Loader className="ml-2 h-4 w-4 animate-spin" />
               </>
             ) : (
               "Finalizar Acerto"
