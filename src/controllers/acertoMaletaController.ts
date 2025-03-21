@@ -1,4 +1,3 @@
-
 import { SuitcaseSettlementFormData } from "@/types/suitcase";
 import { supabase } from "@/integrations/supabase/client";
 import { SuitcaseController } from "./suitcaseController";
@@ -25,7 +24,6 @@ export const acertoMaletaController = {
     const ninetyDaysAgo = new Date();
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
-    // Simplificar a query para evitar problemas de tipo
     const { data, error } = await supabase
       .from('acerto_itens_vendidos')
       .select('id')
@@ -52,7 +50,6 @@ export const acertoMaletaController = {
 
   async getAcertoById(id: string) {
     try {
-      // Buscar o cabeçalho do acerto
       const { data: acertoHeader, error: acertoError } = await supabase
         .from('acertos_maleta')
         .select(`
@@ -76,7 +73,6 @@ export const acertoMaletaController = {
         throw new Error("Erro ao buscar acerto");
       }
 
-      // Buscar os itens vendidos em uma consulta separada
       const { data: itensVendidos, error: itensError } = await supabase
         .from('acerto_itens_vendidos')
         .select(`
@@ -105,7 +101,6 @@ export const acertoMaletaController = {
         throw new Error("Erro ao buscar itens vendidos");
       }
 
-      // Combinar os resultados
       return {
         ...acertoHeader,
         items_vendidos: itensVendidos || []
@@ -243,7 +238,6 @@ export const acertoMaletaController = {
     }
   },
 
-  // Método para buscar todos os acertos
   async getAllAcertos() {
     try {
       const { data, error } = await supabase
@@ -271,7 +265,6 @@ export const acertoMaletaController = {
     }
   },
 
-  // Método para buscar acertos de uma maleta específica
   async getAcertosBySuitcase(suitcaseId: string) {
     try {
       const { data, error } = await supabase
@@ -295,11 +288,8 @@ export const acertoMaletaController = {
     }
   },
 
-  // Método para gerar PDF do recibo
   async generateReceiptPDF(acertoId: string): Promise<string> {
     try {
-      // Em um sistema real, aqui seria implementada a lógica para gerar o PDF
-      // Como é apenas uma simulação, vamos apenas retornar uma URL fictícia
       console.log(`Gerando PDF do acerto ${acertoId}...`);
       return `https://exemplo.com/recibos/${acertoId}.pdf`;
     } catch (error) {

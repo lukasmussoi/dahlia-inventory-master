@@ -15,14 +15,16 @@ export function useReactPrint({
   contentRef: RefObject<HTMLElement>,
   documentTitle?: string,
   onBeforeGetContent?: () => Promise<void> | void,
-  onAfterPrint?: () => void
+  onAfterPrint?: () => void,
+  pageStyle?: string
 }) {
   // Usar o hook original com as opções corretas
   const handlePrint = useReactToPrintOriginal({
     content: () => contentRef.current,
     documentTitle: restOptions.documentTitle || 'Documento',
     onBeforeGetContent: restOptions.onBeforeGetContent,
-    onAfterPrint: restOptions.onAfterPrint
+    onAfterPrint: restOptions.onAfterPrint,
+    pageStyle: restOptions.pageStyle
   });
 
   // Retornar uma função sem parâmetros que invoca handlePrint

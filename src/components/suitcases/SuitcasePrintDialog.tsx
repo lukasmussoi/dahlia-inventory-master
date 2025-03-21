@@ -1,3 +1,4 @@
+
 import { useRef } from "react";
 import { Suitcase, SuitcaseItem } from "@/types/suitcase";
 import { format } from "date-fns";
@@ -33,6 +34,7 @@ export function SuitcasePrintDialog({
 
   const handlePrint = useReactPrint({
     contentRef: printRef,
+    documentTitle: `Maleta_${suitcase?.code || 'sem_codigo'}`,
     pageStyle: `
       @page {
         size: A4;
