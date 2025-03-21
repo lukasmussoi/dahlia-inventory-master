@@ -17,7 +17,17 @@ export class EtiquetaCustomModel {
 
       if (error) throw error;
 
-      return data.map(item => mapDatabaseToModel(item));
+      return data.map(item => {
+        // Garantir que a orientação seja do tipo correto
+        const itemCorrigido = {
+          ...item,
+          orientacao: item.orientacao === 'retrato' || item.orientacao === 'paisagem' 
+            ? item.orientacao 
+            : 'retrato' as const
+        };
+        
+        return mapDatabaseToModel(itemCorrigido as EtiquetaCustomDB);
+      });
     } catch (error) {
       console.error('Erro ao buscar modelos de etiquetas:', error);
       toast.error('Erro ao carregar modelos de etiquetas');
@@ -35,7 +45,15 @@ export class EtiquetaCustomModel {
 
       if (error) throw error;
       
-      return mapDatabaseToModel(data);
+      // Garantir que a orientação seja do tipo correto
+      const itemCorrigido = {
+        ...data,
+        orientacao: data.orientacao === 'retrato' || data.orientacao === 'paisagem' 
+          ? data.orientacao 
+          : 'retrato' as const
+      };
+      
+      return mapDatabaseToModel(itemCorrigido as EtiquetaCustomDB);
     } catch (error) {
       console.error(`Erro ao buscar modelo de etiqueta ID ${id}:`, error);
       toast.error('Erro ao carregar modelo de etiqueta');

@@ -1,3 +1,4 @@
+
 import { Form } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -45,7 +46,14 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
     form.setValue('largura', data.largura);
     form.setValue('altura', data.altura);
     form.setValue('formatoPagina', data.formatoPagina);
-    form.setValue('orientacao', data.orientacao);
+    
+    // Garantir que orientacao seja do tipo correto
+    const orientacao: 'retrato' | 'paisagem' = 
+      data.orientacao === 'retrato' || data.orientacao === 'paisagem' 
+        ? data.orientacao 
+        : 'retrato';
+    form.setValue('orientacao', orientacao);
+    
     form.setValue('margemSuperior', data.margemSuperior);
     form.setValue('margemInferior', data.margemInferior);
     form.setValue('margemEsquerda', data.margemEsquerda);
@@ -169,7 +177,14 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
                         }}
                         onFormatoChange={(formatoPagina, orientacao, larguraPagina, alturaPagina) => {
                           form.setValue('formatoPagina', formatoPagina);
-                          form.setValue('orientacao', orientacao);
+                          
+                          // Garantir que orientacao seja do tipo correto
+                          const orientacaoValidada: 'retrato' | 'paisagem' = 
+                            orientacao === 'retrato' || orientacao === 'paisagem' 
+                              ? orientacao 
+                              : 'retrato';
+                          form.setValue('orientacao', orientacaoValidada);
+                          
                           if (larguraPagina) form.setValue('larguraPagina', larguraPagina);
                           if (alturaPagina) form.setValue('alturaPagina', alturaPagina);
                         }}
@@ -262,7 +277,14 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
                         }}
                         onFormatoChange={(formatoPagina, orientacao, larguraPagina, alturaPagina) => {
                           form.setValue('formatoPagina', formatoPagina);
-                          form.setValue('orientacao', orientacao);
+                          
+                          // Garantir que orientacao seja do tipo correto
+                          const orientacaoValidada: 'retrato' | 'paisagem' = 
+                            orientacao === 'retrato' || orientacao === 'paisagem' 
+                              ? orientacao 
+                              : 'retrato';
+                          form.setValue('orientacao', orientacaoValidada);
+                          
                           if (larguraPagina) form.setValue('larguraPagina', larguraPagina);
                           if (alturaPagina) form.setValue('alturaPagina', alturaPagina);
                         }}
