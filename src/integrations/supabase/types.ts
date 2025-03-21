@@ -822,6 +822,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      count_item_sales: {
+        Args: {
+          inventory_id_param: string
+          seller_id_param: string
+          date_threshold: string
+        }
+        Returns: number
+      }
       has_role:
         | {
             Args: {

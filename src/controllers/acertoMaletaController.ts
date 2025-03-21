@@ -27,7 +27,7 @@ export const acertoMaletaController = {
       ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
       const ninetyDaysAgoISO = ninetyDaysAgo.toISOString();
 
-      // Simplificar a consulta para evitar problemas de inferência de tipo
+      // Chamando a função RPC criada no banco de dados
       const { data, error } = await supabase
         .rpc('count_item_sales', {
           inventory_id_param: inventoryId,
@@ -41,7 +41,7 @@ export const acertoMaletaController = {
       }
       
       // A quantidade de vendas vem como resultado da função RPC
-      const safeCount = data || 0;
+      const safeCount = data as number || 0;
       let frequency = "baixa";
       
       if (safeCount > 5) {
