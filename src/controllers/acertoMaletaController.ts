@@ -77,7 +77,7 @@ export const acertoMaletaController = {
             commission_rate,
             net_profit,
             unit_cost,
-            product:inventory (
+            product:inventory_id (
               id,
               name,
               sku,
@@ -227,7 +227,7 @@ export const acertoMaletaController = {
     }
   },
 
-  // Método adicionado: buscar todos os acertos
+  // Método para buscar todos os acertos
   async getAllAcertos() {
     try {
       const { data, error } = await supabase
@@ -255,7 +255,7 @@ export const acertoMaletaController = {
     }
   },
 
-  // Método adicionado: buscar acertos de uma maleta específica
+  // Método para buscar acertos de uma maleta específica
   async getAcertosBySuitcase(suitcaseId: string) {
     try {
       const { data, error } = await supabase
@@ -279,7 +279,7 @@ export const acertoMaletaController = {
     }
   },
 
-  // Método adicionado: gerar PDF do recibo
+  // Método para gerar PDF do recibo
   async generateReceiptPDF(acertoId: string): Promise<string> {
     try {
       // Em um sistema real, aqui seria implementada a lógica para gerar o PDF

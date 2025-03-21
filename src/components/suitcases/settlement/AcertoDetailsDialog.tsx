@@ -28,10 +28,10 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useRef, useState } from "react";
 import { Separator } from "@/components/ui/separator";
-import { useReactToPrint } from "react-to-print";
+import { useReactPrint } from "@/hooks/useReactPrint";
 import { AcertoMaletaController } from "@/controllers/acertoMaletaController";
 import { Acerto, AcertoItem } from "@/types/suitcase";
-import { formatPhotoUrl } from "@/utils/photoUtils";
+import { getProductPhotoUrl } from "@/utils/photoUtils";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { useQuery } from "@tanstack/react-query";
@@ -62,14 +62,13 @@ export function AcertoDetailsDialog({
     queryFn: async () => {
       if (!acertoId) return null;
       const data = await AcertoMaletaController.getAcertoById(acertoId);
-      // Vamos converter o resultado para o tipo Acerto para satisfazer o TypeScript
       return data as unknown as Acerto;
     },
     enabled: !!acertoId && open,
   });
 
-  const handlePrint = useReactToPrint({
-    content: () => reportRef.current,
+  const handlePrint = useReactPrint({
+    contentRef: reportRef,
     documentTitle: `Acerto_${acerto?.id || 'desconhecido'}`,
     onBeforeGetContent: () => {
       if (reportRef.current) {
@@ -317,7 +316,7 @@ export function AcertoDetailsDialog({
                         <div className="space-y-3">
                           {acerto.items_vendidos.map((item: any) => {
                             const photoUrl = item.product?.photos && item.product.photos.length > 0 
-                              ? formatPhotoUrl(item.product.photos[0]?.photo_url) 
+                              ? getProductPhotoUrl(item.product.photos[0]?.photo_url) 
                               : null;
                             
                             return (
@@ -418,7 +417,7 @@ export function AcertoDetailsDialog({
                 <Button 
                   variant="outline" 
                   size="sm"
-                  onClick={handlePrint}
+                  onClick={() => handlePrint()}
                   className="gap-1"
                 >
                   <Printer className="h-4 w-4" />
