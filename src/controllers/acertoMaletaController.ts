@@ -1,4 +1,3 @@
-
 import { SuitcaseSettlementFormData } from "@/types/suitcase";
 import { supabase } from "@/integrations/supabase/client";
 import { SuitcaseController } from "./suitcaseController";
@@ -22,35 +21,32 @@ export const acertoMaletaController = {
   },
 
   async getItemSalesFrequency(inventoryId: string, sellerId: string): Promise<{ count: number; frequency: string }> {
-    const ninetyDaysAgo = new Date();
-    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-    const ninetyDaysAgoISO = ninetyDaysAgo.toISOString();
+    try {
+      const ninetyDaysAgo = new Date();
+      ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+      const ninetyDaysAgoISO = ninetyDaysAgo.toISOString();
 
-    // Simplificada para evitar problemas de tipo
-    const query = supabase
-      .from('acerto_itens_vendidos')
-      .select('id')
-      .eq('inventory_id', inventoryId)
-      .eq('seller_id', sellerId)
-      .gte('sale_date', ninetyDaysAgoISO);
+      // Abordagem mais simples para evitar problemas de tipo profundo
+      const { count } = await supabase
+        .from('acerto_itens_vendidos')
+        .select('*', { count: 'exact', head: false })
+        .eq('inventory_id', inventoryId)
+        .eq('seller_id', sellerId)
+        .gte('sale_date', ninetyDaysAgoISO);
+      
+      let frequency = "baixa";
+      
+      if (count && count > 5) {
+        frequency = "alta";
+      } else if (count && count > 1) {
+        frequency = "média";
+      }
 
-    const { data, error } = await query;
-
-    if (error) {
+      return { count: count || 0, frequency };
+    } catch (error) {
       console.error("Erro ao buscar frequência de vendas:", error);
-      throw new Error("Erro ao buscar frequência de vendas");
+      return { count: 0, frequency: "baixa" };
     }
-
-    const count = data.length;
-    let frequency = "baixa";
-
-    if (count > 5) {
-      frequency = "alta";
-    } else if (count > 1) {
-      frequency = "média";
-    }
-
-    return { count, frequency };
   },
 
   async getAcertoById(id: string) {
