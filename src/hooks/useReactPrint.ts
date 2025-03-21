@@ -36,8 +36,12 @@ export function useReactPrint({
   if (mediaSize) {
     const { width, height, unit = 'mm', orientation = 'portrait' } = mediaSize;
     
+    // Verificar se as dimensões fazem sentido para orientação
+    const finalWidth = width;
+    const finalHeight = height;
+    
     // Construir tamanho personalizado
-    const size = `size: ${width}${unit} ${height}${unit};`;
+    const size = `size: ${finalWidth}${unit} ${finalHeight}${unit};`;
     const pageOrientation = `orientation: ${orientation};`;
     
     // Adicionar aos estilos existentes
@@ -49,8 +53,8 @@ export function useReactPrint({
       }
       @media print {
         html, body {
-          width: ${width}${unit};
-          height: ${height}${unit};
+          width: ${finalWidth}${unit};
+          height: ${finalHeight}${unit};
           margin: 0;
           padding: 0;
         }

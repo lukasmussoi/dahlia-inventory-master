@@ -45,28 +45,42 @@ export function formatDateTime(date: Date | string): string {
 }
 
 // Função para garantir que o tamanho do documento esteja correto
-export function validateDocumentSize(width: number, height: number, format: string): { width: number, height: number } {
+export function validateDocumentSize(width: number, height: number, format: string, orientation: string = 'portrait'): { width: number, height: number } {
   // Se for formato pequeno de etiqueta
   if (format === 'etiqueta-pequena' || format === 'custom-label-small') {
+    // Para etiqueta pequena, sempre força o formato 90x10 paisagem
     return { width: 90, height: 10 };
   }
+  
+  let dimensions: { width: number, height: number };
   
   // Para outros formatos predefinidos
   switch (format) {
     case 'A4':
-      return { width: 210, height: 297 };
+      dimensions = { width: 210, height: 297 };
+      break;
     case 'A5':
-      return { width: 148, height: 210 };
+      dimensions = { width: 148, height: 210 };
+      break;
     case 'Letter':
-      return { width: 216, height: 279 };
+      dimensions = { width: 216, height: 279 };
+      break;
     case 'Legal':
-      return { width: 216, height: 356 };
+      dimensions = { width: 216, height: 356 };
+      break;
     default:
       // Para formatos personalizados, garantir dimensões mínimas
-      return { 
+      dimensions = { 
         width: Math.max(width, 10), 
         height: Math.max(height, 10) 
       };
+      break;
   }
+  
+  // Ajustar dimensões com base na orientação
+  if (orientation === 'landscape' && dimensions.height > dimensions.width) {
+    return { width: dimensions.height, height: dimensions.width };
+  }
+  
+  return dimensions;
 }
-

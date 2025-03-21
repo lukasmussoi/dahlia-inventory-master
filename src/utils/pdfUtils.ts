@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { EtiquetaCustomModel } from "@/models/etiquetaCustomModel";
 import type { CampoEtiqueta } from "@/types/etiqueta";
 import { generateEtiquetaPDF } from "./etiquetaGenerator";
+import { validateDocumentSize } from "@/lib/utils";
 
 interface GeneratePdfLabelOptions {
   item: any;
@@ -46,7 +47,8 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
         if (modeloCustom.formatoPagina === "Personalizado") {
           console.log("Verificando dimensões personalizadas:", {
             larguraPagina: modeloCustom.larguraPagina,
-            alturaPagina: modeloCustom.alturaPagina
+            alturaPagina: modeloCustom.alturaPagina,
+            orientacao: modeloCustom.orientacao
           });
           
           // Se as dimensões não estiverem definidas, definir um padrão
@@ -65,8 +67,20 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
             throw new Error("Dimensões de página personalizadas inválidas. Os valores devem ser maiores que zero.");
           }
           
+          // Ajustar dimensões com base na orientação
+          let areaUtilLargura = modeloCustom.larguraPagina;
+          let areaUtilAltura = modeloCustom.alturaPagina;
+          
+          if (modeloCustom.orientacao === "paisagem" && areaUtilAltura > areaUtilLargura) {
+            // Trocar as dimensões para paisagem
+            [areaUtilLargura, areaUtilAltura] = [areaUtilAltura, areaUtilLargura];
+          }
+          
+          // Subtrair as margens para obter a área útil
+          areaUtilLargura -= (modeloCustom.margemEsquerda + modeloCustom.margemDireita);
+          areaUtilAltura -= (modeloCustom.margemSuperior + modeloCustom.margemInferior);
+          
           // Validar se a etiqueta cabe na página
-          const areaUtilLargura = modeloCustom.larguraPagina - modeloCustom.margemEsquerda - modeloCustom.margemDireita;
           if (modeloCustom.largura > areaUtilLargura) {
             console.error("Etiqueta maior que área útil:", {
               larguraEtiqueta: modeloCustom.largura,
@@ -81,7 +95,6 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
             );
           }
           
-          const areaUtilAltura = modeloCustom.alturaPagina - modeloCustom.margemSuperior - modeloCustom.margemInferior;
           if (modeloCustom.altura > areaUtilAltura) {
             console.error("Etiqueta maior que área útil:", {
               alturaEtiqueta: modeloCustom.altura,

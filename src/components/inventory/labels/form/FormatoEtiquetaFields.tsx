@@ -51,6 +51,7 @@ export function FormatoEtiquetaFields({ form }: FormatoEtiquetaFieldsProps) {
                   <SelectItem value="A4">A4</SelectItem>
                   <SelectItem value="Letter">Letter</SelectItem>
                   <SelectItem value="Legal">Legal</SelectItem>
+                  <SelectItem value="etiqueta-pequena">Etiqueta 90x10mm</SelectItem>
                   <SelectItem value="Personalizado">Personalizado</SelectItem>
                 </SelectContent>
               </Select>

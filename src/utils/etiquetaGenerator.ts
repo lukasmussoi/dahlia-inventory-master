@@ -39,10 +39,24 @@ export const generatePreviewPDF = async (
       }
     }
 
-    // Criar o documento PDF com formato e orientação corretos
-    const format = pageFormat === 'Personalizado' ? [pageSize.width, pageSize.height] : pageFormat;
+    // Determinar orientação com base nas dimensões da página
     const orientation = pageSize.width > pageSize.height ? 'landscape' : 'portrait';
     
+    // Determinar o formato baseado no pageFormat
+    let format: string | [number, number];
+    
+    if (pageFormat === 'Personalizado') {
+      // Para formato personalizado, usamos as dimensões exatas
+      format = [pageSize.width, pageSize.height];
+    } else if (pageFormat === 'etiqueta-pequena') {
+      // Para etiquetas de 90x10mm
+      format = [90, 10];
+    } else {
+      // Para formatos padrão (A4, Letter, etc.)
+      format = pageFormat;
+    }
+
+    // Criar o documento PDF com formato e orientação corretos
     const pdf = new JsPDF({
       orientation: orientation as 'portrait' | 'landscape',
       unit: 'mm',
@@ -86,7 +100,7 @@ export const generatePreviewPDF = async (
     pdf.text(`Total de etiquetas por página: ${columnsPerPage * rowsPerPage}`, 10, 50);
 
     // Adicionar uma nova página para a visualização da etiqueta
-    pdf.addPage(format as any, orientation as any);
+    pdf.addPage();
 
     // Desenhar as etiquetas
     pdf.setDrawColor(150, 150, 150);
@@ -193,41 +207,69 @@ export const generateEtiquetaPDF = async (
     // Configurar tamanho da página
     let pageWidth, pageHeight;
     let format: any;
-    let orientation: "portrait" | "landscape";
+
+    // Determinar orientação baseada no valor do modelo
+    let orientation: "portrait" | "landscape" = orientacao === "retrato" ? "portrait" : "landscape";
 
     if (formatoPagina === "Personalizado" && larguraPagina && alturaPagina) {
-      pageWidth = larguraPagina;
-      pageHeight = alturaPagina;
+      // Para formato personalizado, usar as dimensões informadas
+      if (orientation === "portrait") {
+        pageWidth = larguraPagina;
+        pageHeight = alturaPagina;
+      } else {
+        // Para paisagem, trocamos largura e altura
+        pageWidth = alturaPagina;
+        pageHeight = larguraPagina;
+      }
       format = [pageWidth, pageHeight];
-      orientation = orientacao === "retrato" ? "portrait" : "landscape";
+    } else if (formatoPagina === "etiqueta-pequena") {
+      // Para etiquetas pequenas, sempre usar formato paisagem (90x10mm)
+      pageWidth = 90;
+      pageHeight = 10;
+      format = [pageWidth, pageHeight];
+      orientation = "landscape"; // Forçar paisagem para etiquetas pequenas
     } else {
       // Tamanhos padrão (em mm)
       if (formatoPagina === "A4") {
-        pageWidth = orientacao === "retrato" ? 210 : 297;
-        pageHeight = orientacao === "retrato" ? 297 : 210;
+        if (orientation === "portrait") {
+          pageWidth = 210;
+          pageHeight = 297;
+        } else {
+          pageWidth = 297;
+          pageHeight = 210;
+        }
         format = "a4";
-      } else if (formatoPagina === "A5") {
-        pageWidth = orientacao === "retrato" ? 148 : 210;
-        pageHeight = orientacao === "retrato" ? 210 : 148;
-        format = "a5";
       } else if (formatoPagina === "Letter") {
-        pageWidth = orientacao === "retrato" ? 216 : 279;
-        pageHeight = orientacao === "retrato" ? 279 : 216;
+        if (orientation === "portrait") {
+          pageWidth = 216;
+          pageHeight = 279;
+        } else {
+          pageWidth = 279;
+          pageHeight = 216;
+        }
         format = "letter";
+      } else if (formatoPagina === "Legal") {
+        if (orientation === "portrait") {
+          pageWidth = 216;
+          pageHeight = 356;
+        } else {
+          pageWidth = 356;
+          pageHeight = 216;
+        }
+        format = "legal";
       } else {
-        // Usar formato personalizado para etiquetas pequenas
-        pageWidth = 90;
-        pageHeight = 10;
-        format = [pageWidth, pageHeight];
+        // Formato padrão caso não seja reconhecido
+        pageWidth = 210;
+        pageHeight = 297;
+        format = "a4";
       }
-      orientation = orientacao === "retrato" ? "portrait" : "landscape";
     }
     
     // Verificar e corrigir dimensões inválidas
     if (!pageWidth || pageWidth <= 0) pageWidth = 90;
     if (!pageHeight || pageHeight <= 0) pageHeight = 10;
     
-    console.log("Dimensões da página:", pageWidth, "x", pageHeight);
+    console.log("Dimensões da página:", pageWidth, "x", pageHeight, "mm, Orientação:", orientation);
     
     // Criar documento PDF
     const pdf = new JsPDF({
@@ -262,18 +304,22 @@ export const generateEtiquetaPDF = async (
     const etiquetaLargura = largura > 0 ? largura : 90;
     const etiquetaAltura = altura > 0 ? altura : 10;
     
+    // Determinar se é uma etiqueta pequena (90x10mm ou similar)
+    const isEtiquetaPequena = formatoPagina === "etiqueta-pequena" || 
+      (etiquetaLargura >= 85 && etiquetaLargura <= 95 && etiquetaAltura >= 5 && etiquetaAltura <= 15);
+    
     // Para etiquetas pequenas, definimos apenas 1 por página
-    const etiquetasPorLinha = formato90x10(format) ? 1 : 
+    const etiquetasPorLinha = isEtiquetaPequena ? 1 : 
       Math.floor((pageWidth - margensValidas.esquerda - margensValidas.direita) / 
       (etiquetaLargura + espacamentosValidos.horizontal));
     
-    const etiquetasPorColuna = formato90x10(format) ? 1 : 
+    const etiquetasPorColuna = isEtiquetaPequena ? 1 : 
       Math.floor((pageHeight - margensValidas.superior - margensValidas.inferior) / 
       (etiquetaAltura + espacamentosValidos.vertical));
 
     // Verificar se os valores são válidos
-    const labelsPerRow = etiquetasPorLinha > 0 ? etiquetasPorLinha : 1;
-    const labelsPerColumn = etiquetasPorColuna > 0 ? etiquetasPorColuna : 1;
+    const labelsPerRow = Math.max(etiquetasPorLinha, 1);
+    const labelsPerColumn = Math.max(etiquetasPorColuna, 1);
     
     console.log("Configurações da página:", {
       pageWidth,
@@ -285,13 +331,9 @@ export const generateEtiquetaPDF = async (
     });
     
     // Inicializar contadores
-    let currentRow = formato90x10(format) ? 0 : options.startRow - 1;
-    let currentColumn = formato90x10(format) ? 0 : options.startColumn - 1;
+    let currentRow = isEtiquetaPequena ? 0 : Math.max(0, options.startRow - 1);
+    let currentColumn = isEtiquetaPequena ? 0 : Math.max(0, options.startColumn - 1);
     let currentPage = 0;
-    
-    // Garantir valores válidos
-    if (currentRow < 0) currentRow = 0;
-    if (currentColumn < 0) currentColumn = 0;
     
     // Calcular número total de etiquetas a serem geradas
     const totalLabels = items.reduce((total, item) => {
@@ -302,8 +344,8 @@ export const generateEtiquetaPDF = async (
     
     let labelCounter = 0;
     
-    // Para formato 90x10, gerar uma etiqueta por página
-    if (formato90x10(format)) {
+    // Para etiquetas pequenas, gerar uma etiqueta por página
+    if (isEtiquetaPequena) {
       for (const item of items) {
         for (let i = 0; i < options.copias; i++) {
           if (labelCounter > 0) {
@@ -316,7 +358,12 @@ export const generateEtiquetaPDF = async (
           
           // Gerar código de barras para este item
           const barcodeText = item.barcode || item.sku || "0000000000";
-          const barcodeData = await generateBarcode(barcodeText);
+          let barcodeData;
+          try {
+            barcodeData = await generateBarcode(barcodeText);
+          } catch (error) {
+            console.error("Erro ao gerar código de barras:", error);
+          }
           
           // Renderizar os campos da etiqueta
           if (campos && Array.isArray(campos)) {
@@ -325,19 +372,27 @@ export const generateEtiquetaPDF = async (
               
               // Configurar fonte
               pdf.setFontSize(campo.tamanhoFonte);
-              pdf.setFont("helvetica", campo.tipo === "preco" ? "bold" : "normal");
+              
+              // Definir a fonte a ser usada (com fallback para helvetica)
+              const fonteName = campo.fonte || "helvetica";
+              const fonteStyle = campo.tipo === "preco" ? "bold" : "normal";
+              pdf.setFont(fonteName, fonteStyle);
               
               // Determinar o conteúdo com base no tipo de campo
               let conteudo = "";
               if (campo.tipo === "nome") {
                 conteudo = item.name || "Sem nome";
               } else if (campo.tipo === "codigo") {
-                try {
-                  // Adicionar imagem do código de barras
-                  pdf.addImage(barcodeData, "PNG", x + campo.x, y + campo.y, campo.largura, campo.altura);
-                  continue; // Pular o resto do loop para este campo
-                } catch (error) {
-                  console.error("Erro ao adicionar código de barras:", error);
+                if (barcodeData) {
+                  try {
+                    // Adicionar imagem do código de barras
+                    pdf.addImage(barcodeData, "PNG", x + campo.x, y + campo.y, campo.largura, campo.altura);
+                    continue; // Pular o resto do loop para este campo
+                  } catch (error) {
+                    console.error("Erro ao adicionar código de barras:", error);
+                    conteudo = barcodeText;
+                  }
+                } else {
                   conteudo = barcodeText;
                 }
               } else if (campo.tipo === "preco") {
@@ -346,15 +401,20 @@ export const generateEtiquetaPDF = async (
               }
               
               // Posicionar e desenhar o texto
-              const posX = x + campo.x;
+              let posX = x + campo.x;
               const posY = y + campo.y;
               
-              if (campo.tipo === "preco") {
-                // Alinhar preço à direita
-                pdf.text(conteudo, posX + campo.largura, posY, { align: 'right' });
-              } else {
-                pdf.text(conteudo, posX, posY);
+              // Ajustar posição X com base no alinhamento
+              const alinhamento = campo.alinhamento || (campo.tipo === "preco" ? "right" : "left");
+              
+              if (alinhamento === "center") {
+                posX = x + campo.x + (campo.largura / 2);
+              } else if (alinhamento === "right") {
+                posX = x + campo.x + campo.largura;
               }
+              
+              // Renderizar texto com alinhamento
+              pdf.text(conteudo, posX, posY, { align: alinhamento });
             }
           } else {
             // Adicionar texto padrão se não houver campos definidos
@@ -370,7 +430,12 @@ export const generateEtiquetaPDF = async (
       for (const item of items) {
         // Gerar código de barras para este item
         const barcodeText = item.barcode || item.sku || "0000000000";
-        const barcodeData = await generateBarcode(barcodeText);
+        let barcodeData;
+        try {
+          barcodeData = await generateBarcode(barcodeText);
+        } catch (error) {
+          console.error("Erro ao gerar código de barras:", error);
+        }
         
         for (let i = 0; i < options.copias; i++) {
           // Verificar se precisa de nova página
@@ -396,19 +461,27 @@ export const generateEtiquetaPDF = async (
               
               // Configurar fonte
               pdf.setFontSize(campo.tamanhoFonte);
-              pdf.setFont("helvetica", campo.tipo === "preco" ? "bold" : "normal");
+              
+              // Definir a fonte a ser usada (com fallback para helvetica)
+              const fonteName = campo.fonte || "helvetica";
+              const fonteStyle = campo.tipo === "preco" ? "bold" : "normal";
+              pdf.setFont(fonteName, fonteStyle);
               
               // Determinar o conteúdo com base no tipo de campo
               let conteudo = "";
               if (campo.tipo === "nome") {
                 conteudo = item.name || "Sem nome";
               } else if (campo.tipo === "codigo") {
-                try {
-                  // Adicionar imagem do código de barras
-                  pdf.addImage(barcodeData, "PNG", x + campo.x, y + campo.y, campo.largura, campo.altura);
-                  continue; // Pular o resto do loop para este campo
-                } catch (error) {
-                  console.error("Erro ao adicionar código de barras:", error);
+                if (barcodeData) {
+                  try {
+                    // Adicionar imagem do código de barras
+                    pdf.addImage(barcodeData, "PNG", x + campo.x, y + campo.y, campo.largura, campo.altura);
+                    continue; // Pular o resto do loop para este campo
+                  } catch (error) {
+                    console.error("Erro ao adicionar código de barras:", error);
+                    conteudo = barcodeText;
+                  }
+                } else {
                   conteudo = barcodeText;
                 }
               } else if (campo.tipo === "preco") {
@@ -417,15 +490,20 @@ export const generateEtiquetaPDF = async (
               }
               
               // Posicionar e desenhar o texto
-              const posX = x + campo.x;
+              let posX = x + campo.x;
               const posY = y + campo.y;
               
-              if (campo.tipo === "preco") {
-                // Alinhar preço à direita
-                pdf.text(conteudo, posX + campo.largura, posY, { align: 'right' });
-              } else {
-                pdf.text(conteudo, posX, posY);
+              // Ajustar posição X com base no alinhamento
+              const alinhamento = campo.alinhamento || (campo.tipo === "preco" ? "right" : "left");
+              
+              if (alinhamento === "center") {
+                posX = x + campo.x + (campo.largura / 2);
+              } else if (alinhamento === "right") {
+                posX = x + campo.x + campo.largura;
               }
+              
+              // Renderizar texto com alinhamento
+              pdf.text(conteudo, posX, posY, { align: alinhamento });
             }
           } else {
             // Adicionar texto padrão se não houver campos definidos
