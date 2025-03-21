@@ -34,6 +34,29 @@ export default {
           light: "#C88E97",
           dark: "#955660",
         },
+        // Cores específicas para os cards de maletas
+        card: {
+          green: {
+            light: "#F2FCE2",
+            DEFAULT: "#4CAF50",
+            dark: "#388E3C",
+          },
+          yellow: {
+            light: "#FEF7CD",
+            DEFAULT: "#FFC107",
+            dark: "#FFA000",
+          },
+          blue: {
+            light: "#D3E4FD",
+            DEFAULT: "#2196F3",
+            dark: "#1976D2",
+          },
+          purple: {
+            light: "#F1F0FB",
+            DEFAULT: "#9C27B0",
+            dark: "#7B1FA2",
+          },
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

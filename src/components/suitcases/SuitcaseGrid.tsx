@@ -12,7 +12,19 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
-import { Eye, Printer, Edit, Trash2, MoreVertical, MapPin, Calculator } from "lucide-react";
+import { 
+  Eye, 
+  Printer, 
+  Edit, 
+  Trash2, 
+  MoreVertical, 
+  MapPin, 
+  Calculator, 
+  Package, 
+  Plus, 
+  Clock, 
+  History 
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -129,10 +141,10 @@ export function SuitcaseGrid({ suitcases, isAdmin, onRefresh, onOpenAcertoDialog
 
   const formatStatus = (status: string) => {
     switch (status) {
-      case 'in_use': return { text: 'Em uso', className: 'bg-green-100 text-green-800' };
-      case 'returned': return { text: 'Devolvida', className: 'bg-blue-100 text-blue-800' };
-      case 'in_replenishment': return { text: 'Aguardando Reposição', className: 'bg-orange-100 text-orange-800' };
-      default: return { text: status, className: 'bg-gray-100 text-gray-800' };
+      case 'in_use': return { text: 'Em uso', className: 'bg-green-100 text-green-800 px-2 py-1 text-xs font-medium rounded-full' };
+      case 'returned': return { text: 'Devolvida', className: 'bg-blue-100 text-blue-800 px-2 py-1 text-xs font-medium rounded-full' };
+      case 'in_replenishment': return { text: 'Aguardando Reposição', className: 'bg-orange-100 text-orange-800 px-2 py-1 text-xs font-medium rounded-full' };
+      default: return { text: status, className: 'bg-gray-100 text-gray-800 px-2 py-1 text-xs font-medium rounded-full' };
     }
   };
 
@@ -153,65 +165,99 @@ export function SuitcaseGrid({ suitcases, isAdmin, onRefresh, onOpenAcertoDialog
 
   return (
     <div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {suitcases.map((suitcase) => {
           const suitcaseItems = allSuitcaseItems[suitcase.id] || [];
-          
           const status = formatStatus(suitcase.status);
-          
           const lastUpdate = formatDate(suitcase.updated_at || suitcase.created_at);
-
           const hasLocation = suitcase.city && suitcase.neighborhood;
           
           return (
             <Card key={suitcase.id} className="overflow-hidden border border-gray-200">
               <div className="p-4">
-                <div className="flex justify-between items-start mb-2">
+                {/* Cabeçalho com código da maleta e status */}
+                <div className="flex justify-between items-center mb-2">
                   <div className="flex items-center">
-                    <svg className="w-5 h-5 mr-2 text-pink-500" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M20 7H4C2.89543 7 2 7.89543 2 9V17C2 18.1046 2.89543 19 4 19H20C21.1046 19 22 18.1046 22 17V9C22 7.89543 21.1046 7 20 7Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M12 12H12.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M16 7V5C16 3.89543 15.1046 3 14 3H10C8.89543 3 8 3.89543 8 5V7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
+                    <Package className="w-5 h-5 mr-2 text-green-500" />
                     <h3 className="text-lg font-bold">{suitcase.code}</h3>
                   </div>
-                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${status.className}`}>
+                  <span className={status.className}>
                     {status.text}
                   </span>
                 </div>
                 
+                {/* Nome da revendedora */}
                 <h4 className="text-base font-semibold mb-1">{suitcase.seller?.name || "Sem revendedora"}</h4>
                 
+                {/* Localização */}
                 {hasLocation && (
-                  <p className="text-sm text-pink-500 mb-2 flex items-center">
-                    <MapPin className="h-3.5 w-3.5 mr-1" />
+                  <p className="text-sm text-rose-500 mb-1">
                     {suitcase.city} • {suitcase.neighborhood}
                   </p>
                 )}
                 
-                <div className="mt-2">
-                  <p className="text-sm text-gray-500 mb-1">
-                    {suitcaseItems.length} itens na maleta
-                  </p>
-                  <p className="text-xs text-gray-400">
-                    Última atualização: {lastUpdate}
-                  </p>
-                </div>
+                {/* Quantidade de itens */}
+                <p className="text-sm text-gray-700 mb-1">
+                  {suitcaseItems.length} itens na maleta
+                </p>
                 
-                <div className="mt-3 flex justify-between">
+                {/* Data da última atualização */}
+                <p className="text-xs text-gray-500 mb-3">
+                  Última atualização: {lastUpdate}
+                </p>
+                
+                {/* Botões de ação */}
+                <div className="grid grid-cols-2 gap-2 mt-3">
+                  {/* Botão Abrir */}
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => handleViewDetails(suitcase)}
+                    className="flex items-center justify-center gap-1 bg-green-50 text-green-700 border-green-100 hover:bg-green-100 hover:text-green-800"
+                  >
+                    <Package className="h-4 w-4" />
+                    Abrir
+                  </Button>
+                  
+                  {/* Botão Abastecer */}
                   <Button 
                     variant="outline" 
                     size="sm"
-                    className="gap-1"
                     onClick={() => handleViewDetails(suitcase)}
+                    className="flex items-center justify-center gap-1 bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-100 hover:text-blue-800"
                   >
-                    <Eye className="h-4 w-4" />
-                    Detalhes
+                    <Plus className="h-4 w-4" />
+                    Abastecer
                   </Button>
                   
+                  {/* Botão Acerto */}
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => handleSettlement(suitcase)}
+                    className="flex items-center justify-center gap-1 bg-yellow-50 text-yellow-700 border-yellow-100 hover:bg-yellow-100 hover:text-yellow-800"
+                  >
+                    <Clock className="h-4 w-4" />
+                    Acerto
+                  </Button>
+                  
+                  {/* Botão Histórico */}
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => handleViewDetails(suitcase)}
+                    className="flex items-center justify-center gap-1 bg-purple-50 text-purple-700 border-purple-100 hover:bg-purple-100 hover:text-purple-800"
+                  >
+                    <History className="h-4 w-4" />
+                    Histórico
+                  </Button>
+                </div>
+                
+                {/* Menu de opções (três pontos) */}
+                <div className="absolute top-3 right-2">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm">
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                         <MoreVertical className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -220,13 +266,6 @@ export function SuitcaseGrid({ suitcases, isAdmin, onRefresh, onOpenAcertoDialog
                         <Printer className="h-4 w-4 mr-2" />
                         Imprimir
                       </DropdownMenuItem>
-                      
-                      {suitcase.status === 'in_use' && (
-                        <DropdownMenuItem onClick={() => handleSettlement(suitcase)}>
-                          <Calculator className="h-4 w-4 mr-2" />
-                          Realizar Acerto
-                        </DropdownMenuItem>
-                      )}
                       
                       {isAdmin && (
                         <>
