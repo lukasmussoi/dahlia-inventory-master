@@ -1,3 +1,4 @@
+
 // Função para formatar CPF (XXX.XXX.XXX-XX)
 export function formatCPF(cpf: string): string {
   const cleaned = cpf.replace(/\D/g, '');
@@ -58,3 +59,46 @@ export function formatRelativeDate(dateString: string): string {
     year: 'numeric' 
   }).format(date);
 }
+
+// Função para formatar moeda (R$ X.XXX,XX)
+export function formatCurrency(value: number): string {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  }).format(value);
+}
+
+// Função para formatar data (DD/MM/YYYY)
+export function formatDate(date: Date | string): string {
+  if (!date) return '';
+  
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  
+  return new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  }).format(dateObj);
+}
+
+// Função para formatar uma frequência em texto
+export function formatFrequency(count: number): "alta" | "média" | "baixa" {
+  if (count > 5) return "alta";
+  if (count > 2) return "média";
+  return "baixa";
+}
+
+// Função para obter uma classe CSS baseada na frequência
+export function getFrequencyClass(frequency: "alta" | "média" | "baixa"): string {
+  switch (frequency) {
+    case "alta":
+      return "text-green-600 font-bold";
+    case "média":
+      return "text-amber-600 font-semibold";
+    case "baixa":
+      return "text-gray-600";
+    default:
+      return "";
+  }
+}
+

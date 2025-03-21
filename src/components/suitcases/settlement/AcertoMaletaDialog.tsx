@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -23,7 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { ReloadIcon } from "@radix-ui/react-icons";
+import { ReloadIcon } from "lucide-react";
 import { SuitcaseSettlementFormData } from "@/types/suitcase";
 
 const formSchema = z.object({
@@ -131,73 +132,73 @@ export function AcertoMaletaDialog({ suitcaseId, open, onOpenChange, onAcertoCom
   };
 
   // Modificar a função handleSubmit para exigir uma data de próximo acerto e gerar PDF
-function handleSubmit() {
-  if (!form.getValues().settlement_date) {
-    toast.error("Selecione a data do acerto");
-    return;
-  }
-  
-  if (!form.getValues().next_settlement_date) {
-    toast.error("É necessário definir uma data para o próximo acerto");
-    return;
-  }
-  
-  setIsSubmitting(true);
-  
-  // Obter apenas os IDs dos itens marcados como presentes
-  const presentItems = scannedItems
-    .filter(item => scannedItemsStatus[item.id])
-    .map(item => item.id);
-  
-  // Verificar se há itens vendidos (não marcados como presentes)
-  const hasItemsToReport = suitcaseItems.length > 0 && 
-    suitcaseItems.length !== presentItems.length;
-  
-  if (!hasItemsToReport) {
-    setIsSubmitting(false);
-    toast.error("Não há itens vendidos para realizar o acerto");
-    return;
-  }
-  
-  // Preparar os dados do acerto
-  const formData: SuitcaseSettlementFormData = {
-    suitcase_id: suitcaseId,
-    seller_id: suitcase?.seller_id || '',
-    settlement_date: form.getValues().settlement_date,
-    next_settlement_date: form.getValues().next_settlement_date,
-    items_present: presentItems,
-    items_sold: [],
-    customer_name: form.getValues().customer_name || '',
-    payment_method: form.getValues().payment_method || ''
-  };
-  
-  console.log("Enviando dados de acerto:", formData);
-  
-  AcertoMaletaController.createAcerto(formData)
-    .then((acertoId) => {
-      toast.success("Acerto concluído com sucesso");
-      
-      // Gerar o PDF após a criação do acerto
-      AcertoMaletaController.generateReceiptPDF(acertoId)
-        .then(receiptUrl => {
-          console.log("PDF gerado com sucesso:", receiptUrl);
-        })
-        .catch(error => {
-          console.error("Erro ao gerar PDF:", error);
-          toast.error("Erro ao gerar o recibo PDF");
-        });
-      
-      if (onOpenChange) onOpenChange(false);
-      if (onAcertoCompleted) onAcertoCompleted();
-    })
-    .catch((error) => {
-      console.error("Erro ao finalizar acerto:", error);
-      toast.error(error.message || "Erro ao finalizar acerto");
-    })
-    .finally(() => {
+  function handleSubmit() {
+    if (!form.getValues().settlement_date) {
+      toast.error("Selecione a data do acerto");
+      return;
+    }
+    
+    if (!form.getValues().next_settlement_date) {
+      toast.error("É necessário definir uma data para o próximo acerto");
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    // Obter apenas os IDs dos itens marcados como presentes
+    const presentItems = scannedItems
+      .filter(item => scannedItemsStatus[item.id])
+      .map(item => item.id);
+    
+    // Verificar se há itens vendidos (não marcados como presentes)
+    const hasItemsToReport = suitcaseItems.length > 0 && 
+      suitcaseItems.length !== presentItems.length;
+    
+    if (!hasItemsToReport) {
       setIsSubmitting(false);
-    });
-}
+      toast.error("Não há itens vendidos para realizar o acerto");
+      return;
+    }
+    
+    // Preparar os dados do acerto
+    const formData: SuitcaseSettlementFormData = {
+      suitcase_id: suitcaseId,
+      seller_id: suitcase?.seller_id || '',
+      settlement_date: form.getValues().settlement_date,
+      next_settlement_date: form.getValues().next_settlement_date,
+      items_present: presentItems,
+      items_sold: [],
+      customer_name: form.getValues().customer_name || '',
+      payment_method: form.getValues().payment_method || ''
+    };
+    
+    console.log("Enviando dados de acerto:", formData);
+    
+    AcertoMaletaController.createAcerto(formData)
+      .then((acertoId) => {
+        toast.success("Acerto concluído com sucesso");
+        
+        // Gerar o PDF após a criação do acerto
+        AcertoMaletaController.generateReceiptPDF(acertoId)
+          .then(receiptUrl => {
+            console.log("PDF gerado com sucesso:", receiptUrl);
+          })
+          .catch(error => {
+            console.error("Erro ao gerar PDF:", error);
+            toast.error("Erro ao gerar o recibo PDF");
+          });
+        
+        if (onOpenChange) onOpenChange(false);
+        if (onAcertoCompleted) onAcertoCompleted();
+      })
+      .catch((error) => {
+        console.error("Erro ao finalizar acerto:", error);
+        toast.error(error.message || "Erro ao finalizar acerto");
+      })
+      .finally(() => {
+        setIsSubmitting(false);
+      });
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -234,27 +235,26 @@ function handleSubmit() {
               )}
             />
 
-            {/* Modificar o formulário para tornar a data do próximo acerto obrigatória */}
-<FormField
-  control={form.control}
-  name="next_settlement_date"
-  render={({ field }) => (
-    <FormItem className="mb-4">
-      <FormLabel className="text-base font-semibold">Data do próximo acerto</FormLabel>
-      <FormDescription>
-        Defina quando será feito o próximo acerto desta maleta.
-      </FormDescription>
-      <FormControl>
-        <DatePicker
-          date={field.value}
-          setDate={(date) => field.onChange(date)}
-          disabled={isSubmitting}
-        />
-      </FormControl>
-      <FormMessage />
-    </FormItem>
-  )}
-/>
+            <FormField
+              control={form.control}
+              name="next_settlement_date"
+              render={({ field }) => (
+                <FormItem className="mb-4">
+                  <FormLabel className="text-base font-semibold">Data do próximo acerto</FormLabel>
+                  <FormDescription>
+                    Defina quando será feito o próximo acerto desta maleta.
+                  </FormDescription>
+                  <FormControl>
+                    <DatePicker
+                      date={field.value}
+                      setDate={(date) => field.onChange(date)}
+                      disabled={isSubmitting}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}
@@ -297,8 +297,9 @@ function handleSubmit() {
                 disabled={isScanning}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
-                    handleScanItem(e.target.value);
-                    e.target.value = ''; // Limpar o input após escanear
+                    const input = e.currentTarget as HTMLInputElement;
+                    handleScanItem(input.value);
+                    input.value = ''; // Limpar o input após escanear
                   }
                 }}
               />

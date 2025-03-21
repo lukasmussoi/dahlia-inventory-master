@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { suitcaseController } from "@/controllers/suitcaseController";
@@ -25,7 +24,7 @@ export function SuitcasesContent({ isAdmin, userProfile }: SuitcasesContentProps
   const [showNewSuitcaseDialog, setShowNewSuitcaseDialog] = useState(false);
   const [showAcertoDialog, setShowAcertoDialog] = useState(false);
   const [showAcertoDetailsDialog, setShowAcertoDetailsDialog] = useState(false);
-  const [selectedSuitcase, setSelectedSuitcase] = useState<Suitcase | null>(null);
+  const [selectedSuitcaseId, setSelectedSuitcaseId] = useState<string | null>(null);
   const [selectedAcertoId, setSelectedAcertoId] = useState<string | undefined>(undefined);
   const [activeTab, setActiveTab] = useState("suitcases");
   const [filters, setFilters] = useState({
@@ -112,7 +111,7 @@ export function SuitcasesContent({ isAdmin, userProfile }: SuitcasesContentProps
 
   // Abrir o modal de acerto da maleta para uma maleta específica - otimizado com useCallback
   const handleOpenAcertoDialog = useCallback((suitcase: Suitcase) => {
-    setSelectedSuitcase(suitcase);
+    setSelectedSuitcaseId(suitcase.id);
     setShowAcertoDialog(true);
   }, []);
 
@@ -228,12 +227,12 @@ export function SuitcasesContent({ isAdmin, userProfile }: SuitcasesContentProps
         mode="create"
       />
       
-      {/* Modal para realizar acerto da maleta */}
+      {/* Modal para realizar acerto da maleta - corrigido para receber suitcaseId ao invés de suitcase */}
       <AcertoMaletaDialog
         open={showAcertoDialog}
         onOpenChange={setShowAcertoDialog}
-        suitcase={selectedSuitcase}
-        onSuccess={handleSuccessAcerto}
+        suitcaseId={selectedSuitcaseId || ''}
+        onAcertoCompleted={handleSuccessAcerto}
       />
       
       {/* Modal para visualizar detalhes de um acerto */}
