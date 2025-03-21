@@ -2,6 +2,21 @@
 import { useReactToPrint as useReactToPrintOriginal } from "react-to-print";
 import { RefObject } from "react";
 
+interface PrintOptions {
+  contentRef: RefObject<HTMLElement>;
+  documentTitle?: string;
+  onBeforeGetContent?: () => Promise<void> | void;
+  onAfterPrint?: () => void;
+  removeAfterPrint?: boolean;
+  pageStyle?: string;
+  mediaSize?: {
+    width: number;
+    height: number;
+    unit?: 'mm' | 'cm' | 'in';
+    orientation?: 'portrait' | 'landscape';
+  };
+}
+
 /**
  * Hook personalizado para impressão de componentes React
  * 
@@ -10,14 +25,51 @@ import { RefObject } from "react";
  */
 export function useReactPrint({ 
   contentRef, 
+  mediaSize,
   ...restOptions 
-}: { 
-  contentRef: RefObject<HTMLElement> 
-} & Omit<Parameters<typeof useReactToPrintOriginal>[0], "content">) {
+}: PrintOptions & Omit<Parameters<typeof useReactToPrintOriginal>[0], "content">) {
+  
+  // Construir estilos personalizados para impressão
+  let pageStyle = restOptions.pageStyle || '';
+  
+  // Se tiver definições personalizadas de mídia
+  if (mediaSize) {
+    const { width, height, unit = 'mm', orientation = 'portrait' } = mediaSize;
+    
+    // Construir tamanho personalizado
+    const size = `size: ${width}${unit} ${height}${unit};`;
+    const pageOrientation = `orientation: ${orientation};`;
+    
+    // Adicionar aos estilos existentes
+    pageStyle = `
+      @page {
+        ${size}
+        ${pageOrientation}
+        margin: 0;
+      }
+      @media print {
+        html, body {
+          width: ${width}${unit};
+          height: ${height}${unit};
+          margin: 0;
+          padding: 0;
+        }
+        .no-print {
+          display: none !important;
+        }
+      }
+      ${pageStyle}
+    `;
+  }
+  
   // Usar o hook original com as opções corretas
   const handlePrint = useReactToPrintOriginal({
     content: () => contentRef.current,
-    documentTitle: restOptions.documentTitle || 'Documento',
+    documentTitle: restOptions.documentTitle || 'Dalia Manager - Documento',
+    pageStyle: pageStyle,
+    onBeforeGetContent: restOptions.onBeforeGetContent,
+    onAfterPrint: restOptions.onAfterPrint,
+    removeAfterPrint: restOptions.removeAfterPrint || false,
     ...restOptions
   } as Parameters<typeof useReactToPrintOriginal>[0]);
 

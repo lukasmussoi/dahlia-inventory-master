@@ -132,17 +132,17 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
 
     // Configurações padrão da etiqueta (caso não tenha modelo personalizado)
     console.log("Usando configurações padrão para etiquetas");
-    let labelWidth = 80;  // largura em mm
-    let labelHeight = 30;  // altura em mm
-    let marginLeft = 10;   // margem esquerda em mm
-    let marginTop = 10;    // margem superior em mm
-    let spacing = 5;       // espaçamento entre etiquetas em mm
-    let orientation = "landscape";
-    let format = "a4";
+    let labelWidth = 90;  // largura em mm (ajustado para 90mm)
+    let labelHeight = 10;  // altura em mm (ajustado para 10mm)
+    let marginLeft = 0;   // margem esquerda em mm
+    let marginTop = 0;    // margem superior em mm
+    let spacing = 0;       // espaçamento entre etiquetas em mm
+    let orientation = "landscape"; // orientação paisagem
+    let format = [90, 10]; // formato personalizado
     let campos: CampoEtiqueta[] = [
-      { tipo: 'nome', x: 2, y: 4, largura: 40, altura: 10, tamanhoFonte: 7 },
-      { tipo: 'codigo', x: 20, y: 1, largura: 40, altura: 6, tamanhoFonte: 8 },
-      { tipo: 'preco', x: 70, y: 4, largura: 20, altura: 10, tamanhoFonte: 10 }
+      { tipo: 'nome', x: 2, y: 4, largura: 40, altura: 5, tamanhoFonte: 7 },
+      { tipo: 'codigo', x: 2, y: 1, largura: 40, altura: 3, tamanhoFonte: 6 },
+      { tipo: 'preco', x: 70, y: 5, largura: 20, altura: 5, tamanhoFonte: 8 }
     ];
 
     // Criar novo documento PDF com as configurações adequadas
@@ -150,6 +150,15 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
       orientation: orientation as "portrait" | "landscape",
       unit: "mm",
       format: format,
+    });
+
+    // Configurar metadados do PDF
+    doc.setProperties({
+      title: "Dalia Manager - Etiquetas",
+      author: "Dalia Manager",
+      subject: "Etiquetas",
+      keywords: "etiquetas, PDF, dalia manager",
+      creator: "Dalia Manager"
     });
 
     // Calcular quantas etiquetas cabem por página
@@ -170,61 +179,38 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
       throw new Error("A largura da etiqueta é maior que a largura útil da página. Por favor, ajuste as dimensões.");
     }
     
-    // Calcular quantas etiquetas cabem na página
-    const labelsPerRow = Math.floor((pageWidth - 2 * marginLeft) / (labelWidth + spacing));
-    const labelsPerColumn = Math.floor((pageHeight - 2 * marginTop) / (labelHeight + spacing));
+    // Para uma etiqueta única, definimos apenas 1 por página
+    const labelsPerRow = 1;
+    const labelsPerColumn = 1;
 
     console.log("Configurações de etiqueta:", { 
       labelWidth, labelHeight, marginLeft, marginTop, spacing,
       labelsPerRow, labelsPerColumn, totalCopies, pageWidth, pageHeight
     });
 
-    // Verificar se os valores calculados são válidos
-    if (labelsPerRow <= 0) {
-      console.error("labelsPerRow inválido:", labelsPerRow);
-      throw new Error("Configuração inválida: não é possível calcular a quantidade de etiquetas por linha. Verifique as dimensões da etiqueta e da página.");
-    }
-    
-    if (labelsPerColumn <= 0) {
-      console.error("labelsPerColumn inválido:", labelsPerColumn);
-      throw new Error("Configuração inválida: não é possível calcular a quantidade de etiquetas por coluna. Verifique as dimensões da etiqueta e da página.");
-    }
-
-    let currentRow = startRow - 1;
-    let currentColumn = startColumn - 1;
-    let currentPage = 0;
-
-    // Garantir valores válidos
-    if (currentRow < 0) currentRow = 0;
-    if (currentColumn < 0) currentColumn = 0;
-
     // Gerar código de barras uma vez para reutilizar
     const barcodeText = item.barcode || item.sku || "0000000000";
     const barcodeData = await generateBarcode(barcodeText);
 
+    let currentPage = 0;
+
+    // Para cada cópia, criar uma nova página
     for (let i = 0; i < totalCopies; i++) {
-      // Verificar se precisa de nova página
-      if (currentRow >= labelsPerColumn) {
-        currentRow = 0;
-        currentColumn++;
-        
-        if (currentColumn >= labelsPerRow) {
-          currentColumn = 0;
-          doc.addPage();
-          currentPage++;
-        }
+      if (i > 0) {
+        doc.addPage([90, 10], "landscape");
+        currentPage++;
       }
 
-      // Calcular posição da etiqueta
-      const x = marginLeft + currentColumn * (labelWidth + spacing);
-      const y = marginTop + currentRow * (labelHeight + spacing);
+      // Posição fixa para etiqueta única por página
+      const x = marginLeft;
+      const y = marginTop;
 
       // Buscar configurações dos campos
-      const campoNome = campos.find(c => c.tipo === 'nome') || { tipo: 'nome', x: 2, y: 4, largura: 40, altura: 10, tamanhoFonte: 7 };
-      const campoCodigo = campos.find(c => c.tipo === 'codigo') || { tipo: 'codigo', x: 20, y: 1, largura: 40, altura: 6, tamanhoFonte: 8 };
-      const campoPreco = campos.find(c => c.tipo === 'preco') || { tipo: 'preco', x: 70, y: 4, largura: 20, altura: 10, tamanhoFonte: 10 };
+      const campoNome = campos.find(c => c.tipo === 'nome') || { tipo: 'nome', x: 2, y: 4, largura: 40, altura: 5, tamanhoFonte: 7 };
+      const campoCodigo = campos.find(c => c.tipo === 'codigo') || { tipo: 'codigo', x: 2, y: 1, largura: 40, altura: 3, tamanhoFonte: 6 };
+      const campoPreco = campos.find(c => c.tipo === 'preco') || { tipo: 'preco', x: 70, y: 5, largura: 20, altura: 5, tamanhoFonte: 8 };
 
-      // Adicionar nome do produto - usar try/catch para cada operação
+      // Adicionar nome do produto
       try {
         doc.setFontSize(campoNome.tamanhoFonte);
         doc.setFont("helvetica", "normal");
@@ -247,12 +233,10 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
         doc.setFont("helvetica", "bold");
         const price = typeof item.price === 'number' ? item.price.toFixed(2) : '0.00';
         const priceText = `R$ ${price}`;
-        doc.text(priceText, x + campoPreco.x, y + campoPreco.y);
+        doc.text(priceText, x + campoPreco.x, y + campoPreco.y, { align: 'right' });
       } catch (error) {
         console.error("Erro ao adicionar preço:", error);
       }
-
-      currentRow++;
     }
 
     // Gerar URL do arquivo temporário

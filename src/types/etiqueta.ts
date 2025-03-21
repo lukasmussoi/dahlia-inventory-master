@@ -8,6 +8,8 @@ export interface CampoEtiqueta {
   largura: number;
   altura: number;
   tamanhoFonte: number;
+  alinhamento?: 'left' | 'center' | 'right';
+  fonte?: string;
   valor?: string;
 }
 

@@ -1,6 +1,7 @@
 
 import JsPDF from 'jspdf';
 import { toast } from 'sonner';
+import { generateBarcode } from './barcodeUtils';
 import type { LabelType, LabelElement } from '@/components/inventory/labels/editor/EtiquetaCreator';
 import type { ModeloEtiqueta } from '@/types/etiqueta';
 
@@ -38,11 +39,23 @@ export const generatePreviewPDF = async (
       }
     }
 
-    // Criar o documento PDF
+    // Criar o documento PDF com formato e orientação corretos
+    const format = pageFormat === 'Personalizado' ? [pageSize.width, pageSize.height] : pageFormat;
+    const orientation = pageSize.width > pageSize.height ? 'landscape' : 'portrait';
+    
     const pdf = new JsPDF({
-      orientation: 'portrait',
+      orientation: orientation as 'portrait' | 'landscape',
       unit: 'mm',
-      format: pageFormat === 'A4' || pageFormat === 'A5' || pageFormat === 'Letter' ? pageFormat : [pageSize.width, pageSize.height]
+      format: format
+    });
+
+    // Configurar metadados do PDF
+    pdf.setProperties({
+      title: "Dalia Manager - Etiquetas",
+      author: "Dalia Manager",
+      subject: "Etiquetas",
+      keywords: "etiquetas, PDF, dalia manager",
+      creator: "Dalia Manager"
     });
 
     // Adicionar título
@@ -73,7 +86,7 @@ export const generatePreviewPDF = async (
     pdf.text(`Total de etiquetas por página: ${columnsPerPage * rowsPerPage}`, 10, 50);
 
     // Adicionar uma nova página para a visualização da etiqueta
-    pdf.addPage();
+    pdf.addPage(format as any, orientation as any);
 
     // Desenhar as etiquetas
     pdf.setDrawColor(150, 150, 150);
@@ -132,11 +145,11 @@ const renderLabelElements = (pdf: JsPDF, elements: LabelElement[], offsetX: numb
 const getElementPreviewText = (type: string): string => {
   switch (type) {
     case 'nome':
-      return 'Pingente Cristal';
+      return 'Elo Aro Invertível';
     case 'codigo':
       return '123456789';
     case 'preco':
-      return 'R$ 99,90';
+      return 'R$ 119,90';
     default:
       return 'Exemplo';
   }
@@ -179,46 +192,65 @@ export const generateEtiquetaPDF = async (
     
     // Configurar tamanho da página
     let pageWidth, pageHeight;
+    let format: any;
+    let orientation: "portrait" | "landscape";
+
     if (formatoPagina === "Personalizado" && larguraPagina && alturaPagina) {
       pageWidth = larguraPagina;
       pageHeight = alturaPagina;
+      format = [pageWidth, pageHeight];
+      orientation = orientacao === "retrato" ? "portrait" : "landscape";
     } else {
       // Tamanhos padrão (em mm)
       if (formatoPagina === "A4") {
         pageWidth = orientacao === "retrato" ? 210 : 297;
         pageHeight = orientacao === "retrato" ? 297 : 210;
+        format = "a4";
       } else if (formatoPagina === "A5") {
         pageWidth = orientacao === "retrato" ? 148 : 210;
         pageHeight = orientacao === "retrato" ? 210 : 148;
+        format = "a5";
       } else if (formatoPagina === "Letter") {
         pageWidth = orientacao === "retrato" ? 216 : 279;
         pageHeight = orientacao === "retrato" ? 279 : 216;
+        format = "letter";
       } else {
-        // Formato padrão (A4 retrato)
-        pageWidth = 210;
-        pageHeight = 297;
+        // Usar formato personalizado para etiquetas pequenas
+        pageWidth = 90;
+        pageHeight = 10;
+        format = [pageWidth, pageHeight];
       }
+      orientation = orientacao === "retrato" ? "portrait" : "landscape";
     }
     
     // Verificar e corrigir dimensões inválidas
-    if (!pageWidth || pageWidth <= 0) pageWidth = 210;
-    if (!pageHeight || pageHeight <= 0) pageHeight = 297;
+    if (!pageWidth || pageWidth <= 0) pageWidth = 90;
+    if (!pageHeight || pageHeight <= 0) pageHeight = 10;
     
     console.log("Dimensões da página:", pageWidth, "x", pageHeight);
     
     // Criar documento PDF
     const pdf = new JsPDF({
-      orientation: orientacao === "retrato" ? "portrait" : "landscape",
+      orientation: orientation,
       unit: "mm",
-      format: formatoPagina === "Personalizado" ? [pageWidth, pageHeight] : formatoPagina
+      format: format
+    });
+    
+    // Configurar metadados do PDF
+    pdf.setProperties({
+      title: "Dalia Manager - Etiquetas",
+      author: "Dalia Manager",
+      subject: "Etiquetas",
+      keywords: "etiquetas, PDF, dalia manager",
+      creator: "Dalia Manager"
     });
     
     // Calcular quantas etiquetas cabem na página
     const margensValidas = {
-      superior: margemSuperior > 0 ? margemSuperior : 10,
-      inferior: margemInferior > 0 ? margemInferior : 10,
-      esquerda: margemEsquerda > 0 ? margemEsquerda : 10,
-      direita: margemDireita > 0 ? margemDireita : 10
+      superior: margemSuperior > 0 ? margemSuperior : 0,
+      inferior: margemInferior > 0 ? margemInferior : 0,
+      esquerda: margemEsquerda > 0 ? margemEsquerda : 0,
+      direita: margemDireita > 0 ? margemDireita : 0
     };
     
     const espacamentosValidos = {
@@ -227,28 +259,34 @@ export const generateEtiquetaPDF = async (
     };
     
     // Garantir que as dimensões da etiqueta são válidas
-    const etiquetaLargura = largura > 0 ? largura : 50;
-    const etiquetaAltura = altura > 0 ? altura : 30;
+    const etiquetaLargura = largura > 0 ? largura : 90;
+    const etiquetaAltura = altura > 0 ? altura : 10;
     
-    const labelsPerRow = Math.floor((pageWidth - margensValidas.esquerda - margensValidas.direita) / (etiquetaLargura + espacamentosValidos.horizontal));
-    const labelsPerColumn = Math.floor((pageHeight - margensValidas.superior - margensValidas.inferior) / (etiquetaAltura + espacamentosValidos.vertical));
+    // Para etiquetas pequenas, definimos apenas 1 por página
+    const etiquetasPorLinha = formato90x10(format) ? 1 : 
+      Math.floor((pageWidth - margensValidas.esquerda - margensValidas.direita) / 
+      (etiquetaLargura + espacamentosValidos.horizontal));
     
-    // Verificar se os cálculos resultaram em valores válidos
-    const etiquetasPorLinha = labelsPerRow > 0 ? labelsPerRow : 1;
-    const etiquetasPorColuna = labelsPerColumn > 0 ? labelsPerColumn : 1;
+    const etiquetasPorColuna = formato90x10(format) ? 1 : 
+      Math.floor((pageHeight - margensValidas.superior - margensValidas.inferior) / 
+      (etiquetaAltura + espacamentosValidos.vertical));
+
+    // Verificar se os valores são válidos
+    const labelsPerRow = etiquetasPorLinha > 0 ? etiquetasPorLinha : 1;
+    const labelsPerColumn = etiquetasPorColuna > 0 ? etiquetasPorColuna : 1;
     
     console.log("Configurações da página:", {
       pageWidth,
       pageHeight,
-      etiquetasPorLinha,
-      etiquetasPorColuna,
+      etiquetasPorLinha: labelsPerRow,
+      etiquetasPorColuna: labelsPerColumn,
       margens: [margensValidas.superior, margensValidas.direita, margensValidas.inferior, margensValidas.esquerda],
       espacamento: [espacamentosValidos.horizontal, espacamentosValidos.vertical]
     });
     
-    // Inicializar posição
-    let currentRow = options.startRow - 1;
-    let currentColumn = options.startColumn - 1;
+    // Inicializar contadores
+    let currentRow = formato90x10(format) ? 0 : options.startRow - 1;
+    let currentColumn = formato90x10(format) ? 0 : options.startColumn - 1;
     let currentPage = 0;
     
     // Garantir valores válidos
@@ -264,67 +302,143 @@ export const generateEtiquetaPDF = async (
     
     let labelCounter = 0;
     
-    // Para cada item, gerar as etiquetas solicitadas
-    for (const item of items) {
-      for (let i = 0; i < options.copias; i++) {
-        // Verificar se precisa de nova página
-        if (currentRow >= etiquetasPorColuna) {
-          currentRow = 0;
-          currentColumn++;
-          
-          if (currentColumn >= etiquetasPorLinha) {
-            currentColumn = 0;
-            pdf.addPage();
-            currentPage++;
+    // Para formato 90x10, gerar uma etiqueta por página
+    if (formato90x10(format)) {
+      for (const item of items) {
+        for (let i = 0; i < options.copias; i++) {
+          if (labelCounter > 0) {
+            pdf.addPage(format, orientation);
           }
-        }
-        
-        // Calcular posição da etiqueta
-        const x = margensValidas.esquerda + currentColumn * (etiquetaLargura + espacamentosValidos.horizontal);
-        const y = margensValidas.superior + currentRow * (etiquetaAltura + espacamentosValidos.vertical);
-        
-        // Desenhar borda da etiqueta (opcional, pode ser comentado para produção)
-        pdf.setDrawColor(200, 200, 200);
-        pdf.rect(x, y, etiquetaLargura, etiquetaAltura);
-        
-        // Renderizar os campos da etiqueta
-        if (campos && Array.isArray(campos)) {
-          campos.forEach(campo => {
-            if (!campo.tipo) return;
-            
-            // Configurar fonte
-            pdf.setFontSize(campo.tamanhoFonte);
-            
-            // Determinar o conteúdo com base no tipo de campo
-            let conteudo = "";
-            if (campo.tipo === "nome") {
-              conteudo = item.name || "Sem nome";
-            } else if (campo.tipo === "codigo") {
-              conteudo = item.sku || item.barcode || "000000";
-            } else if (campo.tipo === "preco") {
-              const preco = typeof item.price === "number" ? item.price.toFixed(2) : "0.00";
-              conteudo = `R$ ${preco}`;
+          
+          // Posição fixa no canto superior esquerdo
+          const x = margensValidas.esquerda;
+          const y = margensValidas.superior;
+          
+          // Gerar código de barras para este item
+          const barcodeText = item.barcode || item.sku || "0000000000";
+          const barcodeData = await generateBarcode(barcodeText);
+          
+          // Renderizar os campos da etiqueta
+          if (campos && Array.isArray(campos)) {
+            for (const campo of campos) {
+              if (!campo.tipo) continue;
+              
+              // Configurar fonte
+              pdf.setFontSize(campo.tamanhoFonte);
+              pdf.setFont("helvetica", campo.tipo === "preco" ? "bold" : "normal");
+              
+              // Determinar o conteúdo com base no tipo de campo
+              let conteudo = "";
+              if (campo.tipo === "nome") {
+                conteudo = item.name || "Sem nome";
+              } else if (campo.tipo === "codigo") {
+                try {
+                  // Adicionar imagem do código de barras
+                  pdf.addImage(barcodeData, "PNG", x + campo.x, y + campo.y, campo.largura, campo.altura);
+                  continue; // Pular o resto do loop para este campo
+                } catch (error) {
+                  console.error("Erro ao adicionar código de barras:", error);
+                  conteudo = barcodeText;
+                }
+              } else if (campo.tipo === "preco") {
+                const preco = typeof item.price === "number" ? item.price.toFixed(2).replace(".", ",") : "0,00";
+                conteudo = `R$ ${preco}`;
+              }
+              
+              // Posicionar e desenhar o texto
+              const posX = x + campo.x;
+              const posY = y + campo.y;
+              
+              if (campo.tipo === "preco") {
+                // Alinhar preço à direita
+                pdf.text(conteudo, posX + campo.largura, posY, { align: 'right' });
+              } else {
+                pdf.text(conteudo, posX, posY);
+              }
             }
-            
-            // Posicionar e desenhar o texto (convertendo números para string)
-            const posX = x + campo.x;
-            const posY = y + campo.y;
-            
-            // Converter coordenadas para string conforme esperado pelo jsPDF
-            pdf.text(conteudo, posX, posY);
-          });
-        } else {
-          console.warn("Modelo sem campos definidos ou campos inválidos");
-          // Adicionar texto padrão se não houver campos definidos
-          pdf.setFontSize(10);
-          pdf.text("Etiqueta sem elementos", x + 5, y + 15);
+          } else {
+            // Adicionar texto padrão se não houver campos definidos
+            pdf.setFontSize(10);
+            pdf.text("Etiqueta sem elementos", x + 5, y + 5);
+          }
+          
+          labelCounter++;
         }
+      }
+    } else {
+      // Para outros formatos, usar o layout de múltiplas etiquetas por página
+      for (const item of items) {
+        // Gerar código de barras para este item
+        const barcodeText = item.barcode || item.sku || "0000000000";
+        const barcodeData = await generateBarcode(barcodeText);
         
-        currentRow++;
-        labelCounter++;
-        
-        if (labelCounter % 10 === 0) {
-          console.log(`Geradas ${labelCounter} etiquetas de ${totalLabels}`);
+        for (let i = 0; i < options.copias; i++) {
+          // Verificar se precisa de nova página
+          if (currentRow >= labelsPerColumn) {
+            currentRow = 0;
+            currentColumn++;
+            
+            if (currentColumn >= labelsPerRow) {
+              currentColumn = 0;
+              pdf.addPage(format, orientation);
+              currentPage++;
+            }
+          }
+          
+          // Calcular posição da etiqueta
+          const x = margensValidas.esquerda + currentColumn * (etiquetaLargura + espacamentosValidos.horizontal);
+          const y = margensValidas.superior + currentRow * (etiquetaAltura + espacamentosValidos.vertical);
+          
+          // Renderizar os campos da etiqueta
+          if (campos && Array.isArray(campos)) {
+            for (const campo of campos) {
+              if (!campo.tipo) continue;
+              
+              // Configurar fonte
+              pdf.setFontSize(campo.tamanhoFonte);
+              pdf.setFont("helvetica", campo.tipo === "preco" ? "bold" : "normal");
+              
+              // Determinar o conteúdo com base no tipo de campo
+              let conteudo = "";
+              if (campo.tipo === "nome") {
+                conteudo = item.name || "Sem nome";
+              } else if (campo.tipo === "codigo") {
+                try {
+                  // Adicionar imagem do código de barras
+                  pdf.addImage(barcodeData, "PNG", x + campo.x, y + campo.y, campo.largura, campo.altura);
+                  continue; // Pular o resto do loop para este campo
+                } catch (error) {
+                  console.error("Erro ao adicionar código de barras:", error);
+                  conteudo = barcodeText;
+                }
+              } else if (campo.tipo === "preco") {
+                const preco = typeof item.price === "number" ? item.price.toFixed(2).replace(".", ",") : "0,00";
+                conteudo = `R$ ${preco}`;
+              }
+              
+              // Posicionar e desenhar o texto
+              const posX = x + campo.x;
+              const posY = y + campo.y;
+              
+              if (campo.tipo === "preco") {
+                // Alinhar preço à direita
+                pdf.text(conteudo, posX + campo.largura, posY, { align: 'right' });
+              } else {
+                pdf.text(conteudo, posX, posY);
+              }
+            }
+          } else {
+            // Adicionar texto padrão se não houver campos definidos
+            pdf.setFontSize(10);
+            pdf.text("Etiqueta sem elementos", x + 5, y + 5);
+          }
+          
+          currentRow++;
+          labelCounter++;
+          
+          if (labelCounter % 10 === 0) {
+            console.log(`Geradas ${labelCounter} etiquetas de ${totalLabels}`);
+          }
         }
       }
     }
@@ -344,3 +458,16 @@ export const generateEtiquetaPDF = async (
     throw error;
   }
 };
+
+// Função auxiliar para verificar se formato é de etiqueta 90x10
+function formato90x10(format: any): boolean {
+  if (Array.isArray(format) && format.length === 2) {
+    // Verificar se as dimensões são aproximadamente 90x10 ou 10x90
+    const [width, height] = format;
+    return (
+      (Math.abs(width - 90) < 5 && Math.abs(height - 10) < 5) ||
+      (Math.abs(width - 10) < 5 && Math.abs(height - 90) < 5)
+    );
+  }
+  return false;
+}
