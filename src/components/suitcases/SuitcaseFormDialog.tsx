@@ -22,13 +22,19 @@ interface SuitcaseFormDialogProps {
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
   initialData?: any;
+  suitcase?: any;
+  mode?: string;
+  onSubmit?: (data: any) => Promise<void>;
 }
 
 export function SuitcaseFormDialog({ 
   open, 
   onOpenChange, 
   onSuccess,
-  initialData 
+  initialData,
+  suitcase,
+  mode = "create",
+  onSubmit
 }: SuitcaseFormDialogProps) {
   const [loading, setLoading] = useState(false);
   const [sellers, setSellers] = useState<{ value: string; label: string }[]>([]);
@@ -88,15 +94,19 @@ export function SuitcaseFormDialog({
       
       if (isEditing) {
         // Se é uma edição e a data do próximo acerto foi alterada
-        const originalDate = initialData.next_settlement_date ? new Date(initialData.next_settlement_date) : undefined;
+        const originalDate = initialData?.next_settlement_date ? new Date(initialData.next_settlement_date) : undefined;
         const newDate = formData.next_settlement_date;
         
         const dateChanged = 
           (originalDate && !newDate) || 
           (!originalDate && newDate) || 
           (originalDate && newDate && originalDate.toISOString() !== newDate.toISOString());
-          
-        await SuitcaseController.updateSuitcase(formData.id, formData);
+        
+        if (onSubmit) {
+          await onSubmit(formData);
+        } else {
+          await SuitcaseController.updateSuitcase(formData.id, formData);
+        }
         
         // Se a data do próximo acerto foi alterada, criar um acerto pendente
         if (dateChanged && newDate) {
@@ -104,11 +114,15 @@ export function SuitcaseFormDialog({
         }
       } else {
         // Criar nova maleta
-        const result = await SuitcaseController.createSuitcase(formData);
-        
-        // Se uma data de próximo acerto foi definida, criar um acerto pendente
-        if (formData.next_settlement_date && result.id) {
-          await SuitcaseController.createPendingSettlement(result.id, formData.next_settlement_date);
+        if (onSubmit) {
+          await onSubmit(formData);
+        } else {
+          const result = await SuitcaseController.createSuitcase(formData);
+          
+          // Se uma data de próximo acerto foi definida, criar um acerto pendente
+          if (formData.next_settlement_date && result.id) {
+            await SuitcaseController.createPendingSettlement(result.id, formData.next_settlement_date);
+          }
         }
       }
       

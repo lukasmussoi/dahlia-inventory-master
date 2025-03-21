@@ -160,7 +160,7 @@ export const acertoMaletaController = {
           
           const commissionRate = seller.data?.commission_rate || 0.3;
           const commissionValue = soldItem.price * commissionRate;
-          const unitCost = item?.product?.unit_cost || 0;
+          const unitCost = item.product?.unit_cost || 0;
           const netProfit = soldItem.price - commissionValue - unitCost;
 
           totalSales += soldItem.price;

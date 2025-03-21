@@ -1,4 +1,3 @@
-
 export type SuitcaseStatus = 'in_use' | 'returned' | 'in_replenishment' | 'lost' | 'in_audit';
 export type SuitcaseItemStatus = 'in_possession' | 'sold' | 'returned' | 'lost';
 export type AcertoStatus = 'pendente' | 'concluido';
@@ -29,6 +28,7 @@ export interface SuitcaseItem {
     sku: string;
     name: string;
     price: number;
+    unit_cost?: number;
     photo_url?: string | PhotoUrl[];
   };
   sales?: SuitcaseItemSale[];
@@ -153,4 +153,6 @@ export interface SuitcaseSettlementFormData {
     customer_name?: string;
     payment_method?: string;
   }[];
+  customer_name?: string;
+  payment_method?: string;
 }
