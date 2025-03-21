@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from "react"
 import { 
   AlignCenter, 
@@ -17,7 +18,8 @@ import {
   CheckSquare,
   Minus,
   FileText,
-  Download
+  Download,
+  RotateCw
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -30,10 +32,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Switch } from "@/components/ui/switch"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import "@/styles/etiqueta-editor.css"
 import { generatePreviewPDF } from "@/utils/etiquetaGenerator"
+import type { ModeloEtiqueta } from "@/types/etiqueta"
 
 export interface ElementType {
   id: string;
@@ -96,6 +100,7 @@ export default function EtiquetaCreator({
   const [gridSize, setGridSize] = useState(5)
   const [pageSize, setPageSize] = useState({ width: initialData?.larguraPagina || 210, height: initialData?.alturaPagina || 297 })
   const [pageFormat, setPageFormat] = useState(initialData?.formatoPagina || "A4")
+  const [pageOrientation, setPageOrientation] = useState<"retrato" | "paisagem">(initialData?.orientacao || "retrato")
   const [labelSize, setLabelSize] = useState({ 
     width: initialData?.largura || 80, 
     height: initialData?.altura || 40 
@@ -172,6 +177,28 @@ export default function EtiquetaCreator({
     
     return () => clearTimeout(timer);
   }, []);
+
+  // Efeito para atualizar as dimensões da página com base na orientação
+  useEffect(() => {
+    // Se a orientação mudar, inverter dimensões da página
+    if (pageOrientation === "paisagem") {
+      // Garantir que largura > altura para paisagem
+      if (pageSize.width < pageSize.height) {
+        setPageSize({
+          width: pageSize.height,
+          height: pageSize.width
+        });
+      }
+    } else {
+      // Garantir que altura > largura para retrato
+      if (pageSize.height < pageSize.width) {
+        setPageSize({
+          width: pageSize.height,
+          height: pageSize.width
+        });
+      }
+    }
+  }, [pageOrientation]);
   
   // Funções auxiliares
   const getSelectedLabel = () => {
@@ -360,13 +387,30 @@ export default function EtiquetaCreator({
     setPageFormat(value);
     
     if (value === "A4") {
-      setPageSize({ width: 210, height: 297 });
+      setPageSize(pageOrientation === "retrato" 
+        ? { width: 210, height: 297 }
+        : { width: 297, height: 210 });
     } else if (value === "A5") {
-      setPageSize({ width: 148, height: 210 });
+      setPageSize(pageOrientation === "retrato" 
+        ? { width: 148, height: 210 }
+        : { width: 210, height: 148 });
     } else if (value === "Letter") {
-      setPageSize({ width: 216, height: 279 });
+      setPageSize(pageOrientation === "retrato" 
+        ? { width: 216, height: 279 }
+        : { width: 279, height: 216 });
     }
-    // Outros formatos podem ser adicionados conforme necessário
+  }
+  
+  const handleToggleOrientation = () => {
+    // Inverter orientação
+    const newOrientation = pageOrientation === "retrato" ? "paisagem" : "retrato";
+    setPageOrientation(newOrientation);
+    
+    // Inverter dimensões da página
+    setPageSize({
+      width: pageSize.height,
+      height: pageSize.width
+    });
   }
   
   const handleUpdateLabelSize = (dimension: "width" | "height", value: number) => {
@@ -535,7 +579,7 @@ export default function EtiquetaCreator({
       largura: primaryLabel.width,
       altura: primaryLabel.height,
       formatoPagina: pageFormat,
-      orientacao: "retrato", // Pode ser dinâmico no futuro
+      orientacao: pageOrientation, // Usar a orientação definida
       margemSuperior: 10,
       margemInferior: 10,
       margemEsquerda: 10,
@@ -637,13 +681,13 @@ export default function EtiquetaCreator({
     
     try {
       // Criar um objeto modelo temporário para a pré-visualização
-      const tempModelo = {
+      const tempModelo: ModeloEtiqueta = {
         nome: modelName || "Modelo sem nome",
         descricao: modelName || "Modelo sem nome",
         largura: labels[0].width,
         altura: labels[0].height,
         formatoPagina: pageFormat,
-        orientacao: 'retrato' as 'retrato' | 'paisagem', // Default to retrato
+        orientacao: pageOrientation,
         margemSuperior: 10,
         margemInferior: 10,
         margemEsquerda: 10,
@@ -847,3 +891,491 @@ export default function EtiquetaCreator({
                             className="h-7 text-sm"
                             value={getSelectedElementDetails()!.x}
                             onChange={(e) => handleUpdateElement('x', e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs" htmlFor="element-y">Posição Y</Label>
+                          <Input
+                            id="element-y"
+                            type="number"
+                            className="h-7 text-sm"
+                            value={getSelectedElementDetails()!.y}
+                            onChange={(e) => handleUpdateElement('y', e.target.value)}
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label className="text-xs" htmlFor="element-width">Largura</Label>
+                          <Input
+                            id="element-width"
+                            type="number"
+                            className="h-7 text-sm"
+                            value={getSelectedElementDetails()!.width}
+                            onChange={(e) => handleUpdateElement('width', e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs" htmlFor="element-height">Altura</Label>
+                          <Input
+                            id="element-height"
+                            type="number"
+                            className="h-7 text-sm"
+                            value={getSelectedElementDetails()!.height}
+                            onChange={(e) => handleUpdateElement('height', e.target.value)}
+                          />
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <Label className="text-xs" htmlFor="element-font">Tam. Fonte</Label>
+                        <Input
+                          id="element-font"
+                          type="number"
+                          className="h-7 text-sm"
+                          value={getSelectedElementDetails()!.fontSize}
+                          onChange={(e) => handleUpdateElement('fontSize', e.target.value)}
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label className="text-xs" htmlFor="element-align">Alinhamento</Label>
+                        <div className="flex gap-1 mt-1">
+                          <Button
+                            variant={getSelectedElementDetails()!.align === "left" ? "default" : "outline"}
+                            size="sm"
+                            className="h-7 px-2 flex-1"
+                            onClick={() => handleSetAlignment("left")}
+                          >
+                            <AlignLeft className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant={getSelectedElementDetails()!.align === "center" ? "default" : "outline"}
+                            size="sm"
+                            className="h-7 px-2 flex-1"
+                            onClick={() => handleSetAlignment("center")}
+                          >
+                            <AlignCenter className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant={getSelectedElementDetails()!.align === "right" ? "default" : "outline"}
+                            size="sm"
+                            className="h-7 px-2 flex-1"
+                            onClick={() => handleSetAlignment("right")}
+                          >
+                            <AlignRight className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+          
+          {activeTab === "etiquetas" && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-medium">Etiquetas</h3>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-2"
+                  onClick={handleAddLabel}
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  <span className="text-xs">Adicionar</span>
+                </Button>
+              </div>
+              
+              <div className="space-y-2">
+                {labels.map(label => (
+                  <ContextMenu key={label.id}>
+                    <ContextMenuTrigger>
+                      <Card 
+                        className={`p-2 cursor-pointer border-2 transition-colors ${selectedLabelId === label.id ? 'border-primary' : 'border-transparent hover:border-primary/30'}`}
+                        onClick={() => setSelectedLabelId(label.id)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="text-sm font-medium">{label.name}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {label.width}x{label.height}mm
+                          </div>
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {label.elements.length} elementos
+                        </div>
+                      </Card>
+                    </ContextMenuTrigger>
+                    <ContextMenuContent>
+                      <ContextMenuLabel>Opções da Etiqueta</ContextMenuLabel>
+                      <ContextMenuSeparator />
+                      <ContextMenuItem onClick={() => handleDuplicateLabel(label.id)}>
+                        <Copy className="h-4 w-4 mr-2" />
+                        Duplicar
+                      </ContextMenuItem>
+                      <ContextMenuItem 
+                        className="text-destructive focus:text-destructive" 
+                        onClick={() => handleDeleteLabel(label.id)}
+                      >
+                        <Trash className="h-4 w-4 mr-2" />
+                        Excluir
+                      </ContextMenuItem>
+                    </ContextMenuContent>
+                  </ContextMenu>
+                ))}
+              </div>
+              
+              {selectedLabelId !== null && getSelectedLabel() && (
+                <div className="pt-4 border-t mt-4">
+                  <h3 className="text-sm font-medium mb-3">Propriedades da Etiqueta</h3>
+                  
+                  <div className="space-y-3">
+                    <div>
+                      <Label className="text-xs" htmlFor="label-name">Nome</Label>
+                      <Input
+                        id="label-name"
+                        type="text"
+                        className="h-7 text-sm"
+                        value={getSelectedLabel()!.name}
+                        onChange={(e) => handleUpdateLabelName(getSelectedLabel()!.id, e.target.value)}
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label className="text-xs" htmlFor="label-width">Largura (mm)</Label>
+                        <Input
+                          id="label-width"
+                          type="number"
+                          className="h-7 text-sm"
+                          value={getSelectedLabel()!.width}
+                          onChange={(e) => handleUpdateLabelSize("width", Number(e.target.value))}
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs" htmlFor="label-height">Altura (mm)</Label>
+                        <Input
+                          id="label-height"
+                          type="number"
+                          className="h-7 text-sm"
+                          value={getSelectedLabel()!.height}
+                          onChange={(e) => handleUpdateLabelSize("height", Number(e.target.value))}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label className="text-xs" htmlFor="label-x">Posição X (mm)</Label>
+                        <Input
+                          id="label-x"
+                          type="number"
+                          className="h-7 text-sm"
+                          value={getSelectedLabel()!.x}
+                          onChange={(e) => {
+                            const updatedLabels = [...labels];
+                            const labelIndex = updatedLabels.findIndex(l => l.id === selectedLabelId);
+                            if (labelIndex !== -1) {
+                              const value = Number(e.target.value);
+                              const maxX = pageSize.width - getSelectedLabel()!.width;
+                              updatedLabels[labelIndex].x = Math.max(0, Math.min(value, maxX));
+                              setLabels(updatedLabels);
+                            }
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs" htmlFor="label-y">Posição Y (mm)</Label>
+                        <Input
+                          id="label-y"
+                          type="number"
+                          className="h-7 text-sm"
+                          value={getSelectedLabel()!.y}
+                          onChange={(e) => {
+                            const updatedLabels = [...labels];
+                            const labelIndex = updatedLabels.findIndex(l => l.id === selectedLabelId);
+                            if (labelIndex !== -1) {
+                              const value = Number(e.target.value);
+                              const maxY = pageSize.height - getSelectedLabel()!.height;
+                              updatedLabels[labelIndex].y = Math.max(0, Math.min(value, maxY));
+                              setLabels(updatedLabels);
+                            }
+                          }}
+                        />
+                      </div>
+                    </div>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full h-8"
+                      onClick={handleOptimizeLayout}
+                    >
+                      <CheckSquare className="h-4 w-4 mr-2" />
+                      Otimizar Layout
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          
+          {activeTab === "config" && (
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium mb-3">Configurações da Página</h3>
+              
+              <div>
+                <Label className="text-xs" htmlFor="page-format">Formato da Página</Label>
+                <Select
+                  value={pageFormat}
+                  onValueChange={handleUpdatePageFormat}
+                >
+                  <SelectTrigger id="page-format" className="h-8 text-sm">
+                    <SelectValue placeholder="Formato da página" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="A4">A4 (210×297mm)</SelectItem>
+                    <SelectItem value="A5">A5 (148×210mm)</SelectItem>
+                    <SelectItem value="Letter">Carta (216×279mm)</SelectItem>
+                    <SelectItem value="Personalizado">Personalizado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label className="text-xs mb-1 block">Orientação da Página</Label>
+                <ToggleGroup type="single" variant="outline" className="justify-start">
+                  <ToggleGroupItem 
+                    value="retrato" 
+                    aria-label="Retrato"
+                    className={pageOrientation === "retrato" ? "bg-muted" : ""}
+                    onClick={() => setPageOrientation("retrato")}
+                  >
+                    Retrato
+                  </ToggleGroupItem>
+                  <ToggleGroupItem 
+                    value="paisagem" 
+                    aria-label="Paisagem"
+                    className={pageOrientation === "paisagem" ? "bg-muted" : ""}
+                    onClick={() => setPageOrientation("paisagem")}
+                  >
+                    Paisagem
+                  </ToggleGroupItem>
+                </ToggleGroup>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-2 h-8"
+                  onClick={handleToggleOrientation}
+                >
+                  <RotateCw className="h-4 w-4 mr-2" />
+                  Alternar Orientação
+                </Button>
+              </div>
+              
+              {pageFormat === "Personalizado" && (
+                <div className="space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label className="text-xs" htmlFor="page-width">Largura da Página (mm)</Label>
+                      <Input
+                        id="page-width"
+                        type="number"
+                        className="h-7 text-sm"
+                        value={pageSize.width}
+                        onChange={(e) => setPageSize({ ...pageSize, width: Number(e.target.value) })}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs" htmlFor="page-height">Altura da Página (mm)</Label>
+                      <Input
+                        id="page-height"
+                        type="number"
+                        className="h-7 text-sm"
+                        value={pageSize.height}
+                        onChange={(e) => setPageSize({ ...pageSize, height: Number(e.target.value) })}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              <div className="border-t pt-3 mt-4">
+                <h3 className="text-sm font-medium mb-2">Dimensões da Etiqueta Padrão</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-xs" htmlFor="default-width">Largura (mm)</Label>
+                    <Input
+                      id="default-width"
+                      type="number"
+                      className="h-7 text-sm"
+                      value={labelSize.width}
+                      onChange={(e) => {
+                        const value = Number(e.target.value);
+                        setLabelSize({ ...labelSize, width: value });
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs" htmlFor="default-height">Altura (mm)</Label>
+                    <Input
+                      id="default-height"
+                      type="number"
+                      className="h-7 text-sm"
+                      value={labelSize.height}
+                      onChange={(e) => {
+                        const value = Number(e.target.value);
+                        setLabelSize({ ...labelSize, height: value });
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              {autoAdjustDimensions !== undefined && onToggleAutoAdjust && (
+                <div className="border-t pt-3 mt-4">
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="auto-adjust"
+                      checked={autoAdjustDimensions}
+                      onCheckedChange={onToggleAutoAdjust}
+                    />
+                    <Label htmlFor="auto-adjust" className="text-sm cursor-pointer">
+                      Ajustar dimensões automaticamente
+                    </Label>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Quando ativado, as dimensões da etiqueta serão ajustadas automaticamente para caber na página
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+        
+        {/* Área principal */}
+        <div className="flex-1 overflow-hidden bg-neutral-100 flex flex-col">
+          <div className="flex-1 overflow-auto p-4">
+            <div
+              ref={editorRef}
+              className={`relative bg-white shadow mx-auto border border-gray-300 overflow-auto ${showGrid ? 'bg-grid' : ''}`}
+              style={{
+                width: `${pageSize.width * (zoom / 100)}px`,
+                height: `${pageSize.height * (zoom / 100)}px`,
+                transformOrigin: 'top left',
+                scale: `${zoom / 100}`,
+              }}
+              onMouseMove={handleDrag}
+              onMouseUp={handleEndDrag}
+              onMouseLeave={handleEndDrag}
+            >
+              {/* Etiquetas */}
+              {labels.map(label => (
+                <div
+                  key={label.id}
+                  className={`absolute border-2 transition-colors ${
+                    selectedLabelId === label.id ? 'border-primary' : 'border-dashed border-gray-400'
+                  }`}
+                  style={{
+                    left: `${label.x}px`,
+                    top: `${label.y}px`,
+                    width: `${label.width}px`,
+                    height: `${label.height}px`,
+                    cursor: 'move',
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedLabelId(label.id);
+                    setSelectedElement(null);
+                  }}
+                  onMouseDown={(e) => handleStartDrag(e, "label", label.id, label.x, label.y)}
+                >
+                  {/* Elementos dentro da etiqueta */}
+                  {label.elements.map(element => (
+                    <div
+                      key={element.id}
+                      className={`absolute cursor-move ${selectedElement === element.id ? 'outline outline-2 outline-blue-500' : ''}`}
+                      style={{
+                        left: `${element.x}px`,
+                        top: `${element.y}px`,
+                        width: `${element.width}px`,
+                        height: `${element.height}px`,
+                        fontSize: `${element.fontSize}px`,
+                        textAlign: element.align as any,
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedElement(element.id);
+                      }}
+                      onMouseDown={(e) => selectedLabelId === label.id && handleStartDrag(e, "element", element.id, element.x, element.y)}
+                    >
+                      <div className="w-full h-full overflow-hidden flex items-center">
+                        <div className="w-full truncate">
+                          {getElementPreview(element.type)}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          {/* Footer */}
+          <div className="p-3 border-t bg-background flex justify-between items-center">
+            <div className="text-sm">
+              {pageOrientation === "retrato" ? "Retrato" : "Paisagem"}: {pageSize.width}×{pageSize.height}mm
+              {selectedLabelId !== null && getSelectedLabel() && (
+                <span className="ml-2">
+                  | Etiqueta: {getSelectedLabel()!.width}×{getSelectedLabel()!.height}mm
+                </span>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={onClose}>Cancelar</Button>
+              <Button onClick={handleSave}>
+                <Save className="h-4 w-4 mr-2" />
+                Salvar Modelo
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Diálogo de pré-visualização */}
+      <Dialog open={isPreviewDialogOpen} onOpenChange={setIsPreviewDialogOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Pré-visualização do Modelo de Etiqueta</DialogTitle>
+            <DialogDescription>
+              Esta é uma prévia do PDF que será gerado para impressão.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="h-[70vh] bg-gray-100 rounded overflow-hidden">
+            {previewPdfUrl && (
+              <iframe 
+                src={previewPdfUrl} 
+                className="w-full h-full" 
+                title="Pré-visualização de PDF"
+              />
+            )}
+          </div>
+          
+          <div className="flex justify-end space-x-2 mt-2">
+            <Button variant="outline" onClick={() => setIsPreviewDialogOpen(false)}>
+              Fechar
+            </Button>
+            <Button onClick={handleDownloadPdf}>
+              <Download className="h-4 w-4 mr-2" />
+              Baixar PDF
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
