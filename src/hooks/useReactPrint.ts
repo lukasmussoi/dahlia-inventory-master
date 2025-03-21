@@ -18,13 +18,13 @@ export function useReactPrint({
   onAfterPrint?: () => void,
   pageStyle?: string
 }) {
-  // Usar o hook original com as opções corretas
+  // Usar o hook original com as opções corretas e tipos compatíveis
   const handlePrint = useReactToPrintOriginal({
     documentTitle: restOptions.documentTitle || 'Documento',
     onAfterPrint: restOptions.onAfterPrint,
-    // A propriedade content é necessária para o hook original
-    content: () => contentRef.current,
-    // Não passamos onBeforeGetContent diretamente, pois não é reconhecido na tipagem
+    pageStyle: restOptions.pageStyle,
+    // O hook original espera um getter para o elemento, não uma ref direta
+    content: () => contentRef.current
   });
 
   // Se temos onBeforeGetContent, temos que executá-lo antes de chamar handlePrint
