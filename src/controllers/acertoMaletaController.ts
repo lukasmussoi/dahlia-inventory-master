@@ -1,3 +1,4 @@
+
 import { SuitcaseSettlementFormData } from "@/types/suitcase";
 import { supabase } from "@/integrations/supabase/client";
 import { SuitcaseController } from "./suitcaseController";
@@ -26,21 +27,21 @@ export const acertoMaletaController = {
       ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
       const ninetyDaysAgoISO = ninetyDaysAgo.toISOString();
 
-      // Usando uma abordagem diferente que evita o erro de tipo excessivamente profundo
+      // Simplificar a consulta para evitar problemas de inferência de tipo
       const { data, error } = await supabase
-        .from('acerto_itens_vendidos')
-        .select('id')
-        .eq('inventory_id', inventoryId)
-        .eq('seller_id', sellerId)
-        .gte('sale_date', ninetyDaysAgoISO);
+        .rpc('count_item_sales', {
+          inventory_id_param: inventoryId,
+          seller_id_param: sellerId,
+          date_threshold: ninetyDaysAgoISO
+        });
       
       if (error) {
         console.error("Erro ao buscar frequência de vendas:", error);
         return { count: 0, frequency: "baixa" };
       }
       
-      // Calculamos a contagem manualmente a partir dos resultados
-      const safeCount = data ? data.length : 0;
+      // A quantidade de vendas vem como resultado da função RPC
+      const safeCount = data || 0;
       let frequency = "baixa";
       
       if (safeCount > 5) {
