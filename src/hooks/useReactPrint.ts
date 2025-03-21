@@ -22,11 +22,19 @@ export function useReactPrint({
   const handlePrint = useReactToPrintOriginal({
     documentTitle: restOptions.documentTitle || 'Documento',
     onAfterPrint: restOptions.onAfterPrint,
-    onBeforeGetContent: restOptions.onBeforeGetContent,
     // A propriedade content é necessária para o hook original
-    content: () => contentRef.current
+    content: () => contentRef.current,
+    // Não passamos onBeforeGetContent diretamente, pois não é reconhecido na tipagem
   });
 
-  // Retornar uma função sem parâmetros que invoca handlePrint
-  return () => handlePrint();
+  // Se temos onBeforeGetContent, temos que executá-lo antes de chamar handlePrint
+  const handlePrintWithBeforeContent = async () => {
+    if (restOptions.onBeforeGetContent) {
+      await restOptions.onBeforeGetContent();
+    }
+    handlePrint();
+  };
+
+  // Retornar uma função que executa a preparação e depois a impressão
+  return handlePrintWithBeforeContent;
 }

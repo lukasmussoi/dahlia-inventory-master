@@ -27,10 +27,10 @@ export const acertoMaletaController = {
       ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
       const ninetyDaysAgoISO = ninetyDaysAgo.toISOString();
 
-      // Usando abordagem diferente para evitar o erro de tipo
-      const { error, count } = await supabase
+      // Simplificando a consulta para evitar erro de tipo
+      const { data, error } = await supabase
         .from('acerto_itens_vendidos')
-        .select('*', { count: 'exact', head: true })
+        .select('id') // Selecionamos apenas o ID para evitar instantiação de tipo profunda
         .eq('inventory_id', inventoryId)
         .eq('seller_id', sellerId)
         .gte('sale_date', ninetyDaysAgoISO);
@@ -40,15 +40,17 @@ export const acertoMaletaController = {
         return { count: 0, frequency: "baixa" };
       }
       
+      // Contamos os resultados manualmente ao invés de usar count
+      const count = data ? data.length : 0;
       let frequency = "baixa";
       
-      if (count && count > 5) {
+      if (count > 5) {
         frequency = "alta";
-      } else if (count && count > 1) {
+      } else if (count > 1) {
         frequency = "média";
       }
 
-      return { count: count || 0, frequency };
+      return { count, frequency };
     } catch (error) {
       console.error("Erro ao buscar frequência de vendas:", error);
       return { count: 0, frequency: "baixa" };
