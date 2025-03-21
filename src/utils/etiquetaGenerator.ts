@@ -1,236 +1,223 @@
 
-/**
- * Gera um PDF de etiquetas personalizado com base em um modelo
- */
-import { CampoEtiqueta, ModeloEtiqueta } from "@/types/etiqueta";
+import { jsPDF } from "jspdf";
+import { generateBarcode } from "./barcodeUtils";
+import type { ModeloEtiqueta, CampoEtiqueta } from "@/types/etiqueta";
+
+interface GenerateEtiquetaPDFOptions {
+  startRow?: number;
+  startColumn?: number;
+  copias?: number;
+}
 
 /**
- * Gera um PDF de etiquetas personalizado com base em um modelo
+ * Gera um PDF de etiquetas com base em um modelo personalizado
+ * 
  * @param modelo Modelo de etiqueta personalizado
- * @param itens Lista de itens para gerar etiquetas
- * @param options Opções de geração como posição inicial e número de cópias
- * @returns URL do blob do PDF gerado
+ * @param items Array de itens a serem impressos
+ * @param options Opções de configuração
+ * @returns URL do arquivo PDF gerado
  */
 export async function generateEtiquetaPDF(
   modelo: ModeloEtiqueta,
-  itens: any[],
-  options: {
-    startRow: number,
-    startColumn: number,
-    copias: number
-  }
+  items: any[],
+  options: GenerateEtiquetaPDFOptions = {}
 ): Promise<string> {
-  // Importar jsPDF e função de geração de código de barras
-  const { jsPDF } = await import("jspdf");
-  const { generateBarcode } = await import("./barcodeUtils");
+  const {
+    startRow = 1,
+    startColumn = 1,
+    copias = 1
+  } = options;
 
-  // Definir orientação e dimensões da página
-  const orientation = modelo.orientacao === 'paisagem' ? 'landscape' : 'portrait';
+  console.log("Gerando PDF para modelo:", modelo);
+  console.log("Itens para impressão:", items);
+  console.log("Opções:", { startRow, startColumn, copias });
+
+  // Configurações da página
+  const formatoPagina = modelo.formatoPagina || "A4";
+  const orientacao = modelo.orientacao || "retrato";
   
-  let format: string | [number, number] = 'a4';
-  if (modelo.formatoPagina === 'A4') {
-    format = 'a4';
-  } else if (modelo.formatoPagina === 'Letter') {
-    format = 'letter';
-  } else if (modelo.formatoPagina === 'Legal') {
-    format = 'legal';
-  } else if (modelo.formatoPagina === 'Personalizado' && modelo.larguraPagina && modelo.alturaPagina) {
-    // Para formatos personalizados, definir diretamente as dimensões em mm
-    format = modelo.orientacao === 'paisagem' 
-      ? [modelo.alturaPagina, modelo.larguraPagina] 
-      : [modelo.larguraPagina, modelo.alturaPagina];
-  }
-
-  console.log("Configuração de página:", {
-    formato: modelo.formatoPagina,
-    orientacao: orientation,
-    dimensoes: format,
-    margens: {
-      superior: modelo.margemSuperior,
-      inferior: modelo.margemInferior,
-      esquerda: modelo.margemEsquerda,
-      direita: modelo.margemDireita
+  // Definir dimensões da página
+  let larguraPagina: number;
+  let alturaPagina: number;
+  
+  if (formatoPagina === "Personalizado" && modelo.larguraPagina && modelo.alturaPagina) {
+    larguraPagina = modelo.larguraPagina;
+    alturaPagina = modelo.alturaPagina;
+  } else {
+    // Dimensões padrão para formatos conhecidos (em mm)
+    switch (formatoPagina) {
+      case "A4":
+        larguraPagina = 210;
+        alturaPagina = 297;
+        break;
+      case "Letter":
+        larguraPagina = 216;
+        alturaPagina = 279;
+        break;
+      case "Legal":
+        larguraPagina = 216;
+        alturaPagina = 356;
+        break;
+      default:
+        larguraPagina = 210;
+        alturaPagina = 297;
     }
+  }
+  
+  // Considerar a orientação da página
+  if (orientacao === "paisagem") {
+    [larguraPagina, alturaPagina] = [alturaPagina, larguraPagina];
+  }
+  
+  console.log("Dimensões da página:", { 
+    larguraPagina, 
+    alturaPagina, 
+    orientacao 
   });
-
-  // Criar novo documento PDF
-  const doc = new jsPDF({
-    orientation: orientation as "portrait" | "landscape",
-    unit: "mm",
-    format: format,
-  });
-
+  
+  // Validar dimensões da etiqueta em relação à página
+  const margemSuperior = modelo.margemSuperior || 10;
+  const margemInferior = modelo.margemInferior || 10;
+  const margemEsquerda = modelo.margemEsquerda || 10;
+  const margemDireita = modelo.margemDireita || 10;
+  
+  const areaUtilLargura = larguraPagina - margemEsquerda - margemDireita;
+  const areaUtilAltura = alturaPagina - margemSuperior - margemInferior;
+  
+  if (modelo.largura > areaUtilLargura) {
+    throw new Error(`A largura da etiqueta (${modelo.largura}mm) é maior que a área útil disponível (${areaUtilLargura}mm).`);
+  }
+  
+  if (modelo.altura > areaUtilAltura) {
+    throw new Error(`A altura da etiqueta (${modelo.altura}mm) é maior que a área útil disponível (${areaUtilAltura}mm).`);
+  }
+  
   // Calcular quantas etiquetas cabem por página
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
+  const espacamentoHorizontal = modelo.espacamentoHorizontal || 0;
+  const espacamentoVertical = modelo.espacamentoVertical || 0;
   
-  console.log("Dimensões da página (PDF):", {
-    largura: pageWidth,
-    altura: pageHeight,
-    unidade: "mm"
+  const etiquetasPorLinha = Math.floor((areaUtilLargura + espacamentoHorizontal) / (modelo.largura + espacamentoHorizontal));
+  const etiquetasPorColuna = Math.floor((areaUtilAltura + espacamentoVertical) / (modelo.altura + espacamentoVertical));
+  
+  console.log("Cálculo de layout:", {
+    etiquetasPorLinha,
+    etiquetasPorColuna,
+    areaUtilLargura,
+    areaUtilAltura
   });
-
-  // Verificar se as dimensões são válidas
-  if (pageWidth <= 0 || pageHeight <= 0) {
-    throw new Error("Dimensões da página inválidas. Verifique as configurações do formato.");
-  }
-
-  // Obter margens da página
-  const marginLeft = modelo.margemEsquerda || 10;
-  const marginTop = modelo.margemSuperior || 10;
-  const marginRight = modelo.margemDireita || 10;
-  const marginBottom = modelo.margemInferior || 10;
-
-  // Calcular área útil
-  const usableWidth = pageWidth - marginLeft - marginRight;
-  const usableHeight = pageHeight - marginTop - marginBottom;
-
-  // Verificar se a etiqueta cabe na página
-  if (modelo.largura > usableWidth) {
-    throw new Error(`A largura da etiqueta (${modelo.largura}mm) excede a área útil da página (${usableWidth}mm).`);
-  }
   
-  if (modelo.altura > usableHeight) {
-    throw new Error(`A altura da etiqueta (${modelo.altura}mm) excede a área útil da página (${usableHeight}mm).`);
-  }
-
-  // Definir espaçamento entre etiquetas
-  const spacingH = modelo.espacamentoHorizontal || 0;
-  const spacingV = modelo.espacamentoVertical || 0;
-
-  // Calcular quantas etiquetas cabem por linha e coluna
-  const labelsPerRow = Math.floor((usableWidth + spacingH) / (modelo.largura + spacingH));
-  const labelsPerColumn = Math.floor((usableHeight + spacingV) / (modelo.altura + spacingV));
-
-  console.log("Layout de etiquetas:", {
-    etiquetasPorLinha: labelsPerRow,
-    etiquetasPorColuna: labelsPerColumn,
-    total: labelsPerRow * labelsPerColumn,
-    larguraEtiqueta: modelo.largura,
-    alturaEtiqueta: modelo.altura
+  // Criar documento PDF
+  const doc = new jsPDF({
+    orientation: orientacao === "paisagem" ? "landscape" : "portrait",
+    unit: "mm",
+    format: formatoPagina === "Personalizado" ? [larguraPagina, alturaPagina] : formatoPagina
   });
-
-  // Validar se o layout permite pelo menos uma etiqueta
-  if (labelsPerRow <= 0 || labelsPerColumn <= 0) {
-    throw new Error(
-      "Configuração inválida: não é possível imprimir nenhuma etiqueta com estas dimensões. " +
-      "Reduza o tamanho da etiqueta ou aumente o tamanho da página."
-    );
-  }
-
-  // Calcular posição inicial baseada nas opções
-  let currentRow = Math.max(0, options.startRow - 1);
-  let currentColumn = Math.max(0, options.startColumn - 1);
   
-  // Ajustar posição inicial se for maior que o layout disponível
-  if (currentRow >= labelsPerColumn) currentRow = 0;
-  if (currentColumn >= labelsPerRow) currentColumn = 0;
-
-  // Contador para novas páginas
-  let currentPage = 0;
-
+  // Configuração inicial
+  let currentRow = startRow - 1;
+  let currentColumn = startColumn - 1;
+  
+  // Garantir valores válidos
+  if (currentRow < 0) currentRow = 0;
+  if (currentColumn < 0) currentColumn = 0;
+  
+  // Cache de códigos de barras
+  const barcodeCache: Record<string, string> = {};
+  
   // Processar cada item
-  for (const item of itens) {
-    // Gerar código de barras uma vez por item para reutilizar
-    const barcodeText = item.barcode || item.sku || item.codigo || "0000000000";
-    const barcodeData = await generateBarcode(barcodeText);
-    
-    // Número de cópias para este item
-    const itemCopies = options.copias || 1;
-    
-    for (let i = 0; i < itemCopies; i++) {
+  for (const item of items) {
+    // Para cada cópia do mesmo item
+    for (let i = 0; i < copias; i++) {
       // Verificar se precisa de nova página
-      if (currentRow >= labelsPerColumn) {
+      if (currentRow >= etiquetasPorColuna) {
         currentRow = 0;
         currentColumn++;
         
-        if (currentColumn >= labelsPerRow) {
+        if (currentColumn >= etiquetasPorLinha) {
           currentColumn = 0;
           doc.addPage();
-          currentPage++;
         }
       }
-
-      // Calcular posição da etiqueta atual
-      const x = marginLeft + currentColumn * (modelo.largura + spacingH);
-      const y = marginTop + currentRow * (modelo.altura + spacingV);
-
-      // Desenhar cada campo da etiqueta
+      
+      // Calcular posição da etiqueta na página
+      const x = margemEsquerda + currentColumn * (modelo.largura + espacamentoHorizontal);
+      const y = margemSuperior + currentRow * (modelo.altura + espacamentoVertical);
+      
+      // Renderizar cada campo da etiqueta
       for (const campo of modelo.campos) {
-        try {
-          // Posição absoluta do campo
-          const campoX = x + campo.x;
-          const campoY = y + campo.y;
-
-          // Processar com base no tipo de campo
-          switch (campo.tipo) {
-            case 'nome':
-              doc.setFontSize(campo.tamanhoFonte);
-              doc.setFont("helvetica", "normal");
-              doc.text(item.nome || item.name || "Sem nome", campoX, campoY);
-              break;
-            
-            case 'codigo':
-              // Adicionar código de barras
-              doc.addImage(
-                barcodeData, 
-                "PNG", 
-                campoX, 
-                campoY, 
-                campo.largura, 
-                campo.altura
-              );
-              break;
-            
-            case 'preco':
-              doc.setFontSize(campo.tamanhoFonte);
-              doc.setFont("helvetica", "bold");
-              const price = typeof item.preco === 'number' 
-                ? item.preco.toFixed(2) 
-                : (typeof item.price === 'number' ? item.price.toFixed(2) : '0.00');
-              const priceText = `R$ ${price.replace('.', ',')}`;
-              doc.text(priceText, campoX, campoY);
-              break;
-            
-            default:
-              console.warn(`Tipo de campo desconhecido: ${campo.tipo}`);
-          }
-        } catch (error) {
-          console.error(`Erro ao processar campo ${campo.tipo}:`, error);
-        }
+        await renderCampo(doc, campo, item, x, y, barcodeCache);
       }
-
+      
       // Avançar para a próxima posição
       currentRow++;
     }
   }
-
+  
   // Gerar URL do arquivo temporário
   const pdfBlob = doc.output("blob");
   return URL.createObjectURL(pdfBlob);
 }
 
 /**
- * Gera um PDF de previsualização do modelo de etiquetas
- * @param modelo Modelo de etiqueta a ser previsualizado
- * @returns URL do blob do PDF gerado
+ * Renderiza um campo individual da etiqueta
+ */
+async function renderCampo(
+  doc: jsPDF,
+  campo: CampoEtiqueta,
+  item: any,
+  etiquetaX: number,
+  etiquetaY: number,
+  barcodeCache: Record<string, string>
+): Promise<void> {
+  const x = etiquetaX + campo.x;
+  const y = etiquetaY + campo.y;
+  
+  try {
+    switch (campo.tipo) {
+      case "nome":
+        doc.setFontSize(campo.tamanhoFonte);
+        doc.setFont("helvetica", "normal");
+        doc.text(item.name || "Sem nome", x, y);
+        break;
+        
+      case "codigo":
+        // Gerar ou recuperar código de barras do cache
+        const barcodeText = item.barcode || item.sku || "0000000000";
+        let barcodeData = barcodeCache[barcodeText];
+        
+        if (!barcodeData) {
+          barcodeData = await generateBarcode(barcodeText);
+          barcodeCache[barcodeText] = barcodeData;
+        }
+        
+        doc.addImage(barcodeData, "PNG", x, y, campo.largura, campo.altura);
+        break;
+        
+      case "preco":
+        doc.setFontSize(campo.tamanhoFonte);
+        doc.setFont("helvetica", "bold");
+        const price = typeof item.price === 'number' ? item.price.toFixed(2) : '0.00';
+        const priceText = `R$ ${price}`;
+        doc.text(priceText, x, y);
+        break;
+    }
+  } catch (error) {
+    console.error(`Erro ao renderizar campo ${campo.tipo}:`, error);
+  }
+}
+
+/**
+ * Gera um PDF de pré-visualização do modelo de etiqueta
  */
 export async function generatePreviewPDF(modelo: ModeloEtiqueta): Promise<string> {
-  // Item de exemplo para a prévia
+  // Criar um item de exemplo para pré-visualização
   const itemExemplo = {
-    nome: "Pingente Coroa Cristal",
-    codigo: "123456789",
-    preco: 59.90
+    name: "Pingente Cristal",
+    barcode: "123456789",
+    sku: "PC001",
+    price: 99.90
   };
-
-  // Usar a mesma função de geração com configurações simples
-  return generateEtiquetaPDF(
-    modelo,
-    [itemExemplo],
-    {
-      startRow: 1,
-      startColumn: 1,
-      copias: 1
-    }
-  );
+  
+  // Usar a função principal para gerar o PDF
+  return generateEtiquetaPDF(modelo, [itemExemplo], { copias: 1 });
 }
