@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { UseFormReturn } from "react-hook-form";
 import * as z from "zod";
 import { useEffect } from "react";
+import { validateDocumentSize } from "@/lib/utils";
 
 const formSchema = z.object({
   largura: z.number().min(10, "Largura mínima de 10mm").max(210, "Largura máxima de 210mm"),
@@ -80,23 +81,15 @@ export function DimensoesEtiquetaFields({ form, ajustarAutomaticamente = false }
     if (!larguraPagina || !alturaPagina) return;
     
     // Considerar orientação para ajustar as dimensões da página
-    // Se a orientação for paisagem, inverter largura e altura
-    let larguraEfetiva = larguraPagina;
-    let alturaEfetiva = alturaPagina;
+    const dimensoes = validateDocumentSize(
+      larguraPagina, 
+      alturaPagina, 
+      values.formatoPagina, 
+      orientacao
+    );
     
-    if (orientacao === 'paisagem') {
-      // Na orientação paisagem, largura é o lado maior e altura o lado menor
-      if (larguraPagina < alturaPagina) {
-        larguraEfetiva = alturaPagina;
-        alturaEfetiva = larguraPagina;
-      }
-    } else {
-      // Na orientação retrato, altura é o lado maior e largura o lado menor
-      if (larguraPagina > alturaPagina) {
-        larguraEfetiva = alturaPagina;
-        alturaEfetiva = larguraPagina;
-      }
-    }
+    const larguraEfetiva = dimensoes.width;
+    const alturaEfetiva = dimensoes.height;
     
     // Calcular área útil
     const margemEsquerda = values.margemEsquerda || 10;
@@ -104,8 +97,15 @@ export function DimensoesEtiquetaFields({ form, ajustarAutomaticamente = false }
     const margemSuperior = values.margemSuperior || 10;
     const margemInferior = values.margemInferior || 10;
     
-    const areaUtilLargura = larguraEfetiva - margemEsquerda - margemDireita;
-    const areaUtilAltura = alturaEfetiva - margemSuperior - margemInferior;
+    const areaUtilLargura = Math.max(0, larguraEfetiva - margemEsquerda - margemDireita);
+    const areaUtilAltura = Math.max(0, alturaEfetiva - margemSuperior - margemInferior);
+    
+    console.log('Validação de dimensões:', {
+      etiqueta: { largura: values.largura, altura: values.altura },
+      pagina: { largura: larguraEfetiva, altura: alturaEfetiva, orientacao },
+      margens: { esquerda: margemEsquerda, direita: margemDireita, superior: margemSuperior, inferior: margemInferior },
+      areaUtil: { largura: areaUtilLargura, altura: areaUtilAltura }
+    });
     
     // Verificar se a etiqueta é maior que a área útil
     if (values.largura > areaUtilLargura) {
@@ -118,6 +118,8 @@ export function DimensoesEtiquetaFields({ form, ajustarAutomaticamente = false }
           message: `A largura excede a área útil (${areaUtilLargura}mm). Reduza para no máximo ${Math.floor(areaUtilLargura)}mm.`
         });
       }
+    } else {
+      form.clearErrors('largura');
     }
     
     if (values.altura > areaUtilAltura) {
@@ -130,6 +132,8 @@ export function DimensoesEtiquetaFields({ form, ajustarAutomaticamente = false }
           message: `A altura excede a área útil (${areaUtilAltura}mm). Reduza para no máximo ${Math.floor(areaUtilAltura)}mm.`
         });
       }
+    } else {
+      form.clearErrors('altura');
     }
   };
 

@@ -1,6 +1,7 @@
 
 import { useReactToPrint as useReactToPrintOriginal } from "react-to-print";
 import { RefObject } from "react";
+import { validateDocumentSize } from "@/lib/utils";
 
 interface PrintOptions {
   contentRef: RefObject<HTMLElement>;
@@ -13,7 +14,7 @@ interface PrintOptions {
     width: number;
     height: number;
     unit?: 'mm' | 'cm' | 'in';
-    orientation?: 'portrait' | 'landscape';
+    orientation?: 'portrait' | 'landscape' | 'retrato' | 'paisagem';
   };
 }
 
@@ -34,31 +35,34 @@ export function useReactPrint({
   
   // Se tiver definições personalizadas de mídia
   if (mediaSize) {
+    // Mapear orientação em português para inglês
+    const orientationMapping: Record<string, 'portrait' | 'landscape'> = {
+      'portrait': 'portrait',
+      'landscape': 'landscape',
+      'retrato': 'portrait',
+      'paisagem': 'landscape'
+    };
+    
+    // Obter a orientação final (padrão: portrait)
+    const orientationInput = mediaSize.orientation || 'portrait';
+    const orientation = orientationMapping[orientationInput] || 'portrait';
+    
     // Garantir que os valores sejam números válidos
     const width = mediaSize.width && mediaSize.width > 0 ? mediaSize.width : 90;
     const height = mediaSize.height && mediaSize.height > 0 ? mediaSize.height : 10;
     const unit = mediaSize.unit || 'mm';
-    const orientation = mediaSize.orientation || 'portrait';
     
-    // Verificar se as dimensões fazem sentido para orientação
-    let finalWidth = width;
-    let finalHeight = height;
-    
-    // Se for paisagem, garantir que a largura seja maior que a altura
-    if (orientation === 'landscape' && finalWidth < finalHeight) {
-      finalWidth = height;
-      finalHeight = width;
-    }
-    
-    // Se for retrato, garantir que a altura seja maior que a largura
-    if (orientation === 'portrait' && finalWidth > finalHeight) {
-      finalWidth = height;
-      finalHeight = width;
-    }
+    // Validar e ajustar dimensões com base na orientação
+    const dimensions = validateDocumentSize(width, height, "Personalizado", orientation);
     
     // Construir tamanho personalizado
-    const size = `size: ${finalWidth}${unit} ${finalHeight}${unit};`;
+    const size = `size: ${dimensions.width}${unit} ${dimensions.height}${unit};`;
     const pageOrientation = `orientation: ${orientation};`;
+    
+    console.log('Configuração de impressão:', {
+      dimensoes: { largura: dimensions.width, altura: dimensions.height, unidade: unit },
+      orientacao: orientation
+    });
     
     // Adicionar aos estilos existentes
     pageStyle = `
@@ -69,8 +73,8 @@ export function useReactPrint({
       }
       @media print {
         html, body {
-          width: ${finalWidth}${unit};
-          height: ${finalHeight}${unit};
+          width: ${dimensions.width}${unit};
+          height: ${dimensions.height}${unit};
           margin: 0;
           padding: 0;
         }

@@ -73,7 +73,7 @@ export function validateDocumentSize(width: number, height: number, format: stri
       dimensions = { width: 216, height: 356 };
       break;
     case 'Personalizado':
-      // Para formatos personalizados, garantir dimensões mínimas
+      // Para formatos personalizados, usar os valores fornecidos e garantir dimensões mínimas
       dimensions = { 
         width: Math.max(width || 10, 10), 
         height: Math.max(height || 10, 10) 
@@ -88,28 +88,31 @@ export function validateDocumentSize(width: number, height: number, format: stri
       break;
   }
   
-  // Verificar se a orientação é válida
-  const validOrientation = ['portrait', 'landscape', 'retrato', 'paisagem'].includes(orientation);
-  if (!validOrientation) {
-    orientation = 'portrait'; // Valor padrão se inválido
-  }
+  // Verificar se a orientação é válida e mapear termos em português para inglês
+  const orientationMapping: Record<string, 'portrait' | 'landscape'> = {
+    'portrait': 'portrait',
+    'landscape': 'landscape',
+    'retrato': 'portrait',
+    'paisagem': 'landscape'
+  };
   
-  // Mapear orientação em português para inglês
-  if (orientation === 'retrato') orientation = 'portrait';
-  if (orientation === 'paisagem') orientation = 'landscape';
+  const finalOrientation = orientationMapping[orientation] || 'portrait';
   
-  // Ajustar dimensões com base na orientação
-  // Em paisagem, o lado maior é a largura, o menor é a altura
-  if (orientation === 'landscape') {
+  // Garantir que as dimensões estejam corretas para a orientação especificada
+  if (finalOrientation === 'landscape') {
+    // Em paisagem, o lado maior deve ser a largura
     if (dimensions.width < dimensions.height) {
+      // Trocar largura e altura
       return { width: dimensions.height, height: dimensions.width };
     }
   } else {
-    // Em retrato, o lado maior é a altura, o menor é a largura
+    // Em retrato, o lado maior deve ser a altura
     if (dimensions.width > dimensions.height) {
+      // Trocar largura e altura
       return { width: dimensions.height, height: dimensions.width };
     }
   }
   
+  // Retornar as dimensões sem alterações se já estiverem na orientação correta
   return dimensions;
 }
