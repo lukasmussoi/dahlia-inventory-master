@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar as CalendarIcon, Check, X, BarcodeIcon, ShoppingBag, FileText, Printer } from "lucide-react";
+import { Calendar as CalendarIcon, Check, X, BarcodeIcon, ShoppingBag, FileText, Printer, Package } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -134,12 +134,12 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
       
       const result = await AcertoMaletaController.createAcerto(formData);
       
-      toast.success("Acerto da maleta realizado com sucesso!");
+      toast.success("Acerto da maleta realizado com sucesso! Todos os itens restantes foram devolvidos ao estoque.");
       
       queryClient.invalidateQueries({ queryKey: ['suitcases'] });
       queryClient.invalidateQueries({ queryKey: ['acertos'] });
       
-      onOpenChange(false);
+      setCreatedAcertoId(result);
       
       if (onSuccess) {
         onSuccess();
@@ -209,7 +209,8 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
               <CardHeader>
                 <CardTitle className="text-center text-green-600">Acerto Concluído com Sucesso!</CardTitle>
                 <CardDescription className="text-center">
-                  O acerto da maleta foi registrado com sucesso.
+                  O acerto da maleta foi registrado com sucesso e todos os itens restantes foram devolvidos ao estoque.
+                  A maleta agora está vazia e pronta para uma nova reposição.
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">

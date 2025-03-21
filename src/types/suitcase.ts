@@ -1,4 +1,3 @@
-
 export type SuitcaseStatus = 'in_use' | 'returned' | 'in_replenishment' | 'lost' | 'in_audit';
 export type SuitcaseItemStatus = 'in_possession' | 'sold' | 'returned' | 'lost';
 export type AcertoStatus = 'pendente' | 'concluido';
@@ -34,7 +33,6 @@ export interface SuitcaseItem {
   sales?: SuitcaseItemSale[];
 }
 
-// Interface para facilitar o tratamento de photo_url
 export interface PhotoUrl {
   photo_url: string;
 }
@@ -57,6 +55,7 @@ export interface Suitcase {
   updated_at?: string;
   next_settlement_date?: string;
   sent_at?: string;
+  is_empty?: boolean;  // Novo campo para indicar se a maleta está vazia
   seller?: {
     id: string;
     name: string;
