@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, memo } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,13 @@ import { formatCurrency, formatPercent } from "@/lib/utils";
 import { getProductPhotoUrl } from "@/utils/photoUtils";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+
+// Interface para estender jsPDF com as propriedades adicionadas pelo jspdf-autotable
+interface ExtendedJsPDF extends jsPDF {
+  lastAutoTable?: {
+    finalY: number;
+  };
+}
 
 interface AcertoDetailsDialogProps {
   open: boolean;
@@ -145,7 +153,8 @@ export function AcertoDetailsDialog({
     if (!currentAcerto) return;
 
     try {
-      const doc = new jsPDF();
+      // Usando o tipo estendido que inclui lastAutoTable
+      const doc = new jsPDF() as ExtendedJsPDF;
       
       if (typeof autoTable !== "function") {
         throw new Error("jspdf-autotable não foi corretamente importado.");
@@ -204,6 +213,7 @@ export function AcertoDetailsDialog({
         }
       }
       
+      // Calcular a posição Y final com segurança
       let finalY = 70;
       if (doc.lastAutoTable) {
         finalY = doc.lastAutoTable.finalY;
