@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, memo } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -22,7 +21,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency, formatPercent } from "@/lib/utils";
 import { getProductPhotoUrl } from "@/utils/photoUtils";
 import jsPDF from "jspdf";
-import "jspdf-autotable";
+import autoTable from "jspdf-autotable";
 
 interface AcertoDetailsDialogProps {
   open: boolean;
@@ -30,7 +29,6 @@ interface AcertoDetailsDialogProps {
   acertoId?: string;
 }
 
-// Memorizamos o componente de venda para evitar re-renderizações desnecessárias
 const AcertoItemCard = memo(({ item }: { item: any }) => {
   const formatPaymentMethod = (method?: string) => {
     if (!method) return "Não informado";
@@ -98,7 +96,6 @@ const AcertoItemCard = memo(({ item }: { item: any }) => {
   );
 });
 
-// Memorizamos o componente de sugestão para evitar re-renderizações desnecessárias
 const RestockSuggestionCard = memo(({ suggestion, index }: { suggestion: any, index: number }) => {
   return (
     <div key={index} className="border rounded-md p-3">
@@ -128,7 +125,6 @@ export function AcertoDetailsDialog({
     return format(new Date(dateString), "dd/MM/yyyy", { locale: ptBR });
   }, []);
 
-  // Otimizamos usando a versão mais recente do tanstack/react-query
   const { data: acerto, isLoading, isError } = useQuery({
     queryKey: ['acerto', acertoId],
     queryFn: async () => {
@@ -136,10 +132,9 @@ export function AcertoDetailsDialog({
       return await AcertoMaletaController.getAcertoById(acertoId) as Acerto;
     },
     enabled: !!acertoId && open,
-    staleTime: 60000, // Cache por 1 minuto para evitar requisições desnecessárias
+    staleTime: 60000,
   });
 
-  // Atualizar o estado quando os dados mudarem
   useEffect(() => {
     if (acerto) {
       setCurrentAcerto(acerto);
@@ -150,14 +145,15 @@ export function AcertoDetailsDialog({
     if (!currentAcerto) return;
 
     try {
-      // Criar um novo documento PDF
       const doc = new jsPDF();
       
-      // Adicionar título
+      if (typeof autoTable !== "function") {
+        throw new Error("jspdf-autotable não foi corretamente importado.");
+      }
+      
       doc.setFontSize(16);
       doc.text("Relatório de Acerto da Maleta", 14, 15);
       
-      // Informações do acerto
       doc.setFontSize(12);
       doc.text(`Data do acerto: ${formatDate(currentAcerto.settlement_date)}`, 14, 25);
       doc.text(`Revendedora: ${currentAcerto.seller?.name || "Não informado"}`, 14, 30);
@@ -166,7 +162,6 @@ export function AcertoDetailsDialog({
         doc.text(`Próximo acerto: ${formatDate(currentAcerto.next_settlement_date.toString())}`, 14, 35);
       }
 
-      // Resumo financeiro
       doc.setFontSize(14);
       doc.text("Resumo Financeiro", 14, 45);
       doc.setFontSize(12);
@@ -177,19 +172,15 @@ export function AcertoDetailsDialog({
         doc.text(`Lucro líquido: ${formatCurrency(currentAcerto.net_profit)}`, 14, 60);
       }
       
-      // Itens vendidos
       if (currentAcerto.items_vendidos && currentAcerto.items_vendidos.length > 0) {
-        // Cabeçalho da tabela de itens
         const tableHeaders = [["Produto", "Código", "Preço", "Comissão", "Lucro"]];
         
-        // Limitamos a 50 itens por página para evitar problemas de memória
         const itemsPerPage = 50;
         const items = currentAcerto.items_vendidos.slice(0, Math.min(currentAcerto.items_vendidos.length, 200)); 
         
         for (let i = 0; i < items.length; i += itemsPerPage) {
           const pageItems = items.slice(i, i + itemsPerPage);
           
-          // Dados da tabela
           const tableData = pageItems.map(item => [
             item.product?.name || "Produto não encontrado",
             item.product?.sku || "-",
@@ -198,9 +189,8 @@ export function AcertoDetailsDialog({
             formatCurrency(item.net_profit || 0)
           ]);
           
-          // Criar tabela
-          (doc as any).autoTable({
-            head: i === 0 ? tableHeaders : [], // Só mostra o cabeçalho na primeira página
+          autoTable(doc, {
+            head: i === 0 ? tableHeaders : [],
             body: tableData,
             startY: i === 0 ? 70 : 10,
             theme: 'striped',
@@ -208,23 +198,24 @@ export function AcertoDetailsDialog({
             headStyles: { fillColor: [233, 30, 99] }
           });
           
-          // Adicionar nova página se não for a última iteração
           if (i + itemsPerPage < items.length) {
             doc.addPage();
           }
         }
       }
       
-      // Adicionar informações adicionais
-      const finalY = (doc as any).lastAutoTable?.finalY || 70;
+      let finalY = 70;
+      if (doc.lastAutoTable) {
+        finalY = doc.lastAutoTable.finalY;
+      }
+      
       doc.text("Relatório gerado em: " + format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR }), 14, finalY + 10);
       
-      // Salvar o PDF
       doc.save(`Acerto_Maleta_${formatDate(currentAcerto.settlement_date)}.pdf`);
       toast.success("Relatório de acerto gerado com sucesso!");
     } catch (error) {
       console.error("Erro ao gerar PDF:", error);
-      toast.error("Erro ao gerar o relatório PDF");
+      toast.error("Erro ao gerar o relatório PDF. Verifique se todas as dependências estão instaladas corretamente.");
     }
   }, [currentAcerto, formatDate]);
 
