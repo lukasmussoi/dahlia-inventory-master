@@ -1,3 +1,4 @@
+
 import { SuitcaseSettlementFormData } from "@/types/suitcase";
 import { supabase } from "@/integrations/supabase/client";
 import { SuitcaseController } from "./suitcaseController";
@@ -23,13 +24,17 @@ export const acertoMaletaController = {
   async getItemSalesFrequency(inventoryId: string, sellerId: string): Promise<{ count: number; frequency: string }> {
     const ninetyDaysAgo = new Date();
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+    const ninetyDaysAgoISO = ninetyDaysAgo.toISOString();
 
-    const { data, error } = await supabase
+    // Simplificada para evitar problemas de tipo
+    const query = supabase
       .from('acerto_itens_vendidos')
       .select('id')
       .eq('inventory_id', inventoryId)
       .eq('seller_id', sellerId)
-      .gte('sale_date', ninetyDaysAgo.toISOString());
+      .gte('sale_date', ninetyDaysAgoISO);
+
+    const { data, error } = await query;
 
     if (error) {
       console.error("Erro ao buscar frequência de vendas:", error);
