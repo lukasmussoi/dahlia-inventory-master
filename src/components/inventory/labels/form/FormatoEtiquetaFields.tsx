@@ -16,6 +16,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { UseFormReturn } from "react-hook-form";
 import * as z from "zod";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { InfoIcon } from "lucide-react";
 
 const formSchema = z.object({
   formatoPagina: z.string(),
@@ -83,43 +85,53 @@ export function FormatoEtiquetaFields({ form }: FormatoEtiquetaFieldsProps) {
       </div>
 
       {showCustomDimensions && (
-        <div className="grid grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="larguraPagina"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Largura da Página (mm)</FormLabel>
-                <FormControl>
-                  <Input 
-                    type="number" 
-                    {...field} 
-                    onChange={e => field.onChange(Number(e.target.value))}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+        <>
+          <div className="grid grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="larguraPagina"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Largura da Página (mm)</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="number" 
+                      {...field} 
+                      onChange={e => field.onChange(Number(e.target.value))}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          <FormField
-            control={form.control}
-            name="alturaPagina"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Altura da Página (mm)</FormLabel>
-                <FormControl>
-                  <Input 
-                    type="number" 
-                    {...field} 
-                    onChange={e => field.onChange(Number(e.target.value))}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+            <FormField
+              control={form.control}
+              name="alturaPagina"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Altura da Página (mm)</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="number" 
+                      {...field} 
+                      onChange={e => field.onChange(Number(e.target.value))}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          
+          <Alert variant="info" className="mt-2">
+            <InfoIcon className="h-4 w-4" />
+            <AlertDescription>
+              Lembre-se que a orientação afeta como as dimensões são interpretadas. 
+              No modo paisagem, a largura será maior que a altura.
+            </AlertDescription>
+          </Alert>
+        </>
       )}
     </div>
   );

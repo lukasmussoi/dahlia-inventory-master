@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { EtiquetaCustomModel } from "@/models/etiquetaCustomModel";
 import type { CampoEtiqueta } from "@/types/etiqueta";
 import { generateEtiquetaPDF } from "./etiquetaGenerator";
+import { ensureString, getPageDimensions } from "@/lib/utils";
 
 interface GeneratePdfLabelOptions {
   item: any;
@@ -42,31 +43,43 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
         console.log("Modelo personalizado encontrado:", modeloCustom);
         console.log("Campos do modelo:", modeloCustom.campos);
         
+        // Obter dimensões da página considerando a orientação
+        const { largura: larguraPagina, altura: alturaPagina } = getPageDimensions(
+          modeloCustom.formatoPagina,
+          modeloCustom.orientacao,
+          modeloCustom.larguraPagina,
+          modeloCustom.alturaPagina
+        );
+        
+        // Atualizar as dimensões no modelo para garantir consistência
+        modeloCustom.larguraPagina = larguraPagina;
+        modeloCustom.alturaPagina = alturaPagina;
+        
         // Validar dimensões da página personalizada
         if (modeloCustom.formatoPagina === "Personalizado") {
           console.log("Verificando dimensões personalizadas:", {
-            larguraPagina: modeloCustom.larguraPagina,
-            alturaPagina: modeloCustom.alturaPagina
+            larguraPagina,
+            alturaPagina
           });
           
           // Se as dimensões não estiverem definidas, definir um padrão
-          if (!modeloCustom.larguraPagina || !modeloCustom.alturaPagina) {
+          if (!larguraPagina || !alturaPagina) {
             console.warn("Dimensões personalizadas não definidas. Usando valores padrão.");
             modeloCustom.larguraPagina = 210; // A4 width em mm
             modeloCustom.alturaPagina = 297; // A4 height em mm
           }
           
           // Validar valores positivos
-          if (modeloCustom.larguraPagina <= 0 || modeloCustom.alturaPagina <= 0) {
+          if (larguraPagina <= 0 || alturaPagina <= 0) {
             console.error("Dimensões de página inválidas:", { 
-              largura: modeloCustom.larguraPagina, 
-              altura: modeloCustom.alturaPagina 
+              largura: larguraPagina, 
+              altura: alturaPagina 
             });
             throw new Error("Dimensões de página personalizadas inválidas. Os valores devem ser maiores que zero.");
           }
           
           // Validar se a etiqueta cabe na página
-          const areaUtilLargura = modeloCustom.larguraPagina - modeloCustom.margemEsquerda - modeloCustom.margemDireita;
+          const areaUtilLargura = larguraPagina - modeloCustom.margemEsquerda - modeloCustom.margemDireita;
           if (modeloCustom.largura > areaUtilLargura) {
             console.error("Etiqueta maior que área útil:", {
               larguraEtiqueta: modeloCustom.largura,
@@ -81,7 +94,7 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
             );
           }
           
-          const areaUtilAltura = modeloCustom.alturaPagina - modeloCustom.margemSuperior - modeloCustom.margemInferior;
+          const areaUtilAltura = alturaPagina - modeloCustom.margemSuperior - modeloCustom.margemInferior;
           if (modeloCustom.altura > areaUtilAltura) {
             console.error("Etiqueta maior que área útil:", {
               alturaEtiqueta: modeloCustom.altura,
@@ -199,7 +212,7 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
     if (currentColumn < 0) currentColumn = 0;
 
     // Gerar código de barras uma vez para reutilizar
-    const barcodeText = item.barcode || item.sku || "0000000000";
+    const barcodeText = ensureString(item.barcode || item.sku || "0000000000");
     const barcodeData = await generateBarcode(barcodeText);
 
     for (let i = 0; i < totalCopies; i++) {
@@ -228,7 +241,7 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
       try {
         doc.setFontSize(campoNome.tamanhoFonte);
         doc.setFont("helvetica", "normal");
-        const nomeProduto = item.name || "Sem nome";
+        const nomeProduto = ensureString(item.name || "Sem nome");
         doc.text(nomeProduto, x + campoNome.x, y + campoNome.y);
       } catch (error) {
         console.error("Erro ao adicionar nome do produto:", error);

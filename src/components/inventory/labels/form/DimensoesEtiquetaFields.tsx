@@ -10,11 +10,13 @@ import { Input } from "@/components/ui/input";
 import { UseFormReturn } from "react-hook-form";
 import * as z from "zod";
 import { useEffect } from "react";
+import { getPageDimensions } from "@/lib/utils";
 
 const formSchema = z.object({
   largura: z.number().min(10, "Largura mínima de 10mm").max(210, "Largura máxima de 210mm"),
   altura: z.number().min(5, "Altura mínima de 5mm").max(297, "Altura máxima de 297mm"),
   formatoPagina: z.string().optional(),
+  orientacao: z.string().optional(),
   larguraPagina: z.number().optional(),
   alturaPagina: z.number().optional(),
   margemEsquerda: z.number().optional(),
@@ -33,7 +35,7 @@ export function DimensoesEtiquetaFields({ form, ajustarAutomaticamente = false }
   useEffect(() => {
     const subscription = form.watch((value, { name }) => {
       // Verificar apenas quando os valores relevantes mudarem
-      if (['largura', 'altura', 'formatoPagina', 'larguraPagina', 'alturaPagina', 
+      if (['largura', 'altura', 'formatoPagina', 'orientacao', 'larguraPagina', 'alturaPagina', 
            'margemEsquerda', 'margemDireita', 'margemSuperior', 'margemInferior'].includes(name as string)) {
         validarDimensoes();
       }
@@ -49,26 +51,13 @@ export function DimensoesEtiquetaFields({ form, ajustarAutomaticamente = false }
     // Se não houver valores de página definidos, não valida
     if (!values.formatoPagina) return;
     
-    let larguraPagina = values.larguraPagina;
-    let alturaPagina = values.alturaPagina;
-    
-    // Para formatos predefinidos
-    if (values.formatoPagina !== "Personalizado") {
-      switch (values.formatoPagina) {
-        case "A4":
-          larguraPagina = 210;
-          alturaPagina = 297;
-          break;
-        case "Letter":
-          larguraPagina = 216;
-          alturaPagina = 279;
-          break;
-        case "Legal":
-          larguraPagina = 216;
-          alturaPagina = 356;
-          break;
-      }
-    }
+    // Obter dimensões da página considerando a orientação
+    const { largura: larguraPagina, altura: alturaPagina } = getPageDimensions(
+      values.formatoPagina,
+      values.orientacao || 'retrato',
+      values.larguraPagina,
+      values.alturaPagina
+    );
     
     // Se não houver largura e altura válidas, não continua
     if (!larguraPagina || !alturaPagina) return;

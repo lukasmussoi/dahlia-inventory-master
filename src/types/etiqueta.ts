@@ -9,6 +9,7 @@ export interface CampoEtiqueta {
   altura: number;
   tamanhoFonte: number;
   valor?: string;
+  alinhamento?: 'left' | 'center' | 'right';
 }
 
 export interface ModeloEtiqueta {
