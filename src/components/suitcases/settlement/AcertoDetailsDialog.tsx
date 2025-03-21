@@ -50,17 +50,22 @@ export function AcertoDetailsDialog({
     return methods[method] || method;
   };
 
+  // A versão mais recente do TanStack Query não suporta onSuccess diretamente nas opções
   const { data: acerto, isLoading } = useQuery({
     queryKey: ['acerto', acertoId],
     queryFn: async () => {
       const data = await AcertoMaletaController.getAcertoById(acertoId);
       return data as Acerto;
     },
-    enabled: !!acertoId && open,
-    onSuccess: (data) => {
-      setCurrentAcerto(data as Acerto);
-    }
+    enabled: !!acertoId && open
   });
+
+  // Usar useEffect para setar o estado quando os dados chegarem
+  useEffect(() => {
+    if (acerto) {
+      setCurrentAcerto(acerto);
+    }
+  }, [acerto]);
 
   if (!acertoId) return null;
 
