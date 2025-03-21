@@ -16,9 +16,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { UseFormReturn } from "react-hook-form";
 import * as z from "zod";
-import { useEffect } from "react";
-import { AlertCircle } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const formSchema = z.object({
   formatoPagina: z.string(),
@@ -34,29 +31,6 @@ type FormatoEtiquetaFieldsProps = {
 export function FormatoEtiquetaFields({ form }: FormatoEtiquetaFieldsProps) {
   const formatoPagina = form.watch("formatoPagina");
   const showCustomDimensions = formatoPagina === "Personalizado";
-  
-  // Garantir que a orientação seja sempre definida
-  useEffect(() => {
-    if (!form.getValues("orientacao")) {
-      // Definir orientação padrão para retrato se não estiver definida
-      form.setValue("orientacao", "retrato");
-    }
-    
-    // Se for etiqueta pequena, forçar orientação paisagem
-    if (formatoPagina === "etiqueta-pequena") {
-      form.setValue("orientacao", "paisagem");
-    }
-    
-    // Se for formato personalizado e não tiver dimensões definidas
-    if (formatoPagina === "Personalizado") {
-      if (!form.getValues("larguraPagina") || form.getValues("larguraPagina") <= 0) {
-        form.setValue("larguraPagina", 210); // Valor padrão A4
-      }
-      if (!form.getValues("alturaPagina") || form.getValues("alturaPagina") <= 0) {
-        form.setValue("alturaPagina", 297); // Valor padrão A4
-      }
-    }
-  }, [formatoPagina, form]);
 
   return (
     <div className="space-y-4">
@@ -77,7 +51,6 @@ export function FormatoEtiquetaFields({ form }: FormatoEtiquetaFieldsProps) {
                   <SelectItem value="A4">A4</SelectItem>
                   <SelectItem value="Letter">Letter</SelectItem>
                   <SelectItem value="Legal">Legal</SelectItem>
-                  <SelectItem value="etiqueta-pequena">Etiqueta 90x10mm</SelectItem>
                   <SelectItem value="Personalizado">Personalizado</SelectItem>
                 </SelectContent>
               </Select>
@@ -92,11 +65,7 @@ export function FormatoEtiquetaFields({ form }: FormatoEtiquetaFieldsProps) {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Orientação</FormLabel>
-              <Select 
-                onValueChange={field.onChange} 
-                defaultValue={field.value}
-                disabled={formatoPagina === "etiqueta-pequena"}
-              >
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione a orientação" />
@@ -114,53 +83,43 @@ export function FormatoEtiquetaFields({ form }: FormatoEtiquetaFieldsProps) {
       </div>
 
       {showCustomDimensions && (
-        <>
-          <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="larguraPagina"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Largura da Página (mm)</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="number" 
-                      {...field} 
-                      onChange={e => field.onChange(Number(e.target.value))}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="larguraPagina"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Largura da Página (mm)</FormLabel>
+                <FormControl>
+                  <Input 
+                    type="number" 
+                    {...field} 
+                    onChange={e => field.onChange(Number(e.target.value))}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-            <FormField
-              control={form.control}
-              name="alturaPagina"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Altura da Página (mm)</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="number" 
-                      {...field} 
-                      onChange={e => field.onChange(Number(e.target.value))}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-          
-          <Alert variant="info" className="bg-blue-50 text-blue-800 border-blue-200">
-            <AlertCircle className="h-4 w-4 text-blue-600" />
-            <AlertDescription>
-              Lembre-se que em orientação paisagem, a largura é maior que a altura.
-              Em orientação retrato, a altura é maior que a largura.
-            </AlertDescription>
-          </Alert>
-        </>
+          <FormField
+            control={form.control}
+            name="alturaPagina"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Altura da Página (mm)</FormLabel>
+                <FormControl>
+                  <Input 
+                    type="number" 
+                    {...field} 
+                    onChange={e => field.onChange(Number(e.target.value))}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
       )}
     </div>
   );

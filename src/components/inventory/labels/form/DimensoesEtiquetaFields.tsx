@@ -10,7 +10,6 @@ import { Input } from "@/components/ui/input";
 import { UseFormReturn } from "react-hook-form";
 import * as z from "zod";
 import { useEffect } from "react";
-import { validateDocumentSize } from "@/lib/utils";
 
 const formSchema = z.object({
   largura: z.number().min(10, "Largura mínima de 10mm").max(210, "Largura máxima de 210mm"),
@@ -22,7 +21,6 @@ const formSchema = z.object({
   margemDireita: z.number().optional(),
   margemSuperior: z.number().optional(),
   margemInferior: z.number().optional(),
-  orientacao: z.string().optional(),
 });
 
 type DimensoesEtiquetaFieldsProps = {
@@ -36,7 +34,7 @@ export function DimensoesEtiquetaFields({ form, ajustarAutomaticamente = false }
     const subscription = form.watch((value, { name }) => {
       // Verificar apenas quando os valores relevantes mudarem
       if (['largura', 'altura', 'formatoPagina', 'larguraPagina', 'alturaPagina', 
-           'margemEsquerda', 'margemDireita', 'margemSuperior', 'margemInferior', 'orientacao'].includes(name as string)) {
+           'margemEsquerda', 'margemDireita', 'margemSuperior', 'margemInferior'].includes(name as string)) {
         validarDimensoes();
       }
     });
@@ -53,7 +51,6 @@ export function DimensoesEtiquetaFields({ form, ajustarAutomaticamente = false }
     
     let larguraPagina = values.larguraPagina;
     let alturaPagina = values.alturaPagina;
-    const orientacao = values.orientacao || 'retrato';
     
     // Para formatos predefinidos
     if (values.formatoPagina !== "Personalizado") {
@@ -70,26 +67,11 @@ export function DimensoesEtiquetaFields({ form, ajustarAutomaticamente = false }
           larguraPagina = 216;
           alturaPagina = 356;
           break;
-        case "etiqueta-pequena":
-          larguraPagina = 90;
-          alturaPagina = 10;
-          break;
       }
     }
     
     // Se não houver largura e altura válidas, não continua
     if (!larguraPagina || !alturaPagina) return;
-    
-    // Considerar orientação para ajustar as dimensões da página
-    const dimensoes = validateDocumentSize(
-      larguraPagina, 
-      alturaPagina, 
-      values.formatoPagina, 
-      orientacao
-    );
-    
-    const larguraEfetiva = dimensoes.width;
-    const alturaEfetiva = dimensoes.height;
     
     // Calcular área útil
     const margemEsquerda = values.margemEsquerda || 10;
@@ -97,15 +79,8 @@ export function DimensoesEtiquetaFields({ form, ajustarAutomaticamente = false }
     const margemSuperior = values.margemSuperior || 10;
     const margemInferior = values.margemInferior || 10;
     
-    const areaUtilLargura = Math.max(0, larguraEfetiva - margemEsquerda - margemDireita);
-    const areaUtilAltura = Math.max(0, alturaEfetiva - margemSuperior - margemInferior);
-    
-    console.log('Validação de dimensões:', {
-      etiqueta: { largura: values.largura, altura: values.altura },
-      pagina: { largura: larguraEfetiva, altura: alturaEfetiva, orientacao },
-      margens: { esquerda: margemEsquerda, direita: margemDireita, superior: margemSuperior, inferior: margemInferior },
-      areaUtil: { largura: areaUtilLargura, altura: areaUtilAltura }
-    });
+    const areaUtilLargura = larguraPagina - margemEsquerda - margemDireita;
+    const areaUtilAltura = alturaPagina - margemSuperior - margemInferior;
     
     // Verificar se a etiqueta é maior que a área útil
     if (values.largura > areaUtilLargura) {
@@ -118,8 +93,6 @@ export function DimensoesEtiquetaFields({ form, ajustarAutomaticamente = false }
           message: `A largura excede a área útil (${areaUtilLargura}mm). Reduza para no máximo ${Math.floor(areaUtilLargura)}mm.`
         });
       }
-    } else {
-      form.clearErrors('largura');
     }
     
     if (values.altura > areaUtilAltura) {
@@ -132,8 +105,6 @@ export function DimensoesEtiquetaFields({ form, ajustarAutomaticamente = false }
           message: `A altura excede a área útil (${areaUtilAltura}mm). Reduza para no máximo ${Math.floor(areaUtilAltura)}mm.`
         });
       }
-    } else {
-      form.clearErrors('altura');
     }
   };
 

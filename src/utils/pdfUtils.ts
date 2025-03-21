@@ -5,7 +5,6 @@ import { toast } from "sonner";
 import { EtiquetaCustomModel } from "@/models/etiquetaCustomModel";
 import type { CampoEtiqueta } from "@/types/etiqueta";
 import { generateEtiquetaPDF } from "./etiquetaGenerator";
-import { validateDocumentSize } from "@/lib/utils";
 
 interface GeneratePdfLabelOptions {
   item: any;
@@ -47,8 +46,7 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
         if (modeloCustom.formatoPagina === "Personalizado") {
           console.log("Verificando dimensões personalizadas:", {
             larguraPagina: modeloCustom.larguraPagina,
-            alturaPagina: modeloCustom.alturaPagina,
-            orientacao: modeloCustom.orientacao
+            alturaPagina: modeloCustom.alturaPagina
           });
           
           // Se as dimensões não estiverem definidas, definir um padrão
@@ -67,35 +65,8 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
             throw new Error("Dimensões de página personalizadas inválidas. Os valores devem ser maiores que zero.");
           }
           
-          // Garantir que a orientação esteja definida
-          if (!modeloCustom.orientacao) {
-            console.warn("Orientação não definida, usando paisagem como padrão");
-            modeloCustom.orientacao = "paisagem";
-          }
-          
-          // Mapear orientação em português para inglês (para jsPDF)
-          const orientacaoJS = modeloCustom.orientacao === "paisagem" ? "landscape" : "portrait";
-          
-          // Ajustar dimensões com base na orientação
-          let areaUtilLargura = modeloCustom.larguraPagina;
-          let areaUtilAltura = modeloCustom.alturaPagina;
-          
-          if ((orientacaoJS === "landscape" && areaUtilAltura > areaUtilLargura) ||
-              (orientacaoJS === "portrait" && areaUtilLargura > areaUtilAltura)) {
-            // Trocar as dimensões para corresponder à orientação
-            [areaUtilLargura, areaUtilAltura] = [areaUtilAltura, areaUtilLargura];
-          }
-          
-          // Subtrair as margens para obter a área útil
-          const margemEsquerda = modeloCustom.margemEsquerda || 0;
-          const margemDireita = modeloCustom.margemDireita || 0;
-          const margemSuperior = modeloCustom.margemSuperior || 0;
-          const margemInferior = modeloCustom.margemInferior || 0;
-          
-          areaUtilLargura -= (margemEsquerda + margemDireita);
-          areaUtilAltura -= (margemSuperior + margemInferior);
-          
           // Validar se a etiqueta cabe na página
+          const areaUtilLargura = modeloCustom.larguraPagina - modeloCustom.margemEsquerda - modeloCustom.margemDireita;
           if (modeloCustom.largura > areaUtilLargura) {
             console.error("Etiqueta maior que área útil:", {
               larguraEtiqueta: modeloCustom.largura,
@@ -110,6 +81,7 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
             );
           }
           
+          const areaUtilAltura = modeloCustom.alturaPagina - modeloCustom.margemSuperior - modeloCustom.margemInferior;
           if (modeloCustom.altura > areaUtilAltura) {
             console.error("Etiqueta maior que área útil:", {
               alturaEtiqueta: modeloCustom.altura,
@@ -133,32 +105,8 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
         
         try {
           console.log("Iniciando geração de PDF com modelo personalizado");
-          
-          // Preparar os campos com textos adequados para evitar o erro jsPDF.hpf
-          const camposPreparados = modeloCustom.campos.map(campo => {
-            // Necessário para evitar erro "Invalid argument passed to jsPDF.hpf"
-            // Converter cada campo para ter um valor de texto definido como string simples
-            const textoSeguro = 
-              campo.tipo === 'nome' ? (item.name || 'Nome do Produto') : 
-              campo.tipo === 'codigo' ? (item.sku || '123456789') : 
-              (item.price ? `R$ ${item.price.toFixed(2).replace('.', ',')}` : 'R$ 0,00');
-            
-            return {
-              ...campo,
-              text: textoSeguro // Adicionar texto seguro para cada campo
-            };
-          });
-          
-          // Substituir os campos originais pelos preparados
-          const modeloPreparado = {
-            ...modeloCustom,
-            campos: camposPreparados
-          };
-          
-          console.log("Campos preparados para impressão:", camposPreparados);
-          
           return await generateEtiquetaPDF(
-            modeloPreparado,
+            modeloCustom,
             [item], // Passamos o item como um array
             {
               startRow,
@@ -184,43 +132,17 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
 
     // Configurações padrão da etiqueta (caso não tenha modelo personalizado)
     console.log("Usando configurações padrão para etiquetas");
-    let labelWidth = 90;  // largura em mm (ajustado para 90mm)
-    let labelHeight = 10;  // altura em mm (ajustado para 10mm)
-    let marginLeft = 0;   // margem esquerda em mm
-    let marginTop = 0;    // margem superior em mm
-    let spacing = 0;       // espaçamento entre etiquetas em mm
-    let orientation = "landscape"; // orientação paisagem
-    let format = [90, 10]; // formato personalizado
-    
-    // Criar campos para a etiqueta padrão com textos seguros
-    let campos = [
-      { 
-        tipo: 'nome', 
-        x: 2, 
-        y: 4, 
-        largura: 40, 
-        altura: 5, 
-        tamanhoFonte: 7,
-        text: item.name || 'Nome do Produto'
-      },
-      { 
-        tipo: 'codigo', 
-        x: 2, 
-        y: 1, 
-        largura: 40, 
-        altura: 3, 
-        tamanhoFonte: 6,
-        text: item.sku || '123456789'
-      },
-      { 
-        tipo: 'preco', 
-        x: 70, 
-        y: 5, 
-        largura: 20, 
-        altura: 5, 
-        tamanhoFonte: 8,
-        text: `R$ ${item.price?.toFixed(2).replace('.', ',') || '0,00'}`
-      }
+    let labelWidth = 80;  // largura em mm
+    let labelHeight = 30;  // altura em mm
+    let marginLeft = 10;   // margem esquerda em mm
+    let marginTop = 10;    // margem superior em mm
+    let spacing = 5;       // espaçamento entre etiquetas em mm
+    let orientation = "landscape";
+    let format = "a4";
+    let campos: CampoEtiqueta[] = [
+      { tipo: 'nome', x: 2, y: 4, largura: 40, altura: 10, tamanhoFonte: 7 },
+      { tipo: 'codigo', x: 20, y: 1, largura: 40, altura: 6, tamanhoFonte: 8 },
+      { tipo: 'preco', x: 70, y: 4, largura: 20, altura: 10, tamanhoFonte: 10 }
     ];
 
     // Criar novo documento PDF com as configurações adequadas
@@ -228,15 +150,6 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
       orientation: orientation as "portrait" | "landscape",
       unit: "mm",
       format: format,
-    });
-
-    // Configurar metadados do PDF
-    doc.setProperties({
-      title: "Dalia Manager - Etiquetas",
-      author: "Dalia Manager",
-      subject: "Etiquetas",
-      keywords: "etiquetas, PDF, dalia manager",
-      creator: "Dalia Manager"
     });
 
     // Calcular quantas etiquetas cabem por página
@@ -257,86 +170,89 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
       throw new Error("A largura da etiqueta é maior que a largura útil da página. Por favor, ajuste as dimensões.");
     }
     
-    // Para uma etiqueta única, definimos apenas 1 por página
-    const labelsPerRow = 1;
-    const labelsPerColumn = 1;
+    // Calcular quantas etiquetas cabem na página
+    const labelsPerRow = Math.floor((pageWidth - 2 * marginLeft) / (labelWidth + spacing));
+    const labelsPerColumn = Math.floor((pageHeight - 2 * marginTop) / (labelHeight + spacing));
 
     console.log("Configurações de etiqueta:", { 
       labelWidth, labelHeight, marginLeft, marginTop, spacing,
       labelsPerRow, labelsPerColumn, totalCopies, pageWidth, pageHeight
     });
 
+    // Verificar se os valores calculados são válidos
+    if (labelsPerRow <= 0) {
+      console.error("labelsPerRow inválido:", labelsPerRow);
+      throw new Error("Configuração inválida: não é possível calcular a quantidade de etiquetas por linha. Verifique as dimensões da etiqueta e da página.");
+    }
+    
+    if (labelsPerColumn <= 0) {
+      console.error("labelsPerColumn inválido:", labelsPerColumn);
+      throw new Error("Configuração inválida: não é possível calcular a quantidade de etiquetas por coluna. Verifique as dimensões da etiqueta e da página.");
+    }
+
+    let currentRow = startRow - 1;
+    let currentColumn = startColumn - 1;
+    let currentPage = 0;
+
+    // Garantir valores válidos
+    if (currentRow < 0) currentRow = 0;
+    if (currentColumn < 0) currentColumn = 0;
+
     // Gerar código de barras uma vez para reutilizar
     const barcodeText = item.barcode || item.sku || "0000000000";
     const barcodeData = await generateBarcode(barcodeText);
 
-    let currentPage = 0;
-
-    // Para cada cópia, criar uma nova página
     for (let i = 0; i < totalCopies; i++) {
-      if (i > 0) {
-        doc.addPage([90, 10], "landscape");
-        currentPage++;
+      // Verificar se precisa de nova página
+      if (currentRow >= labelsPerColumn) {
+        currentRow = 0;
+        currentColumn++;
+        
+        if (currentColumn >= labelsPerRow) {
+          currentColumn = 0;
+          doc.addPage();
+          currentPage++;
+        }
       }
 
-      // Posição fixa para etiqueta única por página
-      const x = marginLeft;
-      const y = marginTop;
+      // Calcular posição da etiqueta
+      const x = marginLeft + currentColumn * (labelWidth + spacing);
+      const y = marginTop + currentRow * (labelHeight + spacing);
 
       // Buscar configurações dos campos
-      const campoNome = campos.find(c => c.tipo === 'nome');
-      const campoCodigo = campos.find(c => c.tipo === 'codigo');
-      const campoPreco = campos.find(c => c.tipo === 'preco');
+      const campoNome = campos.find(c => c.tipo === 'nome') || { tipo: 'nome', x: 2, y: 4, largura: 40, altura: 10, tamanhoFonte: 7 };
+      const campoCodigo = campos.find(c => c.tipo === 'codigo') || { tipo: 'codigo', x: 20, y: 1, largura: 40, altura: 6, tamanhoFonte: 8 };
+      const campoPreco = campos.find(c => c.tipo === 'preco') || { tipo: 'preco', x: 70, y: 4, largura: 20, altura: 10, tamanhoFonte: 10 };
 
-      // Adicionar nome do produto
+      // Adicionar nome do produto - usar try/catch para cada operação
       try {
-        if (campoNome) {
-          doc.setFontSize(campoNome.tamanhoFonte);
-          doc.setFont("helvetica", "normal");
-          
-          // Usar text() método de forma segura para evitar o erro hpf
-          doc.text(
-            campoNome.text, 
-            x + campoNome.x, 
-            y + campoNome.y
-          );
-        }
+        doc.setFontSize(campoNome.tamanhoFonte);
+        doc.setFont("helvetica", "normal");
+        const nomeProduto = item.name || "Sem nome";
+        doc.text(nomeProduto, x + campoNome.x, y + campoNome.y);
       } catch (error) {
         console.error("Erro ao adicionar nome do produto:", error);
       }
 
       // Adicionar código de barras
       try {
-        if (campoCodigo) {
-          doc.addImage(
-            barcodeData, 
-            "PNG", 
-            x + campoCodigo.x, 
-            y + campoCodigo.y, 
-            campoCodigo.largura, 
-            campoCodigo.altura
-          );
-        }
+        doc.addImage(barcodeData, "PNG", x + campoCodigo.x, y + campoCodigo.y, campoCodigo.largura, campoCodigo.altura);
       } catch (error) {
         console.error("Erro ao adicionar código de barras:", error);
       }
 
       // Adicionar preço
       try {
-        if (campoPreco) {
-          doc.setFontSize(campoPreco.tamanhoFonte);
-          doc.setFont("helvetica", "bold");
-          
-          // Usar text() método de forma segura para evitar o erro hpf
-          doc.text(
-            campoPreco.text,
-            x + campoPreco.x, 
-            y + campoPreco.y
-          );
-        }
+        doc.setFontSize(campoPreco.tamanhoFonte);
+        doc.setFont("helvetica", "bold");
+        const price = typeof item.price === 'number' ? item.price.toFixed(2) : '0.00';
+        const priceText = `R$ ${price}`;
+        doc.text(priceText, x + campoPreco.x, y + campoPreco.y);
       } catch (error) {
         console.error("Erro ao adicionar preço:", error);
       }
+
+      currentRow++;
     }
 
     // Gerar URL do arquivo temporário
