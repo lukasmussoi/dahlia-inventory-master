@@ -25,6 +25,7 @@ export const acertoMaletaController = {
     const ninetyDaysAgo = new Date();
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
+    // Simplificar a query para evitar problemas de tipo
     const { data, error } = await supabase
       .from('acerto_itens_vendidos')
       .select('id')
@@ -51,7 +52,8 @@ export const acertoMaletaController = {
 
   async getAcertoById(id: string) {
     try {
-      const { data, error } = await supabase
+      // Buscar o cabeçalho do acerto
+      const { data: acertoHeader, error: acertoError } = await supabase
         .from('acertos_maleta')
         .select(`
           *,
@@ -64,36 +66,50 @@ export const acertoMaletaController = {
             name,
             commission_rate,
             address
-          ),
-          items_vendidos:acerto_itens_vendidos (
-            id,
-            suitcase_item_id,
-            inventory_id,
-            price,
-            sale_date,
-            customer_name,
-            payment_method,
-            commission_value,
-            commission_rate,
-            net_profit,
-            unit_cost,
-            product:inventory_id (
-              id,
-              name,
-              sku,
-              photos:inventory_photos(photo_url)
-            )
           )
         `)
         .eq('id', id)
         .single();
 
-      if (error) {
-        console.error("Erro ao buscar acerto:", error);
+      if (acertoError) {
+        console.error("Erro ao buscar acerto:", acertoError);
         throw new Error("Erro ao buscar acerto");
       }
 
-      return data;
+      // Buscar os itens vendidos em uma consulta separada
+      const { data: itensVendidos, error: itensError } = await supabase
+        .from('acerto_itens_vendidos')
+        .select(`
+          id,
+          suitcase_item_id,
+          inventory_id,
+          price,
+          sale_date,
+          customer_name,
+          payment_method,
+          commission_value,
+          commission_rate,
+          net_profit,
+          unit_cost,
+          product:inventory_id (
+            id,
+            name,
+            sku,
+            photos:inventory_photos(photo_url)
+          )
+        `)
+        .eq('acerto_id', id);
+
+      if (itensError) {
+        console.error("Erro ao buscar itens vendidos:", itensError);
+        throw new Error("Erro ao buscar itens vendidos");
+      }
+
+      // Combinar os resultados
+      return {
+        ...acertoHeader,
+        items_vendidos: itensVendidos || []
+      };
     } catch (error) {
       console.error("Erro ao buscar acerto:", error);
       throw new Error("Erro ao buscar acerto");
