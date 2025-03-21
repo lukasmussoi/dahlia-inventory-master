@@ -16,6 +16,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { UseFormReturn } from "react-hook-form";
 import * as z from "zod";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { AlignLeft, AlignRight } from "lucide-react";
 
 const formSchema = z.object({
   formatoPagina: z.string(),
@@ -65,17 +67,25 @@ export function FormatoEtiquetaFields({ form }: FormatoEtiquetaFieldsProps) {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Orientação</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione a orientação" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="retrato">Retrato</SelectItem>
-                  <SelectItem value="paisagem">Paisagem</SelectItem>
-                </SelectContent>
-              </Select>
+              <FormControl>
+                <ToggleGroup 
+                  type="single" 
+                  value={field.value}
+                  onValueChange={(value) => {
+                    if (value) field.onChange(value);
+                  }}
+                  className="justify-start border rounded-md"
+                >
+                  <ToggleGroupItem value="retrato" aria-label="Retrato" className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+                    <AlignLeft className="h-4 w-4 mr-2" />
+                    Retrato
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="paisagem" aria-label="Paisagem" className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+                    <AlignRight className="h-4 w-4 mr-2" />
+                    Paisagem
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}

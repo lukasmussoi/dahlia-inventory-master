@@ -18,7 +18,7 @@ export interface ModeloEtiqueta {
   largura: number;
   altura: number;
   formatoPagina: string;
-  orientacao: string;
+  orientacao: 'retrato' | 'paisagem';
   margemSuperior: number;
   margemInferior: number;
   margemEsquerda: number;
@@ -40,7 +40,7 @@ export interface EtiquetaCustomDB {
   largura: number;
   altura: number;
   formato_pagina: string;
-  orientacao: string;
+  orientacao: 'retrato' | 'paisagem';
   margem_superior: number;
   margem_inferior: number;
   margem_esquerda: number;
