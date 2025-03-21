@@ -64,14 +64,20 @@ export async function generateEtiquetaPDF(
     }
   }
   
-  // Considerar a orientação da página
+  // Considerar a orientação da página - CORREÇÃO aqui
+  let larguraEfetiva = larguraPagina;
+  let alturaEfetiva = alturaPagina;
+  
   if (orientacao === "paisagem") {
-    [larguraPagina, alturaPagina] = [alturaPagina, larguraPagina];
+    larguraEfetiva = alturaPagina;
+    alturaEfetiva = larguraPagina;
   }
   
   console.log("Dimensões da página:", { 
     larguraPagina, 
     alturaPagina, 
+    larguraEfetiva,
+    alturaEfetiva,
     orientacao 
   });
   
@@ -81,8 +87,9 @@ export async function generateEtiquetaPDF(
   const margemEsquerda = modelo.margemEsquerda || 10;
   const margemDireita = modelo.margemDireita || 10;
   
-  const areaUtilLargura = larguraPagina - margemEsquerda - margemDireita;
-  const areaUtilAltura = alturaPagina - margemSuperior - margemInferior;
+  // CORREÇÃO: Usar larguraEfetiva e alturaEfetiva aqui
+  const areaUtilLargura = larguraEfetiva - margemEsquerda - margemDireita;
+  const areaUtilAltura = alturaEfetiva - margemSuperior - margemInferior;
   
   if (modelo.largura > areaUtilLargura) {
     throw new Error(`A largura da etiqueta (${modelo.largura}mm) é maior que a área útil disponível (${areaUtilLargura}mm).`);

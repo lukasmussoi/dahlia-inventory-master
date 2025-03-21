@@ -80,25 +80,35 @@ export function validarDimensoesEtiqueta(
     margemSuperior: number,
     margemInferior: number,
     margemEsquerda: number,
-    margemDireita: number
+    margemDireita: number,
+    orientacao?: 'retrato' | 'paisagem'
   }
 ): { valido: boolean, mensagem?: string } {
+  // Ajustar dimensões com base na orientação
+  let larguraEfetiva = pagina.largura;
+  let alturaEfetiva = pagina.altura;
+  
+  if (pagina.orientacao === 'paisagem') {
+    larguraEfetiva = pagina.altura;
+    alturaEfetiva = pagina.largura;
+  }
+  
   // Calcular área útil da página
-  const areaUtilLargura = pagina.largura - pagina.margemEsquerda - pagina.margemDireita;
-  const areaUtilAltura = pagina.altura - pagina.margemSuperior - pagina.margemInferior;
+  const areaUtilLargura = larguraEfetiva - pagina.margemEsquerda - pagina.margemDireita;
+  const areaUtilAltura = alturaEfetiva - pagina.margemSuperior - pagina.margemInferior;
 
   // Verificar se as margens são válidas
   if (areaUtilLargura <= 0) {
     return {
       valido: false,
-      mensagem: `As margens laterais (${pagina.margemEsquerda}mm + ${pagina.margemDireita}mm) excedem a largura da página (${pagina.largura}mm).`
+      mensagem: `As margens laterais (${pagina.margemEsquerda}mm + ${pagina.margemDireita}mm) excedem a largura da página (${larguraEfetiva}mm).`
     };
   }
 
   if (areaUtilAltura <= 0) {
     return {
       valido: false,
-      mensagem: `As margens verticais (${pagina.margemSuperior}mm + ${pagina.margemInferior}mm) excedem a altura da página (${pagina.altura}mm).`
+      mensagem: `As margens verticais (${pagina.margemSuperior}mm + ${pagina.margemInferior}mm) excedem a altura da página (${alturaEfetiva}mm).`
     };
   }
 
