@@ -1,3 +1,4 @@
+
 import { SuitcaseSettlementFormData } from "@/types/suitcase";
 import { supabase } from "@/integrations/supabase/client";
 import { SuitcaseController } from "./suitcaseController";
@@ -25,7 +26,7 @@ export const acertoMaletaController = {
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
     const { data, error } = await supabase
-      .from('acerto_items')
+      .from('acerto_itens_vendidos')
       .select('id')
       .eq('inventory_id', inventoryId)
       .eq('seller_id', sellerId)
@@ -64,7 +65,7 @@ export const acertoMaletaController = {
             commission_rate,
             address
           ),
-          items_vendidos:acerto_items (
+          items_vendidos:acerto_itens_vendidos (
             id,
             suitcase_item_id,
             inventory_id,
@@ -182,7 +183,7 @@ export const acertoMaletaController = {
       }
 
       const { error: itemsError } = await supabase
-        .from('acerto_items')
+        .from('acerto_itens_vendidos')
         .insert(acertoItemsToInsert);
 
       if (itemsError) throw itemsError;
@@ -223,6 +224,69 @@ export const acertoMaletaController = {
     } catch (error) {
       console.error("Erro ao esvaziar maleta após acerto:", error);
       throw error;
+    }
+  },
+
+  // Métodos adicionados para resolver os erros
+  async getAllAcertos() {
+    try {
+      const { data, error } = await supabase
+        .from('acertos_maleta')
+        .select(`
+          *,
+          suitcase:suitcase_id (
+            id,
+            code
+          ),
+          seller:seller_id (
+            id,
+            name,
+            commission_rate,
+            address
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error("Erro ao buscar acertos:", error);
+      throw new Error("Erro ao buscar acertos");
+    }
+  },
+
+  async getAcertosBySuitcase(suitcaseId: string) {
+    try {
+      const { data, error } = await supabase
+        .from('acertos_maleta')
+        .select(`
+          *,
+          seller:seller_id (
+            id,
+            name,
+            commission_rate
+          )
+        `)
+        .eq('suitcase_id', suitcaseId)
+        .order('settlement_date', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error(`Erro ao buscar acertos da maleta ${suitcaseId}:`, error);
+      throw new Error("Erro ao buscar acertos da maleta");
+    }
+  },
+
+  async generateReceiptPDF(acertoId: string): Promise<string> {
+    try {
+      // Em um sistema real, aqui seria implementada a lógica para gerar o PDF
+      // Como é apenas uma simulação, vamos apenas retornar uma URL fictícia
+      console.log(`Gerando PDF do acerto ${acertoId}...`);
+      return `https://exemplo.com/recibos/${acertoId}.pdf`;
+    } catch (error) {
+      console.error("Erro ao gerar PDF do acerto:", error);
+      throw new Error("Erro ao gerar PDF do acerto");
     }
   }
 };

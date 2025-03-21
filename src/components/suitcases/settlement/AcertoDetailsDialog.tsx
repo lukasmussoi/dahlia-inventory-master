@@ -14,7 +14,7 @@ import {
   Calculator
 } from "lucide-react";
 import { toast } from "sonner";
-import { Acerto } from "@/types/suitcase";
+import { Acerto, AcertoItem } from "@/types/suitcase";
 import { AcertoMaletaController } from "@/controllers/acertoMaletaController";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
@@ -137,7 +137,13 @@ export function AcertoDetailsDialog({
     queryKey: ['acerto', acertoId],
     queryFn: async () => {
       if (!acertoId) return null;
-      return await AcertoMaletaController.getAcertoById(acertoId) as Acerto;
+      const result = await AcertoMaletaController.getAcertoById(acertoId);
+      // Verificar se items_vendidos é um array
+      if (result && result.items_vendidos && !Array.isArray(result.items_vendidos)) {
+        // Se não for um array, definir como array vazio
+        result.items_vendidos = [];
+      }
+      return result as Acerto;
     },
     enabled: !!acertoId && open,
     staleTime: 60000,
@@ -293,7 +299,7 @@ export function AcertoDetailsDialog({
                         Itens Vendidos ({acerto.items_vendidos.length})
                       </h4>
                       <div className="space-y-2 max-h-60 overflow-y-auto">
-                        {acerto.items_vendidos.slice(0, 20).map((item) => (
+                        {acerto.items_vendidos.slice(0, 20).map((item: AcertoItem) => (
                           <AcertoItemCard key={item.id} item={item} />
                         ))}
                         {acerto.items_vendidos.length > 20 && (

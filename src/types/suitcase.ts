@@ -1,3 +1,4 @@
+
 export type SuitcaseStatus = 'in_use' | 'returned' | 'in_replenishment' | 'lost' | 'in_audit';
 export type SuitcaseItemStatus = 'in_possession' | 'sold' | 'returned' | 'lost';
 export type AcertoStatus = 'pendente' | 'concluido';
