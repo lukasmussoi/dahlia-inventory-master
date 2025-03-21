@@ -27,11 +27,11 @@ export const acertoMaletaController = {
       ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
       const ninetyDaysAgoISO = ninetyDaysAgo.toISOString();
 
-      // Modificação para evitar o erro de tipo excessivamente profundo
-      // Usamos count: 'exact' e convertemos para uma consulta mais simples
+      // Implementação mais simples para evitar o erro de tipo excessivamente profundo
+      // Usamos uma consulta simples apenas para contar registros
       const { count, error } = await supabase
         .from('acerto_itens_vendidos')
-        .select('*', { count: 'exact', head: true })
+        .select('id', { count: 'exact', head: true })
         .eq('inventory_id', inventoryId)
         .eq('seller_id', sellerId)
         .gte('sale_date', ninetyDaysAgoISO);
