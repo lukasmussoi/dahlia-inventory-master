@@ -34,11 +34,27 @@ export function useReactPrint({
   
   // Se tiver definições personalizadas de mídia
   if (mediaSize) {
-    const { width, height, unit = 'mm', orientation = 'portrait' } = mediaSize;
+    // Garantir que os valores sejam números válidos
+    const width = mediaSize.width && mediaSize.width > 0 ? mediaSize.width : 90;
+    const height = mediaSize.height && mediaSize.height > 0 ? mediaSize.height : 10;
+    const unit = mediaSize.unit || 'mm';
+    const orientation = mediaSize.orientation || 'portrait';
     
     // Verificar se as dimensões fazem sentido para orientação
-    const finalWidth = width;
-    const finalHeight = height;
+    let finalWidth = width;
+    let finalHeight = height;
+    
+    // Se for paisagem, garantir que a largura seja maior que a altura
+    if (orientation === 'landscape' && finalWidth < finalHeight) {
+      finalWidth = height;
+      finalHeight = width;
+    }
+    
+    // Se for retrato, garantir que a altura seja maior que a largura
+    if (orientation === 'portrait' && finalWidth > finalHeight) {
+      finalWidth = height;
+      finalHeight = width;
+    }
     
     // Construir tamanho personalizado
     const size = `size: ${finalWidth}${unit} ${finalHeight}${unit};`;
@@ -66,17 +82,29 @@ export function useReactPrint({
     `;
   }
   
+  // Garantir que o content callback não retorne null
+  const contentCallback = () => {
+    return contentRef.current || document.createElement('div');
+  };
+  
   // Usar o hook original com as opções corretas
   const handlePrint = useReactToPrintOriginal({
-    content: () => contentRef.current,
+    content: contentCallback,
     documentTitle: restOptions.documentTitle || 'Dalia Manager - Documento',
     pageStyle: pageStyle,
     onBeforeGetContent: restOptions.onBeforeGetContent,
     onAfterPrint: restOptions.onAfterPrint,
     removeAfterPrint: restOptions.removeAfterPrint || false,
+    suppressErrors: true, // Suprimir erros para evitar quebras na aplicação
     ...restOptions
   } as Parameters<typeof useReactToPrintOriginal>[0]);
 
   // Retornar uma função sem parâmetros que invoca handlePrint
-  return () => handlePrint();
+  return () => {
+    try {
+      handlePrint();
+    } catch (error) {
+      console.error("Erro ao imprimir:", error);
+    }
+  };
 }

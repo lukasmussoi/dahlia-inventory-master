@@ -16,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { UseFormReturn } from "react-hook-form";
 import * as z from "zod";
+import { useEffect } from "react";
 
 const formSchema = z.object({
   formatoPagina: z.string(),
@@ -31,6 +32,19 @@ type FormatoEtiquetaFieldsProps = {
 export function FormatoEtiquetaFields({ form }: FormatoEtiquetaFieldsProps) {
   const formatoPagina = form.watch("formatoPagina");
   const showCustomDimensions = formatoPagina === "Personalizado";
+  
+  // Garantir que a orientação seja sempre definida, especialmente para formatos personalizados
+  useEffect(() => {
+    if (formatoPagina === "Personalizado" && !form.getValues("orientacao")) {
+      // Definir orientação padrão para paisagem se não estiver definida
+      form.setValue("orientacao", "paisagem");
+    }
+    
+    // Se for etiqueta pequena, forçar orientação paisagem
+    if (formatoPagina === "etiqueta-pequena") {
+      form.setValue("orientacao", "paisagem");
+    }
+  }, [formatoPagina, form]);
 
   return (
     <div className="space-y-4">
@@ -66,7 +80,11 @@ export function FormatoEtiquetaFields({ form }: FormatoEtiquetaFieldsProps) {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Orientação</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select 
+                onValueChange={field.onChange} 
+                defaultValue={field.value}
+                disabled={formatoPagina === "etiqueta-pequena"}
+              >
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione a orientação" />

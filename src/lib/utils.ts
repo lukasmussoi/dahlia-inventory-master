@@ -46,6 +46,10 @@ export function formatDateTime(date: Date | string): string {
 
 // Função para garantir que o tamanho do documento esteja correto
 export function validateDocumentSize(width: number, height: number, format: string, orientation: string = 'portrait'): { width: number, height: number } {
+  // Validar valores de entrada
+  if (!width || width <= 0) width = 90;
+  if (!height || height <= 0) height = 10;
+  
   // Se for formato pequeno de etiqueta
   if (format === 'etiqueta-pequena' || format === 'custom-label-small') {
     // Para etiqueta pequena, sempre força o formato 90x10 paisagem
@@ -68,18 +72,43 @@ export function validateDocumentSize(width: number, height: number, format: stri
     case 'Legal':
       dimensions = { width: 216, height: 356 };
       break;
-    default:
+    case 'Personalizado':
       // Para formatos personalizados, garantir dimensões mínimas
       dimensions = { 
-        width: Math.max(width, 10), 
-        height: Math.max(height, 10) 
+        width: Math.max(width || 10, 10), 
+        height: Math.max(height || 10, 10) 
+      };
+      break;
+    default:
+      // Para outros formatos, garantir dimensões mínimas
+      dimensions = { 
+        width: Math.max(width || 10, 10), 
+        height: Math.max(height || 10, 10) 
       };
       break;
   }
   
+  // Verificar se a orientação é válida
+  const validOrientation = ['portrait', 'landscape', 'retrato', 'paisagem'].includes(orientation);
+  if (!validOrientation) {
+    orientation = 'portrait'; // Valor padrão se inválido
+  }
+  
+  // Mapear orientação em português para inglês
+  if (orientation === 'retrato') orientation = 'portrait';
+  if (orientation === 'paisagem') orientation = 'landscape';
+  
   // Ajustar dimensões com base na orientação
-  if (orientation === 'landscape' && dimensions.height > dimensions.width) {
-    return { width: dimensions.height, height: dimensions.width };
+  // Em paisagem, o lado maior é a largura, o menor é a altura
+  if (orientation === 'landscape') {
+    if (dimensions.width < dimensions.height) {
+      return { width: dimensions.height, height: dimensions.width };
+    }
+  } else {
+    // Em retrato, o lado maior é a altura, o menor é a largura
+    if (dimensions.width > dimensions.height) {
+      return { width: dimensions.height, height: dimensions.width };
+    }
   }
   
   return dimensions;

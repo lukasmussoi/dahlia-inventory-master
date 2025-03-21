@@ -67,18 +67,33 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
             throw new Error("Dimensões de página personalizadas inválidas. Os valores devem ser maiores que zero.");
           }
           
+          // Garantir que a orientação esteja definida
+          if (!modeloCustom.orientacao) {
+            console.warn("Orientação não definida, usando paisagem como padrão");
+            modeloCustom.orientacao = "paisagem";
+          }
+          
+          // Mapear orientação em português para inglês (para jsPDF)
+          const orientacaoJS = modeloCustom.orientacao === "paisagem" ? "landscape" : "portrait";
+          
           // Ajustar dimensões com base na orientação
           let areaUtilLargura = modeloCustom.larguraPagina;
           let areaUtilAltura = modeloCustom.alturaPagina;
           
-          if (modeloCustom.orientacao === "paisagem" && areaUtilAltura > areaUtilLargura) {
-            // Trocar as dimensões para paisagem
+          if ((orientacaoJS === "landscape" && areaUtilAltura > areaUtilLargura) ||
+              (orientacaoJS === "portrait" && areaUtilLargura > areaUtilAltura)) {
+            // Trocar as dimensões para corresponder à orientação
             [areaUtilLargura, areaUtilAltura] = [areaUtilAltura, areaUtilLargura];
           }
           
           // Subtrair as margens para obter a área útil
-          areaUtilLargura -= (modeloCustom.margemEsquerda + modeloCustom.margemDireita);
-          areaUtilAltura -= (modeloCustom.margemSuperior + modeloCustom.margemInferior);
+          const margemEsquerda = modeloCustom.margemEsquerda || 0;
+          const margemDireita = modeloCustom.margemDireita || 0;
+          const margemSuperior = modeloCustom.margemSuperior || 0;
+          const margemInferior = modeloCustom.margemInferior || 0;
+          
+          areaUtilLargura -= (margemEsquerda + margemDireita);
+          areaUtilAltura -= (margemSuperior + margemInferior);
           
           // Validar se a etiqueta cabe na página
           if (modeloCustom.largura > areaUtilLargura) {
@@ -118,6 +133,20 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
         
         try {
           console.log("Iniciando geração de PDF com modelo personalizado");
+          
+          // Garantir que todos os campos de texto tenham um valor para text
+          modeloCustom.campos = modeloCustom.campos.map(campo => {
+            if ((campo.tipo === 'nome' || campo.tipo === 'codigo' || campo.tipo === 'preco') && !campo.text) {
+              // Adicionar texto genérico para evitar erro de renderização
+              return {
+                ...campo,
+                text: campo.tipo === 'nome' ? 'Nome do Produto' : 
+                      campo.tipo === 'codigo' ? '123456789' : 'R$ 99,90'
+              };
+            }
+            return campo;
+          });
+          
           return await generateEtiquetaPDF(
             modeloCustom,
             [item], // Passamos o item como um array
@@ -153,9 +182,9 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
     let orientation = "landscape"; // orientação paisagem
     let format = [90, 10]; // formato personalizado
     let campos: CampoEtiqueta[] = [
-      { tipo: 'nome', x: 2, y: 4, largura: 40, altura: 5, tamanhoFonte: 7 },
-      { tipo: 'codigo', x: 2, y: 1, largura: 40, altura: 3, tamanhoFonte: 6 },
-      { tipo: 'preco', x: 70, y: 5, largura: 20, altura: 5, tamanhoFonte: 8 }
+      { tipo: 'nome', x: 2, y: 4, largura: 40, altura: 5, tamanhoFonte: 7, text: item.name || 'Nome do Produto' },
+      { tipo: 'codigo', x: 2, y: 1, largura: 40, altura: 3, tamanhoFonte: 6, text: item.sku || '123456789' },
+      { tipo: 'preco', x: 70, y: 5, largura: 20, altura: 5, tamanhoFonte: 8, text: `R$ ${item.price?.toFixed(2) || '0,00'}` }
     ];
 
     // Criar novo documento PDF com as configurações adequadas
@@ -219,15 +248,17 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
       const y = marginTop;
 
       // Buscar configurações dos campos
-      const campoNome = campos.find(c => c.tipo === 'nome') || { tipo: 'nome', x: 2, y: 4, largura: 40, altura: 5, tamanhoFonte: 7 };
-      const campoCodigo = campos.find(c => c.tipo === 'codigo') || { tipo: 'codigo', x: 2, y: 1, largura: 40, altura: 3, tamanhoFonte: 6 };
-      const campoPreco = campos.find(c => c.tipo === 'preco') || { tipo: 'preco', x: 70, y: 5, largura: 20, altura: 5, tamanhoFonte: 8 };
+      const campoNome = campos.find(c => c.tipo === 'nome') || { tipo: 'nome', x: 2, y: 4, largura: 40, altura: 5, tamanhoFonte: 7, text: item.name || 'Nome do Produto' };
+      const campoCodigo = campos.find(c => c.tipo === 'codigo') || { tipo: 'codigo', x: 2, y: 1, largura: 40, altura: 3, tamanhoFonte: 6, text: item.sku || '123456789' };
+      const campoPreco = campos.find(c => c.tipo === 'preco') || { tipo: 'preco', x: 70, y: 5, largura: 20, altura: 5, tamanhoFonte: 8, text: `R$ ${item.price?.toFixed(2) || '0,00'}` };
 
       // Adicionar nome do produto
       try {
         doc.setFontSize(campoNome.tamanhoFonte);
         doc.setFont("helvetica", "normal");
-        const nomeProduto = item.name || "Sem nome";
+        const nomeProduto = campoNome.text || item.name || "Sem nome";
+        
+        // Usar text() com parâmetros em vez de objetos para evitar o erro hpf
         doc.text(nomeProduto, x + campoNome.x, y + campoNome.y);
       } catch (error) {
         console.error("Erro ao adicionar nome do produto:", error);
@@ -245,8 +276,10 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
         doc.setFontSize(campoPreco.tamanhoFonte);
         doc.setFont("helvetica", "bold");
         const price = typeof item.price === 'number' ? item.price.toFixed(2) : '0.00';
-        const priceText = `R$ ${price}`;
-        doc.text(priceText, x + campoPreco.x, y + campoPreco.y, { align: 'right' });
+        const priceText = campoPreco.text || `R$ ${price}`;
+        
+        // Usar text() com parâmetros em vez de objetos para evitar o erro hpf
+        doc.text(priceText, x + campoPreco.x, y + campoPreco.y);
       } catch (error) {
         console.error("Erro ao adicionar preço:", error);
       }

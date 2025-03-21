@@ -21,6 +21,7 @@ const formSchema = z.object({
   margemDireita: z.number().optional(),
   margemSuperior: z.number().optional(),
   margemInferior: z.number().optional(),
+  orientacao: z.string().optional(),
 });
 
 type DimensoesEtiquetaFieldsProps = {
@@ -34,7 +35,7 @@ export function DimensoesEtiquetaFields({ form, ajustarAutomaticamente = false }
     const subscription = form.watch((value, { name }) => {
       // Verificar apenas quando os valores relevantes mudarem
       if (['largura', 'altura', 'formatoPagina', 'larguraPagina', 'alturaPagina', 
-           'margemEsquerda', 'margemDireita', 'margemSuperior', 'margemInferior'].includes(name as string)) {
+           'margemEsquerda', 'margemDireita', 'margemSuperior', 'margemInferior', 'orientacao'].includes(name as string)) {
         validarDimensoes();
       }
     });
@@ -51,6 +52,7 @@ export function DimensoesEtiquetaFields({ form, ajustarAutomaticamente = false }
     
     let larguraPagina = values.larguraPagina;
     let alturaPagina = values.alturaPagina;
+    const orientacao = values.orientacao || 'retrato';
     
     // Para formatos predefinidos
     if (values.formatoPagina !== "Personalizado") {
@@ -67,11 +69,34 @@ export function DimensoesEtiquetaFields({ form, ajustarAutomaticamente = false }
           larguraPagina = 216;
           alturaPagina = 356;
           break;
+        case "etiqueta-pequena":
+          larguraPagina = 90;
+          alturaPagina = 10;
+          break;
       }
     }
     
     // Se não houver largura e altura válidas, não continua
     if (!larguraPagina || !alturaPagina) return;
+    
+    // Considerar orientação para ajustar as dimensões da página
+    // Se a orientação for paisagem, inverter largura e altura
+    let larguraEfetiva = larguraPagina;
+    let alturaEfetiva = alturaPagina;
+    
+    if (orientacao === 'paisagem') {
+      // Na orientação paisagem, largura é o lado maior e altura o lado menor
+      if (larguraPagina < alturaPagina) {
+        larguraEfetiva = alturaPagina;
+        alturaEfetiva = larguraPagina;
+      }
+    } else {
+      // Na orientação retrato, altura é o lado maior e largura o lado menor
+      if (larguraPagina > alturaPagina) {
+        larguraEfetiva = alturaPagina;
+        alturaEfetiva = larguraPagina;
+      }
+    }
     
     // Calcular área útil
     const margemEsquerda = values.margemEsquerda || 10;
@@ -79,8 +104,8 @@ export function DimensoesEtiquetaFields({ form, ajustarAutomaticamente = false }
     const margemSuperior = values.margemSuperior || 10;
     const margemInferior = values.margemInferior || 10;
     
-    const areaUtilLargura = larguraPagina - margemEsquerda - margemDireita;
-    const areaUtilAltura = alturaPagina - margemSuperior - margemInferior;
+    const areaUtilLargura = larguraEfetiva - margemEsquerda - margemDireita;
+    const areaUtilAltura = alturaEfetiva - margemSuperior - margemInferior;
     
     // Verificar se a etiqueta é maior que a área útil
     if (values.largura > areaUtilLargura) {
