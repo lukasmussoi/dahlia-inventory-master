@@ -1,7 +1,8 @@
+
 /**
  * Gera um PDF de etiquetas personalizado com base em um modelo
  */
-import { CampoEtiqueta } from "@/types/etiqueta";
+import { CampoEtiqueta, ModeloEtiqueta } from "@/types/etiqueta";
 
 /**
  * Gera um PDF de etiquetas personalizado com base em um modelo
@@ -11,7 +12,7 @@ import { CampoEtiqueta } from "@/types/etiqueta";
  * @returns URL do blob do PDF gerado
  */
 export async function generateEtiquetaPDF(
-  modelo: any,
+  modelo: ModeloEtiqueta,
   itens: any[],
   options: {
     startRow: number,
@@ -214,7 +215,7 @@ export async function generateEtiquetaPDF(
  * @param modelo Modelo de etiqueta a ser previsualizado
  * @returns URL do blob do PDF gerado
  */
-export async function generatePreviewPDF(modelo: any): Promise<string> {
+export async function generatePreviewPDF(modelo: ModeloEtiqueta): Promise<string> {
   // Item de exemplo para a prévia
   const itemExemplo = {
     nome: "Pingente Coroa Cristal",

@@ -22,7 +22,7 @@ const formSchema = z.object({
   largura: z.number().min(10, "Largura mínima de 10mm").max(210, "Largura máxima de 210mm"),
   altura: z.number().min(5, "Altura mínima de 5mm").max(297, "Altura máxima de 297mm"),
   formatoPagina: z.string(),
-  orientacao: z.string(),
+  orientacao: z.enum(['retrato', 'paisagem']),
   margemSuperior: z.number().min(0, "Margem superior deve ser positiva").max(50, "Margem superior muito grande"),
   margemInferior: z.number().min(0, "Margem inferior deve ser positiva").max(50, "Margem inferior muito grande"),
   margemEsquerda: z.number().min(0, "Margem esquerda deve ser positiva").max(50, "Margem esquerda muito grande"),
@@ -93,6 +93,12 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
     });
   }
 
+  // Garantir que a orientação tenha um valor válido
+  const orientacaoSegura = (modelo?.orientacao && 
+      (modelo.orientacao === 'retrato' || modelo.orientacao === 'paisagem')) 
+    ? modelo.orientacao 
+    : 'retrato';
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -101,7 +107,7 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
       largura: modelo?.largura || 80,
       altura: modelo?.altura || 30,
       formatoPagina: modelo?.formatoPagina || "A4",
-      orientacao: modelo?.orientacao || "retrato",
+      orientacao: orientacaoSegura,
       margemSuperior: modelo?.margemSuperior || 10,
       margemInferior: modelo?.margemInferior || 10,
       margemEsquerda: modelo?.margemEsquerda || 10,
@@ -351,6 +357,12 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
         tamanhoFonte: Number(campo.tamanhoFonte),
       }));
 
+      // Garantir que a orientação tenha um valor válido
+      const orientacao: 'retrato' | 'paisagem' = 
+        data.orientacao === 'retrato' || data.orientacao === 'paisagem' 
+          ? data.orientacao 
+          : 'retrato';
+
       // Garantir que todos os campos obrigatórios estejam preenchidos
       const modeloData: ModeloEtiqueta = {
         nome: data.nome,
@@ -358,7 +370,7 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
         largura: data.largura,
         altura: data.altura,
         formatoPagina: data.formatoPagina,
-        orientacao: data.orientacao,
+        orientacao: orientacao,
         margemSuperior: data.margemSuperior,
         margemInferior: data.margemInferior,
         margemEsquerda: data.margemEsquerda,

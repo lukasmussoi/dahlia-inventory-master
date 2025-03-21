@@ -11,10 +11,12 @@ import { RefObject } from "react";
 export function useReactPrint({ 
   contentRef, 
   orientation = 'portrait',
+  pageMargin = '1cm',
   ...restOptions 
 }: { 
   contentRef: RefObject<HTMLElement>,
-  orientation?: 'portrait' | 'landscape'
+  orientation?: 'portrait' | 'landscape',
+  pageMargin?: string
 } & Omit<Parameters<typeof useReactToPrintOriginal>[0], "content">) {
   // Usar o hook original com as opções corretas
   const handlePrint = useReactToPrintOriginal({
@@ -23,7 +25,7 @@ export function useReactPrint({
     pageStyle: `
       @page {
         size: ${orientation === 'landscape' ? 'landscape' : 'portrait'};
-        margin: ${restOptions.margin || '1cm'};
+        margin: ${pageMargin};
       }
     `,
     ...restOptions

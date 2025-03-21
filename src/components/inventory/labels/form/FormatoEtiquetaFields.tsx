@@ -21,7 +21,7 @@ import { AlignLeft, AlignRight } from "lucide-react";
 
 const formSchema = z.object({
   formatoPagina: z.string(),
-  orientacao: z.string(),
+  orientacao: z.enum(['retrato', 'paisagem']),
   larguraPagina: z.number().optional(),
   alturaPagina: z.number().optional(),
 });
@@ -72,7 +72,9 @@ export function FormatoEtiquetaFields({ form }: FormatoEtiquetaFieldsProps) {
                   type="single" 
                   value={field.value}
                   onValueChange={(value) => {
-                    if (value) field.onChange(value);
+                    if (value === 'retrato' || value === 'paisagem') {
+                      field.onChange(value);
+                    }
                   }}
                   className="justify-start border rounded-md"
                 >
