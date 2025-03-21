@@ -1,3 +1,4 @@
+
 import { SuitcaseSettlementFormData } from "@/types/suitcase";
 import { supabase } from "@/integrations/supabase/client";
 import { SuitcaseController } from "./suitcaseController";
@@ -120,6 +121,8 @@ export const acertoMaletaController = {
 
   async createAcerto(formData: SuitcaseSettlementFormData): Promise<string> {
     try {
+      console.log("Iniciando criação de acerto com dados:", JSON.stringify(formData, null, 2));
+      
       if (!formData.suitcase_id) {
         throw new Error("ID da maleta é obrigatório");
       }
@@ -132,8 +135,11 @@ export const acertoMaletaController = {
         throw new Error("Data do acerto é obrigatória");
       }
 
+      // Buscar todos os itens da maleta
       const items = await SuitcaseController.getSuitcaseItems(formData.suitcase_id);
+      console.log(`Encontrados ${items.length} itens na maleta`);
       
+      // Identificar itens vendidos (não presentes no formData.items_present)
       const soldItemIds = items
         .filter(item => !formData.items_present.includes(item.id))
         .map(item => ({
@@ -141,6 +147,8 @@ export const acertoMaletaController = {
           inventory_id: item.inventory_id,
           price: item.product?.price || 0
         }));
+      
+      console.log(`Identificados ${soldItemIds.length} itens vendidos`);
 
       let totalSales = 0;
       let totalCommission = 0;
@@ -149,17 +157,26 @@ export const acertoMaletaController = {
 
       const acertoItemsToInsert = [];
 
+      // Buscar dados da revendedora para calcular comissão
+      const { data: seller, error: sellerError } = await supabase
+        .from('resellers')
+        .select('commission_rate')
+        .eq('id', formData.seller_id)
+        .maybeSingle();
+      
+      if (sellerError) {
+        console.error("Erro ao buscar dados da revendedora:", sellerError);
+        throw new Error("Erro ao buscar dados da revendedora");
+      }
+      
+      const commissionRate = seller?.commission_rate || 0.3;
+      console.log(`Taxa de comissão da revendedora: ${commissionRate * 100}%`);
+
       for (const soldItem of soldItemIds) {
         const item = items.find(i => i.id === soldItem.suitcase_item_id);
         if (item) {
-          const seller = await supabase
-            .from('resellers')
-            .select('commission_rate')
-            .eq('id', formData.seller_id)
-            .maybeSingle();
-          
-          const commissionRate = seller.data?.commission_rate || 0.3;
           const commissionValue = soldItem.price * commissionRate;
+          // Valor padrão para custo unitário caso não exista
           const unitCost = item.product?.unit_cost || 0;
           const netProfit = soldItem.price - commissionValue - unitCost;
 
@@ -167,6 +184,8 @@ export const acertoMaletaController = {
           totalCommission += commissionValue;
           totalCost += unitCost;
           totalProfit += netProfit;
+
+          console.log(`Item ${item.id} - Preço: ${soldItem.price}, Comissão: ${commissionValue}, Custo: ${unitCost}, Lucro: ${netProfit}`);
 
           acertoItemsToInsert.push({
             acerto_id: '',
@@ -184,6 +203,7 @@ export const acertoMaletaController = {
         }
       }
 
+      console.log("Inserindo acerto na tabela acertos_maleta");
       const { data: newAcerto, error } = await supabase
         .from('acertos_maleta')
         .insert({
@@ -200,24 +220,45 @@ export const acertoMaletaController = {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Erro ao criar acerto:", error);
+        throw error;
+      }
 
       const acertoId = newAcerto.id;
+      console.log(`Acerto criado com ID: ${acertoId}`);
 
+      // Atualizar itens vendidos com o ID do acerto
       if (acertoItemsToInsert.length > 0) {
+        console.log(`Inserindo ${acertoItemsToInsert.length} itens vendidos`);
+        
+        // Atualizar o ID do acerto em todos os itens
         for (const item of acertoItemsToInsert) {
           item.acerto_id = acertoId;
         }
 
-        const { error: itemsError } = await supabase
-          .from('acerto_itens_vendidos')
-          .insert(acertoItemsToInsert);
+        // Inserir os itens em lotes menores para evitar problemas
+        const batchSize = 10;
+        for (let i = 0; i < acertoItemsToInsert.length; i += batchSize) {
+          const batch = acertoItemsToInsert.slice(i, i + batchSize);
+          console.log(`Inserindo lote ${i/batchSize + 1} com ${batch.length} itens`);
+          
+          const { error: itemsError } = await supabase
+            .from('acerto_itens_vendidos')
+            .insert(batch);
 
-        if (itemsError) throw itemsError;
+          if (itemsError) {
+            console.error(`Erro ao inserir lote de itens vendidos:`, itemsError);
+            console.error("Dados do lote:", JSON.stringify(batch, null, 2));
+            throw itemsError;
+          }
+        }
       }
       
+      console.log("Esvaziando maleta após acerto");
       await this.emptyMaletaAfterAcerto(formData.suitcase_id);
       
+      console.log("Gerando recibo PDF");
       const acertoCompleto = await this.getAcertoById(acertoId);
       if (acertoCompleto) {
         try {
@@ -350,4 +391,3 @@ export const acertoMaletaController = {
 };
 
 export const AcertoMaletaController = acertoMaletaController;
-
