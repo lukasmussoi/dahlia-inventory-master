@@ -134,21 +134,31 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
         try {
           console.log("Iniciando geração de PDF com modelo personalizado");
           
-          // Garantir que todos os campos de texto tenham um valor para text
-          modeloCustom.campos = modeloCustom.campos.map(campo => {
-            if ((campo.tipo === 'nome' || campo.tipo === 'codigo' || campo.tipo === 'preco') && !campo.text) {
-              // Adicionar texto genérico para evitar erro de renderização
-              return {
-                ...campo,
-                text: campo.tipo === 'nome' ? 'Nome do Produto' : 
-                      campo.tipo === 'codigo' ? '123456789' : 'R$ 99,90'
-              };
-            }
-            return campo;
+          // Preparar os campos com textos adequados para evitar o erro jsPDF.hpf
+          const camposPreparados = modeloCustom.campos.map(campo => {
+            // Necessário para evitar erro "Invalid argument passed to jsPDF.hpf"
+            // Converter cada campo para ter um valor de texto definido como string simples
+            const textoSeguro = 
+              campo.tipo === 'nome' ? (item.name || 'Nome do Produto') : 
+              campo.tipo === 'codigo' ? (item.sku || '123456789') : 
+              (item.price ? `R$ ${item.price.toFixed(2).replace('.', ',')}` : 'R$ 0,00');
+            
+            return {
+              ...campo,
+              text: textoSeguro // Adicionar texto seguro para cada campo
+            };
           });
           
+          // Substituir os campos originais pelos preparados
+          const modeloPreparado = {
+            ...modeloCustom,
+            campos: camposPreparados
+          };
+          
+          console.log("Campos preparados para impressão:", camposPreparados);
+          
           return await generateEtiquetaPDF(
-            modeloCustom,
+            modeloPreparado,
             [item], // Passamos o item como um array
             {
               startRow,
@@ -181,10 +191,36 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
     let spacing = 0;       // espaçamento entre etiquetas em mm
     let orientation = "landscape"; // orientação paisagem
     let format = [90, 10]; // formato personalizado
-    let campos: CampoEtiqueta[] = [
-      { tipo: 'nome', x: 2, y: 4, largura: 40, altura: 5, tamanhoFonte: 7, text: item.name || 'Nome do Produto' },
-      { tipo: 'codigo', x: 2, y: 1, largura: 40, altura: 3, tamanhoFonte: 6, text: item.sku || '123456789' },
-      { tipo: 'preco', x: 70, y: 5, largura: 20, altura: 5, tamanhoFonte: 8, text: `R$ ${item.price?.toFixed(2) || '0,00'}` }
+    
+    // Criar campos para a etiqueta padrão com textos seguros
+    let campos = [
+      { 
+        tipo: 'nome', 
+        x: 2, 
+        y: 4, 
+        largura: 40, 
+        altura: 5, 
+        tamanhoFonte: 7,
+        text: item.name || 'Nome do Produto'
+      },
+      { 
+        tipo: 'codigo', 
+        x: 2, 
+        y: 1, 
+        largura: 40, 
+        altura: 3, 
+        tamanhoFonte: 6,
+        text: item.sku || '123456789'
+      },
+      { 
+        tipo: 'preco', 
+        x: 70, 
+        y: 5, 
+        largura: 20, 
+        altura: 5, 
+        tamanhoFonte: 8,
+        text: `R$ ${item.price?.toFixed(2).replace('.', ',') || '0,00'}`
+      }
     ];
 
     // Criar novo documento PDF com as configurações adequadas
@@ -248,38 +284,56 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
       const y = marginTop;
 
       // Buscar configurações dos campos
-      const campoNome = campos.find(c => c.tipo === 'nome') || { tipo: 'nome', x: 2, y: 4, largura: 40, altura: 5, tamanhoFonte: 7, text: item.name || 'Nome do Produto' };
-      const campoCodigo = campos.find(c => c.tipo === 'codigo') || { tipo: 'codigo', x: 2, y: 1, largura: 40, altura: 3, tamanhoFonte: 6, text: item.sku || '123456789' };
-      const campoPreco = campos.find(c => c.tipo === 'preco') || { tipo: 'preco', x: 70, y: 5, largura: 20, altura: 5, tamanhoFonte: 8, text: `R$ ${item.price?.toFixed(2) || '0,00'}` };
+      const campoNome = campos.find(c => c.tipo === 'nome');
+      const campoCodigo = campos.find(c => c.tipo === 'codigo');
+      const campoPreco = campos.find(c => c.tipo === 'preco');
 
       // Adicionar nome do produto
       try {
-        doc.setFontSize(campoNome.tamanhoFonte);
-        doc.setFont("helvetica", "normal");
-        const nomeProduto = campoNome.text || item.name || "Sem nome";
-        
-        // Usar text() com parâmetros em vez de objetos para evitar o erro hpf
-        doc.text(nomeProduto, x + campoNome.x, y + campoNome.y);
+        if (campoNome) {
+          doc.setFontSize(campoNome.tamanhoFonte);
+          doc.setFont("helvetica", "normal");
+          
+          // Usar text() método de forma segura para evitar o erro hpf
+          doc.text(
+            campoNome.text, 
+            x + campoNome.x, 
+            y + campoNome.y
+          );
+        }
       } catch (error) {
         console.error("Erro ao adicionar nome do produto:", error);
       }
 
       // Adicionar código de barras
       try {
-        doc.addImage(barcodeData, "PNG", x + campoCodigo.x, y + campoCodigo.y, campoCodigo.largura, campoCodigo.altura);
+        if (campoCodigo) {
+          doc.addImage(
+            barcodeData, 
+            "PNG", 
+            x + campoCodigo.x, 
+            y + campoCodigo.y, 
+            campoCodigo.largura, 
+            campoCodigo.altura
+          );
+        }
       } catch (error) {
         console.error("Erro ao adicionar código de barras:", error);
       }
 
       // Adicionar preço
       try {
-        doc.setFontSize(campoPreco.tamanhoFonte);
-        doc.setFont("helvetica", "bold");
-        const price = typeof item.price === 'number' ? item.price.toFixed(2) : '0.00';
-        const priceText = campoPreco.text || `R$ ${price}`;
-        
-        // Usar text() com parâmetros em vez de objetos para evitar o erro hpf
-        doc.text(priceText, x + campoPreco.x, y + campoPreco.y);
+        if (campoPreco) {
+          doc.setFontSize(campoPreco.tamanhoFonte);
+          doc.setFont("helvetica", "bold");
+          
+          // Usar text() método de forma segura para evitar o erro hpf
+          doc.text(
+            campoPreco.text,
+            x + campoPreco.x, 
+            y + campoPreco.y
+          );
+        }
       } catch (error) {
         console.error("Erro ao adicionar preço:", error);
       }

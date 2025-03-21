@@ -46,6 +46,8 @@ export function formatDateTime(date: Date | string): string {
 
 // Função para garantir que o tamanho do documento esteja correto
 export function validateDocumentSize(width: number, height: number, format: string, orientation: string = 'portrait'): { width: number, height: number } {
+  console.log(`Validando dimensões: ${width}x${height}, formato: ${format}, orientação: ${orientation}`);
+  
   // Validar valores de entrada
   if (!width || width <= 0) width = 90;
   if (!height || height <= 0) height = 10;
@@ -53,6 +55,7 @@ export function validateDocumentSize(width: number, height: number, format: stri
   // Se for formato pequeno de etiqueta
   if (format === 'etiqueta-pequena' || format === 'custom-label-small') {
     // Para etiqueta pequena, sempre força o formato 90x10 paisagem
+    console.log('Formato etiqueta pequena detectado, usando 90x10mm');
     return { width: 90, height: 10 };
   }
   
@@ -78,6 +81,7 @@ export function validateDocumentSize(width: number, height: number, format: stri
         width: Math.max(width || 10, 10), 
         height: Math.max(height || 10, 10) 
       };
+      console.log(`Usando dimensões personalizadas: ${dimensions.width}x${dimensions.height}mm`);
       break;
     default:
       // Para outros formatos, garantir dimensões mínimas
@@ -97,22 +101,26 @@ export function validateDocumentSize(width: number, height: number, format: stri
   };
   
   const finalOrientation = orientationMapping[orientation] || 'portrait';
+  console.log(`Orientação final: ${finalOrientation}`);
   
   // Garantir que as dimensões estejam corretas para a orientação especificada
   if (finalOrientation === 'landscape') {
     // Em paisagem, o lado maior deve ser a largura
     if (dimensions.width < dimensions.height) {
       // Trocar largura e altura
+      console.log(`Ajustando dimensões para paisagem: ${dimensions.height}x${dimensions.width}mm`);
       return { width: dimensions.height, height: dimensions.width };
     }
   } else {
     // Em retrato, o lado maior deve ser a altura
     if (dimensions.width > dimensions.height) {
       // Trocar largura e altura
+      console.log(`Ajustando dimensões para retrato: ${dimensions.height}x${dimensions.width}mm`);
       return { width: dimensions.height, height: dimensions.width };
     }
   }
   
   // Retornar as dimensões sem alterações se já estiverem na orientação correta
+  console.log(`Dimensões finais: ${dimensions.width}x${dimensions.height}mm`);
   return dimensions;
 }
