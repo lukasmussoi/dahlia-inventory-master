@@ -1,4 +1,3 @@
-
 import { SuitcaseSettlementFormData } from "@/types/suitcase";
 import { supabase } from "@/integrations/supabase/client";
 import { SuitcaseController } from "./suitcaseController";
@@ -27,11 +26,10 @@ export const acertoMaletaController = {
       ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
       const ninetyDaysAgoISO = ninetyDaysAgo.toISOString();
 
-      // Implementação mais simples para evitar o erro de tipo excessivamente profundo
-      // Usamos uma consulta simples apenas para contar registros
-      const { count, error } = await supabase
+      // Usando uma abordagem diferente que evita o erro de tipo excessivamente profundo
+      const { data, error } = await supabase
         .from('acerto_itens_vendidos')
-        .select('id', { count: 'exact', head: true })
+        .select('id')
         .eq('inventory_id', inventoryId)
         .eq('seller_id', sellerId)
         .gte('sale_date', ninetyDaysAgoISO);
@@ -41,8 +39,8 @@ export const acertoMaletaController = {
         return { count: 0, frequency: "baixa" };
       }
       
-      // Garantir que count seja um número
-      const safeCount = typeof count === 'number' ? count : 0;
+      // Calculamos a contagem manualmente a partir dos resultados
+      const safeCount = data ? data.length : 0;
       let frequency = "baixa";
       
       if (safeCount > 5) {
