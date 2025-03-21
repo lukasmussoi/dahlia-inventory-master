@@ -1,9 +1,9 @@
-
 import { SuitcaseSettlementFormData } from "@/types/suitcase";
 import { supabase } from "@/integrations/supabase/client";
 import { SuitcaseController } from "./suitcaseController";
 import { SuitcaseModel } from "@/models/suitcaseModel";
 import { generateAcertoReceipt } from "@/utils/reportGenerator";
+import { SuitcaseStockingModel } from "@/models/suitcaseStockingModel";
 
 export const acertoMaletaController = {
   formatCurrency(value: number): string {
@@ -135,6 +135,10 @@ export const acertoMaletaController = {
         throw new Error("Data do acerto é obrigatória");
       }
 
+      if (!formData.next_settlement_date) {
+        throw new Error("Data do próximo acerto é obrigatória");
+      }
+
       // Buscar todos os itens da maleta
       const items = await SuitcaseController.getSuitcaseItems(formData.suitcase_id);
       console.log(`Encontrados ${items.length} itens na maleta`);
@@ -203,6 +207,18 @@ export const acertoMaletaController = {
         }
       }
 
+      // Gerar sugestões de reabastecimento com base no histórico
+      let restockSuggestions = null;
+      try {
+        const suggestions = await SuitcaseStockingModel.generateStockingSuggestions(formData.seller_id);
+        if (suggestions && (suggestions.items.length > 0 || suggestions.categories.length > 0)) {
+          restockSuggestions = suggestions;
+        }
+      } catch (error) {
+        console.error("Erro ao gerar sugestões de reabastecimento:", error);
+        // Não vamos falhar o processo principal se as sugestões não puderem ser geradas
+      }
+
       console.log("Inserindo acerto na tabela acertos_maleta");
       const { data: newAcerto, error } = await supabase
         .from('acertos_maleta')
@@ -215,7 +231,8 @@ export const acertoMaletaController = {
           commission_amount: totalCommission,
           total_cost: totalCost,
           net_profit: totalProfit,
-          status: 'concluido'
+          status: 'concluido',
+          restock_suggestions: restockSuggestions ? JSON.stringify(restockSuggestions) : null
         })
         .select()
         .single();

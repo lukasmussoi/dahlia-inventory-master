@@ -1,168 +1,232 @@
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
-import { jsPDF } from "jspdf";
-import autoTable from "jspdf-autotable";
-import { SuitcaseItem, Suitcase, Acerto } from "@/types/suitcase";
-import { formatCurrency } from "@/utils/formatters";
-import { getProductPhotoUrl } from "@/utils/photoUtils";
+// Função para formatar a data no padrão brasileiro
+function formatDate(dateString: string): string {
+  const date = new Date(dateString);
+  return new Intl.DateTimeFormat('pt-BR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
+}
 
-/**
- * Gera um relatório PDF do abastecimento da maleta
- * @param suitcase Dados da maleta
- * @param items Itens da maleta
- * @returns URL do arquivo PDF gerado
- */
-export const generateSuitcaseReport = (suitcase: Suitcase, items: SuitcaseItem[]): string => {
+// Função para formatar a data e hora no padrão brasileiro
+function formatDateTime(dateString: string): string {
+  const date = new Date(dateString);
+  return new Intl.DateTimeFormat('pt-BR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).format(date);
+}
+
+// Função para formatar valores monetários no padrão brasileiro
+function formatCurrency(value: number): string {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  }).format(value);
+}
+
+function formatStatus(status: string): string {
+  const statusMap: Record<string, string> = {
+    'in_use': 'Em Uso',
+    'returned': 'Devolvida',
+    'in_replenishment': 'Em Reposição',
+    'in_possession': 'Em Posse',
+    'sold': 'Vendido',
+    'reserved': 'Reservado',
+    'available': 'Disponível',
+    'lost': 'Perdido'
+  };
+  
+  return statusMap[status] || status;
+}
+
+export function generateAcertoReceipt(acerto: any): string {
   try {
-    const doc = new jsPDF();
+    const doc = new jsPDF('portrait', 'pt', 'a4');
     
-    // Cabeçalho do relatório
+    // Definir estilos
     doc.setFontSize(18);
-    doc.text("Relatório de Abastecimento de Maleta", 14, 22);
+    doc.setFont('helvetica', 'bold');
     
+    // Adicionar título
+    doc.text('Recibo de Acerto de Maleta', 40, 40);
+    
+    // Adicionar informações do acerto
     doc.setFontSize(12);
-    doc.text(`Código da Maleta: ${suitcase.code}`, 14, 32);
-    doc.text(`Revendedora: ${suitcase.seller?.name || "Não informado"}`, 14, 40);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Código da Maleta: ${acerto.suitcase?.code || 'N/A'}`, 40, 70);
+    doc.text(`Revendedora: ${acerto.seller?.name || 'N/A'}`, 40, 90);
+    doc.text(`Data do Acerto: ${formatDate(acerto.settlement_date)}`, 40, 110);
+    doc.text(`Próximo Acerto: ${formatDate(acerto.next_settlement_date)}`, 40, 130);
     
-    if (suitcase.seller?.address) {
-      const address = typeof suitcase.seller.address === 'string' 
-        ? suitcase.seller.address 
-        : `${suitcase.city || ""}, ${suitcase.neighborhood || ""}`;
-      doc.text(`Endereço: ${address}`, 14, 48);
-    }
+    // Adicionar tabela de itens vendidos
+    const tableColumn = ["SKU", "Produto", "Preço", "Comissão"];
+    const tableRows: any[] = [];
     
-    const formattedDate = new Date().toLocaleDateString('pt-BR');
-    doc.text(`Data do Abastecimento: ${formattedDate}`, 14, 56);
-    
-    if (suitcase.next_settlement_date) {
-      const nextSettlementDate = new Date(suitcase.next_settlement_date).toLocaleDateString('pt-BR');
-      doc.text(`Data do Próximo Acerto: ${nextSettlementDate}`, 14, 64);
-    }
-    
-    // Tabela de itens
-    const tableData = items.map(item => [
-      item.product?.name || "Produto sem nome",
-      item.product?.sku || "Sem SKU",
-      formatCurrency(item.product?.price || 0),
-      item.quantity || 1
-    ]);
-    
-    autoTable(doc, {
-      head: [["Produto", "SKU", "Preço", "Qtd"]],
-      body: tableData,
-      startY: 72,
-      theme: 'striped',
-      headStyles: { fillColor: [233, 30, 99] }
+    acerto.items_vendidos.forEach(item => {
+      const productData = [
+        item.product?.sku || 'N/A',
+        item.product?.name || 'N/A',
+        formatCurrency(item.price),
+        formatCurrency(item.commission_value || 0)
+      ];
+      tableRows.push(productData);
     });
     
-    // Resumo final
-    const totalItems = items.reduce((sum, item) => sum + (item.quantity || 1), 0);
-    const totalValue = items.reduce((sum, item) => sum + ((item.product?.price || 0) * (item.quantity || 1)), 0);
+    (doc as any).autoTable({
+      head: [tableColumn],
+      body: tableRows,
+      startY: 160,
+      styles: { fontSize: 10 },
+      headStyles: { fillColor: [220, 50, 117] }
+    });
     
-    const finalY = (doc as any).lastAutoTable.finalY + 10;
+    // Adicionar totais
+    const finalY = (doc as any).lastAutoTable.finalY + 20;
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Total de Vendas: ${formatCurrency(acerto.total_sales)}`, 40, finalY);
+    doc.text(`Comissão Total: ${formatCurrency(acerto.commission_amount)}`, 40, finalY + 20);
     
-    doc.text(`Total de Itens: ${totalItems}`, 14, finalY);
-    doc.text(`Valor Total da Maleta: ${formatCurrency(totalValue)}`, 14, finalY + 8);
+    // Adicionar espaço para assinatura
+    const signatureY = finalY + 60;
     
-    // Espaço para assinatura
-    doc.text("Assinatura da Revendedora:", 14, finalY + 25);
-    doc.line(14, finalY + 40, 100, finalY + 40); // Linha para assinatura
+    // Linha para assinatura do destinatário
+    doc.line(40, signatureY, 280, signatureY);
+    doc.text("Assinatura do(a) Revendedor(a)", 40, signatureY + 15);
     
-    doc.text("Confirmo o recebimento de todos os itens listados neste relatório.", 14, finalY + 45);
+    // Linha para assinatura da empresa
+    doc.line(320, signatureY, 560, signatureY);
+    doc.text("Assinatura da Empresa", 320, signatureY + 15);
+    
+    // Informações adicionais
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text("*Este documento serve como comprovante de acerto dos itens relacionados.", 40, signatureY + 50);
     
     // Rodapé
     const pageCount = doc.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
+    for(let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
-      doc.setFontSize(10);
+      doc.setFontSize(8);
+      doc.setTextColor(100, 100, 100);
       doc.text(
-        `Página ${i} de ${pageCount} - Gerado em ${new Date().toLocaleString('pt-BR')}`,
-        doc.internal.pageSize.getWidth() / 2,
-        doc.internal.pageSize.getHeight() - 10,
-        { align: "center" }
+        `Recibo gerado em ${formatDateTime(new Date().toISOString())}`,
+        40, 
+        doc.internal.pageSize.height - 20
+      );
+      doc.text(
+        `Página ${i} de ${pageCount}`,
+        doc.internal.pageSize.width - 80, 
+        doc.internal.pageSize.height - 20
       );
     }
     
-    // Gerar URL do arquivo
-    const pdfBlob = doc.output("blob");
-    return URL.createObjectURL(pdfBlob);
+    // Salvar o PDF
+    const pdfOutput = doc.output('datauristring');
+    return pdfOutput;
   } catch (error) {
-    console.error("Erro ao gerar relatório da maleta:", error);
-    throw new Error("Erro ao gerar relatório da maleta");
+    console.error("Erro ao gerar recibo:", error);
+    throw new Error("Erro ao gerar recibo de acerto");
   }
-};
+}
 
-/**
- * Gera um recibo PDF do acerto da maleta
- * @param acerto Dados do acerto
- * @returns URL do arquivo PDF gerado
- */
-export const generateAcertoReceipt = (acerto: Acerto): string => {
+export function generateSuitcaseReport(suitcase: any, items: any[]): string {
   try {
-    const doc = new jsPDF();
+    const doc = new jsPDF('portrait', 'pt', 'a4');
     
-    // Cabeçalho do recibo
+    // Definir estilos
     doc.setFontSize(18);
-    doc.text("Recibo de Acerto de Maleta", 14, 22);
+    doc.setFont('helvetica', 'bold');
     
+    // Adicionar título
+    doc.text('Relatório de Maleta', 40, 40);
+    
+    // Adicionar informações da maleta
     doc.setFontSize(12);
-    doc.text(`Código da Maleta: ${acerto.suitcase?.code || "Não informado"}`, 14, 32);
-    doc.text(`Revendedora: ${acerto.seller?.name || "Não informado"}`, 14, 40);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Código: ${suitcase.code || 'N/A'}`, 40, 70);
+    doc.text(`Revendedora: ${suitcase.seller?.name || 'N/A'}`, 40, 90);
+    doc.text(`Status: ${formatStatus(suitcase.status)}`, 40, 110);
+    doc.text(`Data: ${formatDate(new Date().toISOString())}`, 40, 130);
     
-    const formattedDate = new Date(acerto.settlement_date).toLocaleDateString('pt-BR');
-    doc.text(`Data do Acerto: ${formattedDate}`, 14, 48);
-    
-    // Tabela de itens vendidos
-    if (acerto.items_vendidos && acerto.items_vendidos.length > 0) {
-      const tableData = acerto.items_vendidos.map(item => [
-        item.product?.name || "Produto sem nome",
-        item.product?.sku || "Sem SKU",
-        formatCurrency(item.price || 0),
-        formatCurrency(item.commission_value || 0),
-        formatCurrency(item.net_profit || 0)
-      ]);
-      
-      autoTable(doc, {
-        head: [["Produto", "SKU", "Preço", "Comissão", "Lucro"]],
-        body: tableData,
-        startY: 56,
-        theme: 'striped',
-        headStyles: { fillColor: [233, 30, 99] }
-      });
-      
-      // Resumo final
-      const finalY = (doc as any).lastAutoTable.finalY + 10;
-      
-      doc.text(`Total em Vendas: ${formatCurrency(acerto.total_sales || 0)}`, 14, finalY);
-      doc.text(`Comissão da Revendedora (${(acerto.seller?.commission_rate || 0.3) * 100}%): ${formatCurrency(acerto.commission_amount || 0)}`, 14, finalY + 8);
-      doc.text(`Lucro Líquido: ${formatCurrency(acerto.net_profit || 0)}`, 14, finalY + 16);
-      
-      // Espaço para assinatura
-      doc.text("Assinatura da Revendedora:", 14, finalY + 35);
-      doc.line(14, finalY + 45, 100, finalY + 45); // Linha para assinatura
-      
-      doc.text("Confirmo o recebimento da comissão e devolução dos itens restantes.", 14, finalY + 52);
-      
-      // Rodapé
-      const pageCount = doc.getNumberOfPages();
-      for (let i = 1; i <= pageCount; i++) {
-        doc.setPage(i);
-        doc.setFontSize(10);
-        doc.text(
-          `Página ${i} de ${pageCount} - Gerado em ${new Date().toLocaleString('pt-BR')}`,
-          doc.internal.pageSize.getWidth() / 2,
-          doc.internal.pageSize.getHeight() - 10,
-          { align: "center" }
-        );
-      }
-    } else {
-      doc.text("Nenhum item vendido neste acerto.", 14, 56);
+    if (suitcase.next_settlement_date) {
+      doc.text(`Próximo Acerto: ${formatDate(suitcase.next_settlement_date)}`, 40, 150);
     }
     
-    // Gerar URL do arquivo
-    const pdfBlob = doc.output("blob");
-    return URL.createObjectURL(pdfBlob);
+    // Adicionar tabela de itens
+    const tableColumn = ["SKU", "Produto", "Preço", "Quantidade"];
+    const tableRows: any[] = [];
+    
+    items.forEach(item => {
+      const productData = [
+        item.product?.sku || 'N/A',
+        item.product?.name || 'N/A',
+        formatCurrency(item.product?.price || 0),
+        item.quantity || 1
+      ];
+      tableRows.push(productData);
+    });
+    
+    (doc as any).autoTable({
+      head: [tableColumn],
+      body: tableRows,
+      startY: 180,
+      styles: { fontSize: 10 },
+      headStyles: { fillColor: [220, 50, 117] }
+    });
+    
+    // Adicionar espaço para assinatura
+    const finalY = (doc as any).lastAutoTable.finalY + 50;
+    
+    // Linha para assinatura do destinatário
+    doc.line(40, finalY, 280, finalY);
+    doc.text("Assinatura do(a) Revendedor(a)", 40, finalY + 15);
+    
+    // Linha para assinatura da empresa
+    doc.line(320, finalY, 560, finalY);
+    doc.text("Assinatura da Empresa", 320, finalY + 15);
+    
+    // Texto de confirmação
+    doc.setFontSize(10);
+    doc.text("Confirmo que recebi todas as peças listadas neste relatório.", 40, finalY + 40);
+    doc.text(`Data: ${formatDate(new Date().toISOString())}`, 40, finalY + 60);
+    
+    // Informações adicionais
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text("*Este documento serve como comprovante de entrega dos itens relacionados.", 40, finalY + 90);
+    
+    // Rodapé
+    const pageCount = doc.getNumberOfPages();
+    for(let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(100, 100, 100);
+      doc.text(
+        `Relatório gerado em ${formatDateTime(new Date().toISOString())}`,
+        40, 
+        doc.internal.pageSize.height - 20
+      );
+      doc.text(
+        `Página ${i} de ${pageCount}`,
+        doc.internal.pageSize.width - 80, 
+        doc.internal.pageSize.height - 20
+      );
+    }
+    
+    // Salvar o PDF
+    const pdfOutput = doc.output('datauristring');
+    return pdfOutput;
   } catch (error) {
-    console.error("Erro ao gerar recibo do acerto:", error);
-    throw new Error("Erro ao gerar recibo do acerto");
+    console.error("Erro ao gerar relatório:", error);
+    throw new Error("Erro ao gerar relatório da maleta");
   }
-};
+}
