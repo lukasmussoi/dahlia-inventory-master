@@ -57,24 +57,22 @@ export const generatePreview = async (options: PreviewPDFOptions): Promise<strin
       pageSize.height
     );
     
-    // Desenhar borda da página (para depuração)
+    // Desenhar borda da página (para depuração) - comentado para não aparecer no PDF final
     // doc.setDrawColor(200, 200, 200);
     // doc.rect(5, 5, pageSize.width - 10, pageSize.height - 10);
     
-    // Adicionar título ao documento
-    doc.setFontSize(16);
-    doc.text(`Modelo: ${modelName}`, 10, 10);
-    
-    // Adicionar informações da página
-    doc.setFontSize(10);
-    doc.text(`Formato: ${pageFormat} - ${pageOrientation}`, 10, 15);
-    doc.text(`Dimensões: ${pageSize.width}mm x ${pageSize.height}mm`, 10, 20);
+    // Removido: Não adicionamos mais título e informações ao documento
+    // doc.setFontSize(16);
+    // doc.text(`Modelo: ${modelName}`, 10, 10);
+    // doc.setFontSize(10);
+    // doc.text(`Formato: ${pageFormat} - ${pageOrientation}`, 10, 15);
+    // doc.text(`Dimensões: ${pageSize.width}mm x ${pageSize.height}mm`, 10, 20);
     
     // Para cada etiqueta, renderizar no PDF
     labels.forEach((label, index) => {
-      // Calcular posição da etiqueta na página
+      // Calcular posição da etiqueta na página - sem offset para título
       const labelX = pageMargins.left + label.x;
-      const labelY = pageMargins.top + label.y + 25; // Adicionar offset para o título
+      const labelY = pageMargins.top + label.y; // Removido offset de 25mm para o título
       
       // Desenhar borda da etiqueta
       doc.setDrawColor(100, 100, 100);
@@ -114,15 +112,15 @@ export const generatePreview = async (options: PreviewPDFOptions): Promise<strin
           });
         }
         
-        // Desenhar borda do elemento (para depuração)
-        doc.setDrawColor(200, 200, 200);
-        doc.setLineWidth(0.1);
-        doc.rect(elementX, elementY, element.width, element.height);
+        // Desenhar borda do elemento (para depuração) - comentado para não aparecer no PDF final
+        // doc.setDrawColor(200, 200, 200);
+        // doc.setLineWidth(0.1);
+        // doc.rect(elementX, elementY, element.width, element.height);
       });
       
-      // Adicionar nome da etiqueta
-      doc.setFontSize(8);
-      doc.text(label.name, labelX, labelY - 2);
+      // Removido: Não adicionamos mais o nome da etiqueta abaixo dela
+      // doc.setFontSize(8);
+      // doc.text(label.name, labelX, labelY - 2);
     });
     
     // Converter o PDF para URL de dados (data URL)
