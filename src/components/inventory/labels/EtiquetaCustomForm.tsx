@@ -16,7 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, ArrowLeft, ArrowRight, Layout, File, LayoutGrid } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 type EtiquetaCustomFormProps = {
   modelo?: ModeloEtiqueta;
@@ -32,8 +32,9 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
     pageAreaWarning
   } = useEtiquetaCustomForm(modelo, onClose, onSuccess);
   
-  // Por padrão, estamos usando o novo editor (EtiquetaCreator)
-  const [useNewEditor, setUseNewEditor] = useState(true);
+  // CORREÇÃO: Definindo o valor padrão para useNewEditor como false para usar o formulário tradicional
+  // e permitir que as modificações feitas em DimensoesEtiquetaFields apareçam
+  const [useNewEditor, setUseNewEditor] = useState(false);
 
   const handleSave = (data: any) => {
     // Adaptar os dados do editor visual para o formato esperado pelo formulário
@@ -64,18 +65,31 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
     form.handleSubmit(onSubmit)();
   };
 
+  // Adicionando opção para alternar entre os editores
+  const toggleEditor = () => {
+    setUseNewEditor(!useNewEditor);
+  };
+
   // O novo editor de etiquetas é o que está sendo mostrado
   if (useNewEditor) {
     return (
-      <EtiquetaCreator 
-        onClose={onClose}
-        onSave={handleSave}
-        initialData={modelo}
-      />
+      <div className="flex flex-col h-full">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold">Editor Visual</h2>
+          <Button variant="outline" onClick={toggleEditor}>
+            Voltar para Editor Tradicional
+          </Button>
+        </div>
+        <EtiquetaCreator 
+          onClose={onClose}
+          onSave={handleSave}
+          initialData={modelo}
+        />
+      </div>
     );
   }
 
-  // Editor antigo (mantido como fallback)
+  // Editor tradicional (agora é o padrão)
   return (
     <Form {...form}>
       <form onSubmit={(e) => {
@@ -87,6 +101,13 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
         }
         form.handleSubmit(onSubmit)(e);
       }} className="space-y-4">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold">Editor Tradicional</h2>
+          <Button variant="outline" onClick={toggleEditor}>
+            Mudar para Editor Visual
+          </Button>
+        </div>
+        
         <div className="max-h-[80vh] overflow-y-auto pr-2 space-y-6">
           <div className="grid grid-cols-2 gap-6">
             <FormField

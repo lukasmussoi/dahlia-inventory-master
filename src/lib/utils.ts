@@ -85,84 +85,94 @@ export function validarDimensoesEtiqueta(
     orientacao?: 'retrato' | 'paisagem'
   }
 ): { valido: boolean, mensagem?: string, areaUtil?: { largura: number, altura: number } } {
-  // Log detalhado para depuração
-  console.log("Validando dimensões:", {
-    etiqueta: { largura: etiquetaLargura, altura: etiquetaAltura },
-    pagina: { ...pagina }
-  });
-  
-  // Obter dimensões efetivas da página considerando a orientação
-  let larguraEfetiva = pagina.largura;
-  let alturaEfetiva = pagina.altura;
-  
-  // Para paisagem, a largura da página se torna a altura original e vice-versa
-  if (pagina.orientacao === 'paisagem') {
-    // IMPORTANTE: Na orientação paisagem, trocamos largura e altura
-    console.log("Ajustando para paisagem - antes:", { larguraEfetiva, alturaEfetiva });
-    larguraEfetiva = pagina.altura;
-    alturaEfetiva = pagina.largura;
-    console.log("Ajustando para paisagem - depois:", { larguraEfetiva, alturaEfetiva });
-  }
-  
-  // Calcular área útil da página após aplicar margens
-  const margemEsquerda = pagina.margemEsquerda || 0;
-  const margemDireita = pagina.margemDireita || 0;
-  const margemSuperior = pagina.margemSuperior || 0; 
-  const margemInferior = pagina.margemInferior || 0;
-  
-  const areaUtilLargura = larguraEfetiva - margemEsquerda - margemDireita;
-  const areaUtilAltura = alturaEfetiva - margemSuperior - margemInferior;
-
-  // Log detalhado da área útil calculada
-  console.log("Área útil calculada:", { 
-    areaUtilLargura, 
-    areaUtilAltura,
-    larguraEfetiva,
-    alturaEfetiva,
-    margens: {
-      esquerda: margemEsquerda,
-      direita: margemDireita,
-      superior: margemSuperior,
-      inferior: margemInferior
+  try {
+    // Log detalhado para depuração
+    console.log("Validando dimensões:", {
+      etiqueta: { largura: etiquetaLargura, altura: etiquetaAltura },
+      pagina: { ...pagina }
+    });
+    
+    // Obter dimensões efetivas da página considerando a orientação
+    let larguraEfetiva = pagina.largura;
+    let alturaEfetiva = pagina.altura;
+    
+    // Para paisagem, a largura da página se torna a altura original e vice-versa
+    if (pagina.orientacao === 'paisagem') {
+      // IMPORTANTE: Na orientação paisagem, trocamos largura e altura
+      console.log("Ajustando para paisagem - antes:", { larguraEfetiva, alturaEfetiva });
+      const temp = larguraEfetiva;
+      larguraEfetiva = alturaEfetiva;
+      alturaEfetiva = temp;
+      console.log("Ajustando para paisagem - depois:", { larguraEfetiva, alturaEfetiva });
     }
-  });
+    
+    // Calcular área útil da página após aplicar margens
+    const margemEsquerda = pagina.margemEsquerda || 0;
+    const margemDireita = pagina.margemDireita || 0;
+    const margemSuperior = pagina.margemSuperior || 0; 
+    const margemInferior = pagina.margemInferior || 0;
+    
+    const areaUtilLargura = larguraEfetiva - margemEsquerda - margemDireita;
+    const areaUtilAltura = alturaEfetiva - margemSuperior - margemInferior;
 
-  // Verificar se as margens são válidas (não excedem a página)
-  if (areaUtilLargura <= 0) {
+    // Log detalhado da área útil calculada
+    console.log("Área útil calculada:", { 
+      areaUtilLargura, 
+      areaUtilAltura,
+      larguraEfetiva,
+      alturaEfetiva,
+      margens: {
+        esquerda: margemEsquerda,
+        direita: margemDireita,
+        superior: margemSuperior,
+        inferior: margemInferior
+      }
+    });
+
+    // Verificar se as margens são válidas (não excedem a página)
+    if (areaUtilLargura <= 0) {
+      return {
+        valido: false,
+        mensagem: `As margens laterais (${margemEsquerda}mm + ${margemDireita}mm) excedem a largura da página (${larguraEfetiva}mm).`,
+        areaUtil: { largura: 0, altura: 0 }
+      };
+    }
+
+    if (areaUtilAltura <= 0) {
+      return {
+        valido: false,
+        mensagem: `As margens verticais (${margemSuperior}mm + ${margemInferior}mm) excedem a altura da página (${alturaEfetiva}mm).`,
+        areaUtil: { largura: 0, altura: 0 }
+      };
+    }
+
+    // Verificar se a etiqueta cabe na área útil
+    if (etiquetaLargura > areaUtilLargura) {
+      return {
+        valido: false,
+        mensagem: `A largura da etiqueta (${etiquetaLargura}mm) excede a área útil (${areaUtilLargura}mm).`,
+        areaUtil: { largura: areaUtilLargura, altura: areaUtilAltura }
+      };
+    }
+
+    if (etiquetaAltura > areaUtilAltura) {
+      return {
+        valido: false,
+        mensagem: `A altura da etiqueta (${etiquetaAltura}mm) excede a área útil (${areaUtilAltura}mm).`,
+        areaUtil: { largura: areaUtilLargura, altura: areaUtilAltura }
+      };
+    }
+
+    return { 
+      valido: true,
+      areaUtil: { largura: areaUtilLargura, altura: areaUtilAltura }
+    };
+  } catch (error) {
+    console.error("Erro ao validar dimensões:", error);
     return {
       valido: false,
-      mensagem: `As margens laterais (${margemEsquerda}mm + ${margemDireita}mm) excedem a largura da página (${larguraEfetiva}mm).`,
+      mensagem: "Erro ao calcular dimensões. Verifique os valores informados.",
       areaUtil: { largura: 0, altura: 0 }
     };
   }
-
-  if (areaUtilAltura <= 0) {
-    return {
-      valido: false,
-      mensagem: `As margens verticais (${margemSuperior}mm + ${margemInferior}mm) excedem a altura da página (${alturaEfetiva}mm).`,
-      areaUtil: { largura: 0, altura: 0 }
-    };
-  }
-
-  // Verificar se a etiqueta cabe na área útil
-  if (etiquetaLargura > areaUtilLargura) {
-    return {
-      valido: false,
-      mensagem: `A largura da etiqueta (${etiquetaLargura}mm) excede a área útil (${areaUtilLargura}mm).`,
-      areaUtil: { largura: areaUtilLargura, altura: areaUtilAltura }
-    };
-  }
-
-  if (etiquetaAltura > areaUtilAltura) {
-    return {
-      valido: false,
-      mensagem: `A altura da etiqueta (${etiquetaAltura}mm) excede a área útil (${areaUtilAltura}mm).`,
-      areaUtil: { largura: areaUtilLargura, altura: areaUtilAltura }
-    };
-  }
-
-  return { 
-    valido: true,
-    areaUtil: { largura: areaUtilLargura, altura: areaUtilAltura }
-  };
 }
