@@ -1,3 +1,4 @@
+
 import type { ModeloEtiqueta, EtiquetaCustomDB, CampoEtiqueta } from "@/types/etiqueta";
 import type { Json } from "@/integrations/supabase/types";
 

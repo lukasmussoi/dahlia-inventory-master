@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Monitor, Smartphone } from "lucide-react";
+import { useEffect } from "react";
 
 interface ConfigPanelProps {
   pageFormat: string;
@@ -50,6 +51,17 @@ export function ConfigPanel({
   autoAdjustDimensions,
   onToggleAutoAdjust
 }: ConfigPanelProps) {
+  // Logging para depuração
+  useEffect(() => {
+    console.log("ConfigPanel renderizado com valores:", {
+      pageFormat,
+      pageOrientation,
+      pageMargins,
+      labelSpacing,
+      pageSize
+    });
+  }, [pageFormat, pageOrientation, pageMargins, labelSpacing, pageSize]);
+
   return (
     <div className="space-y-4">
       <h3 className="text-sm font-medium mb-2">Configurações da Página</h3>
@@ -67,7 +79,7 @@ export function ConfigPanel({
             <SelectItem value="A4">A4 (210 × 297 mm)</SelectItem>
             <SelectItem value="A5">A5 (148 × 210 mm)</SelectItem>
             <SelectItem value="Letter">Carta (216 × 279 mm)</SelectItem>
-            <SelectItem value="Custom">Personalizado</SelectItem>
+            <SelectItem value="Personalizado">Personalizado</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -184,7 +196,7 @@ export function ConfigPanel({
         </div>
       </div>
       
-      {pageFormat === "Custom" && (
+      {(pageFormat === "Custom" || pageFormat === "Personalizado") && (
         <div className="grid grid-cols-2 gap-2">
           <div>
             <Label className="text-xs mb-1 block">Largura da Página (mm)</Label>
@@ -196,6 +208,8 @@ export function ConfigPanel({
                 width: Number(e.target.value),
                 height: pageSize.height
               })}
+              min={10}
+              max={1000}
             />
           </div>
           <div>
@@ -208,6 +222,8 @@ export function ConfigPanel({
                 width: pageSize.width,
                 height: Number(e.target.value)
               })}
+              min={10}
+              max={1000}
             />
           </div>
         </div>
@@ -220,6 +236,8 @@ export function ConfigPanel({
           className="h-7 text-sm"
           value={gridSize}
           onChange={(e) => setGridSize(Number(e.target.value))}
+          min={1}
+          max={50}
         />
       </div>
       

@@ -1,10 +1,12 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 /**
  * Hook para gerenciar configurações de página e dimensões
  */
 export function usePageConfiguration(initialData?: any) {
+  console.log("Inicializando usePageConfiguration com dados:", initialData);
+  
   // Configurações de página
   const [pageSize, setPageSize] = useState({ 
     width: initialData?.larguraPagina || 210, 
@@ -22,6 +24,17 @@ export function usePageConfiguration(initialData?: any) {
     horizontal: initialData?.espacamentoHorizontal || 2,
     vertical: initialData?.espacamentoVertical || 2
   });
+  
+  // Log para debug
+  useEffect(() => {
+    console.log("Estado do usePageConfiguration atualizado:", {
+      pageFormat,
+      pageOrientation, 
+      pageSize,
+      pageMargins,
+      labelSpacing
+    });
+  }, [pageFormat, pageOrientation, pageSize, pageMargins, labelSpacing]);
   
   /**
    * Atualiza a margem da página
@@ -53,6 +66,7 @@ export function usePageConfiguration(initialData?: any) {
    * Atualiza o formato da página e suas dimensões
    */
   const handleUpdatePageFormat = (value: string) => {
+    console.log(`Alterando formato da página para: ${value}`);
     setPageFormat(value);
     
     // Define os tamanhos padrão com base no formato e orientação
@@ -63,6 +77,7 @@ export function usePageConfiguration(initialData?: any) {
    * Atualiza a orientação da página e suas dimensões
    */
   const handleUpdatePageOrientation = (value: string) => {
+    console.log(`Alterando orientação da página para: ${value}`);
     setPageOrientation(value);
     
     // Atualiza as dimensões da página com base na nova orientação
@@ -85,16 +100,24 @@ export function usePageConfiguration(initialData?: any) {
     } else if (format === "Letter") {
       width = 216;
       height = 279;
+    } else if (format === "Personalizado" || format === "Custom") {
+      // Para formato personalizado, usar os valores atuais ou iniciais
+      width = initialData?.larguraPagina || pageSize.width || 210;
+      height = initialData?.alturaPagina || pageSize.height || 297;
     } else {
       // Para outros formatos, usar os valores atuais
       width = pageSize.width;
       height = pageSize.height;
     }
     
+    console.log(`Dimensões originais (${format}): ${width}x${height}`);
+    
     // Inverter largura e altura se for paisagem
     if (orientation === "paisagem") {
+      console.log(`Ajustando para paisagem: ${height}x${width}`);
       setPageSize({ width: height, height: width });
     } else {
+      console.log(`Mantendo como retrato: ${width}x${height}`);
       setPageSize({ width, height });
     }
   };

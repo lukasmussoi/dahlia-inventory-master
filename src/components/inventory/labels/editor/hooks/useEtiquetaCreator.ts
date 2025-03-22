@@ -1,220 +1,298 @@
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
-import { useEtiquetaState } from "./useEtiquetaState";
 import { usePageConfiguration } from "./usePageConfiguration";
 import { useLabelManagement } from "./useLabelManagement";
 import { useElementManagement } from "./useElementManagement";
 import { useDragAndDrop } from "./useDragAndDrop";
 import { usePDFGeneration } from "./usePDFGeneration";
+import { LabelElement, LabelType } from "../types";
+import { EtiquetaCustomModel } from "@/models/etiquetaCustomModel";
 
-/**
- * Hook principal que combina os hooks específicos para o editor de etiquetas
- */
 export function useEtiquetaCreator(initialData?: any, autoAdjustDimensions = false) {
-  // Hooks específicos
-  const etiquetaState = useEtiquetaState(initialData);
-  const pageConfig = usePageConfiguration(initialData);
-  const labelManagement = useLabelManagement(
-    initialData, 
-    pageConfig.pageSize, 
-    etiquetaState.snapToGrid, 
-    etiquetaState.gridSize
-  );
+  // Estado básico
+  const [modelName, setModelName] = useState(initialData?.nome || "");
+  const [activeTab, setActiveTab] = useState<"elementos" | "etiquetas" | "config">("etiquetas");
+  const [zoom, setZoom] = useState(100);
+  const [showGrid, setShowGrid] = useState(true);
+  const [snapToGrid, setSnapToGrid] = useState(true);
+  const [gridSize, setGridSize] = useState(5);
+  const editorRef = useRef<HTMLDivElement>(null);
+
+  // Log para debug
+  useEffect(() => {
+    console.log("useEtiquetaCreator inicializado com dados:", initialData);
+  }, []);
+  
+  // Hooks de gerenciamento de configurações e elementos
+  const pageConfiguration = usePageConfiguration({
+    formatoPagina: initialData?.formatoPagina || "A4",
+    orientacao: initialData?.orientacao || "retrato",
+    larguraPagina: initialData?.larguraPagina || 210,
+    alturaPagina: initialData?.alturaPagina || 297,
+    margemSuperior: initialData?.margemSuperior || 10,
+    margemInferior: initialData?.margemInferior || 10,
+    margemEsquerda: initialData?.margemEsquerda || 10,
+    margemDireita: initialData?.margemDireita || 10,
+    espacamentoHorizontal: initialData?.espacamentoHorizontal || 2,
+    espacamentoVertical: initialData?.espacamentoVertical || 2
+  });
+  
+  // Inicializar as etiquetas se houver dados iniciais
+  const initialLabels: LabelType[] = initialData?.campos ? [
+    {
+      id: 1,
+      name: initialData.nome || "Etiqueta",
+      x: 10,
+      y: 10,
+      width: initialData.largura || 80,
+      height: initialData.altura || 30,
+      elements: initialData.campos.map((campo: any, index: number) => ({
+        id: `element-${index}`,
+        type: campo.tipo,
+        x: campo.x,
+        y: campo.y,
+        width: campo.largura,
+        height: campo.altura,
+        fontSize: campo.tamanhoFonte,
+        align: campo.alinhamento || 'left'
+      }))
+    }
+  ] : [];
+  
+  // Gerenciamento de etiquetas
+  const labelManagement = useLabelManagement(initialLabels);
+  
+  // Gerenciamento de elementos
   const elementManagement = useElementManagement(
-    labelManagement.labels,
-    labelManagement.setLabels,
-    labelManagement.selectedLabelId,
-    labelManagement.snapToGridValue
+    labelManagement.labels, 
+    labelManagement.setLabels, 
+    labelManagement.selectedLabelId
   );
+
+  // Drag & Drop
   const dragAndDrop = useDragAndDrop(
-    etiquetaState.editorRef,
+    editorRef,
     labelManagement.labels,
     labelManagement.setLabels,
-    labelManagement.selectedLabelId,
-    etiquetaState.zoom,
-    labelManagement.snapToGridValue
+    zoom,
+    snapToGrid,
+    gridSize
   );
+  
+  // Geração de PDF
   const pdfGeneration = usePDFGeneration();
-
-  // Funções adaptadoras para o componente ElementPanel
-  const handleDeleteElement = () => {
-    if (etiquetaState.selectedElement) {
-      elementManagement.handleDeleteElement(etiquetaState.selectedElement);
-      etiquetaState.setSelectedElement(null);
-    }
-  };
-
-  const handleUpdateElement = (property: string, value: any) => {
-    if (etiquetaState.selectedElement) {
-      elementManagement.handleUpdateElement(etiquetaState.selectedElement, property, value);
-    }
-  };
-
-  const handleSetAlignment = (alignment: string) => {
-    if (etiquetaState.selectedElement) {
-      elementManagement.handleSetAlignment(etiquetaState.selectedElement, alignment);
-    }
-  };
-
-  /**
-   * Manipula a geração de prévia do PDF
-   */
-  const handlePreview = async () => {
+  
+  // Funções
+  
+  // Mostrar pré-visualização
+  const handlePreview = () => {
+    // Log para debug
+    console.log("Solicitando pré-visualização com orientação:", pageConfiguration.pageOrientation);
+    
+    // Verificar se há etiquetas para visualizar
     if (labelManagement.labels.length === 0) {
       toast.error("Adicione pelo menos uma etiqueta para visualizar");
       return;
     }
     
-    if (labelManagement.selectedLabelId === null) {
-      toast.error("Selecione uma etiqueta para visualizar");
+    // Chamada para geração de PDF com todos os parâmetros necessários
+    pdfGeneration.handlePreview({
+      modelName: modelName || "Modelo sem nome",
+      labels: labelManagement.labels,
+      pageFormat: pageConfiguration.pageFormat,
+      pageSize: pageConfiguration.pageSize,
+      pageMargins: {
+        top: pageConfiguration.pageMargins.top,
+        bottom: pageConfiguration.pageMargins.bottom,
+        left: pageConfiguration.pageMargins.left,
+        right: pageConfiguration.pageMargins.right,
+      },
+      labelSpacing: pageConfiguration.labelSpacing,
+      autoAdjustDimensions,
+      pageOrientation: pageConfiguration.pageOrientation
+    });
+  };
+  
+  // Salvar o modelo
+  const handleSave = async (onSave: (data: any) => void) => {
+    if (!modelName.trim()) {
+      toast.error("O nome do modelo é obrigatório");
       return;
     }
     
-    console.log("Iniciando preview com orientação:", pageConfig.pageOrientation);
-    etiquetaState.setIsGeneratingPdf(true);
+    if (labelManagement.labels.length === 0) {
+      toast.error("Adicione pelo menos uma etiqueta");
+      return;
+    }
     
     try {
-      // Chamando o método handlePreview do hook usePDFGeneration
-      // Este método gerencia o estado internamente e não retorna o pdfUrl
-      await pdfGeneration.handlePreview({
-        modelName: etiquetaState.modelName || "Modelo sem nome",
-        labels: labelManagement.labels,
-        pageFormat: pageConfig.pageFormat,
-        pageSize: pageConfig.pageSize,
-        pageMargins: pageConfig.pageMargins,
-        labelSpacing: pageConfig.labelSpacing,
-        autoAdjustDimensions,
-        pageOrientation: pageConfig.pageOrientation
+      // Obter a primeira etiqueta (atualmente só suportamos uma etiqueta)
+      const primeiraEtiqueta = labelManagement.labels[0];
+      
+      // Log para debug
+      console.log("Dados para salvar (antes de formatação):", {
+        nome: modelName,
+        largura: primeiraEtiqueta.width,
+        altura: primeiraEtiqueta.height,
+        formatoPagina: pageConfiguration.pageFormat,
+        orientacao: pageConfiguration.pageOrientation,
+        pageSize: pageConfiguration.pageSize
       });
       
-      // Como o hook pdfGeneration já gerencia o estado do previewPdfUrl,
-      // atualizamos apenas nossos estados locais com base nos estados dele
-      etiquetaState.setPreviewPdfUrl(pdfGeneration.previewPdfUrl);
-      etiquetaState.setIsPreviewDialogOpen(true);
-    } catch (error) {
-      console.error("Erro ao gerar pré-visualização:", error);
-      if (error instanceof Error) {
-        toast.error(`Erro na pré-visualização: ${error.message}`);
+      // Preparar os dados para salvamento
+      const modelData = {
+        nome: modelName,
+        descricao: modelName,
+        largura: primeiraEtiqueta.width,
+        altura: primeiraEtiqueta.height,
+        formatoPagina: pageConfiguration.pageFormat,
+        orientacao: pageConfiguration.pageOrientation,
+        margemSuperior: pageConfiguration.pageMargins.top,
+        margemInferior: pageConfiguration.pageMargins.bottom,
+        margemEsquerda: pageConfiguration.pageMargins.left,
+        margemDireita: pageConfiguration.pageMargins.right,
+        espacamentoHorizontal: pageConfiguration.labelSpacing.horizontal,
+        espacamentoVertical: pageConfiguration.labelSpacing.vertical,
+        larguraPagina: pageConfiguration.pageSize.width,
+        alturaPagina: pageConfiguration.pageSize.height,
+        campos: primeiraEtiqueta.elements.map((element: LabelElement) => ({
+          tipo: element.type,
+          x: element.x,
+          y: element.y,
+          largura: element.width,
+          altura: element.height,
+          tamanhoFonte: element.fontSize,
+          alinhamento: element.align
+        }))
+      };
+      
+      // Verificar se estamos editando ou criando
+      let result;
+      if (initialData?.id) {
+        console.log(`Atualizando modelo existente (ID: ${initialData.id})`, modelData);
+        result = await EtiquetaCustomModel.update(initialData.id, modelData);
+        if (result) {
+          toast.success("Modelo atualizado com sucesso!");
+        }
       } else {
-        toast.error("Não foi possível gerar a pré-visualização");
+        console.log("Criando novo modelo:", modelData);
+        result = await EtiquetaCustomModel.create(modelData);
+        if (result) {
+          toast.success("Modelo criado com sucesso!");
+        }
       }
-    } finally {
-      etiquetaState.setIsGeneratingPdf(false);
-    }
-  };
-
-  /**
-   * Faz o download do PDF gerado
-   */
-  const handleDownloadPdf = (modelName: string) => {
-    if (!etiquetaState.previewPdfUrl) return;
-    
-    const a = document.createElement("a");
-    a.href = etiquetaState.previewPdfUrl;
-    a.download = `${modelName || "modelo-etiqueta"}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  };
-
-  /**
-   * Salva o modelo de etiqueta
-   */
-  const handleSave = (onSave: (data: any) => void) => {
-    if (!etiquetaState.modelName.trim()) {
-      toast.error("Por favor, informe um nome para o modelo");
-      document.getElementById("model-name-input")?.focus();
-      return;
-    }
-    
-    // Verificar se existe ao menos uma etiqueta
-    if (labelManagement.labels.length === 0) {
-      toast.error("Por favor, adicione pelo menos uma etiqueta");
-      return;
-    }
-    
-    // Verificar se todas as etiquetas têm pelo menos um elemento
-    const emptyLabels = labelManagement.labels.filter(label => label.elements.length === 0);
-    if (emptyLabels.length > 0) {
-      toast.error(`A etiqueta "${emptyLabels[0].name}" não possui elementos. Adicione pelo menos um elemento em cada etiqueta.`);
-      labelManagement.setSelectedLabelId(emptyLabels[0].id);
-      return;
-    }
-    
-    // Se tiver múltiplas etiquetas, usar a primeira como referência principal
-    const primaryLabel = labelManagement.labels[0];
-    
-    // Mapear para o formato esperado pelo backend
-    const modelData = {
-      nome: etiquetaState.modelName,
-      descricao: etiquetaState.modelName,
-      campos: primaryLabel.elements.map(el => ({
-        tipo: el.type,
-        x: el.x,
-        y: el.y,
-        largura: el.width,
-        altura: el.height,
-        tamanhoFonte: el.fontSize,
-        alinhamento: el.align
-      })),
-      largura: primaryLabel.width,
-      altura: primaryLabel.height,
-      formatoPagina: pageConfig.pageFormat,
-      orientacao: pageConfig.pageOrientation,
-      margemSuperior: pageConfig.pageMargins.top,
-      margemInferior: pageConfig.pageMargins.bottom,
-      margemEsquerda: pageConfig.pageMargins.left,
-      margemDireita: pageConfig.pageMargins.right,
-      espacamentoHorizontal: pageConfig.labelSpacing.horizontal,
-      espacamentoVertical: pageConfig.labelSpacing.vertical,
-      larguraPagina: pageConfig.pageSize.width,
-      alturaPagina: pageConfig.pageSize.height
-    };
-    
-    console.log("Dados do modelo a serem salvos:", modelData);
-    
-    try {
-      // Chamar a função onSave e verificar se houve sucesso
-      if (typeof onSave === 'function') {
-        toast.info("Salvando modelo de etiqueta...");
-        // Chamando onSave com os dados do modelo
+      
+      if (result) {
+        console.log("Salvamento bem-sucedido:", result);
         onSave(modelData);
       } else {
-        console.error("A função onSave não foi fornecida ao componente EtiquetaCreator");
-        toast.error("Erro ao salvar: configuração incorreta");
+        console.error("Falha ao salvar modelo");
+        toast.error("Erro ao salvar modelo");
       }
     } catch (error) {
-      console.error("Erro ao chamar onSave:", error);
-      toast.error("Erro ao salvar modelo de etiqueta");
+      console.error("Erro ao salvar modelo:", error);
+      toast.error("Erro ao salvar modelo");
     }
+  };
+
+  // Organizar as etiquetas na página para maximizar o uso do espaço
+  const handleOptimizeLayout = () => {
+    // Verificar se há etiquetas
+    if (labelManagement.labels.length === 0) {
+      toast.error("Adicione pelo menos uma etiqueta para otimizar o layout");
+      return;
+    }
+    
+    // Calcular área útil da página (dentro das margens)
+    const usableWidth = pageConfiguration.pageSize.width - 
+                         pageConfiguration.pageMargins.left - 
+                         pageConfiguration.pageMargins.right;
+    const usableHeight = pageConfiguration.pageSize.height - 
+                          pageConfiguration.pageMargins.top - 
+                          pageConfiguration.pageMargins.bottom;
+    
+    // Pegar dimensões da primeira etiqueta como referência
+    const firstLabel = labelManagement.labels[0];
+    const labelWidth = firstLabel.width;
+    const labelHeight = firstLabel.height;
+    
+    // Calcular quantas etiquetas cabem por linha e coluna
+    const labelsPerRow = Math.floor(usableWidth / (labelWidth + pageConfiguration.labelSpacing.horizontal));
+    const labelsPerColumn = Math.floor(usableHeight / (labelHeight + pageConfiguration.labelSpacing.vertical));
+    
+    // Calcular total de etiquetas que cabem na página
+    const totalLabels = labelsPerRow * labelsPerColumn;
+    
+    if (totalLabels === 0) {
+      toast.error("A etiqueta é maior que a área útil da página. Ajuste as dimensões.");
+      return;
+    }
+    
+    const newLabels: LabelType[] = [];
+    
+    // Criar etiquetas organizadas na página
+    for (let row = 0; row < labelsPerColumn; row++) {
+      for (let col = 0; col < labelsPerRow; col++) {
+        if (newLabels.length >= totalLabels) break;
+        
+        // Clonar a primeira etiqueta como template
+        const clonedElement = { ...labelManagement.labels[0] };
+        
+        // Ajustar posição
+        const xPos = pageConfiguration.pageMargins.left + col * (labelWidth + pageConfiguration.labelSpacing.horizontal);
+        const yPos = pageConfiguration.pageMargins.top + row * (labelHeight + pageConfiguration.labelSpacing.vertical);
+        
+        newLabels.push({
+          ...clonedElement,
+          id: newLabels.length + 1,
+          name: `Etiqueta ${newLabels.length + 1}`,
+          x: xPos,
+          y: yPos,
+          elements: clonedElement.elements.map(element => ({ ...element, id: `element-${Math.random()}` }))
+        });
+      }
+    }
+    
+    // Atualizar as etiquetas
+    labelManagement.setLabels(newLabels);
+    toast.success(`Layout otimizado: ${newLabels.length} etiquetas dispostas em ${labelsPerRow}x${labelsPerColumn}`);
   };
 
   return {
-    // Estado básico
-    ...etiquetaState,
+    // Estado
+    modelName,
+    setModelName,
+    activeTab,
+    setActiveTab,
+    zoom,
+    setZoom,
+    showGrid,
+    setShowGrid,
+    snapToGrid,
+    setSnapToGrid,
+    gridSize,
+    setGridSize,
+    editorRef,
     
-    // Configurações de página
-    ...pageConfig,
-    
-    // Gerenciamento de etiquetas
+    // Labels
     ...labelManagement,
     
-    // Elementos - incluir as funções adaptadas para o elemento selecionado
+    // Elements
     ...elementManagement,
-    handleDeleteElement,
-    handleUpdateElement,
-    handleSetAlignment,
     
-    // Arrastar e soltar
+    // Drag & Drop
     ...dragAndDrop,
     
-    // Geração de PDF
+    // Configurações de página
+    ...pageConfiguration,
+    
+    // PDF
     ...pdfGeneration,
     handlePreview,
-    handleDownloadPdf: () => handleDownloadPdf(etiquetaState.modelName),
     
-    // Funções específicas
-    handleSave
+    // Funções adicionais
+    handleSave,
+    handleOptimizeLayout
   };
 }
