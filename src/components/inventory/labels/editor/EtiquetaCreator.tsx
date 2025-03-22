@@ -1,86 +1,16 @@
+
 import { useState, useRef, useEffect } from "react"
-import { 
-  AlignCenter, 
-  AlignLeft, 
-  AlignRight, 
-  Copy, 
-  Grid, 
-  Layers, 
-  Plus, 
-  Save, 
-  Settings, 
-  Trash, 
-  X, 
-  ZoomIn, 
-  ZoomOut,
-  LayoutGrid,
-  CheckSquare,
-  Minus,
-  FileText,
-  Download,
-  Smartphone,
-  Monitor
-} from "lucide-react"
+import { Save } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuLabel, ContextMenuSeparator, ContextMenuTrigger } from "@/components/ui/context-menu"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Switch } from "@/components/ui/switch"
-import { Separator } from "@/components/ui/separator"
-import { cn } from "@/lib/utils"
 import { toast } from "sonner"
-import "@/styles/etiqueta-editor.css"
 import { generatePreviewPDF } from "@/utils/etiquetaGenerator"
-
-export interface ElementType {
-  id: string;
-  name: string;
-  defaultWidth: number;
-  defaultHeight: number;
-  defaultFontSize: number;
-  defaultAlign?: string;
-  x?: number;
-  y?: number;
-  width?: number;
-  height?: number;
-  fontSize?: number;
-  align?: string;
-}
-
-export interface LabelElement {
-  id: string;
-  type: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  fontSize: number;
-  align: string;
-}
-
-export interface LabelType {
-  id: number;
-  name: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  elements: LabelElement[];
-}
-
-export interface EtiquetaCreatorProps {
-  onClose: () => void;
-  onSave: (data: any) => void;
-  initialData?: any;
-  autoAdjustDimensions?: boolean;
-  onToggleAutoAdjust?: () => void;
-}
+import { EditorToolbar } from "./EditorToolbar"
+import { ElementPanel } from "./ElementPanel"
+import { LabelPanel } from "./LabelPanel"
+import { ConfigPanel } from "./ConfigPanel"
+import { PreviewDialog } from "./PreviewDialog"
+import { VisualEditor } from "./VisualEditor"
+import { ElementType, LabelType, EtiquetaCreatorProps } from "./types"
 
 export default function EtiquetaCreator({ 
   onClose, 
@@ -193,13 +123,6 @@ export default function EtiquetaCreator({
     return labels.find(label => label.id === selectedLabelId) || null;
   }
 
-  const getSelectedElementDetails = () => {
-    if (!selectedElement || selectedLabelId === null) return null;
-    const label = labels.find(l => l.id === selectedLabelId);
-    if (!label) return null;
-    return label.elements.find(e => e.id === selectedElement);
-  }
-
   const handleStartDrag = (e: React.MouseEvent, type: "element" | "label", id: string | number, x: number, y: number) => {
     if (!editorRef.current) return;
     e.stopPropagation();
@@ -290,7 +213,7 @@ export default function EtiquetaCreator({
     const elementTemplate = elements.find(e => e.id === elementType);
     if (!elementTemplate) return;
     
-    const newElement: LabelElement = {
+    const newElement = {
       id: `elemento-${elementType}-${Date.now()}`,
       type: elementType,
       x: 10,
@@ -613,24 +536,6 @@ export default function EtiquetaCreator({
     onSave(modelData);
   }
   
-  const getElementName = (type: string) => {
-    switch (type) {
-      case "nome": return "Nome do Produto";
-      case "codigo": return "Código de Barras";
-      case "preco": return "Preço";
-      default: return type;
-    }
-  }
-  
-  const getElementPreview = (type: string) => {
-    switch (type) {
-      case "nome": return "Pingente Cristal";
-      case "codigo": return "123456789";
-      case "preco": return "R$ 99,90";
-      default: return "Elemento";
-    }
-  }
-  
   const handleOptimizeLayout = () => {
     if (selectedLabelId === null) return;
     
@@ -739,646 +644,92 @@ export default function EtiquetaCreator({
   
   return (
     <div className="bg-background rounded-lg shadow-lg w-full max-w-5xl mx-auto overflow-hidden">
-      {/* Cabeçalho */}
-      <div className="flex items-center justify-between p-3 border-b">
-        <h2 className="text-lg font-semibold">Criar Novo Modelo de Etiqueta</h2>
-        <div className="flex items-center space-x-2">
-          <Input 
-            id="model-name-input"
-            placeholder="Nome do modelo" 
-            className="w-48 h-8 text-sm" 
-            value={modelName}
-            onChange={(e) => setModelName(e.target.value)}
-          />
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-      
-      {/* Toolbar */}
-      <div className="flex items-center border-b p-2 gap-2 bg-muted/30">
-        <Button 
-          variant={activeTab === "elementos" ? "default" : "outline"} 
-          size="sm" 
-          className="h-8 px-3" 
-          onClick={() => setActiveTab("elementos")}
-        >
-          <Plus className="h-4 w-4 mr-1" />
-          <span className="text-xs">Elementos</span>
-        </Button>
-        
-        <Button 
-          variant={activeTab === "etiquetas" ? "default" : "outline"} 
-          size="sm" 
-          className="h-8 px-3" 
-          onClick={() => setActiveTab("etiquetas")}
-        >
-          <Layers className="h-4 w-4 mr-1" />
-          <span className="text-xs">Etiquetas</span>
-        </Button>
-        
-        <Button 
-          variant={activeTab === "config" ? "default" : "outline"} 
-          size="sm" 
-          className="h-8 px-3" 
-          onClick={() => setActiveTab("config")}
-        >
-          <Settings className="h-4 w-4 mr-1" />
-          <span className="text-xs">Config</span>
-        </Button>
-        
-        <div className="ml-auto flex items-center gap-2">
-          <Select
-            value={String(zoom)}
-            onValueChange={(value) => setZoom(Number(value))}
-          >
-            <SelectTrigger className="h-8 w-20">
-              <SelectValue placeholder={`${zoom}%`} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="50">50%</SelectItem>
-              <SelectItem value="75">75%</SelectItem>
-              <SelectItem value="100">100%</SelectItem>
-              <SelectItem value="150">150%</SelectItem>
-              <SelectItem value="200">200%</SelectItem>
-              <SelectItem value="300">300%</SelectItem>
-              <SelectItem value="500">500%</SelectItem>
-            </SelectContent>
-          </Select>
-          
-          <Button
-            variant={showGrid ? "default" : "outline"}
-            size="sm"
-            className="h-8 px-3"
-            onClick={() => setShowGrid(!showGrid)}
-          >
-            <Grid className="h-4 w-4 mr-1" />
-            <span className="text-xs">Grade</span>
-          </Button>
-          
-          <Button
-            variant={snapToGrid ? "default" : "outline"}
-            size="sm"
-            className="h-8 px-3"
-            onClick={() => setSnapToGrid(!snapToGrid)}
-          >
-            <CheckSquare className="h-4 w-4 mr-1" />
-            <span className="text-xs">Snap</span>
-          </Button>
-          
-          <Button
-            variant="default"
-            size="sm"
-            className="h-8 px-3"
-            onClick={handlePreview}
-            disabled={isGeneratingPdf}
-          >
-            <FileText className="h-4 w-4 mr-1" />
-            <span className="text-xs">Pré-visualizar</span>
-          </Button>
-        </div>
-      </div>
+      {/* Toolbar e cabeçalho */}
+      <EditorToolbar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        zoom={zoom}
+        setZoom={setZoom}
+        showGrid={showGrid}
+        setShowGrid={setShowGrid}
+        snapToGrid={snapToGrid}
+        setSnapToGrid={setSnapToGrid}
+        modelName={modelName}
+        setModelName={setModelName}
+        onClose={onClose}
+        handlePreview={handlePreview}
+        isGeneratingPdf={isGeneratingPdf}
+      />
       
       {/* Conteúdo principal */}
       <div className="flex h-[calc(100vh-18rem)]">
         {/* Painel lateral */}
         <div className="w-72 border-r bg-muted/20 p-2 overflow-y-auto">
           {activeTab === "elementos" && (
-            <div className="space-y-2">
-              <h3 className="text-sm font-medium mb-3">Elementos Disponíveis</h3>
-              
-              {elements.map(element => (
-                <Card 
-                  key={element.id}
-                  className="p-2 cursor-pointer hover:bg-accent transition-colors"
-                  onClick={() => handleAddElement(element.id)}
-                >
-                  <div className="text-sm font-medium mb-1">{element.name}</div>
-                  <div className="text-xs text-muted-foreground">
-                    Clique para adicionar à etiqueta
-                  </div>
-                </Card>
-              ))}
-              
-              {selectedElement && (
-                <div className="mt-6 border-t pt-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-sm font-medium">Propriedades do Elemento</h3>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      className="h-6 px-2"
-                      onClick={handleDeleteElement}
-                    >
-                      <Trash className="h-3 w-3 mr-1" />
-                      <span className="text-xs">Remover</span>
-                    </Button>
-                  </div>
-                  
-                  {getSelectedElementDetails() && (
-                    <div className="space-y-2">
-                      <div>
-                        <Label className="text-xs" htmlFor="element-type">Tipo</Label>
-                        <div className="text-sm font-medium" id="element-type">
-                          {getElementName(getSelectedElementDetails()!.type)}
-                        </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <Label className="text-xs" htmlFor="element-x">Posição X</Label>
-                          <Input
-                            id="element-x"
-                            type="number"
-                            className="h-7 text-sm"
-                            value={getSelectedElementDetails()!.x}
-                            onChange={(e) => handleUpdateElement('x', e.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs" htmlFor="element-y">Posição Y</Label>
-                          <Input
-                            id="element-y"
-                            type="number"
-                            className="h-7 text-sm"
-                            value={getSelectedElementDetails()!.y}
-                            onChange={(e) => handleUpdateElement('y', e.target.value)}
-                          />
-                        </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <Label className="text-xs" htmlFor="element-width">Largura</Label>
-                          <Input
-                            id="element-width"
-                            type="number"
-                            className="h-7 text-sm"
-                            value={getSelectedElementDetails()!.width}
-                            onChange={(e) => handleUpdateElement('width', e.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs" htmlFor="element-height">Altura</Label>
-                          <Input
-                            id="element-height"
-                            type="number"
-                            className="h-7 text-sm"
-                            value={getSelectedElementDetails()!.height}
-                            onChange={(e) => handleUpdateElement('height', e.target.value)}
-                          />
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <Label className="text-xs" htmlFor="element-font-size">Tamanho da Fonte</Label>
-                        <Input
-                          id="element-font-size"
-                          type="number"
-                          className="h-7 text-sm"
-                          value={getSelectedElementDetails()!.fontSize}
-                          onChange={(e) => handleUpdateElement('fontSize', e.target.value)}
-                        />
-                      </div>
-                      
-                      <div>
-                        <Label className="text-xs mb-1 block">Alinhamento</Label>
-                        <div className="flex items-center space-x-1">
-                          <Button
-                            variant={getSelectedElementDetails()!.align === "left" ? "default" : "outline"}
-                            size="sm"
-                            className="h-7 flex-1"
-                            onClick={() => handleSetAlignment("left")}
-                          >
-                            <AlignLeft className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            variant={getSelectedElementDetails()!.align === "center" ? "default" : "outline"}
-                            size="sm"
-                            className="h-7 flex-1"
-                            onClick={() => handleSetAlignment("center")}
-                          >
-                            <AlignCenter className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            variant={getSelectedElementDetails()!.align === "right" ? "default" : "outline"}
-                            size="sm"
-                            className="h-7 flex-1"
-                            onClick={() => handleSetAlignment("right")}
-                          >
-                            <AlignRight className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+            <ElementPanel
+              elements={elements}
+              selectedElement={selectedElement}
+              selectedLabelId={selectedLabelId}
+              labels={labels}
+              handleAddElement={handleAddElement}
+              handleDeleteElement={handleDeleteElement}
+              handleUpdateElement={handleUpdateElement}
+              handleSetAlignment={handleSetAlignment}
+            />
           )}
           
           {activeTab === "etiquetas" && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-medium">Etiquetas</h3>
-                <Button
-                  variant="default"
-                  size="sm"
-                  className="h-7 px-2"
-                  onClick={handleAddLabel}
-                >
-                  <Plus className="h-3 w-3 mr-1" />
-                  <span className="text-xs">Nova</span>
-                </Button>
-              </div>
-              
-              <div className="space-y-2">
-                {labels.map(label => (
-                  <Card 
-                    key={label.id}
-                    className={cn(
-                      "p-2 cursor-pointer",
-                      selectedLabelId === label.id ? "bg-primary/10 border-primary" : "hover:bg-accent"
-                    )}
-                    onClick={() => {
-                      setSelectedLabelId(label.id);
-                      setSelectedElement(null);
-                    }}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="text-sm font-medium">{label.name}</div>
-                      <div className="flex items-center">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 w-6 p-0"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDuplicateLabel(label.id);
-                          }}
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 w-6 p-0 text-destructive"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteLabel(label.id);
-                          }}
-                        >
-                          <Trash className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                    
-                    <div className="text-xs text-muted-foreground">
-                      {label.width} × {label.height} mm • {label.elements.length} elementos
-                    </div>
-                    
-                    {selectedLabelId === label.id && (
-                      <div className="mt-2 pt-2 border-t">
-                        <Label className="text-xs mb-1 block">Nome da Etiqueta</Label>
-                        <Input
-                          value={label.name}
-                          className="h-7 text-sm"
-                          onChange={(e) => handleUpdateLabelName(label.id, e.target.value)}
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                        
-                        <div className="grid grid-cols-2 gap-2 mt-2">
-                          <div>
-                            <Label className="text-xs mb-1 block">Largura (mm)</Label>
-                            <Input
-                              type="number"
-                              className="h-7 text-sm"
-                              value={label.width}
-                              onChange={(e) => handleUpdateLabelSize("width", Number(e.target.value))}
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-xs mb-1 block">Altura (mm)</Label>
-                            <Input
-                              type="number"
-                              className="h-7 text-sm"
-                              value={label.height}
-                              onChange={(e) => handleUpdateLabelSize("height", Number(e.target.value))}
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                          </div>
-                        </div>
-                        
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="w-full mt-2 h-7"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOptimizeLayout();
-                          }}
-                        >
-                          <LayoutGrid className="h-3 w-3 mr-1" />
-                          <span className="text-xs">Otimizar Layout</span>
-                        </Button>
-                      </div>
-                    )}
-                  </Card>
-                ))}
-              </div>
-            </div>
+            <LabelPanel
+              labels={labels}
+              selectedLabelId={selectedLabelId}
+              setSelectedLabelId={setSelectedLabelId}
+              setSelectedElement={setSelectedElement}
+              handleAddLabel={handleAddLabel}
+              handleDuplicateLabel={handleDuplicateLabel}
+              handleDeleteLabel={handleDeleteLabel}
+              handleUpdateLabelName={handleUpdateLabelName}
+              handleUpdateLabelSize={handleUpdateLabelSize}
+              handleOptimizeLayout={handleOptimizeLayout}
+            />
           )}
           
           {activeTab === "config" && (
-            <div className="space-y-4">
-              <h3 className="text-sm font-medium mb-2">Configurações da Página</h3>
-              
-              <div>
-                <Label className="text-xs mb-1 block">Formato da Página</Label>
-                <Select
-                  value={pageFormat}
-                  onValueChange={handleUpdatePageFormat}
-                >
-                  <SelectTrigger className="h-8">
-                    <SelectValue placeholder="Selecione um formato" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="A4">A4 (210 × 297 mm)</SelectItem>
-                    <SelectItem value="A5">A5 (148 × 210 mm)</SelectItem>
-                    <SelectItem value="Letter">Carta (216 × 279 mm)</SelectItem>
-                    <SelectItem value="Custom">Personalizado</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <Label className="text-xs mb-1 block">Orientação da Página</Label>
-                <Select
-                  value={pageOrientation}
-                  onValueChange={handleUpdatePageOrientation}
-                >
-                  <SelectTrigger className="h-8">
-                    <SelectValue placeholder="Selecione a orientação" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="retrato">
-                      <div className="flex items-center gap-2">
-                        <Smartphone className="h-4 w-4" />
-                        <span>Retrato</span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="paisagem">
-                      <div className="flex items-center gap-2">
-                        <Monitor className="h-4 w-4" />
-                        <span>Paisagem</span>
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              {/* Margens da Página */}
-              <div className="space-y-2">
-                <Label className="text-xs mb-1 block">Margens da Página (mm)</Label>
-                <div className="grid grid-cols-2 gap-x-2 gap-y-2">
-                  <div>
-                    <Label className="text-xs" htmlFor="margin-top">Margem Superior</Label>
-                    <Input
-                      id="margin-top"
-                      type="number"
-                      className="h-7 text-sm"
-                      value={pageMargins.top}
-                      onChange={(e) => handleUpdatePageMargin('top', Number(e.target.value))}
-                      min={0}
-                      max={200}
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs" htmlFor="margin-bottom">Margem Inferior</Label>
-                    <Input
-                      id="margin-bottom"
-                      type="number"
-                      className="h-7 text-sm"
-                      value={pageMargins.bottom}
-                      onChange={(e) => handleUpdatePageMargin('bottom', Number(e.target.value))}
-                      min={0}
-                      max={200}
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs" htmlFor="margin-left">Margem Esquerda</Label>
-                    <Input
-                      id="margin-left"
-                      type="number"
-                      className="h-7 text-sm"
-                      value={pageMargins.left}
-                      onChange={(e) => handleUpdatePageMargin('left', Number(e.target.value))}
-                      min={0}
-                      max={200}
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs" htmlFor="margin-right">Margem Direita</Label>
-                    <Input
-                      id="margin-right"
-                      type="number"
-                      className="h-7 text-sm"
-                      value={pageMargins.right}
-                      onChange={(e) => handleUpdatePageMargin('right', Number(e.target.value))}
-                      min={0}
-                      max={200}
-                    />
-                  </div>
-                </div>
-              </div>
-              
-              {/* Espaçamento entre Etiquetas */}
-              <div className="space-y-2">
-                <Label className="text-xs mb-1 block">Espaçamento entre Etiquetas (mm)</Label>
-                <div className="grid grid-cols-2 gap-x-2 gap-y-2">
-                  <div>
-                    <Label className="text-xs" htmlFor="spacing-horizontal">Espaçamento Horizontal</Label>
-                    <Input
-                      id="spacing-horizontal"
-                      type="number"
-                      className="h-7 text-sm"
-                      value={labelSpacing.horizontal}
-                      onChange={(e) => handleUpdateLabelSpacing('horizontal', Number(e.target.value))}
-                      min={0}
-                      max={200}
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs" htmlFor="spacing-vertical">Espaçamento Vertical</Label>
-                    <Input
-                      id="spacing-vertical"
-                      type="number"
-                      className="h-7 text-sm"
-                      value={labelSpacing.vertical}
-                      onChange={(e) => handleUpdateLabelSpacing('vertical', Number(e.target.value))}
-                      min={0}
-                      max={200}
-                    />
-                  </div>
-                </div>
-              </div>
-              
-              {pageFormat === "Custom" && (
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <Label className="text-xs mb-1 block">Largura da Página (mm)</Label>
-                    <Input
-                      type="number"
-                      className="h-7 text-sm"
-                      value={pageSize.width}
-                      onChange={(e) => setPageSize(prev => ({ ...prev, width: Number(e.target.value) }))}
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs mb-1 block">Altura da Página (mm)</Label>
-                    <Input
-                      type="number"
-                      className="h-7 text-sm"
-                      value={pageSize.height}
-                      onChange={(e) => setPageSize(prev => ({ ...prev, height: Number(e.target.value) }))}
-                    />
-                  </div>
-                </div>
-              )}
-              
-              <div>
-                <Label className="text-xs mb-1 block">Tamanho da Grade (mm)</Label>
-                <Input
-                  type="number"
-                  className="h-7 text-sm"
-                  value={gridSize}
-                  onChange={(e) => setGridSize(Number(e.target.value))}
-                />
-              </div>
-              
-              {onToggleAutoAdjust && (
-                <div className="flex items-center space-x-2 pt-2">
-                  <Switch 
-                    id="auto-adjust" 
-                    checked={autoAdjustDimensions}
-                    onCheckedChange={onToggleAutoAdjust}
-                  />
-                  <Label htmlFor="auto-adjust" className="text-sm cursor-pointer">
-                    Ajustar dimensões automaticamente
-                  </Label>
-                </div>
-              )}
-            </div>
+            <ConfigPanel
+              pageFormat={pageFormat}
+              handleUpdatePageFormat={handleUpdatePageFormat}
+              pageOrientation={pageOrientation}
+              handleUpdatePageOrientation={handleUpdatePageOrientation}
+              pageMargins={pageMargins}
+              handleUpdatePageMargin={handleUpdatePageMargin}
+              labelSpacing={labelSpacing}
+              handleUpdateLabelSpacing={handleUpdateLabelSpacing}
+              pageSize={pageSize}
+              setPageSize={setPageSize}
+              gridSize={gridSize}
+              setGridSize={setGridSize}
+              autoAdjustDimensions={autoAdjustDimensions}
+              onToggleAutoAdjust={onToggleAutoAdjust}
+            />
           )}
         </div>
         
         {/* Editor Visual */}
-        <div className="flex-1 p-4 overflow-auto bg-gray-100 dark:bg-gray-800/20">
-          <div 
-            className="relative bg-white dark:bg-gray-950 mx-auto border shadow"
-            style={{
-              width: pageSize.width * (zoom / 100),
-              height: pageSize.height * (zoom / 100),
-            }}
-            ref={editorRef}
-            onMouseMove={handleDrag}
-            onMouseUp={handleEndDrag}
-            onMouseLeave={handleEndDrag}
-          >
-            {/* Grade */}
-            {showGrid && (
-              <div 
-                className="absolute inset-0 pointer-events-none"
-                style={{
-                  backgroundSize: `${gridSize * (zoom / 100)}px ${gridSize * (zoom / 100)}px`,
-                  backgroundImage: "linear-gradient(to right, #f0f0f0 1px, transparent 1px), linear-gradient(to bottom, #f0f0f0 1px, transparent 1px)",
-                  opacity: 0.4
-                }}
-              />
-            )}
-            
-            {/* Visualização das margens da página */}
-            <div 
-              className="absolute border border-dashed border-blue-300 pointer-events-none"
-              style={{
-                left: pageMargins.left * (zoom / 100),
-                top: pageMargins.top * (zoom / 100),
-                right: pageMargins.right * (zoom / 100),
-                bottom: pageMargins.bottom * (zoom / 100),
-                width: `calc(100% - ${(pageMargins.left + pageMargins.right) * (zoom / 100)}px)`,
-                height: `calc(100% - ${(pageMargins.top + pageMargins.bottom) * (zoom / 100)}px)`,
-              }}
-            />
-            
-            {/* Etiquetas */}
-            {labels.map(label => (
-              <div 
-                key={label.id}
-                className={cn(
-                  "absolute border border-dashed cursor-move transition-all",
-                  selectedLabelId === label.id ? "border-primary border-2" : "border-gray-400"
-                )}
-                style={{
-                  left: label.x * (zoom / 100),
-                  top: label.y * (zoom / 100),
-                  width: label.width * (zoom / 100),
-                  height: label.height * (zoom / 100),
-                }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSelectedLabelId(label.id);
-                  setSelectedElement(null);
-                }}
-                onMouseDown={(e) => handleStartDrag(e, "label", label.id, label.x, label.y)}
-              >
-                {/* Elementos da etiqueta */}
-                {label.elements.map(element => (
-                  <div
-                    key={element.id}
-                    className={cn(
-                      "absolute border transition-all",
-                      selectedElement === element.id ? "border-primary-foreground bg-primary" : "border-gray-300 bg-gray-50"
-                    )}
-                    style={{
-                      left: element.x * (zoom / 100),
-                      top: element.y * (zoom / 100),
-                      width: element.width * (zoom / 100),
-                      height: element.height * (zoom / 100),
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedLabelId(label.id);
-                      setSelectedElement(element.id);
-                    }}
-                    onMouseDown={(e) => handleStartDrag(e, "element", element.id, element.x, element.y)}
-                  >
-                    <div 
-                      className={cn(
-                        "w-full h-full flex items-center overflow-hidden px-1",
-                        selectedElement === element.id ? "text-primary-foreground" : "text-foreground"
-                      )}
-                      style={{
-                        fontSize: element.fontSize * (zoom / 100),
-                        textAlign: element.align as any
-                      }}
-                    >
-                      <div className="w-full truncate">
-                        {getElementPreview(element.type)}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                
-                {/* Nome da etiqueta */}
-                <div className="absolute -top-5 left-0 text-xs font-medium">
-                  {label.name}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        <VisualEditor
+          editorRef={editorRef}
+          pageSize={pageSize}
+          zoom={zoom}
+          showGrid={showGrid}
+          gridSize={gridSize}
+          pageMargins={pageMargins}
+          labels={labels}
+          selectedLabelId={selectedLabelId}
+          selectedElement={selectedElement}
+          handleDrag={handleDrag}
+          handleEndDrag={handleEndDrag}
+          handleStartDrag={handleStartDrag}
+          setSelectedLabelId={setSelectedLabelId}
+          setSelectedElement={setSelectedElement}
+        />
       </div>
       
       {/* Rodapé */}
@@ -1393,41 +744,13 @@ export default function EtiquetaCreator({
       </div>
       
       {/* Diálogo de Pré-visualização */}
-      <Dialog open={isPreviewDialogOpen} onOpenChange={setIsPreviewDialogOpen}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>Pré-visualização da Etiqueta</DialogTitle>
-            <DialogDescription>
-              Esta é uma prévia de como sua etiqueta ficará quando impressa.
-            </DialogDescription>
-          </DialogHeader>
-          
-          {previewPdfUrl && (
-            <div className="mt-4 bg-gray-100 rounded-lg overflow-hidden">
-              <iframe 
-                src={previewPdfUrl} 
-                className="w-full h-[70vh] border-0"
-              />
-            </div>
-          )}
-          
-          <div className="flex justify-end mt-2 space-x-2">
-            <Button 
-              variant="outline" 
-              onClick={() => setIsPreviewDialogOpen(false)}
-            >
-              Fechar
-            </Button>
-            <Button 
-              onClick={handleDownloadPdf}
-              disabled={!previewPdfUrl}
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Baixar PDF
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <PreviewDialog
+        isOpen={isPreviewDialogOpen}
+        onOpenChange={setIsPreviewDialogOpen}
+        previewPdfUrl={previewPdfUrl}
+        modelName={modelName}
+        handleDownloadPdf={handleDownloadPdf}
+      />
     </div>
   );
 }
