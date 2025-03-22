@@ -75,7 +75,7 @@ export function useEtiquetaCreator(initialData?: any, autoAdjustDimensions = fal
     etiquetaState.setIsGeneratingPdf(true);
     
     try {
-      // Usando a função generatePreview que recebe um único objeto de configuração
+      // Chamando handlePreview e armazenando o resultado em uma variável
       const pdfUrl = await pdfGeneration.handlePreview({
         modelName: etiquetaState.modelName || "Modelo sem nome",
         labels: labelManagement.labels,
@@ -87,9 +87,13 @@ export function useEtiquetaCreator(initialData?: any, autoAdjustDimensions = fal
         pageOrientation: pageConfig.pageOrientation
       });
       
-      // Corrigindo o erro: chamando setPreviewPdfUrl com o valor pdfUrl
-      etiquetaState.setPreviewPdfUrl(pdfUrl);
-      etiquetaState.setIsPreviewDialogOpen(true);
+      // Usando o valor retornado para atualizar o estado
+      if (pdfUrl) {
+        etiquetaState.setPreviewPdfUrl(pdfUrl);
+        etiquetaState.setIsPreviewDialogOpen(true);
+      } else {
+        throw new Error("Falha ao gerar PDF: URL não retornada");
+      }
     } catch (error) {
       console.error("Erro ao gerar pré-visualização:", error);
       if (error instanceof Error) {
@@ -176,7 +180,7 @@ export function useEtiquetaCreator(initialData?: any, autoAdjustDimensions = fal
       // Chamar a função onSave e verificar se houve sucesso
       if (typeof onSave === 'function') {
         toast.info("Salvando modelo de etiqueta...");
-        // Corrigindo o erro: chamar onSave sem tentar atribuir seu valor de retorno void
+        // Chamando onSave com os dados do modelo, sem usar seu retorno
         onSave(modelData);
       } else {
         console.error("A função onSave não foi fornecida ao componente EtiquetaCreator");
