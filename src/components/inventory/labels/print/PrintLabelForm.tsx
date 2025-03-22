@@ -1,11 +1,9 @@
 
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { toast } from "sonner";
 import type { ModeloEtiqueta } from "@/types/etiqueta";
 
 interface PrintLabelFormProps {
@@ -14,10 +12,6 @@ interface PrintLabelFormProps {
   setSelectedModeloId: (id: string | undefined) => void;
   copies: string;
   setCopies: (copies: string) => void;
-  startRow: string;
-  setStartRow: (row: string) => void;
-  startColumn: string;
-  setStartColumn: (column: string) => void;
   multiplyByStock: boolean;
   setMultiplyByStock: (multiply: boolean) => void;
   onPrint: () => void;
@@ -32,10 +26,6 @@ export function PrintLabelForm({
   setSelectedModeloId,
   copies,
   setCopies,
-  startRow,
-  setStartRow,
-  startColumn,
-  setStartColumn,
   multiplyByStock,
   setMultiplyByStock,
   onPrint,
@@ -70,16 +60,7 @@ export function PrintLabelForm({
           <Input id="copies" type="number" min="1" value={copies} onChange={e => setCopies(e.target.value)} />
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="start-row">Linha início</Label>
-          <Input id="start-row" type="number" min="1" value={startRow} onChange={e => setStartRow(e.target.value)} />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="start-column">Coluna início</Label>
-          <Input id="start-column" type="number" min="1" value={startColumn} onChange={e => setStartColumn(e.target.value)} />
-        </div>
-      </div>
+      
       <div className="flex items-center space-x-2">
         <Switch id="multiply-stock" checked={multiplyByStock} onCheckedChange={setMultiplyByStock} />
         <Label htmlFor="multiply-stock">Multiplicar por estoque</Label>

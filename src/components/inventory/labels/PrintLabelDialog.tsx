@@ -24,8 +24,6 @@ export function PrintLabelDialog({
 }: PrintLabelDialogProps) {
   // Estados para configuração de impressão
   const [copies, setCopies] = useState("1");
-  const [startRow, setStartRow] = useState("1");
-  const [startColumn, setStartColumn] = useState("1");
   const [multiplyByStock, setMultiplyByStock] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   
@@ -64,8 +62,6 @@ export function PrintLabelDialog({
   useEffect(() => {
     if (isOpen) {
       setCopies("1");
-      setStartRow("1");
-      setStartColumn("1");
       setMultiplyByStock(false);
       setModeloWarning(null);
       setEtiquetaParaDuplicar(null);
@@ -133,20 +129,11 @@ export function PrintLabelDialog({
     }
     
     const copiesNum = parseInt(copies);
-    const startRowNum = parseInt(startRow);
-    const startColNum = parseInt(startColumn);
     if (isNaN(copiesNum) || copiesNum < 1) {
       toast.error("Número de cópias deve ser pelo menos 1");
       return false;
     }
-    if (isNaN(startRowNum) || startRowNum < 1) {
-      toast.error("Linha de início deve ser pelo menos 1");
-      return false;
-    }
-    if (isNaN(startColNum) || startColNum < 1) {
-      toast.error("Coluna de início deve ser pelo menos 1");
-      return false;
-    }
+    
     if (selectedModeloId && modeloWarning) {
       if (!confirm("O modelo selecionado pode ter problemas de impressão. Deseja continuar mesmo assim?")) {
         return false;
@@ -169,8 +156,6 @@ export function PrintLabelDialog({
       const pdfUrl = await generatePdfLabel({
         item,
         copies: parseInt(copies),
-        startRow: parseInt(startRow),
-        startColumn: parseInt(startColumn),
         multiplyByStock,
         selectedModeloId
       });
@@ -265,10 +250,6 @@ export function PrintLabelDialog({
           setSelectedModeloId={setSelectedModeloId}
           copies={copies}
           setCopies={setCopies}
-          startRow={startRow}
-          setStartRow={setStartRow}
-          startColumn={startColumn}
-          setStartColumn={setStartColumn}
           multiplyByStock={multiplyByStock}
           setMultiplyByStock={setMultiplyByStock}
           onPrint={handlePrint}

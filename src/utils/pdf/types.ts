@@ -6,8 +6,6 @@
 export interface GeneratePdfLabelOptions {
   item: any;
   copies: number;
-  startRow: number;
-  startColumn: number;
   multiplyByStock: boolean;
   selectedModeloId?: string;
 }

@@ -92,14 +92,10 @@ export const generateEtiquetaPDF = async (
       espacamento: [espacamentosValidos.horizontal, espacamentosValidos.vertical]
     });
     
-    // Inicializar posição
-    let currentRow = options.startRow - 1;
-    let currentColumn = options.startColumn - 1;
+    // Inicializar posição na primeira etiqueta
+    let currentRow = 0;
+    let currentColumn = 0;
     let currentPage = 0;
-    
-    // Garantir valores válidos
-    if (currentRow < 0) currentRow = 0;
-    if (currentColumn < 0) currentColumn = 0;
     
     // Calcular número total de etiquetas a serem geradas
     const totalLabels = items.reduce((total, item) => {

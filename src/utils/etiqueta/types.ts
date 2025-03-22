@@ -22,8 +22,6 @@ export interface PreviewPDFOptions {
  */
 export interface EtiquetaPrintOptions {
   copias: number;
-  startRow: number;
-  startColumn: number;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
 }
