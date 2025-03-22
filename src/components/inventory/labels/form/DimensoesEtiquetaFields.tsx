@@ -10,13 +10,10 @@ import { Input } from "@/components/ui/input";
 import { UseFormReturn } from "react-hook-form";
 import * as z from "zod";
 import { useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Info, Ruler, ArrowLeftRight, ArrowUpDown } from "lucide-react";
 
 const formSchema = z.object({
-  largura: z.number().min(0, "Largura deve ser maior que zero").max(300, "Largura máxima permitida: 300mm"),
-  altura: z.number().min(0, "Altura deve ser maior que zero").max(300, "Altura máxima permitida: 300mm"),
+  largura: z.number().min(10, "Largura mínima de 10mm").max(210, "Largura máxima de 210mm"),
+  altura: z.number().min(5, "Altura mínima de 5mm").max(297, "Altura máxima de 297mm"),
   formatoPagina: z.string().optional(),
   larguraPagina: z.number().optional(),
   alturaPagina: z.number().optional(),
@@ -24,20 +21,20 @@ const formSchema = z.object({
   margemDireita: z.number().optional(),
   margemSuperior: z.number().optional(),
   margemInferior: z.number().optional(),
-  orientacao: z.string().optional(),
 });
 
 type DimensoesEtiquetaFieldsProps = {
   form: UseFormReturn<z.infer<typeof formSchema>>;
+  ajustarAutomaticamente?: boolean;
 };
 
-export function DimensoesEtiquetaFields({ form }: DimensoesEtiquetaFieldsProps) {
-  // Observar as dimensões da página e margens para validação em tempo real
+export function DimensoesEtiquetaFields({ form, ajustarAutomaticamente = false }: DimensoesEtiquetaFieldsProps) {
+  // Observar as dimensões da página e margens para validar em tempo real
   useEffect(() => {
     const subscription = form.watch((value, { name }) => {
       // Verificar apenas quando os valores relevantes mudarem
       if (['largura', 'altura', 'formatoPagina', 'larguraPagina', 'alturaPagina', 
-           'margemEsquerda', 'margemDireita', 'margemSuperior', 'margemInferior', 'orientacao'].includes(name as string)) {
+           'margemEsquerda', 'margemDireita', 'margemSuperior', 'margemInferior'].includes(name as string)) {
         validarDimensoes();
       }
     });
@@ -48,7 +45,6 @@ export function DimensoesEtiquetaFields({ form }: DimensoesEtiquetaFieldsProps) 
   // Função para validar se a etiqueta cabe na página
   const validarDimensoes = () => {
     const values = form.getValues();
-    const orientacao = values.orientacao || 'retrato';
     
     // Se não houver valores de página definidos, não valida
     if (!values.formatoPagina) return;
@@ -74,150 +70,133 @@ export function DimensoesEtiquetaFields({ form }: DimensoesEtiquetaFieldsProps) 
       }
     }
     
-    // Aplicar orientação (trocar largura/altura se paisagem)
-    if (orientacao === 'paisagem' && larguraPagina && alturaPagina) {
-      [larguraPagina, alturaPagina] = [alturaPagina, larguraPagina];
-    }
-    
     // Se não houver largura e altura válidas, não continua
     if (!larguraPagina || !alturaPagina) return;
     
     // Calcular área útil
-    const margemEsquerda = values.margemEsquerda || 0;
-    const margemDireita = values.margemDireita || 0;
-    const margemSuperior = values.margemSuperior || 0;
-    const margemInferior = values.margemInferior || 0;
+    const margemEsquerda = values.margemEsquerda || 10;
+    const margemDireita = values.margemDireita || 10;
+    const margemSuperior = values.margemSuperior || 10;
+    const margemInferior = values.margemInferior || 10;
     
     const areaUtilLargura = larguraPagina - margemEsquerda - margemDireita;
     const areaUtilAltura = alturaPagina - margemSuperior - margemInferior;
     
     // Verificar se a etiqueta é maior que a área útil
     if (values.largura > areaUtilLargura) {
-      form.setError('largura', {
-        type: 'manual',
-        message: `A largura (${values.largura}mm) excede a área útil disponível (${areaUtilLargura}mm).`
-      });
-    } else {
-      // Se estiver dentro da área útil, limpar o erro
-      form.clearErrors('largura');
+      if (ajustarAutomaticamente) {
+        // Ajustar automaticamente a largura
+        form.setValue('largura', Math.floor(areaUtilLargura * 0.95));
+      } else {
+        form.setError('largura', {
+          type: 'manual',
+          message: `A largura excede a área útil (${areaUtilLargura}mm). Reduza para no máximo ${Math.floor(areaUtilLargura)}mm.`
+        });
+      }
     }
     
     if (values.altura > areaUtilAltura) {
-      form.setError('altura', {
-        type: 'manual',
-        message: `A altura (${values.altura}mm) excede a área útil disponível (${areaUtilAltura}mm).`
-      });
-    } else {
-      // Se estiver dentro da área útil, limpar o erro
-      form.clearErrors('altura');
+      if (ajustarAutomaticamente) {
+        // Ajustar automaticamente a altura
+        form.setValue('altura', Math.floor(areaUtilAltura * 0.95));
+      } else {
+        form.setError('altura', {
+          type: 'manual',
+          message: `A altura excede a área útil (${areaUtilAltura}mm). Reduza para no máximo ${Math.floor(areaUtilAltura)}mm.`
+        });
+      }
     }
   };
 
   return (
-    <Card className="mb-6">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base flex items-center">
-          <Ruler className="h-4 w-4 mr-2" />
-          Dimensões da Etiqueta
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Info className="h-4 w-4 ml-2 text-muted-foreground" />
-              </TooltipTrigger>
-              <TooltipContent>
-                <p className="w-[200px] text-xs">
-                  Dimensões em milímetros da etiqueta a ser impressa. 
-                  Certifique-se que cabem nas dimensões úteis da página.
-                </p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </CardTitle>
-        <CardDescription>Defina a largura e altura em milímetros</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="largura"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="flex items-center">
-                  <ArrowLeftRight className="h-4 w-4 mr-2" />
-                  Largura (mm)
-                </FormLabel>
-                <FormControl>
-                  <Input 
-                    type="number" 
-                    {...field} 
-                    onChange={e => {
-                      const valor = Number(e.target.value);
-                      field.onChange(valor);
-                      
-                      // Validação básica
-                      if (valor <= 0) {
-                        form.setError('largura', {
-                          type: 'manual',
-                          message: 'Largura deve ser maior que zero'
-                        });
-                      } else if (valor > 300) {
-                        form.setError('largura', {
-                          type: 'manual',
-                          message: 'Largura máxima permitida: 300mm'
-                        });
-                      }
-                    }}
-                    min={1}
-                    max={300}
-                    className={form.formState.errors.largura ? "border-red-300 bg-red-50" : ""}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
+    <div className="space-y-4">
+      <FormField
+        control={form.control}
+        name="largura"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Largura (mm)</FormLabel>
+            <FormControl>
+              <Input 
+                type="number" 
+                {...field} 
+                onChange={e => {
+                  const valor = Number(e.target.value);
+                  field.onChange(valor);
+                  
+                  // Validação em tempo real
+                  if (valor < 10) {
+                    form.setError('largura', {
+                      type: 'manual',
+                      message: 'Largura mínima de 10mm'
+                    });
+                  } else if (valor > 210) {
+                    form.setError('largura', {
+                      type: 'manual',
+                      message: 'Largura máxima de 210mm'
+                    });
+                  } else {
+                    form.clearErrors('largura');
+                  }
+                }}
+                min={10}
+                max={210}
+                className={form.formState.errors.largura ? "dimension-invalid" : ""}
+              />
+            </FormControl>
+            <FormMessage />
+            {form.formState.errors.largura && (
+              <div className="dimension-warning">
+                {form.formState.errors.largura.message}
+              </div>
             )}
-          />
+          </FormItem>
+        )}
+      />
 
-          <FormField
-            control={form.control}
-            name="altura"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="flex items-center">
-                  <ArrowUpDown className="h-4 w-4 mr-2" />
-                  Altura (mm)
-                </FormLabel>
-                <FormControl>
-                  <Input 
-                    type="number" 
-                    {...field} 
-                    onChange={e => {
-                      const valor = Number(e.target.value);
-                      field.onChange(valor);
-                      
-                      // Validação básica
-                      if (valor <= 0) {
-                        form.setError('altura', {
-                          type: 'manual',
-                          message: 'Altura deve ser maior que zero'
-                        });
-                      } else if (valor > 300) {
-                        form.setError('altura', {
-                          type: 'manual',
-                          message: 'Altura máxima permitida: 300mm'
-                        });
-                      }
-                    }}
-                    min={1}
-                    max={300}
-                    className={form.formState.errors.altura ? "border-red-300 bg-red-50" : ""}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
+      <FormField
+        control={form.control}
+        name="altura"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Altura (mm)</FormLabel>
+            <FormControl>
+              <Input 
+                type="number" 
+                {...field} 
+                onChange={e => {
+                  const valor = Number(e.target.value);
+                  field.onChange(valor);
+                  
+                  // Validação em tempo real
+                  if (valor < 5) {
+                    form.setError('altura', {
+                      type: 'manual',
+                      message: 'Altura mínima de 5mm'
+                    });
+                  } else if (valor > 297) {
+                    form.setError('altura', {
+                      type: 'manual',
+                      message: 'Altura máxima de 297mm'
+                    });
+                  } else {
+                    form.clearErrors('altura');
+                  }
+                }}
+                min={5}
+                max={297}
+                className={form.formState.errors.altura ? "dimension-invalid" : ""}
+              />
+            </FormControl>
+            <FormMessage />
+            {form.formState.errors.altura && (
+              <div className="dimension-warning">
+                {form.formState.errors.altura.message}
+              </div>
             )}
-          />
-        </div>
-      </CardContent>
-    </Card>
+          </FormItem>
+        )}
+      />
+    </div>
   );
 }

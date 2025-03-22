@@ -38,13 +38,12 @@ export function ElementosEtiquetaFields({ form }: ElementosEtiquetaFieldsProps) 
       const camposCorrigidos = camposAtuais.map((campo: any, index: number) => {
         const campoInicial = elementosIniciais[index];
         return {
-          tipo: campo.tipo || campoInicial.tipo, // Garantir que tipo nunca seja undefined
+          tipo: campo.tipo || campoInicial.tipo,
           x: Number(campo.x || campoInicial.x),
           y: Number(campo.y || campoInicial.y),
           largura: Number(campo.largura || campoInicial.largura), 
           altura: Number(campo.altura || campoInicial.altura),
-          tamanhoFonte: Number(campo.tamanhoFonte || campoInicial.tamanhoFonte),
-          align: campo.align || 'left'
+          tamanhoFonte: Number(campo.tamanhoFonte || campoInicial.tamanhoFonte)
         } as CampoEtiqueta;
       });
       

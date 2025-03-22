@@ -17,7 +17,7 @@ export class EtiquetaCustomModel {
 
       if (error) throw error;
 
-      return data.map(item => mapDatabaseToModel(item as EtiquetaCustomDB));
+      return data.map(item => mapDatabaseToModel(item));
     } catch (error) {
       console.error('Erro ao buscar modelos de etiquetas:', error);
       toast.error('Erro ao carregar modelos de etiquetas');
@@ -35,7 +35,7 @@ export class EtiquetaCustomModel {
 
       if (error) throw error;
       
-      return mapDatabaseToModel(data as EtiquetaCustomDB);
+      return mapDatabaseToModel(data);
     } catch (error) {
       console.error(`Erro ao buscar modelo de etiqueta ID ${id}:`, error);
       toast.error('Erro ao carregar modelo de etiqueta');

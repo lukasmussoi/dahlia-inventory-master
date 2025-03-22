@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { InventoryModel } from "@/models/inventoryModel";
 import { LabelModel } from "@/models/labelModel";
-import { Printer, Tag, Search, XCircle, CheckCircle, History, Filter, X, Plus } from "lucide-react";
+import { Printer, Tag, Search, XCircle, CheckCircle, History, Filter, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,7 +24,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { PrintLabelDialog } from "./PrintLabelDialog";
-import { EtiquetaCustomForm } from "./EtiquetaCustomForm";
 
 export function InventoryLabels() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -34,7 +33,6 @@ export function InventoryLabels() {
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const [selectedItemForHistory, setSelectedItemForHistory] = useState<string | null>(null);
   const [selectedItemForPrint, setSelectedItemForPrint] = useState<any>(null);
-  const [isNewLabelDialogOpen, setIsNewLabelDialogOpen] = useState(false);
 
   const { data: items, isLoading: isLoadingItems } = useQuery({
     queryKey: ['inventory-items'],
@@ -53,11 +51,6 @@ export function InventoryLabels() {
 
   const handlePrintLabels = async () => {
     setSelectedItemForPrint(items?.find(item => item.id === selectedItems[0]));
-  };
-
-  const handleNewLabelSuccess = () => {
-    setIsNewLabelDialogOpen(false);
-    toast.success("Modelo de etiqueta criado com sucesso!");
   };
 
   const filteredItems = items?.filter(item => {
@@ -95,29 +88,19 @@ export function InventoryLabels() {
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Etiquetas de Produtos</h1>
-        <div className="flex gap-2">
-          {selectedItems.length > 0 && (
-            <Button
-              onClick={() => handlePrintLabels()}
-              className="flex items-center gap-2"
-              disabled={isPrinting}
-            >
-              <Printer className="h-4 w-4" />
-              {isPrinting 
-                ? "Imprimindo..." 
-                : `Imprimir Selecionados (${selectedItems.length})`
-              }
-            </Button>
-          )}
+        {selectedItems.length > 0 && (
           <Button
-            onClick={() => setIsNewLabelDialogOpen(true)}
-            variant="default"
+            onClick={() => handlePrintLabels()}
             className="flex items-center gap-2"
+            disabled={isPrinting}
           >
-            <Plus className="h-4 w-4" />
-            Novo Modelo de Etiqueta
+            <Printer className="h-4 w-4" />
+            {isPrinting 
+              ? "Imprimindo..." 
+              : `Imprimir Selecionados (${selectedItems.length})`
+            }
           </Button>
-        </div>
+        )}
       </div>
 
       <Card>
@@ -329,18 +312,6 @@ export function InventoryLabels() {
         onClose={() => setSelectedItemForPrint(null)}
         item={selectedItemForPrint}
       />
-
-      <Dialog open={isNewLabelDialogOpen} onOpenChange={setIsNewLabelDialogOpen}>
-        <DialogContent className="max-w-5xl">
-          <DialogHeader>
-            <DialogTitle>Criar Novo Modelo de Etiqueta</DialogTitle>
-          </DialogHeader>
-          <EtiquetaCustomForm 
-            onClose={() => setIsNewLabelDialogOpen(false)} 
-            onSuccess={handleNewLabelSuccess} 
-          />
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

@@ -3,86 +3,125 @@ import type { ModeloEtiqueta, EtiquetaCustomDB, CampoEtiqueta } from "@/types/et
 import type { Json } from "@/integrations/supabase/types";
 
 /**
- * Transforma um objeto ModeloEtiqueta em um formato adequado para o banco de dados
- */
-export function mapModelToDatabase(modelo: ModeloEtiqueta): Omit<EtiquetaCustomDB, 'id' | 'criado_por' | 'criado_em' | 'atualizado_em'> {
-  return {
-    descricao: modelo.descricao || '',
-    tipo: 'custom',
-    largura: modelo.largura,
-    altura: modelo.altura,
-    formato_pagina: modelo.formatoPagina,
-    orientacao: modelo.orientacao,
-    margem_superior: modelo.margemSuperior,
-    margem_inferior: modelo.margemInferior,
-    margem_esquerda: modelo.margemEsquerda,
-    margem_direita: modelo.margemDireita,
-    espacamento_horizontal: modelo.espacamentoHorizontal,
-    espacamento_vertical: modelo.espacamentoVertical,
-    largura_pagina: modelo.larguraPagina,
-    altura_pagina: modelo.alturaPagina,
-    // Garantir que todos os campos tenham as propriedades obrigatórias
-    campos: modelo.campos.map(campo => ({
-      tipo: campo.tipo || 'nome', // Garantir que tipo nunca seja undefined
-      x: campo.x,
-      y: campo.y,
-      largura: campo.largura,
-      altura: campo.altura,
-      tamanhoFonte: campo.tamanhoFonte,
-      align: campo.align || 'left',
-      valor: campo.valor
-    })) as unknown as Json,
-    margem_interna_superior: modelo.margemInternaEtiquetaSuperior,
-    margem_interna_inferior: modelo.margemInternaEtiquetaInferior,
-    margem_interna_esquerda: modelo.margemInternaEtiquetaEsquerda,
-    margem_interna_direita: modelo.margemInternaEtiquetaDireita
-  };
-}
-
-/**
- * Transforma um objeto do banco de dados em um ModeloEtiqueta
+ * Converte um registro do banco de dados para o formato usado no frontend
  */
 export function mapDatabaseToModel(item: EtiquetaCustomDB): ModeloEtiqueta {
-  // Garantir que campos seja um array, mesmo que venha como null do banco
-  const camposFromDB = item.campos ? 
-    (Array.isArray(item.campos) ? item.campos : []) : 
-    [];
+  let campos: CampoEtiqueta[] = [];
+  
+  console.log("Mapeando item do banco para modelo:", item);
+  
+  // Certifica que campos seja tratado como um array de CampoEtiqueta
+  if (item.campos) {
+    try {
+      if (typeof item.campos === 'string') {
+        campos = JSON.parse(item.campos as string);
+      } else {
+        const camposArray = Array.isArray(item.campos) 
+          ? item.campos 
+          : Array.isArray((item.campos as any).data) 
+            ? (item.campos as any).data 
+            : [];
+            
+        campos = camposArray.map((campo: any) => ({
+          tipo: campo.tipo || 'nome',
+          x: Number(campo.x || 0),
+          y: Number(campo.y || 0),
+          largura: Number(campo.largura || 10),
+          altura: Number(campo.altura || 10),
+          tamanhoFonte: Number(campo.tamanhoFonte || 10),
+          valor: campo.valor
+        }));
+      }
+    } catch (error) {
+      console.error('Erro ao converter campos da etiqueta:', error);
+      // Configurar valores padrão para os campos
+      campos = [
+        { tipo: 'nome' as const, x: 2, y: 4, largura: 40, altura: 10, tamanhoFonte: 7 },
+        { tipo: 'codigo' as const, x: 20, y: 1, largura: 40, altura: 6, tamanhoFonte: 8 },
+        { tipo: 'preco' as const, x: 70, y: 4, largura: 20, altura: 10, tamanhoFonte: 10 }
+      ];
+    }
+  }
 
-  // Garantir que todos os campos tenham as propriedades obrigatórias
-  const camposValidados = camposFromDB.map((campo: any) => ({
-    tipo: campo.tipo || 'nome', // Valor padrão para garantir que o tipo seja definido
-    x: campo.x || 0,
-    y: campo.y || 0,
-    largura: campo.largura || 100,
-    altura: campo.altura || 20,
-    tamanhoFonte: campo.tamanhoFonte || 12,
-    align: campo.align || 'left',
+  // Se não houver campos, usar os valores padrão
+  if (campos.length === 0) {
+    campos = [
+      { tipo: 'nome' as const, x: 2, y: 4, largura: 40, altura: 10, tamanhoFonte: 7 },
+      { tipo: 'codigo' as const, x: 20, y: 1, largura: 40, altura: 6, tamanhoFonte: 8 },
+      { tipo: 'preco' as const, x: 70, y: 4, largura: 20, altura: 10, tamanhoFonte: 10 }
+    ];
+  }
+
+  // Garantir que cada campo tenha todos os atributos necessários
+  campos = campos.map(campo => ({
+    tipo: campo.tipo as 'nome' | 'codigo' | 'preco',
+    x: Number(campo.x) || 0,
+    y: Number(campo.y) || 0,
+    largura: Number(campo.largura) || 10,
+    altura: Number(campo.altura) || 10,
+    tamanhoFonte: Number(campo.tamanhoFonte) || 10,
     valor: campo.valor
-  })) as CampoEtiqueta[];
+  }));
+
+  console.log("Campos mapeados:", campos);
 
   return {
     id: item.id,
     nome: item.descricao,
     descricao: item.descricao,
-    largura: item.largura,
-    altura: item.altura,
-    formatoPagina: item.formato_pagina,
-    orientacao: item.orientacao,
-    margemSuperior: item.margem_superior,
-    margemInferior: item.margem_inferior,
-    margemEsquerda: item.margem_esquerda,
-    margemDireita: item.margem_direita,
-    espacamentoHorizontal: item.espacamento_horizontal,
-    espacamentoVertical: item.espacamento_vertical,
-    larguraPagina: item.largura_pagina,
-    alturaPagina: item.altura_pagina,
-    campos: camposValidados,
+    largura: Number(item.largura) || 80,
+    altura: Number(item.altura) || 40,
+    formatoPagina: item.formato_pagina || "A4",
+    orientacao: item.orientacao || "retrato",
+    margemSuperior: Number(item.margem_superior) || 10,
+    margemInferior: Number(item.margem_inferior) || 10,
+    margemEsquerda: Number(item.margem_esquerda) || 10,
+    margemDireita: Number(item.margem_direita) || 10,
+    espacamentoHorizontal: Number(item.espacamento_horizontal) || 0,
+    espacamentoVertical: Number(item.espacamento_vertical) || 0,
+    larguraPagina: Number(item.largura_pagina) || undefined,
+    alturaPagina: Number(item.altura_pagina) || undefined,
+    campos: campos,
     usuario_id: item.criado_por,
     criado_em: item.criado_em,
-    atualizado_em: item.atualizado_em,
-    margemInternaEtiquetaSuperior: item.margem_interna_superior,
-    margemInternaEtiquetaInferior: item.margem_interna_inferior,
-    margemInternaEtiquetaEsquerda: item.margem_interna_esquerda,
-    margemInternaEtiquetaDireita: item.margem_interna_direita
+    atualizado_em: item.atualizado_em
+  };
+}
+
+/**
+ * Prepara um modelo para inclusão no banco de dados
+ */
+export function mapModelToDatabase(modelo: ModeloEtiqueta) {
+  console.log("Mapeando modelo para banco de dados:", modelo);
+  
+  // Garante que todos os campos tenham os valores obrigatórios
+  const camposValidados = modelo.campos.map(campo => ({
+    tipo: campo.tipo || 'nome',
+    x: Number(campo.x || 0),
+    y: Number(campo.y || 0),
+    largura: Number(campo.largura || 10),
+    altura: Number(campo.altura || 10),
+    tamanhoFonte: Number(campo.tamanhoFonte || 10),
+    valor: campo.valor
+  }));
+
+  console.log("Campos validados para salvar:", camposValidados);
+
+  return {
+    descricao: modelo.nome,
+    tipo: 'padrao',
+    largura: Number(modelo.largura) || 80,
+    altura: Number(modelo.altura) || 40,
+    formato_pagina: modelo.formatoPagina || "A4",
+    orientacao: modelo.orientacao || "retrato",
+    margem_superior: Number(modelo.margemSuperior) || 10,
+    margem_inferior: Number(modelo.margemInferior) || 10,
+    margem_esquerda: Number(modelo.margemEsquerda) || 10,
+    margem_direita: Number(modelo.margemDireita) || 10,
+    espacamento_horizontal: Number(modelo.espacamentoHorizontal) || 0,
+    espacamento_vertical: Number(modelo.espacamentoVertical) || 0,
+    largura_pagina: modelo.larguraPagina ? Number(modelo.larguraPagina) : null,
+    altura_pagina: modelo.alturaPagina ? Number(modelo.alturaPagina) : null,
+    campos: camposValidados as unknown as Json
   };
 }
