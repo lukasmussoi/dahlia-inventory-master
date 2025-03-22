@@ -32,6 +32,7 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
     pageAreaWarning
   } = useEtiquetaCustomForm(modelo, onClose, onSuccess);
   
+  // Por padrão, estamos usando o novo editor (EtiquetaCreator)
   const [useNewEditor, setUseNewEditor] = useState(true);
 
   const handleSave = (data: any) => {
@@ -63,7 +64,7 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
     form.handleSubmit(onSubmit)();
   };
 
-  // Usando o novo editor de etiquetas 
+  // O novo editor de etiquetas é o que está sendo mostrado
   if (useNewEditor) {
     return (
       <EtiquetaCreator 

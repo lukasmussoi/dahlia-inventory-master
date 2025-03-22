@@ -93,6 +93,7 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
     ? modelo.orientacao 
     : 'retrato';
 
+  // Usando margens de 0 por padrão para permitir maior área útil
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -122,6 +123,10 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
         validarDimensoes();
       }
     });
+    
+    // Validar inicialmente
+    validarDimensoes();
+    
     return () => subscription.unsubscribe();
   }, [form.watch]);
 

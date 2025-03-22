@@ -79,7 +79,7 @@ export function DimensoesEtiquetaFields({ form }: DimensoesEtiquetaFieldsProps) 
           alturaPagina = 356;
           break;
         default:
-          larguraPagina = 210;
+          larguraPagina =, 210;
           alturaPagina = 297;
       }
     }
@@ -87,7 +87,7 @@ export function DimensoesEtiquetaFields({ form }: DimensoesEtiquetaFieldsProps) 
     // Se não houver largura e altura válidas, não continua
     if (!larguraPagina || !alturaPagina) return;
     
-    // Usar a função utilitária para validação
+    // Usar a função utilitária para validação, incluindo orientação
     const resultado = validarDimensoesEtiqueta(
       values.largura || 0,
       values.altura || 0,
@@ -115,6 +115,7 @@ export function DimensoesEtiquetaFields({ form }: DimensoesEtiquetaFieldsProps) 
   return (
     <div className="space-y-4">
       {/* Dimensões da etiqueta */}
+      <h3 className="text-sm font-medium mb-2">Dimensões da Etiqueta</h3>
       <div className="grid grid-cols-2 gap-4">
         <FormField
           control={form.control}
@@ -180,7 +181,6 @@ export function DimensoesEtiquetaFields({ form }: DimensoesEtiquetaFieldsProps) 
                   onChange={e => field.onChange(Number(e.target.value))}
                   min={0}
                   max={200}
-                  defaultValue={0}
                 />
               </FormControl>
               <FormMessage />
@@ -201,7 +201,6 @@ export function DimensoesEtiquetaFields({ form }: DimensoesEtiquetaFieldsProps) 
                   onChange={e => field.onChange(Number(e.target.value))}
                   min={0}
                   max={200}
-                  defaultValue={0}
                 />
               </FormControl>
               <FormMessage />
@@ -224,7 +223,6 @@ export function DimensoesEtiquetaFields({ form }: DimensoesEtiquetaFieldsProps) 
                   onChange={e => field.onChange(Number(e.target.value))}
                   min={0}
                   max={200}
-                  defaultValue={0}
                 />
               </FormControl>
               <FormMessage />
@@ -245,7 +243,6 @@ export function DimensoesEtiquetaFields({ form }: DimensoesEtiquetaFieldsProps) 
                   onChange={e => field.onChange(Number(e.target.value))}
                   min={0}
                   max={200}
-                  defaultValue={0}
                 />
               </FormControl>
               <FormMessage />
@@ -271,7 +268,6 @@ export function DimensoesEtiquetaFields({ form }: DimensoesEtiquetaFieldsProps) 
                   onChange={e => field.onChange(Number(e.target.value))}
                   min={0}
                   max={200}
-                  defaultValue={0}
                 />
               </FormControl>
               <FormMessage />
@@ -292,7 +288,6 @@ export function DimensoesEtiquetaFields({ form }: DimensoesEtiquetaFieldsProps) 
                   onChange={e => field.onChange(Number(e.target.value))}
                   min={0}
                   max={200}
-                  defaultValue={0}
                 />
               </FormControl>
               <FormMessage />

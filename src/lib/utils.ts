@@ -97,9 +97,11 @@ export function validarDimensoesEtiqueta(
   
   // Para paisagem, a largura da página se torna a altura original e vice-versa
   if (pagina.orientacao === 'paisagem') {
+    // IMPORTANTE: Na orientação paisagem, trocamos largura e altura
+    console.log("Ajustando para paisagem - antes:", { larguraEfetiva, alturaEfetiva });
     larguraEfetiva = pagina.altura;
     alturaEfetiva = pagina.largura;
-    console.log("Dimensões efetivas (paisagem):", { larguraEfetiva, alturaEfetiva });
+    console.log("Ajustando para paisagem - depois:", { larguraEfetiva, alturaEfetiva });
   }
   
   // Calcular área útil da página após aplicar margens
