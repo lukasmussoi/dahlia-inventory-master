@@ -4,7 +4,7 @@
  */
 import { toast } from "sonner";
 import { EtiquetaCustomModel } from "@/models/etiquetaCustomModel";
-import { generateEtiquetaPDF } from "@/utils/etiquetaGenerator";
+import { generatePrintablePDF } from "@/utils/etiquetaGenerator";
 import { validateLabelDimensions } from "./validationUtils";
 import type { GeneratePdfLabelOptions, PdfGenerationResult } from "./types";
 
@@ -57,7 +57,7 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
     
     try {
       console.log("Iniciando geração de PDF com modelo personalizado");
-      return await generateEtiquetaPDF(
+      return await generatePrintablePDF(
         modeloCustom,
         [item], // Passamos o item como um array
         {
