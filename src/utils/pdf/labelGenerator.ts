@@ -16,7 +16,7 @@ import type { GeneratePdfLabelOptions, PdfGenerationResult } from "./types";
  */
 export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promise<string> {
   try {
-    const { item, copies, multiplyByStock, startRow, startColumn, selectedModeloId } = options;
+    const { item, copies, multiplyByStock, selectedModeloId } = options;
     
     if (!item) {
       throw new Error("Item não fornecido para gerar etiqueta");
@@ -61,8 +61,6 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
         modeloCustom,
         [item], // Passamos o item como um array
         {
-          startRow,
-          startColumn,
           copias: totalCopies
         }
       );
