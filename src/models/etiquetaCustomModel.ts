@@ -92,12 +92,18 @@ export class EtiquetaCustomModel {
       const modeloDb = mapModelToDatabase(modelo);
       console.log("Atualizando modelo:", id, modeloDb);
 
+      // Remova qualquer propriedade updated_at ou atualizado_em para evitar conflitos
+      // O trigger do banco de dados cuidará da atualização automática desses campos
       const { error } = await supabase
         .from('etiquetas_custom')
         .update(modeloDb)
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro do Supabase ao atualizar modelo:', error);
+        throw error;
+      }
+      
       console.log("Modelo atualizado com sucesso");
       return true;
     } catch (error) {

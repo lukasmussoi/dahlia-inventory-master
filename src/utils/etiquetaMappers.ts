@@ -29,7 +29,8 @@ export function mapDatabaseToModel(item: EtiquetaCustomDB): ModeloEtiqueta {
           largura: Number(campo.largura || 10),
           altura: Number(campo.altura || 10),
           tamanhoFonte: Number(campo.tamanhoFonte || 10),
-          valor: campo.valor
+          valor: campo.valor,
+          alinhamento: campo.alinhamento || 'left'
         }));
       }
     } catch (error) {
@@ -60,10 +61,17 @@ export function mapDatabaseToModel(item: EtiquetaCustomDB): ModeloEtiqueta {
     largura: Number(campo.largura) || 10,
     altura: Number(campo.altura) || 10,
     tamanhoFonte: Number(campo.tamanhoFonte) || 10,
-    valor: campo.valor
+    valor: campo.valor,
+    alinhamento: campo.alinhamento || 'left'
   }));
 
   console.log("Campos mapeados:", campos);
+
+  // Assegura que formatoPagina seja tratado corretamente, inclusive valores personalizados
+  let formatoPagina = item.formato_pagina || "A4";
+  if (formatoPagina === "Custom" || formatoPagina === "Personalizado") {
+    formatoPagina = "Personalizado";
+  }
 
   return {
     id: item.id,
@@ -71,7 +79,7 @@ export function mapDatabaseToModel(item: EtiquetaCustomDB): ModeloEtiqueta {
     descricao: item.descricao,
     largura: Number(item.largura) || 80,
     altura: Number(item.altura) || 40,
-    formatoPagina: item.formato_pagina || "A4",
+    formatoPagina: formatoPagina,
     orientacao: item.orientacao || "retrato",
     margemSuperior: Number(item.margem_superior) || 10,
     margemInferior: Number(item.margem_inferior) || 10,
@@ -103,7 +111,7 @@ export function mapModelToDatabase(modelo: ModeloEtiqueta) {
     altura: Number(campo.altura || 10),
     tamanhoFonte: Number(campo.tamanhoFonte || 10),
     valor: campo.valor,
-    alinhamento: (campo as any).alinhamento || 'left'
+    alinhamento: campo.alinhamento || 'left'
   }));
 
   console.log("Campos validados para salvar:", camposValidados);
