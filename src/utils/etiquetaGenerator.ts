@@ -12,9 +12,29 @@ export const generatePreviewPDF = async (
   pageSize: { width: number, height: number },
   margins: { top: number, right: number, bottom: number, left: number },
   spacing: { horizontal: number, vertical: number },
+  internalMargins?: { top?: number, right?: number, bottom?: number, left?: number },
   autoAdjustDimensions: boolean = false
 ): Promise<string> => {
   try {
+    // Normalizar margens internas
+    const normalizedInternalMargins = {
+      top: internalMargins?.top || 0,
+      right: internalMargins?.right || 0,
+      bottom: internalMargins?.bottom || 0,
+      left: internalMargins?.left || 0
+    };
+    
+    // Log das configurações
+    console.log("Gerando PDF de pré-visualização:", {
+      modelName,
+      labels: labels[0],
+      pageFormat,
+      pageSize,
+      margins,
+      spacing,
+      internalMargins: normalizedInternalMargins
+    });
+
     // Verificar se as dimensões são válidas
     if (labels[0].width > pageSize.width - margins.left - margins.right) {
       if (autoAdjustDimensions) {
@@ -60,6 +80,12 @@ export const generatePreviewPDF = async (
     pdf.text(`Dimensões: ${pageSize.width} × ${pageSize.height} mm`, 10, 35);
     pdf.text(`Dimensões da etiqueta: ${labels[0].width} × ${labels[0].height} mm`, 10, 40);
 
+    // Adicionar informações sobre margens internas
+    const hasInternalMargins = Object.values(normalizedInternalMargins).some(val => val > 0);
+    if (hasInternalMargins) {
+      pdf.text(`Margens internas: S:${normalizedInternalMargins.top} I:${normalizedInternalMargins.bottom} E:${normalizedInternalMargins.left} D:${normalizedInternalMargins.right} mm`, 10, 45);
+    }
+
     // Desenhar borda da página
     pdf.setDrawColor(200, 200, 200);
     pdf.rect(margins.left, margins.top, pageSize.width - margins.left - margins.right, pageSize.height - margins.top - margins.bottom);
@@ -69,8 +95,8 @@ export const generatePreviewPDF = async (
     const rowsPerPage = Math.floor((pageSize.height - margins.top - margins.bottom) / (labels[0].height + spacing.vertical));
 
     pdf.setFontSize(10);
-    pdf.text(`Disposição: ${columnsPerPage} × ${rowsPerPage} (colunas × linhas)`, 10, 45);
-    pdf.text(`Total de etiquetas por página: ${columnsPerPage * rowsPerPage}`, 10, 50);
+    pdf.text(`Disposição: ${columnsPerPage} × ${rowsPerPage} (colunas × linhas)`, 10, hasInternalMargins ? 50 : 45);
+    pdf.text(`Total de etiquetas por página: ${columnsPerPage * rowsPerPage}`, 10, hasInternalMargins ? 55 : 50);
 
     // Adicionar uma nova página para a visualização da etiqueta
     pdf.addPage();
@@ -86,8 +112,29 @@ export const generatePreviewPDF = async (
         // Desenhar borda da etiqueta
         pdf.rect(x, y, labels[0].width, labels[0].height);
 
+        // Desenhar margens internas da etiqueta (se definidas)
+        if (hasInternalMargins) {
+          pdf.setDrawColor(200, 200, 255);
+          pdf.setLineDashPattern([1, 1], 0);
+          
+          const contentX = x + normalizedInternalMargins.left;
+          const contentY = y + normalizedInternalMargins.top;
+          const contentWidth = labels[0].width - normalizedInternalMargins.left - normalizedInternalMargins.right;
+          const contentHeight = labels[0].height - normalizedInternalMargins.top - normalizedInternalMargins.bottom;
+          
+          pdf.rect(contentX, contentY, contentWidth, contentHeight);
+          pdf.setLineDashPattern([], 0);
+          pdf.setDrawColor(150, 150, 150);
+        }
+
         // Desenhar elementos da etiqueta
-        renderLabelElements(pdf, labels[0].elements, x, y);
+        renderLabelElements(
+          pdf, 
+          labels[0].elements, 
+          x, 
+          y, 
+          normalizedInternalMargins
+        );
       }
     }
 
@@ -100,7 +147,13 @@ export const generatePreviewPDF = async (
 };
 
 // Função auxiliar para renderizar os elementos de uma etiqueta
-const renderLabelElements = (pdf: JsPDF, elements: LabelElement[], offsetX: number, offsetY: number) => {
+const renderLabelElements = (
+  pdf: JsPDF, 
+  elements: LabelElement[], 
+  offsetX: number, 
+  offsetY: number,
+  internalMargins: { top: number, right: number, bottom: number, left: number }
+) => {
   elements.forEach(element => {
     // Definir o tamanho da fonte
     pdf.setFontSize(element.fontSize);
@@ -108,23 +161,27 @@ const renderLabelElements = (pdf: JsPDF, elements: LabelElement[], offsetX: numb
     // Obter dados de exemplo para o elemento
     const text = getElementPreviewText(element.type);
 
-    // Calcular a posição do texto baseado no alinhamento
-    let x = offsetX + element.x;
+    // Calcular a posição com base nas margens internas
+    const x = offsetX + element.x + internalMargins.left;
+    const y = offsetY + element.y + internalMargins.top;
+    
+    // Calcular alinhamento do texto
+    let textX = x;
     let textAlign: 'left' | 'center' | 'right' = 'left';
     
     if (element.align === 'center') {
-      x = offsetX + element.x + (element.width / 2);
+      textX = x + (element.width / 2);
       textAlign = 'center';
     } else if (element.align === 'right') {
-      x = offsetX + element.x + element.width;
+      textX = x + element.width;
       textAlign = 'right';
     }
     
     // Centralizar verticalmente
-    const y = offsetY + element.y + (element.height / 2) + (element.fontSize / 4);
+    const textY = y + (element.height / 2) + (element.fontSize / 4);
 
     // Desenhar o texto com o alinhamento especificado
-    pdf.text(text, x, y, { align: textAlign });
+    pdf.text(text, textX, textY, { align: textAlign });
   });
 };
 
@@ -174,8 +231,20 @@ export const generateEtiquetaPDF = async (
       espacamentoVertical,
       larguraPagina,
       alturaPagina,
-      campos
+      campos,
+      margemInternaEtiquetaSuperior,
+      margemInternaEtiquetaInferior, 
+      margemInternaEtiquetaEsquerda,
+      margemInternaEtiquetaDireita
     } = modelo;
+    
+    // Normalizar margens internas da etiqueta
+    const margensInternas = {
+      superior: margemInternaEtiquetaSuperior || 0,
+      inferior: margemInternaEtiquetaInferior || 0,
+      esquerda: margemInternaEtiquetaEsquerda || 0,
+      direita: margemInternaEtiquetaDireita || 0
+    };
     
     // Configurar tamanho da página
     let pageWidth, pageHeight;
@@ -205,6 +274,7 @@ export const generateEtiquetaPDF = async (
     if (!pageHeight || pageHeight <= 0) pageHeight = 297;
     
     console.log("Dimensões da página:", pageWidth, "x", pageHeight);
+    console.log("Margens internas da etiqueta:", margensInternas);
     
     // Criar documento PDF
     const pdf = new JsPDF({
@@ -215,10 +285,10 @@ export const generateEtiquetaPDF = async (
     
     // Calcular quantas etiquetas cabem na página
     const margensValidas = {
-      superior: margemSuperior > 0 ? margemSuperior : 10,
-      inferior: margemInferior > 0 ? margemInferior : 10,
-      esquerda: margemEsquerda > 0 ? margemEsquerda : 10,
-      direita: margemDireita > 0 ? margemDireita : 10
+      superior: margemSuperior > 0 ? margemSuperior : 0,
+      inferior: margemInferior > 0 ? margemInferior : 0,
+      esquerda: margemEsquerda > 0 ? margemEsquerda : 0,
+      direita: margemDireita > 0 ? margemDireita : 0
     };
     
     const espacamentosValidos = {
@@ -287,6 +357,21 @@ export const generateEtiquetaPDF = async (
         pdf.setDrawColor(200, 200, 200);
         pdf.rect(x, y, etiquetaLargura, etiquetaAltura);
         
+        // Desenhar margens internas se definidas
+        if (Object.values(margensInternas).some(val => val > 0)) {
+          pdf.setDrawColor(200, 200, 255);
+          pdf.setLineDashPattern([1, 1], 0);
+          
+          const contentX = x + margensInternas.esquerda;
+          const contentY = y + margensInternas.superior;
+          const contentWidth = etiquetaLargura - margensInternas.esquerda - margensInternas.direita;
+          const contentHeight = etiquetaAltura - margensInternas.superior - margensInternas.inferior;
+          
+          pdf.rect(contentX, contentY, contentWidth, contentHeight);
+          pdf.setLineDashPattern([], 0);
+          pdf.setDrawColor(150, 150, 150);
+        }
+        
         // Renderizar os campos da etiqueta
         if (campos && Array.isArray(campos)) {
           campos.forEach(campo => {
@@ -306,9 +391,9 @@ export const generateEtiquetaPDF = async (
               conteudo = `R$ ${preco}`;
             }
             
-            // Posicionar e desenhar o texto (convertendo números para string)
-            const posX = x + campo.x;
-            const posY = y + campo.y;
+            // Posicionar e desenhar o texto considerando margens internas
+            const posX = x + campo.x + margensInternas.esquerda;
+            const posY = y + campo.y + margensInternas.superior;
             
             // Converter coordenadas para string conforme esperado pelo jsPDF
             pdf.text(conteudo, posX, posY);
@@ -317,7 +402,7 @@ export const generateEtiquetaPDF = async (
           console.warn("Modelo sem campos definidos ou campos inválidos");
           // Adicionar texto padrão se não houver campos definidos
           pdf.setFontSize(10);
-          pdf.text("Etiqueta sem elementos", x + 5, y + 15);
+          pdf.text("Etiqueta sem elementos", x + 5 + margensInternas.esquerda, y + 15 + margensInternas.superior);
         }
         
         currentRow++;

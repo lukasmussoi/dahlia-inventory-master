@@ -4,22 +4,58 @@
   background-image: linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
                     linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
   background-size: 5mm 5mm;
+  position: relative;
 }
 
 /* Estilos para melhor visualização e interação */
 .etiqueta-content {
-  height: calc(100vh - 130px);
+  height: calc(100vh - 180px);
   max-height: 700px;
+  overflow: auto;
+  position: relative;
+}
+
+.etiqueta-workspace {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100%;
+  padding: 2rem;
+}
+
+/* Estilo para visualização de página com escala real */
+.page-view {
+  background-color: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  position: relative;
+  margin: 0 auto;
+  transform-origin: top left;
+}
+
+/* Área útil da página (considerando margens) */
+.page-content-area {
+  position: absolute;
+  border: 1px dashed rgba(0, 0, 0, 0.2);
+}
+
+/* Estilo para etiqueta */
+.etiqueta-container {
+  border: 1px solid rgba(100, 100, 100, 0.5);
+  background-color: white;
+  position: absolute;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  cursor: move;
+  overflow: hidden;
 }
 
 /* Estilo para elementos selecionados */
 .selected-element {
   border-color: hsl(var(--primary)) !important;
-  box-shadow: 0 0 0 1px hsl(var(--primary));
+  box-shadow: 0 0 0 2px hsl(var(--primary), 0.3);
 }
 
 /* Animações suaves */
-.absolute {
+.draggable-element {
   transition: left 0.1s ease, top 0.1s ease, width 0.1s ease, height 0.1s ease;
 }
 
@@ -127,13 +163,86 @@
   to { opacity: 1; }
 }
 
-/* Estilos para o toggle de ajuste automático */
-.auto-adjust-toggle {
+/* Marcadores de dimensão */
+.dimension-marker {
+  position: absolute;
+  font-size: 8px;
+  color: #666;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.dimension-marker-horizontal {
+  top: -16px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.dimension-marker-vertical {
+  left: -24px;
+  top: 50%;
+  transform: translateY(-50%) rotate(-90deg);
+}
+
+/* Alças de redimensionamento */
+.resize-handle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background-color: white;
+  border: 1px solid hsl(var(--primary));
+  border-radius: 50%;
+  z-index: 10;
+}
+
+.resize-handle-nw { top: -5px; left: -5px; cursor: nwse-resize; }
+.resize-handle-ne { top: -5px; right: -5px; cursor: nesw-resize; }
+.resize-handle-sw { bottom: -5px; left: -5px; cursor: nesw-resize; }
+.resize-handle-se { bottom: -5px; right: -5px; cursor: nwse-resize; }
+.resize-handle-n { top: -5px; left: 50%; transform: translateX(-50%); cursor: ns-resize; }
+.resize-handle-s { bottom: -5px; left: 50%; transform: translateX(-50%); cursor: ns-resize; }
+.resize-handle-e { right: -5px; top: 50%; transform: translateY(-50%); cursor: ew-resize; }
+.resize-handle-w { left: -5px; top: 50%; transform: translateY(-50%); cursor: ew-resize; }
+
+/* Margens internas da etiqueta (visualização) */
+.etiqueta-internal-margins {
+  position: absolute;
+  border: 1px dashed rgba(0, 0, 255, 0.2);
+  pointer-events: none;
+}
+
+/* Elemento dentro da etiqueta */
+.etiqueta-element {
+  position: absolute;
+  background-color: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  cursor: move;
+  user-select: none;
+}
+
+.etiqueta-element:hover {
+  border-color: hsl(var(--primary));
+}
+
+/* Ferramentas de zoom e navegação */
+.zoom-controls {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
   display: flex;
+  gap: 8px;
+  z-index: 100;
+  background-color: white;
+  border-radius: 8px;
+  padding: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.zoom-value {
+  display: inline-flex;
   align-items: center;
-  padding: 6px 12px;
-  border-radius: 4px;
-  font-size: 0.875rem;
-  background-color: rgba(0, 0, 0, 0.05);
-  margin-bottom: 8px;
+  justify-content: center;
+  min-width: 60px;
+  font-size: 12px;
 }
