@@ -99,11 +99,17 @@ export function validarDimensoesEtiqueta(
   if (pagina.orientacao === 'paisagem') {
     larguraEfetiva = pagina.altura;
     alturaEfetiva = pagina.largura;
+    console.log("Dimensões efetivas (paisagem):", { larguraEfetiva, alturaEfetiva });
   }
   
   // Calcular área útil da página após aplicar margens
-  const areaUtilLargura = larguraEfetiva - pagina.margemEsquerda - pagina.margemDireita;
-  const areaUtilAltura = alturaEfetiva - pagina.margemSuperior - pagina.margemInferior;
+  const margemEsquerda = pagina.margemEsquerda || 0;
+  const margemDireita = pagina.margemDireita || 0;
+  const margemSuperior = pagina.margemSuperior || 0; 
+  const margemInferior = pagina.margemInferior || 0;
+  
+  const areaUtilLargura = larguraEfetiva - margemEsquerda - margemDireita;
+  const areaUtilAltura = alturaEfetiva - margemSuperior - margemInferior;
 
   // Log detalhado da área útil calculada
   console.log("Área útil calculada:", { 
@@ -112,10 +118,10 @@ export function validarDimensoesEtiqueta(
     larguraEfetiva,
     alturaEfetiva,
     margens: {
-      esquerda: pagina.margemEsquerda,
-      direita: pagina.margemDireita,
-      superior: pagina.margemSuperior,
-      inferior: pagina.margemInferior
+      esquerda: margemEsquerda,
+      direita: margemDireita,
+      superior: margemSuperior,
+      inferior: margemInferior
     }
   });
 
@@ -123,7 +129,7 @@ export function validarDimensoesEtiqueta(
   if (areaUtilLargura <= 0) {
     return {
       valido: false,
-      mensagem: `As margens laterais (${pagina.margemEsquerda}mm + ${pagina.margemDireita}mm) excedem a largura da página (${larguraEfetiva}mm).`,
+      mensagem: `As margens laterais (${margemEsquerda}mm + ${margemDireita}mm) excedem a largura da página (${larguraEfetiva}mm).`,
       areaUtil: { largura: 0, altura: 0 }
     };
   }
@@ -131,7 +137,7 @@ export function validarDimensoesEtiqueta(
   if (areaUtilAltura <= 0) {
     return {
       valido: false,
-      mensagem: `As margens verticais (${pagina.margemSuperior}mm + ${pagina.margemInferior}mm) excedem a altura da página (${alturaEfetiva}mm).`,
+      mensagem: `As margens verticais (${margemSuperior}mm + ${margemInferior}mm) excedem a altura da página (${alturaEfetiva}mm).`,
       areaUtil: { largura: 0, altura: 0 }
     };
   }
