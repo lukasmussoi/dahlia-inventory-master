@@ -2,6 +2,14 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { toast } from "sonner";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
   Form,
   FormControl,
   FormField,
@@ -9,614 +17,344 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { FormatoEtiquetaFields } from '../form/FormatoEtiquetaFields';
-import { MargensEtiquetaFields } from '../form/MargensEtiquetaFields';
-import { MargensInternasEtiquetaFields } from '../form/MargensInternasEtiquetaFields';
-import { EtiquetaEditor } from './EtiquetaEditor';
-import { useEtiquetaCustomForm } from '@/hooks/useEtiquetaCustomForm';
-import { generatePreviewPDF } from '@/utils/etiquetaGenerator';
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { EtiquetaEditor } from "./EtiquetaEditor";
+import { FormatoEtiquetaFields } from "../form/FormatoEtiquetaFields";
+import { DimensoesEtiquetaFields } from "../form/DimensoesEtiquetaFields";
+import { ElementosEtiquetaFields } from "../form/ElementosEtiquetaFields";
+import { MargensEtiquetaFields } from "../form/MargensEtiquetaFields";
+import { EspacamentoEtiquetaFields } from "../form/EspacamentoEtiquetaFields";
+import { MargensInternasEtiquetaFields } from "../form/MargensInternasEtiquetaFields";
+import { useEtiquetaCustomForm } from "@/hooks/useEtiquetaCustomForm";
 import type { ModeloEtiqueta, CampoEtiqueta } from "@/types/etiqueta";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
+import { useEtiquetaZoom } from "./useEtiquetaZoom";
+import { ZoomControls } from "./ZoomControls";
 
-export type LabelElement = {
-  type: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  fontSize: number;
-  align?: 'left' | 'center' | 'right';
-};
-
-export type LabelType = {
-  width: number;
-  height: number;
-  elements: LabelElement[];
-};
-
-type EtiquetaCreatorProps = {
+interface EtiquetaCreatorProps {
   initialData?: ModeloEtiqueta;
   onClose: () => void;
   onSave: () => void;
-};
+}
 
-/**
- * Componente para criar ou editar modelos de etiqueta com editor visual
- */
-export default function EtiquetaCreator({ initialData, onClose, onSave }: EtiquetaCreatorProps) {
-  const [activeTab, setActiveTab] = useState("elementos");
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [previewElements, setPreviewElements] = useState<LabelElement[]>([]);
-  const [showPageView, setShowPageView] = useState(true);
+export function EtiquetaCreator({ initialData, onClose, onSave }: EtiquetaCreatorProps) {
+  const [showNewElementModal, setShowNewElementModal] = useState(false);
+  const [activeTab, setActiveTab] = useState("dimensoes");
+  const [selectedElementType, setSelectedElementType] = useState<"nome" | "codigo" | "preco" | null>(null);
+  const [isEditorMode, setIsEditorMode] = useState(true);
+  const [editorView, setEditorView] = useState<"etiqueta" | "pagina">("etiqueta");
+  
+  const { zoomLevel, handleZoomIn, handleZoomOut, handleResetZoom } = useEtiquetaZoom();
+  
+  const { form, isLoading, onSubmit, pageAreaWarning, validarDimensoes } = useEtiquetaCustomForm(
+    initialData,
+    onClose,
+    onSave
+  );
+  
+  // Verificar se um tipo de elemento já existe nos campos
+  const camposAtuais = form.watch("campos") || [];
+  const tiposExistentes = new Set(camposAtuais.map(campo => campo.tipo));
+  
+  // Calcular altura e largura atuais
+  const larguraEtiqueta = form.watch("largura");
+  const alturaEtiqueta = form.watch("altura");
+  
+  // Calcular altura e largura máximas disponíveis
+  const formatoPagina = form.watch("formatoPagina");
+  const orientacao = form.watch("orientacao");
+  const margemSuperior = form.watch("margemSuperior");
+  const margemInferior = form.watch("margemInferior");
+  const margemEsquerda = form.watch("margemEsquerda");
+  const margemDireita = form.watch("margemDireita");
+  
+  let larguraPagina = formatoPagina === "A4" ? 210 : 
+                    formatoPagina === "Letter" ? 216 : 
+                    formatoPagina === "Legal" ? 216 : 
+                    form.watch("larguraPagina") || 210;
+  
+  let alturaPagina = formatoPagina === "A4" ? 297 : 
+                   formatoPagina === "Letter" ? 279 : 
+                   formatoPagina === "Legal" ? 356 : 
+                   form.watch("alturaPagina") || 297;
+  
+  if (orientacao === "paisagem") {
+    [larguraPagina, alturaPagina] = [alturaPagina, larguraPagina];
+  }
+  
+  const larguraMaxima = larguraPagina - margemEsquerda - margemDireita;
+  const alturaMaxima = alturaPagina - margemSuperior - margemInferior;
+  
+  const resetSelectedElement = useCallback(() => {
+    setSelectedElementType(null);
+  }, []);
 
-  const { form, isLoading, onSubmit, pageAreaWarning, validarDimensoes } = useEtiquetaCustomForm(initialData, onClose, onSave);
+  const handleCamposChange = useCallback((novosCampos: CampoEtiqueta[]) => {
+    form.setValue("campos", novosCampos, { shouldValidate: true });
+  }, [form]);
 
-  useEffect(() => {
-    const campos = form.watch("campos");
-    if (campos) {
-      const elements = campos.map(campo => ({
-        type: campo.tipo,
-        x: campo.x,
-        y: campo.y,
-        width: campo.largura,
-        height: campo.altura,
-        fontSize: campo.tamanhoFonte,
-        align: campo.align
-      }));
-      setPreviewElements(elements);
+  const handleDimensoesChange = useCallback((largura: number, altura: number) => {
+    form.setValue("largura", largura, { shouldValidate: true });
+    form.setValue("altura", altura, { shouldValidate: true });
+    validarDimensoes();
+  }, [form, validarDimensoes]);
+
+  const handleFormatoChange = useCallback((formatoPagina: string, orientacao: string, larguraPagina?: number, alturaPagina?: number) => {
+    form.setValue("formatoPagina", formatoPagina, { shouldValidate: true });
+    form.setValue("orientacao", orientacao, { shouldValidate: true });
+    
+    if (formatoPagina === "Personalizado") {
+      if (larguraPagina) form.setValue("larguraPagina", larguraPagina, { shouldValidate: true });
+      if (alturaPagina) form.setValue("alturaPagina", alturaPagina, { shouldValidate: true });
     }
-  }, [form.watch("campos")]);
+    
+    validarDimensoes();
+  }, [form, validarDimensoes]);
 
-  const handlePreview = useCallback(async () => {
-    try {
-      validarDimensoes();
-      if (pageAreaWarning) {
-        toast.error("Há problemas com as dimensões da etiqueta. Por favor, corrija antes de pré-visualizar.");
-        return;
-      }
+  const handleMargensChange = useCallback((margemSuperior: number, margemInferior: number, margemEsquerda: number, margemDireita: number) => {
+    form.setValue("margemSuperior", margemSuperior, { shouldValidate: true });
+    form.setValue("margemInferior", margemInferior, { shouldValidate: true });
+    form.setValue("margemEsquerda", margemEsquerda, { shouldValidate: true });
+    form.setValue("margemDireita", margemDireita, { shouldValidate: true });
+    
+    validarDimensoes();
+  }, [form, validarDimensoes]);
 
-      const formValues = form.getValues();
+  const handleEspacamentoChange = useCallback((espacamentoHorizontal: number, espacamentoVertical: number) => {
+    form.setValue("espacamentoHorizontal", espacamentoHorizontal, { shouldValidate: true });
+    form.setValue("espacamentoVertical", espacamentoVertical, { shouldValidate: true });
+  }, [form]);
 
-      let pageSize: { width: number, height: number };
-      if (formValues.formatoPagina === "Personalizado" && formValues.larguraPagina && formValues.alturaPagina) {
-        pageSize = { width: formValues.larguraPagina, height: formValues.alturaPagina };
-      } else {
-        if (formValues.formatoPagina === "A4") {
-          pageSize = formValues.orientacao === "retrato" ? { width: 210, height: 297 } : { width: 297, height: 210 };
-        } else if (formValues.formatoPagina === "A5") {
-          pageSize = formValues.orientacao === "retrato" ? { width: 148, height: 210 } : { width: 210, height: 148 };
-        } else if (formValues.formatoPagina === "Letter") {
-          pageSize = formValues.orientacao === "retrato" ? { width: 216, height: 279 } : { width: 279, height: 216 };
-        } else {
-          pageSize = { width: 210, height: 297 };
-        }
-      }
+  const handleMargemInternaChange = useCallback((superior: number, inferior: number, esquerda: number, direita: number) => {
+    form.setValue("margemInternaEtiquetaSuperior", superior, { shouldValidate: true });
+    form.setValue("margemInternaEtiquetaInferior", inferior, { shouldValidate: true });
+    form.setValue("margemInternaEtiquetaEsquerda", esquerda, { shouldValidate: true });
+    form.setValue("margemInternaEtiquetaDireita", direita, { shouldValidate: true });
+  }, [form]);
 
-      const camposValidos = formValues.campos.map(campo => ({
-        tipo: campo.tipo,
-        x: Number(campo.x) || 0,
-        y: Number(campo.y) || 0,
-        largura: Number(campo.largura) || 40,
-        altura: Number(campo.altura) || 10,
-        tamanhoFonte: Number(campo.tamanhoFonte) || 8,
-        align: campo.align || 'left'
-      }));
+  const toggleEditorMode = () => {
+    setIsEditorMode(!isEditorMode);
+  };
 
-      const modeloCompleto: ModeloEtiqueta = {
-        nome: formValues.nome || 'Novo Modelo',
-        descricao: formValues.descricao || '',
-        largura: formValues.largura,
-        altura: formValues.altura,
-        formatoPagina: formValues.formatoPagina,
-        orientacao: formValues.orientacao,
-        margemSuperior: formValues.margemSuperior,
-        margemInferior: formValues.margemInferior,
-        margemEsquerda: formValues.margemEsquerda,
-        margemDireita: formValues.margemDireita,
-        espacamentoHorizontal: formValues.espacamentoHorizontal,
-        espacamentoVertical: formValues.espacamentoVertical,
-        larguraPagina: formValues.larguraPagina,
-        alturaPagina: formValues.alturaPagina,
-        margemInternaEtiquetaSuperior: formValues.margemInternaEtiquetaSuperior,
-        margemInternaEtiquetaInferior: formValues.margemInternaEtiquetaInferior,
-        margemInternaEtiquetaEsquerda: formValues.margemInternaEtiquetaEsquerda,
-        margemInternaEtiquetaDireita: formValues.margemInternaEtiquetaDireita,
-        campos: camposValidos
-      };
+  const toggleEditorView = () => {
+    setEditorView(editorView === "etiqueta" ? "pagina" : "etiqueta");
+  };
 
-      const previewUrl = await generatePreviewPDF(
-        modeloCompleto.nome,
-        [
-          {
-            width: modeloCompleto.largura,
-            height: modeloCompleto.altura,
-            elements: previewElements
-          }
-        ],
-        modeloCompleto.formatoPagina,
-        pageSize,
-        { 
-          top: modeloCompleto.margemSuperior, 
-          right: modeloCompleto.margemDireita, 
-          bottom: modeloCompleto.margemInferior, 
-          left: modeloCompleto.margemEsquerda 
-        },
-        { 
-          horizontal: modeloCompleto.espacamentoHorizontal, 
-          vertical: modeloCompleto.espacamentoVertical 
-        },
-        { 
-          top: modeloCompleto.margemInternaEtiquetaSuperior || 0, 
-          right: modeloCompleto.margemInternaEtiquetaDireita || 0,
-          bottom: modeloCompleto.margemInternaEtiquetaInferior || 0, 
-          left: modeloCompleto.margemInternaEtiquetaEsquerda || 0
-        },
-        true
-      );
-
-      setPreviewUrl(previewUrl);
-    } catch (error: any) {
-      console.error("Erro ao gerar PDF de pré-visualização:", error);
-      toast.error(`Erro ao gerar PDF: ${error.message}`);
-    }
-  }, [form, previewElements, validarDimensoes, pageAreaWarning]);
-
+  // Verificar se podemos adicionar novos elementos
+  const canAddNome = !tiposExistentes.has('nome');
+  const canAddCodigo = !tiposExistentes.has('codigo');
+  const canAddPreco = !tiposExistentes.has('preco');
+  
   return (
-    <div className="w-full">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold">Criar Novo Modelo de Etiqueta</h2>
-        <div className="flex gap-2">
-          <Button onClick={onClose} variant="outline">Cancelar</Button>
-          <Button 
-            onClick={form.handleSubmit(onSubmit)} 
-            disabled={isLoading}
-          >
-            {isLoading ? "Salvando..." : "Salvar"}
-          </Button>
-        </div>
-      </div>
+    <Dialog open={true} onOpenChange={() => onClose()}>
+      <DialogContent className="max-w-[90vw] h-[90vh] flex flex-col p-0 gap-0 bg-background">
+        <DialogHeader className="p-4 pb-2">
+          <DialogTitle>
+            {initialData?.id ? "Editar Modelo de Etiqueta" : "Criar Novo Modelo de Etiqueta"}
+          </DialogTitle>
+          <DialogDescription>
+            Configure as dimensões, elementos e layouts para criar seu modelo de etiqueta personalizado.
+          </DialogDescription>
+        </DialogHeader>
 
-      <Form {...form}>
-        <form className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="nome"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nome do modelo</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Nome do modelo" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="descricao"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Descrição</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Descrição do modelo" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          <Tabs 
-            defaultValue="elementos" 
-            value={activeTab} 
-            onValueChange={setActiveTab}
-            className="w-full"
-          >
-            <TabsList className="w-full grid grid-cols-3">
-              <TabsTrigger value="elementos">Elementos</TabsTrigger>
-              <TabsTrigger value="etiquetas">Etiquetas</TabsTrigger>
-              <TabsTrigger value="config">Configurações</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="elementos" className="space-y-4">
-              <div className="border p-4 rounded-md">
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="largura"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Largura da Etiqueta (mm)</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            {...field}
-                            onChange={e => field.onChange(Number(e.target.value))}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="altura"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Altura da Etiqueta (mm)</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            {...field}
-                            onChange={e => field.onChange(Number(e.target.value))}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </div>
-
-              <div className="border p-4 rounded-md bg-slate-50">
-                <h3 className="font-medium mb-2">Editor Visual</h3>
-                <EtiquetaEditor
-                  campos={form.watch("campos") || []}
-                  largura={form.watch("largura")}
-                  altura={form.watch("altura")}
-                  formatoPagina={form.watch("formatoPagina")}
-                  orientacao={form.watch("orientacao")}
-                  margemSuperior={form.watch("margemSuperior")}
-                  margemInferior={form.watch("margemInferior")}
-                  margemEsquerda={form.watch("margemEsquerda")}
-                  margemDireita={form.watch("margemDireita")}
-                  espacamentoHorizontal={form.watch("espacamentoHorizontal")}
-                  espacamentoVertical={form.watch("espacamentoVertical")}
-                  larguraPagina={form.watch("larguraPagina")}
-                  alturaPagina={form.watch("alturaPagina")}
-                  margemInternaEtiquetaSuperior={form.watch("margemInternaEtiquetaSuperior")}
-                  margemInternaEtiquetaInferior={form.watch("margemInternaEtiquetaInferior")}
-                  margemInternaEtiquetaEsquerda={form.watch("margemInternaEtiquetaEsquerda")}
-                  margemInternaEtiquetaDireita={form.watch("margemInternaEtiquetaDireita")}
-                  onCamposChange={(campos) => {
-                    form.setValue("campos", campos as CampoEtiqueta[], { shouldValidate: true });
-                  }}
-                  onDimensoesChange={(largura, altura) => {
-                    form.setValue("largura", largura, { shouldValidate: true });
-                    form.setValue("altura", altura, { shouldValidate: true });
-                  }}
-                  onMargensChange={(margemSuperior, margemInferior, margemEsquerda, margemDireita) => {
-                    form.setValue("margemSuperior", margemSuperior, { shouldValidate: true });
-                    form.setValue("margemInferior", margemInferior, { shouldValidate: true });
-                    form.setValue("margemEsquerda", margemEsquerda, { shouldValidate: true });
-                    form.setValue("margemDireita", margemDireita, { shouldValidate: true });
-                  }}
-                  onEspacamentoChange={(espacamentoHorizontal, espacamentoVertical) => {
-                    form.setValue("espacamentoHorizontal", espacamentoHorizontal, { shouldValidate: true });
-                    form.setValue("espacamentoVertical", espacamentoVertical, { shouldValidate: true });
-                  }}
-                  onFormatoChange={(formatoPagina, orientacao, larguraPagina, alturaPagina) => {
-                    form.setValue("formatoPagina", formatoPagina, { shouldValidate: true });
-                    form.setValue("orientacao", orientacao, { shouldValidate: true });
-                    if (larguraPagina) form.setValue("larguraPagina", larguraPagina, { shouldValidate: true });
-                    if (alturaPagina) form.setValue("alturaPagina", alturaPagina, { shouldValidate: true });
-                  }}
-                  showPageView={showPageView}
-                />
-                {pageAreaWarning && (
-                  <div className="rounded-md bg-yellow-50 p-3 mt-4 text-yellow-700 text-sm border border-yellow-200">
-                    <span className="font-medium">Alerta:</span> {pageAreaWarning}
-                  </div>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 flex flex-col flex-1 overflow-hidden">
+            <div className="flex gap-4 px-4">
+              <FormField
+                control={form.control}
+                name="nome"
+                render={({ field }) => (
+                  <FormItem className="flex-1">
+                    <FormLabel>Nome do Modelo</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ex: Etiqueta Padrão" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
                 )}
-                <div className="flex justify-end mt-4">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setShowPageView(!showPageView)}
-                  >
-                    {showPageView ? 'Esconder Visualização da Página' : 'Mostrar Visualização da Página'}
-                  </Button>
-                </div>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="etiquetas" className="space-y-4">
-              <div className="flex justify-end">
+              />
+
+              <div className="flex items-end gap-2">
                 <Button 
                   type="button" 
-                  variant="outline" 
-                  onClick={handlePreview} 
-                  disabled={isLoading}
-                  className="mb-4"
+                  variant="outline"
+                  onClick={toggleEditorMode}
                 >
-                  Pré-visualizar
+                  {isEditorMode ? "Modo Formulário" : "Modo Editor Visual"}
                 </Button>
-              </div>
-
-              <div className="border p-4 rounded-md">
-                <h3 className="font-medium mb-2">Configuração de Elementos</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Adicione ou ajuste elementos de texto na etiqueta. Você pode arrastar e redimensionar elementos no editor visual.
-                </p>
                 
-                <div className="grid gap-4">
-                  {form.watch("campos")?.map((campo, index) => (
-                    <div key={index} className="grid grid-cols-2 gap-3 p-3 border rounded-md">
-                      <div>
-                        <FormLabel>Tipo</FormLabel>
-                        <Select
-                          value={campo.tipo}
-                          onValueChange={(value: 'nome' | 'codigo' | 'preco') => {
-                            const newCampos = [...form.watch("campos")];
-                            newCampos[index].tipo = value;
-                            form.setValue("campos", newCampos, { shouldValidate: true });
-                          }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Tipo de campo" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="nome">Nome</SelectItem>
-                            <SelectItem value="codigo">Código</SelectItem>
-                            <SelectItem value="preco">Preço</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      
-                      <div>
-                        <FormLabel>Tamanho da Fonte</FormLabel>
-                        <Input
-                          type="number"
-                          value={campo.tamanhoFonte}
-                          onChange={(e) => {
-                            const newCampos = [...form.watch("campos")];
-                            newCampos[index].tamanhoFonte = Number(e.target.value);
-                            form.setValue("campos", newCampos, { shouldValidate: true });
-                          }}
-                        />
-                      </div>
-                      
-                      <div>
-                        <FormLabel>Alinhamento</FormLabel>
-                        <Select
-                          value={campo.align || 'left'}
-                          onValueChange={(value: 'left' | 'center' | 'right') => {
-                            const newCampos = [...form.watch("campos")];
-                            newCampos[index].align = value;
-                            form.setValue("campos", newCampos, { shouldValidate: true });
-                          }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Alinhamento" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="left">Esquerda</SelectItem>
-                            <SelectItem value="center">Centro</SelectItem>
-                            <SelectItem value="right">Direita</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      
-                      <div className="col-span-2 grid grid-cols-4 gap-2">
-                        <div>
-                          <FormLabel className="text-xs">X (mm)</FormLabel>
-                          <Input
-                            type="number"
-                            value={campo.x}
-                            onChange={(e) => {
-                              const newCampos = [...form.watch("campos")];
-                              newCampos[index].x = Number(e.target.value);
-                              form.setValue("campos", newCampos, { shouldValidate: true });
-                            }}
-                          />
-                        </div>
-                        <div>
-                          <FormLabel className="text-xs">Y (mm)</FormLabel>
-                          <Input
-                            type="number"
-                            value={campo.y}
-                            onChange={(e) => {
-                              const newCampos = [...form.watch("campos")];
-                              newCampos[index].y = Number(e.target.value);
-                              form.setValue("campos", newCampos, { shouldValidate: true });
-                            }}
-                          />
-                        </div>
-                        <div>
-                          <FormLabel className="text-xs">Largura (mm)</FormLabel>
-                          <Input
-                            type="number"
-                            value={campo.largura}
-                            onChange={(e) => {
-                              const newCampos = [...form.watch("campos")];
-                              newCampos[index].largura = Number(e.target.value);
-                              form.setValue("campos", newCampos, { shouldValidate: true });
-                            }}
-                          />
-                        </div>
-                        <div>
-                          <FormLabel className="text-xs">Altura (mm)</FormLabel>
-                          <Input
-                            type="number"
-                            value={campo.altura}
-                            onChange={(e) => {
-                              const newCampos = [...form.watch("campos")];
-                              newCampos[index].altura = Number(e.target.value);
-                              form.setValue("campos", newCampos, { shouldValidate: true });
-                            }}
-                          />
-                        </div>
-                      </div>
-                      
-                      <div className="col-span-2 flex justify-end">
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => {
-                            const newCampos = form.watch("campos").filter((_, i) => i !== index);
-                            form.setValue("campos", newCampos, { shouldValidate: true });
-                          }}
-                        >
-                          Remover
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                  
-                  <Button
-                    type="button"
+                {isEditorMode && (
+                  <Button 
+                    type="button" 
                     variant="outline"
-                    onClick={() => {
-                      // Aqui está a correção - definindo explicitamente todos os campos obrigatórios
-                      const newCampo: CampoEtiqueta = {
-                        tipo: 'nome',
-                        x: 5,
-                        y: 5,
-                        largura: 40,
-                        altura: 10,
-                        tamanhoFonte: 8,
-                        align: 'left'
-                      };
-                      const currentCampos = form.watch("campos") || [];
-                      form.setValue("campos", [...currentCampos, newCampo], { shouldValidate: true });
-                    }}
+                    onClick={toggleEditorView}
                   >
-                    Adicionar Elemento
+                    {editorView === "etiqueta" ? "Visualizar Página" : "Editar Etiqueta"}
                   </Button>
-                </div>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="config" className="space-y-4">
-              <div className="grid grid-cols-1 gap-4">
-                <FormatoEtiquetaFields form={form} />
-                <MargensEtiquetaFields form={form} />
-                <MargensInternasEtiquetaFields form={form} />
+                )}
                 
-                <div className="border p-4 rounded-md">
-                  <h3 className="text-sm font-medium mb-1">Espaçamento Entre Etiquetas</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="espacamentoHorizontal"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Horizontal (mm)</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              placeholder="0"
-                              {...field}
-                              onChange={(e) => field.onChange(Number(e.target.value))}
-                              min={0}
-                              max={200}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="espacamentoVertical"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Vertical (mm)</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              placeholder="0"
-                              {...field}
-                              onChange={(e) => field.onChange(Number(e.target.value))}
-                              min={0}
-                              max={200}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                <ZoomControls 
+                  zoomLevel={zoomLevel}
+                  onZoomIn={handleZoomIn}
+                  onZoomOut={handleZoomOut}
+                  onResetZoom={handleResetZoom}
+                />
+              </div>
+            </div>
+
+            {pageAreaWarning && (
+              <Alert variant="destructive" className="mx-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Atenção</AlertTitle>
+                <AlertDescription>
+                  {pageAreaWarning}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <div className="flex flex-1 overflow-hidden">
+              {isEditorMode ? (
+                <div className="flex-1 flex overflow-hidden">
+                  <EtiquetaEditor
+                    campos={form.watch("campos")}
+                    largura={form.watch("largura")}
+                    altura={form.watch("altura")}
+                    formatoPagina={form.watch("formatoPagina")}
+                    orientacao={form.watch("orientacao")}
+                    margemSuperior={form.watch("margemSuperior")}
+                    margemInferior={form.watch("margemInferior")}
+                    margemEsquerda={form.watch("margemEsquerda")}
+                    margemDireita={form.watch("margemDireita")}
+                    espacamentoHorizontal={form.watch("espacamentoHorizontal")}
+                    espacamentoVertical={form.watch("espacamentoVertical")}
+                    larguraPagina={form.watch("larguraPagina")}
+                    alturaPagina={form.watch("alturaPagina")}
+                    onCamposChange={handleCamposChange}
+                    onDimensoesChange={handleDimensoesChange}
+                    onMargensChange={handleMargensChange}
+                    onEspacamentoChange={handleEspacamentoChange}
+                    onFormatoChange={handleFormatoChange}
+                    showPageView={editorView === "pagina"}
+                  />
+                </div>
+              ) : (
+                <div className="flex flex-1 overflow-hidden">
+                  <div className="w-1/3 border-r p-4 overflow-y-auto">
+                    <Tabs defaultValue={activeTab} onValueChange={setActiveTab}>
+                      <TabsList className="grid grid-cols-3 mb-4">
+                        <TabsTrigger value="dimensoes">Dimensões</TabsTrigger>
+                        <TabsTrigger value="margens">Margens</TabsTrigger>
+                        <TabsTrigger value="elementos">Elementos</TabsTrigger>
+                      </TabsList>
+                      
+                      <TabsContent value="dimensoes" className="space-y-4">
+                        <DimensoesEtiquetaFields form={form} />
+                        <FormatoEtiquetaFields form={form} />
+                      </TabsContent>
+                      
+                      <TabsContent value="margens" className="space-y-4">
+                        <h3 className="font-medium mb-2">Margens da Página</h3>
+                        <MargensEtiquetaFields form={form} />
+                        
+                        <h3 className="font-medium mb-2 mt-6">Margens Internas da Etiqueta</h3>
+                        <MargensInternasEtiquetaFields form={form} />
+                        
+                        <h3 className="font-medium mb-2 mt-6">Espaçamento entre Etiquetas</h3>
+                        <EspacamentoEtiquetaFields form={form} />
+                      </TabsContent>
+                      
+                      <TabsContent value="elementos" className="space-y-4">
+                        <div className="flex justify-between items-center mb-4">
+                          <h3 className="font-medium">Elementos na Etiqueta</h3>
+                          <Button 
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                              // Corrigido: definindo explicitamente todos os campos obrigatórios
+                              const newCampo: CampoEtiqueta = {
+                                tipo: 'nome',
+                                x: 5,
+                                y: 5,
+                                largura: 40,
+                                altura: 10,
+                                tamanhoFonte: 8,
+                                align: 'left'
+                              };
+                              
+                              const campos = form.getValues().campos || [];
+                              form.setValue('campos', [...campos, newCampo], { shouldValidate: true });
+                            }}
+                          >
+                            Adicionar Elemento
+                          </Button>
+                        </div>
+                        <ElementosEtiquetaFields 
+                          form={form} 
+                          maxWidth={larguraMaxima} 
+                          maxHeight={alturaMaxima} 
+                        />
+                      </TabsContent>
+                    </Tabs>
+                  </div>
+                  
+                  <div className="flex-1 p-4 flex flex-col items-center justify-center bg-gray-50 overflow-auto">
+                    <div 
+                      className="bg-white border rounded shadow-sm overflow-hidden"
+                      style={{
+                        width: `${form.watch("largura") * zoomLevel}px`,
+                        height: `${form.watch("altura") * zoomLevel}px`,
+                        position: 'relative'
+                      }}
+                    >
+                      {form.watch("campos").map((campo, index) => (
+                        <div 
+                          key={`preview-${campo.tipo}-${index}`}
+                          className="absolute border border-gray-300"
+                          style={{
+                            left: `${campo.x * zoomLevel}px`,
+                            top: `${campo.y * zoomLevel}px`,
+                            width: `${campo.largura * zoomLevel}px`,
+                            height: `${campo.altura * zoomLevel}px`,
+                            fontSize: `${campo.tamanhoFonte * zoomLevel}px`,
+                            fontFamily: 'Arial, sans-serif',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: campo.align === 'center' ? 'center' : 
+                                          campo.align === 'right' ? 'flex-end' : 'flex-start',
+                            padding: '0 4px',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          {campo.tipo === 'nome' ? 'Nome do Produto' :
+                           campo.tipo === 'codigo' ? '0123456789012' : 'R$ 99,99'}
+                        </div>
+                      ))}
+                    </div>
+                    
+                    <div className="text-sm text-gray-500 mt-2">
+                      Dimensões: {form.watch("largura")}mm × {form.watch("altura")}mm
+                    </div>
                   </div>
                 </div>
-              </div>
-            </TabsContent>
-          </Tabs>
+              )}
+            </div>
 
-          <div className="flex justify-between">
-            <Button 
-              type="button" 
-              variant="outline"
-              onClick={handlePreview} 
-              disabled={isLoading}
-            >
-              Pré-visualizar
-            </Button>
-            <div className="space-x-2">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={onClose} 
-                disabled={isLoading}
-              >
+            <DialogFooter className="p-4 pt-2">
+              <Button type="button" variant="outline" onClick={onClose}>
                 Cancelar
               </Button>
-              <Button 
-                type="button" 
-                onClick={form.handleSubmit(onSubmit)} 
-                disabled={isLoading}
-              >
-                {isLoading ? "Salvando..." : "Salvar modelo"}
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? "Salvando..." : "Salvar Modelo"}
               </Button>
-            </div>
-          </div>
-        </form>
-      </Form>
-
-      {previewUrl && (
-        <div className="fixed inset-0 bg-background/80 flex items-center justify-center z-50">
-          <div className="bg-background rounded-lg shadow-lg w-4/5 h-4/5 flex flex-col">
-            <div className="flex justify-between items-center p-4 border-b">
-              <h3 className="text-lg font-medium">Pré-visualização da Etiqueta</h3>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setPreviewUrl(null)}
-              >
-                Fechar
-              </Button>
-            </div>
-            <div className="flex-1 overflow-auto">
-              <iframe 
-                src={previewUrl} 
-                className="w-full h-full border-none"
-                title="Pré-visualização de etiqueta"
-              />
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
   );
 }
