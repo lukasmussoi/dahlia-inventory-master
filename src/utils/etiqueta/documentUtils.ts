@@ -6,6 +6,24 @@ import { jsPDF } from "jspdf";
 import JsBarcode from "jsbarcode";
 
 /**
+ * Interface para representar margens de página
+ */
+interface Margens {
+  superior: number;
+  inferior: number;
+  esquerda: number;
+  direita: number;
+}
+
+/**
+ * Interface para representar espaçamentos entre etiquetas
+ */
+interface Espacamentos {
+  horizontal: number;
+  vertical: number;
+}
+
+/**
  * Cria um documento PDF com as configurações especificadas
  * 
  * @param pageFormat Formato da página ("A4", "A5", "Carta", "Personalizado")
@@ -113,4 +131,148 @@ export const generateBarcode = (
     // Em caso de erro, adicionamos apenas o texto do código
     doc.text(code, x + width / 2, y + height / 2, { align: 'center' });
   }
+};
+
+/**
+ * Calcula dimensões da página baseado no formato e orientação
+ * 
+ * @param formatoPagina Formato da página
+ * @param orientacao Orientação da página
+ * @param larguraPersonalizada Largura personalizada (se formatoPagina for "Personalizado")
+ * @param alturaPersonalizada Altura personalizada (se formatoPagina for "Personalizado")
+ * @returns Objeto com largura e altura da página
+ */
+export const calcularDimensoesPagina = (
+  formatoPagina: string,
+  orientacao: string,
+  larguraPersonalizada: number = 0,
+  alturaPersonalizada: number = 0
+): { pageWidth: number; pageHeight: number } => {
+  console.log(`Calculando dimensões da página: formato=${formatoPagina}, orientação=${orientacao}`);
+  
+  let pageWidth: number;
+  let pageHeight: number;
+  
+  // Definir dimensões baseadas no formato da página
+  switch (formatoPagina.toLowerCase()) {
+    case 'a4':
+      pageWidth = 210;
+      pageHeight = 297;
+      break;
+    case 'a5':
+      pageWidth = 148;
+      pageHeight = 210;
+      break;
+    case 'carta':
+    case 'letter':
+      pageWidth = 216;
+      pageHeight = 279;
+      break;
+    case 'personalizado':
+    case 'custom':
+      if (larguraPersonalizada <= 0 || alturaPersonalizada <= 0) {
+        console.warn("Dimensões personalizadas inválidas, usando padrão A4");
+        pageWidth = 210;
+        pageHeight = 297;
+      } else {
+        pageWidth = larguraPersonalizada;
+        pageHeight = alturaPersonalizada;
+      }
+      break;
+    default:
+      console.warn(`Formato de página desconhecido: ${formatoPagina}, usando padrão A4`);
+      pageWidth = 210;
+      pageHeight = 297;
+  }
+  
+  // Para paisagem, não invertemos as dimensões aqui - isso é feito na criação do documento
+  // Este método apenas calcula as dimensões lógicas da página
+  
+  console.log(`Dimensões calculadas: ${pageWidth}mm x ${pageHeight}mm`);
+  return { pageWidth, pageHeight };
+};
+
+/**
+ * Normaliza as margens da página, garantindo valores válidos
+ * 
+ * @param margemSuperior Margem superior
+ * @param margemInferior Margem inferior
+ * @param margemEsquerda Margem esquerda
+ * @param margemDireita Margem direita
+ * @returns Objeto com as margens normalizadas
+ */
+export const normalizarMargens = (
+  margemSuperior: number,
+  margemInferior: number,
+  margemEsquerda: number,
+  margemDireita: number
+): Margens => {
+  // Garantir que margens sejam valores válidos (não negativos)
+  return {
+    superior: margemSuperior >= 0 ? margemSuperior : 0,
+    inferior: margemInferior >= 0 ? margemInferior : 0,
+    esquerda: margemEsquerda >= 0 ? margemEsquerda : 0,
+    direita: margemDireita >= 0 ? margemDireita : 0
+  };
+};
+
+/**
+ * Normaliza os espaçamentos entre etiquetas, garantindo valores válidos
+ * 
+ * @param espacamentoHorizontal Espaçamento horizontal entre etiquetas
+ * @param espacamentoVertical Espaçamento vertical entre etiquetas
+ * @returns Objeto com os espaçamentos normalizados
+ */
+export const normalizarEspacamentos = (
+  espacamentoHorizontal: number,
+  espacamentoVertical: number
+): Espacamentos => {
+  // Garantir que espaçamentos sejam valores válidos (não negativos)
+  return {
+    horizontal: espacamentoHorizontal >= 0 ? espacamentoHorizontal : 0,
+    vertical: espacamentoVertical >= 0 ? espacamentoVertical : 0
+  };
+};
+
+/**
+ * Calcula quantas etiquetas cabem na página baseado nas dimensões e margens
+ * 
+ * @param pageWidth Largura da página
+ * @param pageHeight Altura da página
+ * @param etiquetaLargura Largura da etiqueta
+ * @param etiquetaAltura Altura da etiqueta
+ * @param margens Margens da página
+ * @param espacamentos Espaçamentos entre etiquetas
+ * @returns Objeto com número de etiquetas por linha e por coluna
+ */
+export const calcularEtiquetasPorPagina = (
+  pageWidth: number,
+  pageHeight: number,
+  etiquetaLargura: number,
+  etiquetaAltura: number,
+  margens: Margens,
+  espacamentos: Espacamentos
+): { etiquetasPorLinha: number; etiquetasPorColuna: number } => {
+  console.log("Calculando etiquetas por página com dimensões:", {
+    pageWidth, pageHeight, etiquetaLargura, etiquetaAltura
+  });
+  
+  // Calcular área útil da página
+  const areaUtilLargura = pageWidth - margens.esquerda - margens.direita;
+  const areaUtilAltura = pageHeight - margens.superior - margens.inferior;
+  
+  console.log(`Área útil da página: ${areaUtilLargura}mm x ${areaUtilAltura}mm`);
+  
+  // Calcular quantas etiquetas cabem em cada dimensão
+  // Ao adicionar uma etiqueta, precisamos considerar seu próprio tamanho mais o espaçamento
+  let etiquetasPorLinha = Math.floor((areaUtilLargura + espacamentos.horizontal) / (etiquetaLargura + espacamentos.horizontal));
+  let etiquetasPorColuna = Math.floor((areaUtilAltura + espacamentos.vertical) / (etiquetaAltura + espacamentos.vertical));
+  
+  // Garantir que temos pelo menos uma etiqueta em cada dimensão
+  etiquetasPorLinha = Math.max(1, etiquetasPorLinha);
+  etiquetasPorColuna = Math.max(1, etiquetasPorColuna);
+  
+  console.log(`Etiquetas por página: ${etiquetasPorLinha} x ${etiquetasPorColuna} = ${etiquetasPorLinha * etiquetasPorColuna} etiquetas no total`);
+  
+  return { etiquetasPorLinha, etiquetasPorColuna };
 };
