@@ -4,48 +4,14 @@
  */
 import { jsPDF } from "jspdf";
 import 'jspdf-autotable';
-import { getElementPreviewText } from './elementUtils';
+import { getElementPreviewText, isBarcode, formatBarcodeValue } from './elementUtils';
 import { formatCurrency } from '@/lib/utils';
-import { createPdfDocument, addLabelToPage } from './documentUtils';
+import { createPdfDocument, generateBarcode } from './documentUtils';
 import type { PreviewPDFOptions } from './types';
 
 /**
  * Gera um PDF de pré-visualização para um modelo de etiqueta
  * 
- * @param modelName Nome do modelo de etiqueta
- * @param labels Array de etiquetas para incluir no PDF
- * @param pageFormat Formato da página (A4, Letter, etc)
- * @param pageSize Dimensões da página {width, height}
- * @param pageMargins Margens da página {top, bottom, left, right}
- * @param labelSpacing Espaçamento entre etiquetas {horizontal, vertical}
- * @param autoAdjustDimensions Flag para ajuste automático de dimensões
- * @param pageOrientation Orientação da página (retrato, paisagem)
- * @returns Promise com a URL do PDF gerado
- */
-export const generatePreviewPDF = async (
-  modelName: string,
-  labels: any[],
-  pageFormat: string,
-  pageSize: { width: number; height: number },
-  pageMargins: { top: number; bottom: number; left: number; right: number },
-  labelSpacing: { horizontal: number; vertical: number },
-  autoAdjustDimensions: boolean,
-  pageOrientation: string
-): Promise<string> => {
-  console.log("Gerando PDF com orientação:", pageOrientation);
-  const doc = createPdfDocument(pageFormat, pageOrientation, pageSize.width, pageSize.height);
-
-  for (const label of labels) {
-    addLabelToPage(doc, label, pageMargins, labelSpacing, getElementPreviewText, formatCurrency);
-  }
-
-  // Converter o PDF para URL de dados (data URL)
-  const pdfBase64 = doc.output('datauristring');
-  return pdfBase64;
-};
-
-/**
- * Versão da função com um único parâmetro objeto para maior flexibilidade
  * @param options Opções para geração do PDF
  * @returns Promise com a URL do PDF gerado
  */
@@ -61,15 +27,108 @@ export const generatePreview = async (options: PreviewPDFOptions): Promise<strin
     pageOrientation = 'retrato'
   } = options;
 
-  console.log("generatePreview recebeu orientação:", pageOrientation);
-  return generatePreviewPDF(
+  console.log("Gerando PDF de pré-visualização:", {
     modelName,
-    labels,
     pageFormat,
     pageSize,
     pageMargins,
     labelSpacing,
     autoAdjustDimensions,
     pageOrientation
-  );
+  });
+  
+  // Verificar se há etiquetas para incluir
+  if (!labels || labels.length === 0) {
+    throw new Error("Nenhuma etiqueta fornecida para pré-visualização");
+  }
+  
+  // Verificar se há elementos nas etiquetas
+  const emptyLabels = labels.filter(label => !label.elements || label.elements.length === 0);
+  if (emptyLabels.length > 0) {
+    throw new Error(`A etiqueta "${emptyLabels[0].name}" não possui elementos`);
+  }
+  
+  try {
+    // Criar documento PDF com as configurações especificadas
+    const doc = createPdfDocument(
+      pageFormat, 
+      pageOrientation, 
+      pageSize.width, 
+      pageSize.height
+    );
+    
+    // Desenhar borda da página (para depuração)
+    // doc.setDrawColor(200, 200, 200);
+    // doc.rect(5, 5, pageSize.width - 10, pageSize.height - 10);
+    
+    // Adicionar título ao documento
+    doc.setFontSize(16);
+    doc.text(`Modelo: ${modelName}`, 10, 10);
+    
+    // Adicionar informações da página
+    doc.setFontSize(10);
+    doc.text(`Formato: ${pageFormat} - ${pageOrientation}`, 10, 15);
+    doc.text(`Dimensões: ${pageSize.width}mm x ${pageSize.height}mm`, 10, 20);
+    
+    // Para cada etiqueta, renderizar no PDF
+    labels.forEach((label, index) => {
+      // Calcular posição da etiqueta na página
+      const labelX = pageMargins.left + label.x;
+      const labelY = pageMargins.top + label.y + 25; // Adicionar offset para o título
+      
+      // Desenhar borda da etiqueta
+      doc.setDrawColor(100, 100, 100);
+      doc.setLineWidth(0.1);
+      doc.rect(labelX, labelY, label.width, label.height);
+      
+      // Renderizar elementos da etiqueta
+      label.elements.forEach(element => {
+        // Calcular posição do elemento em relação à etiqueta
+        const elementX = labelX + element.x;
+        const elementY = labelY + element.y;
+        
+        // Configurar fonte
+        doc.setFontSize(element.fontSize);
+        
+        // Verificar se é um código de barras
+        if (isBarcode(element.type)) {
+          // Gerar código de barras
+          const code = formatBarcodeValue(getElementPreviewText(element.type));
+          generateBarcode(doc, code, elementX, elementY, element.width, element.height);
+        } else {
+          // Obter texto do elemento
+          const text = getElementPreviewText(element.type);
+          
+          // Ajustar alinhamento
+          let alignmentX = elementX;
+          if (element.align === 'center') {
+            alignmentX = elementX + element.width / 2;
+          } else if (element.align === 'right') {
+            alignmentX = elementX + element.width;
+          }
+          
+          // Renderizar texto com alinhamento
+          doc.text(text, alignmentX, elementY + element.fontSize / 2, {
+            align: element.align as any,
+            baseline: 'middle'
+          });
+        }
+        
+        // Desenhar borda do elemento (para depuração)
+        doc.setDrawColor(200, 200, 200);
+        doc.setLineWidth(0.1);
+        doc.rect(elementX, elementY, element.width, element.height);
+      });
+      
+      // Adicionar nome da etiqueta
+      doc.setFontSize(8);
+      doc.text(label.name, labelX, labelY - 2);
+    });
+    
+    // Converter o PDF para URL de dados (data URL)
+    return doc.output('datauristring');
+  } catch (error) {
+    console.error("Erro ao gerar pré-visualização:", error);
+    throw error;
+  }
 };

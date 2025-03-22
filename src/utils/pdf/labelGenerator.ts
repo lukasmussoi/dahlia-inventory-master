@@ -4,9 +4,9 @@
  */
 import { toast } from "sonner";
 import { EtiquetaCustomModel } from "@/models/etiquetaCustomModel";
-import { generatePrintablePDF } from "@/utils/etiquetaGenerator";
+import { generatePrintablePDF } from "@/utils/etiqueta/printGenerator";
 import { validateLabelDimensions } from "./validationUtils";
-import type { GeneratePdfLabelOptions, PdfGenerationResult } from "./types";
+import type { GeneratePdfLabelOptions } from "./types";
 
 /**
  * Gera um PDF com etiquetas baseado nas opções fornecidas

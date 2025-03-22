@@ -19,25 +19,80 @@ export function useDragAndDrop(
     startX: 0, 
     startY: 0, 
     offsetX: 0, 
-    offsetY: 0 
+    offsetY: 0,
+    elementInitialBounds: { x: 0, y: 0, width: 0, height: 0 }, // Armazenar dimensões iniciais do elemento
+    labelInitialBounds: { x: 0, y: 0, width: 0, height: 0 }    // Armazenar dimensões iniciais da etiqueta
   });
 
   /**
    * Inicia o arrastar de um elemento ou etiqueta
    */
-  const handleStartDrag = (e: React.MouseEvent, type: "element" | "label", id: string | number, x: number, y: number) => {
+  const handleStartDrag = (
+    e: React.MouseEvent, 
+    type: "element" | "label", 
+    id: string | number, 
+    x: number, 
+    y: number
+  ) => {
     if (!editorRef.current) return;
     e.stopPropagation();
+    
     const rect = editorRef.current.getBoundingClientRect();
-    dragRef.current = { 
-      isDragging: true, 
-      type, 
-      id, 
-      startX: x, 
-      startY: y, 
-      offsetX: e.clientX - rect.left, 
-      offsetY: e.clientY - rect.top 
-    };
+    
+    // Armazenar informações adicionais dependendo do tipo
+    if (type === "element" && selectedLabelId !== null) {
+      // Encontrar o elemento e a etiqueta
+      const label = labels.find(l => l.id === selectedLabelId);
+      if (!label) return;
+      
+      const element = label.elements.find(el => el.id === id);
+      if (!element) return;
+      
+      // Armazenar as dimensões iniciais
+      dragRef.current = {
+        isDragging: true, 
+        type, 
+        id, 
+        startX: x, 
+        startY: y, 
+        offsetX: e.clientX - rect.left, 
+        offsetY: e.clientY - rect.top,
+        elementInitialBounds: {
+          x: element.x,
+          y: element.y,
+          width: element.width,
+          height: element.height
+        },
+        labelInitialBounds: {
+          x: label.x,
+          y: label.y,
+          width: label.width,
+          height: label.height
+        }
+      };
+    } else if (type === "label") {
+      // Encontrar a etiqueta
+      const label = labels.find(l => l.id === id);
+      if (!label) return;
+      
+      // Armazenar informações da etiqueta
+      dragRef.current = {
+        isDragging: true, 
+        type, 
+        id, 
+        startX: x, 
+        startY: y, 
+        offsetX: e.clientX - rect.left, 
+        offsetY: e.clientY - rect.top,
+        elementInitialBounds: { x: 0, y: 0, width: 0, height: 0 },
+        labelInitialBounds: {
+          x: label.x,
+          y: label.y,
+          width: label.width,
+          height: label.height
+        }
+      };
+    }
   };
 
   /**
@@ -50,8 +105,13 @@ export function useDragAndDrop(
     const rect = editorRef.current.getBoundingClientRect();
     const zoomFactor = zoom / 100;
     
-    const x = snapToGridValue((e.clientX - rect.left) / zoomFactor);
-    const y = snapToGridValue((e.clientY - rect.top) / zoomFactor);
+    // Calcular a nova posição
+    const currentX = (e.clientX - rect.left) / zoomFactor;
+    const currentY = (e.clientY - rect.top) / zoomFactor;
+    
+    // Aplicar o snap to grid se ativado
+    const x = snapToGridValue(currentX);
+    const y = snapToGridValue(currentY);
     
     const updatedLabels = [...labels];
     
@@ -64,11 +124,22 @@ export function useDragAndDrop(
       if (elementIndex === -1) return;
       
       const element = label.elements[elementIndex];
+      const initialBounds = dragRef.current.elementInitialBounds;
+      const labelBounds = dragRef.current.labelInitialBounds;
+      
+      // Calcular o deslocamento em relação à posição inicial
+      const deltaX = x - dragRef.current.offsetX / zoomFactor;
+      const deltaY = y - dragRef.current.offsetY / zoomFactor;
+      
+      // Calcular a nova posição do elemento
+      let newX = initialBounds.x + deltaX;
+      let newY = initialBounds.y + deltaY;
       
       // Limitar o elemento dentro dos limites da etiqueta
-      const newX = Math.max(0, Math.min(x, label.width - element.width));
-      const newY = Math.max(0, Math.min(y, label.height - element.height));
+      newX = Math.max(0, Math.min(newX, label.width - element.width));
+      newY = Math.max(0, Math.min(newY, label.height - element.height));
       
+      // Atualizar a posição do elemento
       label.elements[elementIndex] = {
         ...element,
         x: newX,
@@ -78,11 +149,24 @@ export function useDragAndDrop(
       const labelIndex = updatedLabels.findIndex(l => l.id === dragRef.current.id);
       if (labelIndex === -1) return;
       
+      const initialBounds = dragRef.current.labelInitialBounds;
+      const pageWidth = rect.width / zoomFactor;
+      const pageHeight = rect.height / zoomFactor;
+      
+      // Calcular o deslocamento em relação à posição inicial
+      const deltaX = x - dragRef.current.offsetX / zoomFactor;
+      const deltaY = y - dragRef.current.offsetY / zoomFactor;
+      
+      // Calcular a nova posição da etiqueta
+      let newX = initialBounds.x + deltaX;
+      let newY = initialBounds.y + deltaY;
+      
       // Limitar a etiqueta dentro dos limites da página
       const label = updatedLabels[labelIndex];
-      const newX = Math.max(0, Math.min(x, 210 - label.width)); // 210 é largura A4
-      const newY = Math.max(0, Math.min(y, 297 - label.height)); // 297 é altura A4
+      newX = Math.max(0, Math.min(newX, pageWidth - label.width));
+      newY = Math.max(0, Math.min(newY, pageHeight - label.height));
       
+      // Atualizar a posição da etiqueta
       updatedLabels[labelIndex] = {
         ...label,
         x: newX,

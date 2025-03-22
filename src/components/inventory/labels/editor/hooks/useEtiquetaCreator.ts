@@ -41,6 +41,7 @@ export function useEtiquetaCreator(initialData?: any, autoAdjustDimensions = fal
   const handleDeleteElement = () => {
     if (etiquetaState.selectedElement) {
       elementManagement.handleDeleteElement(etiquetaState.selectedElement);
+      etiquetaState.setSelectedElement(null);
     }
   };
 
@@ -60,17 +61,58 @@ export function useEtiquetaCreator(initialData?: any, autoAdjustDimensions = fal
    * Manipula a geração de prévia do PDF
    */
   const handlePreview = async () => {
+    if (labelManagement.labels.length === 0) {
+      toast.error("Adicione pelo menos uma etiqueta para visualizar");
+      return;
+    }
+    
+    if (labelManagement.selectedLabelId === null) {
+      toast.error("Selecione uma etiqueta para visualizar");
+      return;
+    }
+    
     console.log("Iniciando preview com orientação:", pageConfig.pageOrientation);
-    await pdfGeneration.handlePreview({
-      modelName: etiquetaState.modelName || "Modelo sem nome",
-      labels: labelManagement.labels,
-      pageFormat: pageConfig.pageFormat,
-      pageSize: pageConfig.pageSize,
-      pageMargins: pageConfig.pageMargins,
-      labelSpacing: pageConfig.labelSpacing,
-      autoAdjustDimensions,
-      pageOrientation: pageConfig.pageOrientation
-    });
+    etiquetaState.setIsGeneratingPdf(true);
+    
+    try {
+      // Usando a função generatePreview que recebe um único objeto de configuração
+      const pdfUrl = await pdfGeneration.handlePreview({
+        modelName: etiquetaState.modelName || "Modelo sem nome",
+        labels: labelManagement.labels,
+        pageFormat: pageConfig.pageFormat,
+        pageSize: pageConfig.pageSize,
+        pageMargins: pageConfig.pageMargins,
+        labelSpacing: pageConfig.labelSpacing,
+        autoAdjustDimensions,
+        pageOrientation: pageConfig.pageOrientation
+      });
+      
+      etiquetaState.setPreviewPdfUrl(pdfUrl);
+      etiquetaState.setIsPreviewDialogOpen(true);
+    } catch (error) {
+      console.error("Erro ao gerar pré-visualização:", error);
+      if (error instanceof Error) {
+        toast.error(`Erro na pré-visualização: ${error.message}`);
+      } else {
+        toast.error("Não foi possível gerar a pré-visualização");
+      }
+    } finally {
+      etiquetaState.setIsGeneratingPdf(false);
+    }
+  };
+
+  /**
+   * Faz o download do PDF gerado
+   */
+  const handleDownloadPdf = (modelName: string) => {
+    if (!etiquetaState.previewPdfUrl) return;
+    
+    const a = document.createElement("a");
+    a.href = etiquetaState.previewPdfUrl;
+    a.download = `${modelName || "modelo-etiqueta"}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   /**
@@ -165,10 +207,10 @@ export function useEtiquetaCreator(initialData?: any, autoAdjustDimensions = fal
     
     // Geração de PDF
     ...pdfGeneration,
+    handlePreview,
+    handleDownloadPdf: () => handleDownloadPdf(etiquetaState.modelName),
     
     // Funções específicas
-    handlePreview,
-    handleSave,
-    handleDownloadPdf: () => pdfGeneration.handleDownloadPdf(etiquetaState.modelName)
+    handleSave
   };
 }

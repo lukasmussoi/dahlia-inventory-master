@@ -62,11 +62,16 @@ export function useElementManagement(
     const elementTemplate = elements.find(e => e.id === elementType);
     if (!elementTemplate) return;
     
+    // Posicionar o elemento no centro da etiqueta
+    const label = labels[labelIndex];
+    const defaultX = Math.max(0, (label.width - elementTemplate.defaultWidth) / 2);
+    const defaultY = Math.max(0, (label.height - elementTemplate.defaultHeight) / 2);
+    
     const newElement = {
       id: `elemento-${elementType}-${Date.now()}`,
       type: elementType,
-      x: 10,
-      y: 10,
+      x: snapToGridValue(defaultX),
+      y: snapToGridValue(defaultY),
       width: elementTemplate.defaultWidth,
       height: elementTemplate.defaultHeight,
       fontSize: elementTemplate.defaultFontSize,
@@ -114,24 +119,31 @@ export function useElementManagement(
     const elementIndex = label.elements.findIndex((el: any) => el.id === elementId);
     if (elementIndex === -1) return;
     
+    const element = label.elements[elementIndex];
+    
     // Garantir que os valores estão dentro dos limites
     if (property === 'x' || property === 'y' || property === 'width' || property === 'height') {
       value = Number(value);
       
+      // Aplicar snap to grid
+      if (property === 'x' || property === 'y') {
+        value = snapToGridValue(value);
+      }
+      
       // Limites para x e width
       if (property === 'x') {
-        value = Math.max(0, Math.min(value, label.width - label.elements[elementIndex].width));
+        value = Math.max(0, Math.min(value, label.width - element.width));
       }
       else if (property === 'width') {
-        value = Math.max(10, Math.min(value, label.width - label.elements[elementIndex].x));
+        value = Math.max(10, Math.min(value, label.width - element.x));
       }
       
       // Limites para y e height
       if (property === 'y') {
-        value = Math.max(0, Math.min(value, label.height - label.elements[elementIndex].height));
+        value = Math.max(0, Math.min(value, label.height - element.height));
       }
       else if (property === 'height') {
-        value = Math.max(5, Math.min(value, label.height - label.elements[elementIndex].y));
+        value = Math.max(5, Math.min(value, label.height - element.y));
       }
     }
     

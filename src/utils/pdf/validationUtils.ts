@@ -11,13 +11,14 @@ import type { ModeloEtiqueta } from "@/types/etiqueta";
  */
 export function validateLabelDimensions(modelo: ModeloEtiqueta): string | null {
   // Validar dimensões da página personalizada
-  if (modelo.formatoPagina === "Personalizado") {
+  if (modelo.formatoPagina === "Personalizado" || modelo.formatoPagina === "Custom") {
     console.log("Verificando dimensões personalizadas:", {
       larguraPagina: modelo.larguraPagina,
-      alturaPagina: modelo.alturaPagina
+      alturaPagina: modelo.alturaPagina,
+      orientacao: modelo.orientacao
     });
     
-    // Se as dimensões não estiverem definidas, retornar erro
+    // Verificar se as dimensões da página estão definidas
     if (!modelo.larguraPagina || !modelo.alturaPagina) {
       return "Dimensões personalizadas não definidas. Por favor, defina a largura e altura da página.";
     }
@@ -31,8 +32,20 @@ export function validateLabelDimensions(modelo: ModeloEtiqueta): string | null {
       return "Dimensões de página personalizadas inválidas. Os valores devem ser maiores que zero.";
     }
     
+    // Obter largura e altura efetivas considerando a orientação
+    let pageWidth = modelo.larguraPagina;
+    let pageHeight = modelo.alturaPagina;
+    
+    if (modelo.orientacao === 'paisagem') {
+      pageWidth = Math.max(modelo.larguraPagina, modelo.alturaPagina);
+      pageHeight = Math.min(modelo.larguraPagina, modelo.alturaPagina);
+    } else {
+      pageWidth = Math.min(modelo.larguraPagina, modelo.alturaPagina);
+      pageHeight = Math.max(modelo.larguraPagina, modelo.alturaPagina);
+    }
+    
     // Validar se a etiqueta cabe na página
-    const areaUtilLargura = modelo.larguraPagina - modelo.margemEsquerda - modelo.margemDireita;
+    const areaUtilLargura = pageWidth - modelo.margemEsquerda - modelo.margemDireita;
     if (modelo.largura > areaUtilLargura) {
       console.error("Etiqueta maior que área útil:", {
         larguraEtiqueta: modelo.largura,
@@ -45,7 +58,7 @@ export function validateLabelDimensions(modelo: ModeloEtiqueta): string | null {
         `aumente a largura da página/reduza as margens.`;
     }
     
-    const areaUtilAltura = modelo.alturaPagina - modelo.margemSuperior - modelo.margemInferior;
+    const areaUtilAltura = pageHeight - modelo.margemSuperior - modelo.margemInferior;
     if (modelo.altura > areaUtilAltura) {
       console.error("Etiqueta maior que área útil:", {
         alturaEtiqueta: modelo.altura,

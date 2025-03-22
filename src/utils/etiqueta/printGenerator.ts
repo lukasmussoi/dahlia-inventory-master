@@ -4,8 +4,18 @@
  */
 import JsPDF from 'jspdf';
 import { toast } from 'sonner';
+import { jsPDF } from 'jspdf';
+import 'jspdf-autotable';
 import type { ModeloEtiqueta } from '@/types/etiqueta';
-import { calcularDimensoesPagina, calcularEtiquetasPorPagina, createPdfDocument, normalizarMargens, normalizarEspacamentos } from './documentUtils';
+import { 
+  calcularDimensoesPagina, 
+  calcularEtiquetasPorPagina, 
+  createPdfDocument, 
+  normalizarMargens, 
+  normalizarEspacamentos,
+  generateBarcode
+} from './documentUtils';
+import { getElementRealText, isBarcode, formatBarcodeValue } from './elementUtils';
 import { EtiquetaPrintOptions } from './types';
 
 /**
@@ -15,13 +25,14 @@ import { EtiquetaPrintOptions } from './types';
  * @param options Opções de impressão
  * @returns URL do PDF gerado
  */
-export const generateEtiquetaPDF = async (
+export const generatePrintablePDF = async (
   modelo: ModeloEtiqueta,
   items: any[],
   options: EtiquetaPrintOptions
 ): Promise<string> => {
   try {
-    console.log("Gerando PDF para etiquetas com modelo:", modelo.nome);
+    console.log("Gerando PDF para impressão com modelo:", modelo.nome);
+    console.log("Opções:", options);
     
     // Verificar se há itens para gerar etiquetas
     if (!items || items.length === 0) {
@@ -126,34 +137,44 @@ export const generateEtiquetaPDF = async (
         const y = margensValidas.superior + currentRow * (etiquetaAltura + espacamentosValidos.vertical);
         
         // Desenhar borda da etiqueta (opcional, pode ser comentado para produção)
-        pdf.setDrawColor(200, 200, 200);
-        pdf.rect(x, y, etiquetaLargura, etiquetaAltura);
+        // pdf.setDrawColor(200, 200, 200);
+        // pdf.rect(x, y, etiquetaLargura, etiquetaAltura);
         
         // Renderizar os campos da etiqueta
         if (campos && Array.isArray(campos)) {
           campos.forEach(campo => {
             if (!campo.tipo) return;
             
+            // Calcular posição do elemento em relação à etiqueta
+            const elementX = x + campo.x;
+            const elementY = y + campo.y;
+            
             // Configurar fonte
             pdf.setFontSize(campo.tamanhoFonte);
             
-            // Determinar o conteúdo com base no tipo de campo
-            let conteudo = "";
-            if (campo.tipo === "nome") {
-              conteudo = item.name || "Sem nome";
-            } else if (campo.tipo === "codigo") {
-              conteudo = item.sku || item.barcode || "000000";
-            } else if (campo.tipo === "preco") {
-              const preco = typeof item.price === "number" ? item.price.toFixed(2) : "0.00";
-              conteudo = `R$ ${preco}`;
+            // Verificar se é um código de barras
+            if (isBarcode(campo.tipo)) {
+              // Gerar código de barras
+              const code = formatBarcodeValue(getElementRealText(campo.tipo, item));
+              generateBarcode(pdf, code, elementX, elementY, campo.largura, campo.altura);
+            } else {
+              // Obter texto do elemento
+              const text = getElementRealText(campo.tipo, item);
+              
+              // Ajustar alinhamento
+              let alignmentX = elementX;
+              if (campo.alinhamento === 'center') {
+                alignmentX = elementX + campo.largura / 2;
+              } else if (campo.alinhamento === 'right') {
+                alignmentX = elementX + campo.largura;
+              }
+              
+              // Renderizar texto com alinhamento
+              pdf.text(text, alignmentX, elementY + campo.tamanhoFonte / 2, {
+                align: campo.alinhamento as any,
+                baseline: 'middle'
+              });
             }
-            
-            // Posicionar e desenhar o texto (convertendo números para string)
-            const posX = x + campo.x;
-            const posY = y + campo.y;
-            
-            // Converter coordenadas para string conforme esperado pelo jsPDF
-            pdf.text(conteudo, posX, posY);
           });
         } else {
           console.warn("Modelo sem campos definidos ou campos inválidos");
