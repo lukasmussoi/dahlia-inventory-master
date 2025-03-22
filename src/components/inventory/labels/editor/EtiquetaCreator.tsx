@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react"
 import { 
   AlignCenter, 
@@ -645,7 +644,7 @@ export default function EtiquetaCreator({
         pageSize,
         { top: 10, right: 10, bottom: 10, left: 10 },
         { horizontal: 2, vertical: 2 },
-        autoAdjustDimensions
+        false
       );
       
       setPreviewPdfUrl(pdfUrl);
