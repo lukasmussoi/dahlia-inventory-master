@@ -644,6 +644,7 @@ export default function EtiquetaCreator({
         pageSize,
         { top: 10, right: 10, bottom: 10, left: 10 },
         { horizontal: 2, vertical: 2 },
+        { top: 0, right: 0, bottom: 0, left: 0 },
         false
       );
       
