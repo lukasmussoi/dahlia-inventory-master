@@ -93,8 +93,8 @@ export function ConfigPanel({
                 <Monitor className="h-4 w-4" />
                 <span>Paisagem</span>
               </div>
-            </SelectItem>
-          </SelectContent>
+            </SelectContent>
+          </SelectTrigger>
         </Select>
       </div>
       
@@ -192,7 +192,10 @@ export function ConfigPanel({
               type="number"
               className="h-7 text-sm"
               value={pageSize.width}
-              onChange={(e) => setPageSize(prev => ({ ...prev, width: Number(e.target.value) }))}
+              onChange={(e) => setPageSize({
+                width: Number(e.target.value),
+                height: pageSize.height
+              })}
             />
           </div>
           <div>
@@ -201,7 +204,10 @@ export function ConfigPanel({
               type="number"
               className="h-7 text-sm"
               value={pageSize.height}
-              onChange={(e) => setPageSize(prev => ({ ...prev, height: Number(e.target.value) }))}
+              onChange={(e) => setPageSize({
+                width: pageSize.width,
+                height: Number(e.target.value)
+              })}
             />
           </div>
         </div>

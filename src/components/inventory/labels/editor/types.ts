@@ -42,3 +42,9 @@ export interface EtiquetaCreatorProps {
   autoAdjustDimensions?: boolean;
   onToggleAutoAdjust?: () => void;
 }
+
+export interface EtiquetaEditorProps {
+  modelo?: any;
+  onSave: (modelo: any) => void;
+  onClose: () => void;
+}

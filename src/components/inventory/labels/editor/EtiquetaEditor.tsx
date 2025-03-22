@@ -2,12 +2,7 @@
 import { ModeloEtiqueta } from "@/types/etiqueta";
 import EtiquetaCreator from "./EtiquetaCreator";
 import { useState } from "react";
-
-interface EtiquetaEditorProps {
-  modelo?: ModeloEtiqueta;
-  onSave: (modelo: ModeloEtiqueta) => void;
-  onClose: () => void;
-}
+import { EtiquetaEditorProps } from "./types";
 
 export function EtiquetaEditor({ modelo, onSave, onClose }: EtiquetaEditorProps) {
   const [autoAdjustDimensions, setAutoAdjustDimensions] = useState(false);

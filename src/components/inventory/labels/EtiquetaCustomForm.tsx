@@ -1,11 +1,10 @@
-
 import { Form } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EtiquetaEditor } from './editor/EtiquetaEditor';
 import { useEtiquetaCustomForm } from "@/hooks/useEtiquetaCustomForm";
 import EtiquetaCreator from './editor/EtiquetaCreator';
-import type { ModeloEtiqueta, CampoEtiqueta } from "@/types/etiqueta";
+import type { ModeloEtiqueta } from "@/types/etiqueta";
 import { 
   FormField, 
   FormItem, 
