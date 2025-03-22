@@ -292,7 +292,7 @@ export function EtiquetaCreator({ initialData, onClose, onSave }: EtiquetaCreato
                             onClick={() => {
                               // Correção: garantir que todos os campos obrigatórios estejam definidos
                               const newCampo: CampoEtiqueta = {
-                                tipo: 'nome',
+                                tipo: 'nome', // Valor obrigatório
                                 x: 5,
                                 y: 5,
                                 largura: 40,
@@ -324,31 +324,35 @@ export function EtiquetaCreator({ initialData, onClose, onSave }: EtiquetaCreato
                         position: 'relative'
                       }}
                     >
-                      {form.watch("campos").map((campo, index) => (
-                        <div 
-                          key={`preview-${campo.tipo}-${index}`}
-                          className="absolute border border-gray-300"
-                          style={{
-                            left: `${campo.x * zoomLevel}px`,
-                            top: `${campo.y * zoomLevel}px`,
-                            width: `${campo.largura * zoomLevel}px`,
-                            height: `${campo.altura * zoomLevel}px`,
-                            fontSize: `${campo.tamanhoFonte * zoomLevel}px`,
-                            fontFamily: 'Arial, sans-serif',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: campo.align === 'center' ? 'center' : 
-                                          campo.align === 'right' ? 'flex-end' : 'flex-start',
-                            padding: '0 4px',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap'
-                          }}
-                        >
-                          {campo.tipo === 'nome' ? 'Nome do Produto' :
-                           campo.tipo === 'codigo' ? '0123456789012' : 'R$ 99,99'}
-                        </div>
-                      ))}
+                      {(form.watch("campos") || []).map((campo, index) => {
+                        // Garantir que campo.tipo esteja sempre definido
+                        const tipo = campo.tipo || 'nome';
+                        return (
+                          <div 
+                            key={`preview-${tipo}-${index}`}
+                            className="absolute border border-gray-300"
+                            style={{
+                              left: `${campo.x * zoomLevel}px`,
+                              top: `${campo.y * zoomLevel}px`,
+                              width: `${campo.largura * zoomLevel}px`,
+                              height: `${campo.altura * zoomLevel}px`,
+                              fontSize: `${campo.tamanhoFonte * zoomLevel}px`,
+                              fontFamily: 'Arial, sans-serif',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: campo.align === 'center' ? 'center' : 
+                                              campo.align === 'right' ? 'flex-end' : 'flex-start',
+                              padding: '0 4px',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap'
+                            }}
+                          >
+                            {tipo === 'nome' ? 'Nome do Produto' :
+                             tipo === 'codigo' ? '0123456789012' : 'R$ 99,99'}
+                          </div>
+                        );
+                      })}
                     </div>
                     
                     <div className="text-sm text-gray-500 mt-2">

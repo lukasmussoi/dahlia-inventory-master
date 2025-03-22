@@ -23,7 +23,7 @@ export function mapModelToDatabase(modelo: ModeloEtiqueta): Omit<EtiquetaCustomD
     altura_pagina: modelo.alturaPagina,
     // Garantir que todos os campos tenham as propriedades obrigatórias
     campos: modelo.campos.map(campo => ({
-      tipo: campo.tipo,
+      tipo: campo.tipo || 'nome', // Garantir que tipo nunca seja undefined
       x: campo.x,
       y: campo.y,
       largura: campo.largura,
