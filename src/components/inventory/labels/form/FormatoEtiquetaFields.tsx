@@ -59,28 +59,37 @@ export function FormatoEtiquetaFields({ form }: FormatoEtiquetaFieldsProps) {
 
   // Atualiza as dimensões da página ao alterar o formato
   useEffect(() => {
-    if (formatoPagina !== "Personalizado") {
-      // Atualizar dimensões da página conforme o formato selecionado
+    if (formatoPagina) {
       let largura = 210; // Padrão A4
       let altura = 297;
       
-      switch (formatoPagina) {
-        case "A4":
-          largura = 210;
-          altura = 297;
-          break;
-        case "A5":
-          largura = 148;
-          altura = 210;
-          break;
-        case "Letter":
-          largura = 216;
-          altura = 279;
-          break;
-        case "Legal":
-          largura = 216;
-          altura = 356;
-          break;
+      if (formatoPagina === "Personalizado") {
+        // Para formato personalizado, manter os valores atuais ou usar padrões
+        const larguraAtual = form.getValues("larguraPagina");
+        const alturaAtual = form.getValues("alturaPagina");
+        
+        largura = larguraAtual || 210;
+        altura = alturaAtual || 297;
+      } else {
+        // Atualizar dimensões da página conforme o formato selecionado
+        switch (formatoPagina) {
+          case "A4":
+            largura = 210;
+            altura = 297;
+            break;
+          case "A5":
+            largura = 148;
+            altura = 210;
+            break;
+          case "Letter":
+            largura = 216;
+            altura = 279;
+            break;
+          case "Legal":
+            largura = 216;
+            altura = 356;
+            break;
+        }
       }
       
       // Ajustar para orientação
@@ -88,10 +97,9 @@ export function FormatoEtiquetaFields({ form }: FormatoEtiquetaFieldsProps) {
         [largura, altura] = [altura, largura];
       }
       
+      console.log(`Definindo dimensões da página: largura=${largura}, altura=${altura}`);
       form.setValue("larguraPagina", largura);
       form.setValue("alturaPagina", altura);
-      
-      console.log(`Dimensões da página atualizadas para ${largura}x${altura} baseado no formato ${formatoPagina} e orientação ${orientacao}`);
     }
   }, [formatoPagina, orientacao, form]);
 
@@ -110,6 +118,7 @@ export function FormatoEtiquetaFields({ form }: FormatoEtiquetaFieldsProps) {
                   field.onChange(value);
                 }} 
                 defaultValue={field.value}
+                value={field.value}
               >
                 <FormControl>
                   <SelectTrigger>
@@ -140,6 +149,7 @@ export function FormatoEtiquetaFields({ form }: FormatoEtiquetaFieldsProps) {
                   field.onChange(value);
                 }} 
                 defaultValue={field.value}
+                value={field.value}
               >
                 <FormControl>
                   <SelectTrigger>
@@ -168,14 +178,16 @@ export function FormatoEtiquetaFields({ form }: FormatoEtiquetaFieldsProps) {
                 <FormControl>
                   <Input 
                     type="number" 
-                    {...field} 
+                    value={field.value || ''} 
                     onChange={e => {
-                      const value = Number(e.target.value);
+                      const value = e.target.value === '' ? undefined : Number(e.target.value);
                       console.log(`Largura da página alterada para: ${value}`);
                       field.onChange(value);
                     }}
                     onBlur={() => {
-                      console.log(`Largura da página confirmada: ${field.value}`);
+                      const value = field.value === undefined ? 210 : field.value;
+                      console.log(`Largura da página confirmada: ${value}`);
+                      form.setValue("larguraPagina", value);
                     }}
                   />
                 </FormControl>
@@ -193,14 +205,16 @@ export function FormatoEtiquetaFields({ form }: FormatoEtiquetaFieldsProps) {
                 <FormControl>
                   <Input 
                     type="number" 
-                    {...field} 
+                    value={field.value || ''} 
                     onChange={e => {
-                      const value = Number(e.target.value);
+                      const value = e.target.value === '' ? undefined : Number(e.target.value);
                       console.log(`Altura da página alterada para: ${value}`);
                       field.onChange(value);
                     }}
                     onBlur={() => {
-                      console.log(`Altura da página confirmada: ${field.value}`);
+                      const value = field.value === undefined ? 297 : field.value;
+                      console.log(`Altura da página confirmada: ${value}`);
+                      form.setValue("alturaPagina", value);
                     }}
                   />
                 </FormControl>

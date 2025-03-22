@@ -142,6 +142,13 @@ export function mapModelToDatabase(modelo: ModeloEtiqueta) {
   if (modelo.formatoPagina === "Personalizado" || modelo.formatoPagina === "Custom") {
     larguraPagina = Number(modelo.larguraPagina) || 210;
     alturaPagina = Number(modelo.alturaPagina) || 297;
+  } else {
+    // Para formatos padrão, ainda salvar as dimensões no banco
+    // Isso garante que mesmo que o formato seja A4, Letter, etc, as dimensões sejam preservadas
+    if (modelo.larguraPagina !== undefined && modelo.alturaPagina !== undefined) {
+      larguraPagina = Number(modelo.larguraPagina);
+      alturaPagina = Number(modelo.alturaPagina);
+    }
   }
 
   // Garantir que todos os valores numéricos sejam números válidos
