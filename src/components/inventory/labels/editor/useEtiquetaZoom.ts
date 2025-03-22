@@ -16,27 +16,10 @@ export function useEtiquetaZoom(initialZoom = 1) {
     setZoomLevel(1);
   }, []);
 
-  const handleZoomToFit = useCallback((containerWidth: number, containerHeight: number, objectWidth: number, objectHeight: number, padding = 20) => {
-    const availableWidth = containerWidth - padding * 2;
-    const availableHeight = containerHeight - padding * 2;
-    
-    // Calcular o fator de zoom para ajustar aos limites do container
-    const widthRatio = availableWidth / objectWidth;
-    const heightRatio = availableHeight / objectHeight;
-    
-    // Usar o menor dos dois para garantir que o objeto caiba completamente
-    const newZoom = Math.min(widthRatio, heightRatio);
-    
-    // Limitar o zoom (opcional)
-    setZoomLevel(Math.min(Math.max(newZoom, 0.3), 5));
-  }, []);
-
   // Keyboard shortcuts for zoom
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || 
-          e.target instanceof HTMLTextAreaElement || 
-          e.target instanceof HTMLSelectElement) return;
+      if (e.target instanceof HTMLInputElement) return;
       
       if (e.key === '=' || e.key === '+') {
         e.preventDefault();
@@ -60,6 +43,5 @@ export function useEtiquetaZoom(initialZoom = 1) {
     handleZoomIn,
     handleZoomOut,
     handleResetZoom,
-    handleZoomToFit
   };
 }

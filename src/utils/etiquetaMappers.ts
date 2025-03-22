@@ -65,12 +65,6 @@ export function mapDatabaseToModel(item: EtiquetaCustomDB): ModeloEtiqueta {
 
   console.log("Campos mapeados:", campos);
 
-  // Garantir que a orientação seja um valor válido
-  const orientacao: 'retrato' | 'paisagem' = 
-    item.orientacao === 'retrato' || item.orientacao === 'paisagem' 
-      ? item.orientacao 
-      : 'retrato';
-
   return {
     id: item.id,
     nome: item.descricao,
@@ -78,7 +72,7 @@ export function mapDatabaseToModel(item: EtiquetaCustomDB): ModeloEtiqueta {
     largura: Number(item.largura) || 80,
     altura: Number(item.altura) || 40,
     formatoPagina: item.formato_pagina || "A4",
-    orientacao: orientacao,
+    orientacao: item.orientacao || "retrato",
     margemSuperior: Number(item.margem_superior) || 10,
     margemInferior: Number(item.margem_inferior) || 10,
     margemEsquerda: Number(item.margem_esquerda) || 10,
@@ -97,7 +91,7 @@ export function mapDatabaseToModel(item: EtiquetaCustomDB): ModeloEtiqueta {
 /**
  * Prepara um modelo para inclusão no banco de dados
  */
-export function mapModelToDatabase(modelo: ModeloEtiqueta): Omit<EtiquetaCustomDB, 'id' | 'criado_por' | 'criado_em' | 'atualizado_em'> {
+export function mapModelToDatabase(modelo: ModeloEtiqueta) {
   console.log("Mapeando modelo para banco de dados:", modelo);
   
   // Garante que todos os campos tenham os valores obrigatórios
@@ -113,19 +107,13 @@ export function mapModelToDatabase(modelo: ModeloEtiqueta): Omit<EtiquetaCustomD
 
   console.log("Campos validados para salvar:", camposValidados);
 
-  // Garantir que a orientação seja válida
-  const orientacao: 'retrato' | 'paisagem' = 
-    modelo.orientacao === 'retrato' || modelo.orientacao === 'paisagem' 
-      ? modelo.orientacao 
-      : 'retrato';
-
   return {
     descricao: modelo.nome,
     tipo: 'padrao',
     largura: Number(modelo.largura) || 80,
     altura: Number(modelo.altura) || 40,
     formato_pagina: modelo.formatoPagina || "A4",
-    orientacao: orientacao,
+    orientacao: modelo.orientacao || "retrato",
     margem_superior: Number(modelo.margemSuperior) || 10,
     margem_inferior: Number(modelo.margemInferior) || 10,
     margem_esquerda: Number(modelo.margemEsquerda) || 10,

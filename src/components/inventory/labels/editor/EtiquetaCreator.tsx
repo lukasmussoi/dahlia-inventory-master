@@ -1,1098 +1,1244 @@
-import { useEffect, useState, useRef } from "react";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Slider } from "@/components/ui/slider";
-import { Switch } from "@/components/ui/switch";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { AlertCircle, Save, Info, ZoomIn, ZoomOut, RotateCw, Tag, Tags, Layout, File, LayoutGrid } from "lucide-react";
-import { useEtiquetaZoom } from "./useEtiquetaZoom";
-import { generatePreviewPDF } from "@/utils/etiquetaGenerator";
-import { validarDimensoesEtiqueta } from "@/lib/utils";
-import { cn } from "@/lib/utils";
-import type { ModeloEtiqueta, CampoEtiqueta } from "@/types/etiqueta";
-import ZoomControls from "./ZoomControls";
-import "@/styles/etiqueta-editor.css";
 
-interface CampoDrag {
-  isDragging: boolean;
-  initialX: number;
-  initialY: number;
-  offsetX: number;
-  offsetY: number;
+import { useState, useRef, useEffect } from "react"
+import { 
+  AlignCenter, 
+  AlignLeft, 
+  AlignRight, 
+  Copy, 
+  Grid, 
+  Layers, 
+  Plus, 
+  Save, 
+  Settings, 
+  Trash, 
+  X, 
+  ZoomIn, 
+  ZoomOut,
+  LayoutGrid,
+  CheckSquare,
+  Minus,
+  FileText,
+  Download
+} from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuLabel, ContextMenuSeparator, ContextMenuTrigger } from "@/components/ui/context-menu"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Switch } from "@/components/ui/switch"
+import { cn } from "@/lib/utils"
+import { toast } from "sonner"
+import "@/styles/etiqueta-editor.css"
+import { generatePreviewPDF } from "@/utils/etiquetaGenerator"
+
+export interface ElementType {
+  id: string;
+  name: string;
+  defaultWidth: number;
+  defaultHeight: number;
+  defaultFontSize: number;
+  defaultAlign?: string;
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  fontSize?: number;
+  align?: string;
 }
 
-interface EtiquetaCreatorProps {
+export interface LabelElement {
+  id: string;
+  type: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  fontSize: number;
+  align: string;
+}
+
+export interface LabelType {
+  id: number;
+  name: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  elements: LabelElement[];
+}
+
+export interface EtiquetaCreatorProps {
   onClose: () => void;
-  onSave: (data: ModeloEtiqueta) => void;
-  initialData?: ModeloEtiqueta;
-  isLoading?: boolean;
+  onSave: (data: any) => void;
+  initialData?: any;
+  autoAdjustDimensions?: boolean;
+  onToggleAutoAdjust?: () => void;
 }
 
-const formatoOptions = [
-  { value: "A4", label: "A4 (210 x 297 mm)" },
-  { value: "Letter", label: "Carta (216 x 279 mm)" },
-  { value: "Legal", label: "Ofício (216 x 356 mm)" },
-  { value: "Personalizado", label: "Personalizado" }
-];
-
-const tiposCampo = [
-  { value: "nome", label: "Nome do Produto" },
-  { value: "codigo", label: "Código de Barras" },
-  { value: "preco", label: "Preço" }
-];
-
-export default function EtiquetaCreator({ onClose, onSave, initialData, isLoading }: EtiquetaCreatorProps) {
-  const [modelo, setModelo] = useState<ModeloEtiqueta>(() => {
-    if (initialData) return { ...initialData };
-    
-    return {
-      nome: "",
-      descricao: "",
-      largura: 80,
-      altura: 30,
-      formatoPagina: "A4",
-      orientacao: "retrato",
-      margemSuperior: 0,
-      margemInferior: 0,
-      margemEsquerda: 0,
-      margemDireita: 0,
-      espacamentoHorizontal: 0,
-      espacamentoVertical: 0,
-      larguraPagina: 210,
-      alturaPagina: 297,
-      campos: [
-        { tipo: 'nome', x: 2, y: 4, largura: 40, altura: 10, tamanhoFonte: 7 },
-        { tipo: 'codigo', x: 20, y: 1, largura: 40, altura: 6, tamanhoFonte: 8 },
-        { tipo: 'preco', x: 70, y: 4, largura: 20, altura: 10, tamanhoFonte: 10 },
-      ]
-    };
-  });
-
-  const [campoDrag, setCampoDrag] = useState<CampoDrag>({
-    isDragging: false,
-    initialX: 0,
-    initialY: 0,
-    offsetX: 0,
-    offsetY: 0
-  });
-
-  const [campoSelecionado, setCampoSelecionado] = useState<number | null>(null);
-
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [showPreview, setShowPreview] = useState(false);
-  const [showPageView, setShowPageView] = useState(false);
-  const [validacaoEtiqueta, setValidacaoEtiqueta] = useState<{valido: boolean, mensagem?: string} | null>(null);
-  const [areaUtil, setAreaUtil] = useState<{largura: number, altura: number} | null>(null);
-  const [autoAjustar, setAutoAjustar] = useState(true);
-
-  const etiquetaRef = useRef<HTMLDivElement>(null);
-  const paginaRef = useRef<HTMLDivElement>(null);
-
-  const { zoomLevel, setZoomLevel, handleZoomIn, handleZoomOut, handleResetZoom } = useEtiquetaZoom(1);
-
+export default function EtiquetaCreator({ 
+  onClose, 
+  onSave, 
+  initialData,
+  autoAdjustDimensions = false,
+  onToggleAutoAdjust
+}: EtiquetaCreatorProps) {
+  // Estado principal
+  const [activeTab, setActiveTab] = useState("elementos")
+  const [modelName, setModelName] = useState(initialData?.nome || "")
+  const [selectedElement, setSelectedElement] = useState<string | null>(null)
+  const [zoom, setZoom] = useState(150)
+  const [showGrid, setShowGrid] = useState(true)
+  const [snapToGrid, setSnapToGrid] = useState(true)
+  const [gridSize, setGridSize] = useState(5)
+  const [pageSize, setPageSize] = useState({ width: initialData?.larguraPagina || 210, height: initialData?.alturaPagina || 297 })
+  const [pageFormat, setPageFormat] = useState(initialData?.formatoPagina || "A4")
+  const [labelSize, setLabelSize] = useState({ 
+    width: initialData?.largura || 80, 
+    height: initialData?.altura || 40 
+  })
+  const [nextLabelId, setNextLabelId] = useState(1)
+  const [selectedLabelId, setSelectedLabelId] = useState<number | null>(0)
+  const [labels, setLabels] = useState<LabelType[]>([{ 
+    id: 0, 
+    name: "Etiqueta 1",
+    x: 20, 
+    y: 20, 
+    width: initialData?.largura || 80,
+    height: initialData?.altura || 40,
+    elements: initialData?.campos?.map((campo: any, index: number) => ({
+      id: `elemento-${campo.tipo}-${index}`,
+      type: campo.tipo,
+      x: campo.x,
+      y: campo.y,
+      width: campo.largura,
+      height: campo.altura,
+      fontSize: campo.tamanhoFonte,
+      align: campo.alinhamento || "left"
+    })) || []
+  }])
+  const [isPreviewDialogOpen, setIsPreviewDialogOpen] = useState(false)
+  const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null)
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false)
+  
+  // Refs
+  const editorRef = useRef<HTMLDivElement>(null)
+  const dragRef = useRef({ 
+    isDragging: false, 
+    type: null as any, 
+    id: null as any, 
+    startX: 0, 
+    startY: 0, 
+    offsetX: 0, 
+    offsetY: 0 
+  })
+  
+  // Elementos disponíveis
+  const elements = [
+    { 
+      id: "nome", 
+      name: "Nome do Produto", 
+      defaultWidth: 60, 
+      defaultHeight: 15, 
+      defaultFontSize: 10, 
+      defaultAlign: "left" 
+    }, 
+    { 
+      id: "codigo", 
+      name: "Código de Barras", 
+      defaultWidth: 60, 
+      defaultHeight: 15, 
+      defaultFontSize: 8,
+      defaultAlign: "left"
+    }, 
+    { 
+      id: "preco", 
+      name: "Preço", 
+      defaultWidth: 40, 
+      defaultHeight: 15, 
+      defaultFontSize: 12, 
+      defaultAlign: "center" 
+    }
+  ]
+  
+  // Quando a página carrega, definir o foco no input de nome
   useEffect(() => {
-    validarDimensoes();
-  }, [
-    modelo.formatoPagina, 
-    modelo.orientacao, 
-    modelo.largura, 
-    modelo.altura, 
-    modelo.margemSuperior, 
-    modelo.margemInferior,
-    modelo.margemEsquerda,
-    modelo.margemDireita,
-    modelo.larguraPagina,
-    modelo.alturaPagina
-  ]);
+    const timer = setTimeout(() => {
+      document.getElementById("model-name-input")?.focus();
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, []);
+  
+  // Funções auxiliares
+  const getSelectedLabel = () => {
+    if (selectedLabelId === null) return null;
+    return labels.find(label => label.id === selectedLabelId) || null;
+  }
 
-  const validarDimensoes = () => {
-    if (!modelo.formatoPagina) return;
-    
-    let larguraPagina = modelo.larguraPagina || 0;
-    let alturaPagina = modelo.alturaPagina || 0;
-    
-    if (modelo.formatoPagina !== "Personalizado") {
-      switch (modelo.formatoPagina) {
-        case "A4":
-          larguraPagina = 210;
-          alturaPagina = 297;
-          break;
-        case "Letter":
-          larguraPagina = 216;
-          alturaPagina = 279;
-          break;
-        case "Legal":
-          larguraPagina = 216;
-          alturaPagina = 356;
-          break;
-        default:
-          larguraPagina = 210;
-          alturaPagina = 297;
-      }
-    }
-    
-    if (!larguraPagina || !alturaPagina) return;
-    
-    const resultado = validarDimensoesEtiqueta(
-      modelo.largura || 0,
-      modelo.altura || 0,
-      {
-        largura: larguraPagina,
-        altura: alturaPagina,
-        margemSuperior: modelo.margemSuperior || 0,
-        margemInferior: modelo.margemInferior || 0,
-        margemEsquerda: modelo.margemEsquerda || 0,
-        margemDireita: modelo.margemDireita || 0,
-        orientacao: modelo.orientacao || 'retrato'
-      }
-    );
-    
-    setValidacaoEtiqueta({
-      valido: resultado.valido,
-      mensagem: resultado.mensagem
-    });
-    
-    if (resultado.areaUtil) {
-      setAreaUtil(resultado.areaUtil);
-    }
-  };
+  const getSelectedElementDetails = () => {
+    if (!selectedElement || selectedLabelId === null) return null;
+    const label = labels.find(l => l.id === selectedLabelId);
+    if (!label) return null;
+    return label.elements.find(e => e.id === selectedElement);
+  }
 
-  const iniciarArraste = (index: number, e: React.MouseEvent<HTMLDivElement>) => {
+  const handleStartDrag = (e: React.MouseEvent, type: "element" | "label", id: string | number, x: number, y: number) => {
+    if (!editorRef.current) return;
+    e.stopPropagation();
+    const rect = editorRef.current.getBoundingClientRect();
+    dragRef.current = { 
+      isDragging: true, 
+      type, 
+      id, 
+      startX: x, 
+      startY: y, 
+      offsetX: e.clientX - rect.left, 
+      offsetY: e.clientY - rect.top 
+    };
+  }
+
+  const snapToGridValue = (value: number) => snapToGrid ? Math.round(value / gridSize) * gridSize : value;
+
+  const handleDrag = (e: React.MouseEvent) => {
+    if (!dragRef.current.isDragging || !editorRef.current) return;
     e.preventDefault();
     
-    const campo = modelo.campos[index];
+    const rect = editorRef.current.getBoundingClientRect();
+    const zoomFactor = zoom / 100;
     
-    setCampoSelecionado(index);
-    setCampoDrag({
-      isDragging: true,
-      initialX: e.clientX,
-      initialY: e.clientY,
-      offsetX: 0,
-      offsetY: 0
-    });
-  };
-
-  const arrastarCampo = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!campoDrag.isDragging || campoSelecionado === null) return;
+    const x = snapToGridValue((e.clientX - rect.left - dragRef.current.offsetX) / zoomFactor);
+    const y = snapToGridValue((e.clientY - rect.top - dragRef.current.offsetY) / zoomFactor);
     
-    const offsetX = e.clientX - campoDrag.initialX;
-    const offsetY = e.clientY - campoDrag.initialY;
+    const updatedLabels = [...labels];
     
-    setCampoDrag(prev => ({
-      ...prev,
-      offsetX,
-      offsetY
-    }));
-  };
-
-  const finalizarArraste = () => {
-    if (!campoDrag.isDragging || campoSelecionado === null) return;
-    
-    const zoom = zoomLevel;
-    const campo = modelo.campos[campoSelecionado];
-    
-    const novoX = Math.max(0, campo.x + (campoDrag.offsetX / zoom));
-    const novoY = Math.max(0, campo.y + (campoDrag.offsetY / zoom));
-    
-    const camposAtualizados = [...modelo.campos];
-    camposAtualizados[campoSelecionado] = {
-      ...campo,
-      x: novoX,
-      y: novoY
-    };
-    
-    setModelo(prev => ({
-      ...prev,
-      campos: camposAtualizados
-    }));
-    
-    setCampoDrag({
-      isDragging: false,
-      initialX: 0,
-      initialY: 0,
-      offsetX: 0,
-      offsetY: 0
-    });
-  };
-
-  const atualizarCampo = (index: number, chave: keyof CampoEtiqueta, valor: any) => {
-    const novosCampos = [...modelo.campos];
-    novosCampos[index] = {
-      ...novosCampos[index],
-      [chave]: valor
-    };
-    
-    setModelo(prev => ({
-      ...prev,
-      campos: novosCampos
-    }));
-  };
-
-  const adicionarCampo = (tipo: 'nome' | 'codigo' | 'preco') => {
-    const novoCampo: CampoEtiqueta = {
-      tipo: tipo,
-      x: 10,
-      y: 10,
-      largura: tipo === 'codigo' ? 40 : 20,
-      altura: tipo === 'codigo' ? 10 : 8,
-      tamanhoFonte: 8
-    };
-    
-    setModelo(prev => ({
-      ...prev,
-      campos: [...prev.campos, novoCampo]
-    }));
-    
-    setCampoSelecionado(modelo.campos.length);
-  };
-
-  const removerCampoSelecionado = () => {
-    if (campoSelecionado === null) return;
-    
-    const novosCampos = modelo.campos.filter((_, index) => index !== campoSelecionado);
-    
-    setModelo(prev => ({
-      ...prev,
-      campos: novosCampos
-    }));
-    
-    setCampoSelecionado(null);
-  };
-
-  const atualizarModelo = (chave: keyof ModeloEtiqueta, valor: any) => {
-    setModelo(prev => ({
-      ...prev,
-      [chave]: valor
-    }));
-  };
-
-  const gerarPreview = async () => {
-    try {
-      const url = await generatePreviewPDF(modelo);
-      setPreviewUrl(url);
-      setShowPreview(true);
-    } catch (error) {
-      console.error("Erro ao gerar pré-visualização:", error);
-      if (error instanceof Error) {
-        setValidacaoEtiqueta({
-          valido: false,
-          mensagem: `Erro ao gerar pré-visualização: ${error.message}`
-        });
-      } else {
-        setValidacaoEtiqueta({
-          valido: false,
-          mensagem: "Erro desconhecido ao gerar pré-visualização"
-        });
-      }
-    }
-  };
-
-  const calcularDimensoesPagina = () => {
-    let larguraPagina = modelo.larguraPagina || 210;
-    let alturaPagina = modelo.alturaPagina || 297;
-    
-    if (modelo.formatoPagina !== "Personalizado") {
-      switch (modelo.formatoPagina) {
-        case "A4":
-          larguraPagina = 210;
-          alturaPagina = 297;
-          break;
-        case "Letter":
-          larguraPagina = 216;
-          alturaPagina = 279;
-          break;
-        case "Legal":
-          larguraPagina = 216;
-          alturaPagina = 356;
-          break;
-        default:
-          larguraPagina = 210;
-          alturaPagina = 297;
-      }
-    }
-    
-    if (modelo.orientacao === 'paisagem') {
-      return { 
-        largura: alturaPagina, 
-        altura: larguraPagina 
+    if (dragRef.current.type === "element") {
+      const labelIndex = updatedLabels.findIndex(l => l.id === selectedLabelId);
+      if (labelIndex === -1) return;
+      
+      const label = updatedLabels[labelIndex];
+      const elementIndex = label.elements.findIndex(el => el.id === dragRef.current.id);
+      if (elementIndex === -1) return;
+      
+      const element = label.elements[elementIndex];
+      
+      // Limitar o elemento dentro dos limites da etiqueta
+      const newX = Math.max(0, Math.min(x, label.width - element.width));
+      const newY = Math.max(0, Math.min(y, label.height - element.height));
+      
+      label.elements[elementIndex] = {
+        ...element,
+        x: newX,
+        y: newY
+      };
+    } else if (dragRef.current.type === "label") {
+      const labelIndex = updatedLabels.findIndex(l => l.id === dragRef.current.id);
+      if (labelIndex === -1) return;
+      
+      // Limitar a etiqueta dentro dos limites da página
+      const label = updatedLabels[labelIndex];
+      const newX = Math.max(0, Math.min(x, pageSize.width - label.width));
+      const newY = Math.max(0, Math.min(y, pageSize.height - label.height));
+      
+      updatedLabels[labelIndex] = {
+        ...label,
+        x: newX,
+        y: newY
       };
     }
     
-    return { 
-      largura: larguraPagina, 
-      altura: alturaPagina 
+    setLabels(updatedLabels);
+  }
+
+  const handleEndDrag = () => {
+    dragRef.current.isDragging = false;
+  }
+  
+  const handleAddElement = (elementType: string) => {
+    if (selectedLabelId === null) {
+      toast.error("Selecione uma etiqueta primeiro");
+      return;
+    }
+    
+    const labelIndex = labels.findIndex(l => l.id === selectedLabelId);
+    if (labelIndex === -1) return;
+    
+    // Verificar se o elemento já existe
+    const elementExists = labels[labelIndex].elements.some(el => el.type === elementType);
+    if (elementExists) {
+      toast.error(`Este elemento já foi adicionado na etiqueta`);
+      return;
+    }
+    
+    const elementTemplate = elements.find(e => e.id === elementType);
+    if (!elementTemplate) return;
+    
+    const newElement: LabelElement = {
+      id: `elemento-${elementType}-${Date.now()}`,
+      type: elementType,
+      x: 10,
+      y: 10,
+      width: elementTemplate.defaultWidth,
+      height: elementTemplate.defaultHeight,
+      fontSize: elementTemplate.defaultFontSize,
+      align: elementTemplate.defaultAlign || "left"
     };
-  };
-
-  const calcularEtiquetasPorPagina = () => {
-    if (!areaUtil) return { etiquetasPorLinha: 0, etiquetasPorColuna: 0 };
     
-    const espacamentoH = modelo.espacamentoHorizontal || 0;
-    const espacamentoV = modelo.espacamentoVertical || 0;
+    const updatedLabels = [...labels];
+    updatedLabels[labelIndex].elements.push(newElement);
+    setLabels(updatedLabels);
+    setSelectedElement(newElement.id);
     
-    const etiquetasPorLinha = Math.floor((areaUtil.largura + espacamentoH) / (modelo.largura + espacamentoH));
-    const etiquetasPorColuna = Math.floor((areaUtil.altura + espacamentoV) / (modelo.altura + espacamentoV));
+    toast.success(`${elementTemplate.name} adicionado`);
+  }
+  
+  const handleDeleteElement = () => {
+    if (!selectedElement || selectedLabelId === null) return;
     
-    return { etiquetasPorLinha, etiquetasPorColuna };
-  };
-
-  const salvarModelo = () => {
-    validarDimensoes();
+    const updatedLabels = [...labels];
+    const labelIndex = updatedLabels.findIndex(l => l.id === selectedLabelId);
+    if (labelIndex === -1) return;
     
-    if (validacaoEtiqueta && !validacaoEtiqueta.valido) {
-      return;
-    }
+    const elementIndex = updatedLabels[labelIndex].elements.findIndex(el => el.id === selectedElement);
+    if (elementIndex === -1) return;
     
-    if (!modelo.nome.trim()) {
-      setValidacaoEtiqueta({
-        valido: false,
-        mensagem: "O nome do modelo é obrigatório"
-      });
-      return;
-    }
+    updatedLabels[labelIndex].elements.splice(elementIndex, 1);
+    setLabels(updatedLabels);
+    setSelectedElement(null);
     
-    onSave(modelo);
-  };
-
-  const renderizarVisualizacaoPagina = () => {
-    if (!areaUtil) return null;
+    toast.success(`Elemento removido`);
+  }
+  
+  const handleUpdateElement = (property: string, value: any) => {
+    if (!selectedElement || selectedLabelId === null) return;
     
-    const dimensoesPagina = calcularDimensoesPagina();
-    const { etiquetasPorLinha, etiquetasPorColuna } = calcularEtiquetasPorPagina();
+    const updatedLabels = [...labels];
+    const labelIndex = updatedLabels.findIndex(l => l.id === selectedLabelId);
+    if (labelIndex === -1) return;
     
-    const etiquetas = [];
-    for (let coluna = 0; coluna < etiquetasPorLinha; coluna++) {
-      for (let linha = 0; linha < etiquetasPorColuna; linha++) {
-        const x = modelo.margemEsquerda + coluna * (modelo.largura + (modelo.espacamentoHorizontal || 0));
-        const y = modelo.margemSuperior + linha * (modelo.altura + (modelo.espacamentoVertical || 0));
-        
-        etiquetas.push(
-          <div 
-            key={`etiqueta-${coluna}-${linha}`}
-            className="absolute border border-dashed border-gray-300"
-            style={{
-              left: x * zoomLevel,
-              top: y * zoomLevel,
-              width: modelo.largura * zoomLevel,
-              height: modelo.altura * zoomLevel,
-              backgroundColor: 'rgba(255, 255, 255, 0.8)'
-            }}
-          />
-        );
+    const label = updatedLabels[labelIndex];
+    const elementIndex = label.elements.findIndex(el => el.id === selectedElement);
+    if (elementIndex === -1) return;
+    
+    // Garantir que os valores estão dentro dos limites
+    if (property === 'x' || property === 'y' || property === 'width' || property === 'height') {
+      value = Number(value);
+      
+      // Limites para x e width
+      if (property === 'x') {
+        value = Math.max(0, Math.min(value, label.width - label.elements[elementIndex].width));
+      }
+      else if (property === 'width') {
+        value = Math.max(10, Math.min(value, label.width - label.elements[elementIndex].x));
+      }
+      
+      // Limites para y e height
+      if (property === 'y') {
+        value = Math.max(0, Math.min(value, label.height - label.elements[elementIndex].height));
+      }
+      else if (property === 'height') {
+        value = Math.max(5, Math.min(value, label.height - label.elements[elementIndex].y));
       }
     }
     
-    return (
-      <div className="flex justify-center my-4 overflow-auto">
-        <div 
-          ref={paginaRef}
-          className="relative bg-white shadow-md border"
-          style={{
-            width: dimensoesPagina.largura * zoomLevel,
-            height: dimensoesPagina.altura * zoomLevel,
-          }}
-        >
-          <div 
-            className="absolute border border-dashed border-blue-300"
-            style={{
-              left: modelo.margemEsquerda * zoomLevel,
-              top: modelo.margemSuperior * zoomLevel,
-              width: areaUtil.largura * zoomLevel,
-              height: areaUtil.altura * zoomLevel,
-              backgroundColor: 'rgba(59, 130, 246, 0.05)'
-            }}
+    if (property === 'fontSize') {
+      value = Math.max(6, Math.min(24, Number(value)));
+    }
+    
+    label.elements[elementIndex] = {
+      ...label.elements[elementIndex],
+      [property]: value
+    };
+    
+    setLabels(updatedLabels);
+  }
+  
+  const handleUpdatePageFormat = (value: string) => {
+    setPageFormat(value);
+    
+    if (value === "A4") {
+      setPageSize({ width: 210, height: 297 });
+    } else if (value === "A5") {
+      setPageSize({ width: 148, height: 210 });
+    } else if (value === "Letter") {
+      setPageSize({ width: 216, height: 279 });
+    }
+    // Outros formatos podem ser adicionados conforme necessário
+  }
+  
+  const handleUpdateLabelSize = (dimension: "width" | "height", value: number) => {
+    if (selectedLabelId === null) return;
+    
+    // Validar que o tamanho da etiqueta não seja maior que a página
+    value = Math.max(10, Math.min(value, dimension === "width" ? pageSize.width : pageSize.height));
+    
+    const newLabelSize = { ...labelSize, [dimension]: value };
+    setLabelSize(newLabelSize);
+    
+    // Atualizar também o tamanho da etiqueta selecionada no array
+    const updatedLabels = [...labels];
+    const labelIndex = updatedLabels.findIndex(l => l.id === selectedLabelId);
+    if (labelIndex === -1) return;
+    
+    updatedLabels[labelIndex] = {
+      ...updatedLabels[labelIndex],
+      [dimension]: value
+    };
+    
+    // Verificar se algum elemento está fora dos limites e ajustar se necessário
+    updatedLabels[labelIndex].elements = updatedLabels[labelIndex].elements.map(element => {
+      let updatedElement = { ...element };
+      
+      if (dimension === "width" && element.x + element.width > value) {
+        if (element.x < value) {
+          // Elemento está parcialmente dentro, ajustar apenas a largura
+          updatedElement.width = value - element.x;
+        } else {
+          // Elemento está totalmente fora, reposicionar
+          updatedElement.x = Math.max(0, value - element.width);
+        }
+      }
+      
+      if (dimension === "height" && element.y + element.height > value) {
+        if (element.y < value) {
+          // Elemento está parcialmente dentro, ajustar apenas a altura
+          updatedElement.height = value - element.y;
+        } else {
+          // Elemento está totalmente fora, reposicionar
+          updatedElement.y = Math.max(0, value - element.height);
+        }
+      }
+      
+      return updatedElement;
+    });
+    
+    setLabels(updatedLabels);
+  }
+  
+  const handleAddLabel = () => {
+    const newLabelId = nextLabelId;
+    setNextLabelId(prevId => prevId + 1);
+    
+    // Criar uma nova etiqueta com base na configuração atual
+    const newLabel: LabelType = {
+      id: newLabelId,
+      name: `Etiqueta ${newLabelId + 1}`,
+      x: 20,
+      y: 20 + (labels.length * 10), // Posicionar abaixo das etiquetas existentes
+      width: labelSize.width,
+      height: labelSize.height,
+      elements: [] // Começar sem elementos
+    };
+    
+    setLabels(prevLabels => [...prevLabels, newLabel]);
+    setSelectedLabelId(newLabelId); // Selecionar a nova etiqueta
+    setSelectedElement(null); // Limpar seleção de elemento
+    
+    toast.success(`Nova etiqueta adicionada`);
+  }
+  
+  const handleDuplicateLabel = (labelId: number) => {
+    const labelToDuplicate = labels.find(l => l.id === labelId);
+    if (!labelToDuplicate) return;
+    
+    const newLabelId = nextLabelId;
+    setNextLabelId(prevId => prevId + 1);
+    
+    // Criar uma cópia da etiqueta
+    const newLabel: LabelType = {
+      ...labelToDuplicate,
+      id: newLabelId,
+      name: `${labelToDuplicate.name} (Cópia)`,
+      x: labelToDuplicate.x + 10, // Posicionar ligeiramente deslocada
+      y: labelToDuplicate.y + 10,
+      // Copiar todos os elementos da etiqueta
+      elements: labelToDuplicate.elements.map(element => ({
+        ...element,
+        id: `${element.id}-copy-${Date.now()}`
+      }))
+    };
+    
+    setLabels(prevLabels => [...prevLabels, newLabel]);
+    setSelectedLabelId(newLabelId); // Selecionar a nova etiqueta
+    setSelectedElement(null); // Limpar seleção de elemento
+    
+    toast.success(`Etiqueta duplicada`);
+  }
+  
+  const handleDeleteLabel = (labelId: number) => {
+    // Impedir que todas as etiquetas sejam excluídas
+    if (labels.length === 1) {
+      toast.error("Deve haver pelo menos uma etiqueta");
+      return;
+    }
+    
+    setLabels(prevLabels => prevLabels.filter(l => l.id !== labelId));
+    
+    // Se a etiqueta excluída era a selecionada, selecionar a primeira etiqueta restante
+    if (selectedLabelId === labelId) {
+      const remainingLabels = labels.filter(l => l.id !== labelId);
+      setSelectedLabelId(remainingLabels[0]?.id || null);
+      setSelectedElement(null);
+    }
+    
+    toast.success(`Etiqueta removida`);
+  }
+  
+  const handleUpdateLabelName = (labelId: number, name: string) => {
+    setLabels(prevLabels => 
+      prevLabels.map(label => 
+        label.id === labelId ? { ...label, name } : label
+      )
+    );
+  }
+  
+  const handleSave = () => {
+    if (!modelName.trim()) {
+      toast.error("Por favor, informe um nome para o modelo");
+      document.getElementById("model-name-input")?.focus();
+      return;
+    }
+    
+    // Verificar se existe ao menos uma etiqueta
+    if (labels.length === 0) {
+      toast.error("Por favor, adicione pelo menos uma etiqueta");
+      return;
+    }
+    
+    // Verificar se todas as etiquetas têm pelo menos um elemento
+    const emptyLabels = labels.filter(label => label.elements.length === 0);
+    if (emptyLabels.length > 0) {
+      toast.error(`A etiqueta "${emptyLabels[0].name}" não possui elementos. Adicione pelo menos um elemento em cada etiqueta.`);
+      setSelectedLabelId(emptyLabels[0].id);
+      return;
+    }
+    
+    // Se tiver múltiplas etiquetas, usar a primeira como referência principal
+    const primaryLabel = labels[0];
+    
+    // Mapear para o formato esperado pelo backend
+    const modelData = {
+      nome: modelName,
+      descricao: modelName,
+      campos: primaryLabel.elements.map(el => ({
+        tipo: el.type,
+        x: el.x,
+        y: el.y,
+        largura: el.width,
+        altura: el.height,
+        tamanhoFonte: el.fontSize,
+        alinhamento: el.align
+      })),
+      largura: primaryLabel.width,
+      altura: primaryLabel.height,
+      formatoPagina: pageFormat,
+      orientacao: "retrato", // Pode ser dinâmico no futuro
+      margemSuperior: 10,
+      margemInferior: 10,
+      margemEsquerda: 10,
+      margemDireita: 10,
+      espacamentoHorizontal: 2,
+      espacamentoVertical: 2,
+      larguraPagina: pageSize.width,
+      alturaPagina: pageSize.height
+    };
+    
+    onSave(modelData);
+  }
+  
+  const getElementName = (type: string) => {
+    switch (type) {
+      case "nome": return "Nome do Produto";
+      case "codigo": return "Código de Barras";
+      case "preco": return "Preço";
+      default: return type;
+    }
+  }
+  
+  const getElementPreview = (type: string) => {
+    switch (type) {
+      case "nome": return "Pingente Cristal";
+      case "codigo": return "123456789";
+      case "preco": return "R$ 99,90";
+      default: return "Elemento";
+    }
+  }
+  
+  const handleOptimizeLayout = () => {
+    if (selectedLabelId === null) return;
+    
+    // Implementação básica de otimização: centralizar todos os elementos
+    const updatedLabels = [...labels];
+    const labelIndex = updatedLabels.findIndex(l => l.id === selectedLabelId);
+    if (labelIndex === -1) return;
+    
+    const label = updatedLabels[labelIndex];
+    
+    // Organizar elementos em uma grade lógica
+    const elementsCount = label.elements.length;
+    if (elementsCount === 0) return;
+    
+    if (elementsCount === 1) {
+      // Centralizar o único elemento
+      const element = label.elements[0];
+      element.x = Math.floor((label.width - element.width) / 2);
+      element.y = Math.floor((label.height - element.height) / 2);
+    } else if (elementsCount === 2) {
+      // Organizar dois elementos um acima do outro
+      const gap = 5;
+      const totalHeight = label.elements.reduce((sum, el) => sum + el.height, 0) + gap;
+      let currentY = Math.floor((label.height - totalHeight) / 2);
+      
+      for (let element of label.elements) {
+        element.x = Math.floor((label.width - element.width) / 2);
+        element.y = currentY;
+        currentY += element.height + gap;
+      }
+    } else if (elementsCount === 3) {
+      // Organizar três elementos em uma configuração adequada
+      const nomeElement = label.elements.find(el => el.type === "nome");
+      const codigoElement = label.elements.find(el => el.type === "codigo");
+      const precoElement = label.elements.find(el => el.type === "preco");
+      
+      if (nomeElement && codigoElement && precoElement) {
+        // Nome no topo
+        nomeElement.x = Math.floor((label.width - nomeElement.width) / 2);
+        nomeElement.y = 2;
+        
+        // Código no meio
+        codigoElement.x = Math.floor((label.width - codigoElement.width) / 2);
+        codigoElement.y = nomeElement.y + nomeElement.height + 2;
+        
+        // Preço na parte inferior
+        precoElement.x = Math.floor((label.width - precoElement.width) / 2);
+        precoElement.y = codigoElement.y + codigoElement.height + 2;
+      }
+    }
+    
+    setLabels(updatedLabels);
+    toast.success("Layout otimizado!");
+  }
+  
+  const handleSetAlignment = (alignment: string) => {
+    if (!selectedElement) return;
+    handleUpdateElement('align', alignment);
+  }
+  
+  const handlePreview = async () => {
+    if (labels.length === 0 || labels[0].elements.length === 0) {
+      toast.error("Adicione pelo menos uma etiqueta com elementos para visualizar");
+      return;
+    }
+    
+    setIsGeneratingPdf(true);
+    
+    try {
+      // Gerar PDF de pré-visualização
+      const pdfUrl = await generatePreviewPDF(
+        modelName || "Modelo sem nome",
+        labels,
+        pageFormat,
+        pageSize,
+        { top: 10, right: 10, bottom: 10, left: 10 },
+        { horizontal: 2, vertical: 2 },
+        autoAdjustDimensions
+      );
+      
+      setPreviewPdfUrl(pdfUrl);
+      setIsPreviewDialogOpen(true);
+    } catch (error) {
+      console.error("Erro ao gerar pré-visualização:", error);
+      if (error instanceof Error) {
+        toast.error(`Erro na pré-visualização: ${error.message}`);
+      } else {
+        toast.error("Não foi possível gerar a pré-visualização");
+      }
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  }
+  
+  const handleDownloadPdf = () => {
+    if (!previewPdfUrl) return;
+    
+    const a = document.createElement("a");
+    a.href = previewPdfUrl;
+    a.download = `${modelName || "modelo-etiqueta"}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+  
+  return (
+    <div className="bg-background rounded-lg shadow-lg w-full max-w-5xl mx-auto overflow-hidden">
+      {/* Cabeçalho */}
+      <div className="flex items-center justify-between p-3 border-b">
+        <h2 className="text-lg font-semibold">Criar Novo Modelo de Etiqueta</h2>
+        <div className="flex items-center space-x-2">
+          <Input 
+            id="model-name-input"
+            placeholder="Nome do modelo" 
+            className="w-48 h-8 text-sm" 
+            value={modelName}
+            onChange={(e) => setModelName(e.target.value)}
           />
-          
-          {etiquetas}
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            <X className="h-4 w-4" />
+          </Button>
         </div>
       </div>
-    );
-  };
-
-  const renderizarPosicaoElementos = () => {
-    return modelo.campos.map((campo, index) => {
-      const isSelected = index === campoSelecionado;
       
-      let posX = campo.x;
-      let posY = campo.y;
-      
-      if (isSelected && campoDrag.isDragging) {
-        posX = campo.x + (campoDrag.offsetX / zoomLevel);
-        posY = campo.y + (campoDrag.offsetY / zoomLevel);
-      }
-      
-      return (
-        <div
-          key={`campo-${index}`}
-          className={cn(
-            "absolute border-2 border-gray-200 bg-white/70 hover:bg-white/90 cursor-move rounded-sm",
-            isSelected ? "selected-element" : ""
-          )}
-          style={{
-            left: posX * zoomLevel,
-            top: posY * zoomLevel,
-            width: campo.largura * zoomLevel,
-            height: campo.altura * zoomLevel,
-            zIndex: isSelected ? 10 : 1
-          }}
-          onClick={(e) => {
-            e.stopPropagation();
-            setCampoSelecionado(index);
-          }}
-          onMouseDown={(e) => iniciarArraste(index, e)}
+      {/* Toolbar */}
+      <div className="flex items-center border-b p-2 gap-2 bg-muted/30">
+        <Button 
+          variant={activeTab === "elementos" ? "default" : "outline"} 
+          size="sm" 
+          className="h-8 px-3" 
+          onClick={() => setActiveTab("elementos")}
         >
-          <div className="w-full h-full flex items-center justify-center p-1 overflow-hidden">
-            {campo.tipo === 'nome' && (
-              <div className="truncate text-center" style={{ fontSize: campo.tamanhoFonte * zoomLevel }}>
-                Nome do Produto
-              </div>
-            )}
-            {campo.tipo === 'codigo' && (
-              <div className="text-center flex items-center justify-center" style={{ fontSize: campo.tamanhoFonte * zoomLevel }}>
-                <svg width={campo.largura * zoomLevel * 0.8} height={campo.altura * zoomLevel * 0.6} className="mx-auto">
-                  <rect x="0" y="0" width="100%" height="80%" fill="#ECECEC" />
-                  {Array.from({ length: 15 }).map((_, i) => (
-                    <rect 
-                      key={i} 
-                      x={i * 6} 
-                      y="0" 
-                      width="3" 
-                      height="80%" 
-                      fill={i % 3 === 0 ? "#333" : "#666"} 
-                    />
-                  ))}
-                </svg>
-                <span className="text-[6px] absolute bottom-0 left-0 right-0 text-center">123456789</span>
-              </div>
-            )}
-            {campo.tipo === 'preco' && (
-              <div className="truncate text-center font-bold" style={{ fontSize: campo.tamanhoFonte * zoomLevel }}>
-                R$ 99,90
-              </div>
-            )}
-          </div>
+          <Plus className="h-4 w-4 mr-1" />
+          <span className="text-xs">Elementos</span>
+        </Button>
+        
+        <Button 
+          variant={activeTab === "etiquetas" ? "default" : "outline"} 
+          size="sm" 
+          className="h-8 px-3" 
+          onClick={() => setActiveTab("etiquetas")}
+        >
+          <Layers className="h-4 w-4 mr-1" />
+          <span className="text-xs">Etiquetas</span>
+        </Button>
+        
+        <Button 
+          variant={activeTab === "config" ? "default" : "outline"} 
+          size="sm" 
+          className="h-8 px-3" 
+          onClick={() => setActiveTab("config")}
+        >
+          <Settings className="h-4 w-4 mr-1" />
+          <span className="text-xs">Config</span>
+        </Button>
+        
+        <div className="ml-auto flex items-center gap-2">
+          <Select
+            value={String(zoom)}
+            onValueChange={(value) => setZoom(Number(value))}
+          >
+            <SelectTrigger className="h-8 w-20">
+              <SelectValue placeholder={`${zoom}%`} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="50">50%</SelectItem>
+              <SelectItem value="75">75%</SelectItem>
+              <SelectItem value="100">100%</SelectItem>
+              <SelectItem value="150">150%</SelectItem>
+              <SelectItem value="200">200%</SelectItem>
+              <SelectItem value="300">300%</SelectItem>
+              <SelectItem value="500">500%</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          <Button
+            variant={showGrid ? "default" : "outline"}
+            size="sm"
+            className="h-8 px-3"
+            onClick={() => setShowGrid(!showGrid)}
+          >
+            <Grid className="h-4 w-4 mr-1" />
+            <span className="text-xs">Grade</span>
+          </Button>
+          
+          <Button
+            variant={snapToGrid ? "default" : "outline"}
+            size="sm"
+            className="h-8 px-3"
+            onClick={() => setSnapToGrid(!snapToGrid)}
+          >
+            <CheckSquare className="h-4 w-4 mr-1" />
+            <span className="text-xs">Snap</span>
+          </Button>
+          
+          <Button
+            variant="default"
+            size="sm"
+            className="h-8 px-3"
+            onClick={handlePreview}
+            disabled={isGeneratingPdf}
+          >
+            <FileText className="h-4 w-4 mr-1" />
+            <span className="text-xs">Pré-visualizar</span>
+          </Button>
         </div>
-      );
-    });
-  };
-
-  return (
-    <div className="flex flex-col h-full max-h-[80vh]">
-      <Tabs defaultValue="editor" className="flex flex-col h-full">
-        <TabsList className="w-full grid grid-cols-3 mb-4">
-          <TabsTrigger value="editor" className="flex items-center gap-2">
-            <Layout className="h-4 w-4" />
-            Editor de Etiqueta
-          </TabsTrigger>
-          <TabsTrigger value="pageLayout" className="flex items-center gap-2">
-            <LayoutGrid className="h-4 w-4" />
-            Layout da Página
-          </TabsTrigger>
-          <TabsTrigger value="preview" className="flex items-center gap-2">
-            <File className="h-4 w-4" />
-            Pré-visualização
-          </TabsTrigger>
-        </TabsList>
-
-        <div className="flex-1 overflow-hidden">
-          <TabsContent value="editor" className="h-full overflow-auto">
-            <div className="grid grid-cols-8 gap-4 h-full">
-              <div className="col-span-3 space-y-4 overflow-auto pr-2">
-                <Card>
-                  <CardContent className="pt-6 space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="nome">Nome do Modelo</Label>
-                      <Input 
-                        id="nome" 
-                        value={modelo.nome} 
-                        onChange={(e) => atualizarModelo('nome', e.target.value)}
-                        placeholder="Ex: Etiqueta padrão de jóias"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="descricao">Descrição</Label>
-                      <Textarea 
-                        id="descricao" 
-                        value={modelo.descricao} 
-                        onChange={(e) => atualizarModelo('descricao', e.target.value)}
-                        placeholder="Descrição do modelo de etiqueta"
-                        rows={2}
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent className="pt-6 space-y-4">
-                    <h3 className="text-base font-medium flex items-center gap-1">
-                      Dimensões da Etiqueta
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Info className="h-4 w-4 text-muted-foreground cursor-help" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Defina o tamanho da etiqueta em milímetros</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="largura">Largura (mm)</Label>
-                        <Input 
-                          id="largura" 
-                          type="number" 
-                          value={modelo.largura} 
-                          onChange={(e) => atualizarModelo('largura', Number(e.target.value))}
-                          min={1}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="altura">Altura (mm)</Label>
-                        <Input 
-                          id="altura" 
-                          type="number" 
-                          value={modelo.altura} 
-                          onChange={(e) => atualizarModelo('altura', Number(e.target.value))}
-                          min={1}
-                        />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent className="pt-6 space-y-4">
-                    <h3 className="text-base font-medium flex items-center gap-1">
-                      Configurações da Página
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Info className="h-4 w-4 text-muted-foreground cursor-help" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Configurações da página para impressão</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </h3>
-                    <div className="space-y-2">
-                      <Label htmlFor="formatoPagina">Formato da Página</Label>
-                      <Select 
-                        value={modelo.formatoPagina} 
-                        onValueChange={(value) => atualizarModelo('formatoPagina', value)}
-                      >
-                        <SelectTrigger id="formatoPagina">
-                          <SelectValue placeholder="Selecione o formato" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {formatoOptions.map((formato) => (
-                            <SelectItem key={formato.value} value={formato.value}>
-                              {formato.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {modelo.formatoPagina === "Personalizado" && (
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="larguraPagina">Largura da Página (mm)</Label>
-                          <Input 
-                            id="larguraPagina" 
-                            type="number" 
-                            value={modelo.larguraPagina} 
-                            onChange={(e) => atualizarModelo('larguraPagina', Number(e.target.value))}
-                            min={1}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="alturaPagina">Altura da Página (mm)</Label>
-                          <Input 
-                            id="alturaPagina" 
-                            type="number" 
-                            value={modelo.alturaPagina} 
-                            onChange={(e) => atualizarModelo('alturaPagina', Number(e.target.value))}
-                            min={1}
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="space-y-2">
-                      <Label htmlFor="orientacao">Orientação</Label>
-                      <Select 
-                        value={modelo.orientacao} 
-                        onValueChange={(value: 'retrato' | 'paisagem') => atualizarModelo('orientacao', value)}
-                      >
-                        <SelectTrigger id="orientacao">
-                          <SelectValue placeholder="Selecione a orientação" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="retrato">Retrato (vertical)</SelectItem>
-                          <SelectItem value="paisagem">Paisagem (horizontal)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent className="pt-6 space-y-4">
-                    <h3 className="text-base font-medium flex items-center gap-1">
-                      Margens da Página
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Info className="h-4 w-4 text-muted-foreground cursor-help" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Margens entre o conteúdo e as bordas da página</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="margemSuperior">Margem Superior (mm)</Label>
-                        <Input 
-                          id="margemSuperior" 
-                          type="number" 
-                          value={modelo.margemSuperior} 
-                          onChange={(e) => atualizarModelo('margemSuperior', Number(e.target.value))}
-                          min={0}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="margemInferior">Margem Inferior (mm)</Label>
-                        <Input 
-                          id="margemInferior" 
-                          type="number" 
-                          value={modelo.margemInferior} 
-                          onChange={(e) => atualizarModelo('margemInferior', Number(e.target.value))}
-                          min={0}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="margemEsquerda">Margem Esquerda (mm)</Label>
-                        <Input 
-                          id="margemEsquerda" 
-                          type="number" 
-                          value={modelo.margemEsquerda} 
-                          onChange={(e) => atualizarModelo('margemEsquerda', Number(e.target.value))}
-                          min={0}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="margemDireita">Margem Direita (mm)</Label>
-                        <Input 
-                          id="margemDireita" 
-                          type="number" 
-                          value={modelo.margemDireita} 
-                          onChange={(e) => atualizarModelo('margemDireita', Number(e.target.value))}
-                          min={0}
-                        />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent className="pt-6 space-y-4">
-                    <h3 className="text-base font-medium flex items-center gap-1">
-                      Espaçamento entre Etiquetas
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Info className="h-4 w-4 text-muted-foreground cursor-help" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Espaço entre etiquetas quando várias são impressas em uma página</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="espacamentoHorizontal">Horizontal (mm)</Label>
-                        <Input 
-                          id="espacamentoHorizontal" 
-                          type="number" 
-                          value={modelo.espacamentoHorizontal} 
-                          onChange={(e) => atualizarModelo('espacamentoHorizontal', Number(e.target.value))}
-                          min={0}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="espacamentoVertical">Vertical (mm)</Label>
-                        <Input 
-                          id="espacamentoVertical" 
-                          type="number" 
-                          value={modelo.espacamentoVertical} 
-                          onChange={(e) => atualizarModelo('espacamentoVertical', Number(e.target.value))}
-                          min={0}
-                        />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <div className="col-span-5 space-y-4">
-                {validacaoEtiqueta && !validacaoEtiqueta.valido && (
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Problema nas dimensões</AlertTitle>
-                    <AlertDescription>
-                      {validacaoEtiqueta.mensagem}
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                {areaUtil && (
-                  <div className="bg-muted p-3 rounded-md">
-                    <p className="text-sm font-medium">
-                      <strong>Área útil disponível:</strong> {areaUtil.largura.toFixed(1)} x {areaUtil.altura.toFixed(1)} mm
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Esta é a área disponível na página após aplicar as margens.
-                    </p>
+      </div>
+      
+      {/* Conteúdo principal */}
+      <div className="flex h-[calc(100vh-18rem)]">
+        {/* Painel lateral */}
+        <div className="w-72 border-r bg-muted/20 p-2 overflow-y-auto">
+          {activeTab === "elementos" && (
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium mb-3">Elementos Disponíveis</h3>
+              
+              {elements.map(element => (
+                <Card 
+                  key={element.id}
+                  className="p-2 cursor-pointer hover:bg-accent transition-colors"
+                  onClick={() => handleAddElement(element.id)}
+                >
+                  <div className="text-sm font-medium mb-1">{element.name}</div>
+                  <div className="text-xs text-muted-foreground">
+                    Clique para adicionar à etiqueta
                   </div>
-                )}
-
-                <div className="flex items-center gap-2 bg-muted p-2 rounded-md">
-                  <span className="text-sm font-medium">Adicionar Elemento:</span>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => adicionarCampo('nome')}
-                    className="gap-1"
-                  >
-                    <Tag className="h-4 w-4" />
-                    Nome
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => adicionarCampo('codigo')}
-                    className="gap-1"
-                  >
-                    <Tags className="h-4 w-4" />
-                    Código
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => adicionarCampo('preco')}
-                    className="gap-1"
-                  >
-                    <Tag className="h-4 w-4" />
-                    Preço
-                  </Button>
-                  
-                  {campoSelecionado !== null && (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={removerCampoSelecionado}
-                      className="ml-auto text-red-500 hover:text-red-700"
+                </Card>
+              ))}
+              
+              {selectedElement && (
+                <div className="mt-6 border-t pt-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-medium">Propriedades do Elemento</h3>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="h-6 px-2"
+                      onClick={handleDeleteElement}
                     >
-                      Remover Elemento
+                      <Trash className="h-3 w-3 mr-1" />
+                      <span className="text-xs">Remover</span>
                     </Button>
-                  )}
-                </div>
-
-                {campoSelecionado !== null && (
-                  <Card>
-                    <CardContent className="pt-6 space-y-4">
-                      <h3 className="text-base font-medium">
-                        Propriedades do Elemento: {tiposCampo.find(t => t.value === modelo.campos[campoSelecionado].tipo)?.label}
-                      </h3>
-                      
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="campo-x">Posição X (mm)</Label>
-                          <Input 
-                            id="campo-x" 
-                            type="number" 
-                            value={modelo.campos[campoSelecionado].x} 
-                            onChange={(e) => atualizarCampo(campoSelecionado, 'x', Number(e.target.value))}
-                            min={0}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="campo-y">Posição Y (mm)</Label>
-                          <Input 
-                            id="campo-y" 
-                            type="number" 
-                            value={modelo.campos[campoSelecionado].y} 
-                            onChange={(e) => atualizarCampo(campoSelecionado, 'y', Number(e.target.value))}
-                            min={0}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="campo-largura">Largura (mm)</Label>
-                          <Input 
-                            id="campo-largura" 
-                            type="number" 
-                            value={modelo.campos[campoSelecionado].largura} 
-                            onChange={(e) => atualizarCampo(campoSelecionado, 'largura', Number(e.target.value))}
-                            min={1}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="campo-altura">Altura (mm)</Label>
-                          <Input 
-                            id="campo-altura" 
-                            type="number" 
-                            value={modelo.campos[campoSelecionado].altura} 
-                            onChange={(e) => atualizarCampo(campoSelecionado, 'altura', Number(e.target.value))}
-                            min={1}
-                          />
-                        </div>
-                        <div className="space-y-2 col-span-2">
-                          <Label htmlFor="campo-tamanhoFonte">Tamanho da Fonte (pt)</Label>
-                          <div className="flex items-center gap-4">
-                            <Slider 
-                              id="campo-tamanhoFonte"
-                              min={5}
-                              max={24}
-                              step={1}
-                              value={[modelo.campos[campoSelecionado].tamanhoFonte]}
-                              onValueChange={(value) => atualizarCampo(campoSelecionado, 'tamanhoFonte', value[0])}
-                              className="flex-1"
-                            />
-                            <span className="w-8 text-center">{modelo.campos[campoSelecionado].tamanhoFonte}pt</span>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                <div className="bg-white border rounded-md shadow-sm overflow-hidden">
-                  <div className="flex items-center justify-between p-2 bg-muted">
-                    <h3 className="text-sm font-medium">Visualização da Etiqueta</h3>
-                    <ZoomControls 
-                      zoomLevel={zoomLevel} 
-                      onZoomIn={handleZoomIn} 
-                      onZoomOut={handleZoomOut} 
-                      onResetZoom={handleResetZoom}
-                    />
                   </div>
                   
-                  <div className="relative p-4 overflow-auto min-h-[300px] etiqueta-content">
-                    <div 
-                      className="relative mx-auto bg-white border shadow-sm etiqueta-grid"
-                      style={{
-                        width: modelo.largura * zoomLevel, 
-                        height: modelo.altura * zoomLevel
-                      }}
-                      ref={etiquetaRef}
-                      onClick={() => setCampoSelecionado(null)}
-                      onMouseMove={arrastarCampo}
-                      onMouseUp={finalizarArraste}
-                      onMouseLeave={finalizarArraste}
-                    >
-                      {renderizarPosicaoElementos()}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="pageLayout" className="h-full overflow-auto">
-            <div className="space-y-6">
-              <div className="grid grid-cols-3 gap-6">
-                <Card>
-                  <CardContent className="pt-6 space-y-4">
-                    <h3 className="text-base font-medium">Configurações da Página</h3>
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label>Formato</Label>
-                        <div className="text-sm">{modelo.formatoPagina === "Personalizado" 
-                          ? `Personalizado (${modelo.larguraPagina} x ${modelo.alturaPagina} mm)` 
-                          : formatoOptions.find(f => f.value === modelo.formatoPagina)?.label
-                        }</div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Orientação</Label>
-                        <div className="text-sm">{modelo.orientacao === "retrato" ? "Retrato (vertical)" : "Paisagem (horizontal)"}</div>
-                      </div>
-                      <Separator />
-                      <div className="space-y-2">
-                        <Label>Margens (mm)</Label>
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                          <div>Superior: {modelo.margemSuperior}</div>
-                          <div>Inferior: {modelo.margemInferior}</div>
-                          <div>Esquerda: {modelo.margemEsquerda}</div>
-                          <div>Direita: {modelo.margemDireita}</div>
-                        </div>
-                      </div>
-                      <Separator />
-                      <div className="space-y-2">
-                        <Label>Espaçamento entre Etiquetas (mm)</Label>
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                          <div>Horizontal: {modelo.espacamentoHorizontal}</div>
-                          <div>Vertical: {modelo.espacamentoVertical}</div>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="col-span-2">
-                  <CardContent className="pt-6 space-y-4">
-                    <h3 className="text-base font-medium">Informações do Layout</h3>
-                    
-                    <div className="grid grid-cols-3 gap-4">
+                  {getSelectedElementDetails() && (
+                    <div className="space-y-2">
                       <div>
-                        <Label>Tamanho da Etiqueta</Label>
-                        <div className="text-sm font-medium mt-1">{modelo.largura} x {modelo.altura} mm</div>
+                        <Label className="text-xs" htmlFor="element-type">Tipo</Label>
+                        <div className="text-sm font-medium" id="element-type">
+                          {getElementName(getSelectedElementDetails()!.type)}
+                        </div>
                       </div>
                       
-                      {areaUtil && (
+                      <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <Label>Área Útil Disponível</Label>
-                          <div className="text-sm font-medium mt-1">{areaUtil.largura.toFixed(1)} x {areaUtil.altura.toFixed(1)} mm</div>
+                          <Label className="text-xs" htmlFor="element-x">Posição X</Label>
+                          <Input
+                            id="element-x"
+                            type="number"
+                            className="h-7 text-sm"
+                            value={getSelectedElementDetails()!.x}
+                            onChange={(e) => handleUpdateElement('x', e.target.value)}
+                          />
                         </div>
-                      )}
+                        <div>
+                          <Label className="text-xs" htmlFor="element-y">Posição Y</Label>
+                          <Input
+                            id="element-y"
+                            type="number"
+                            className="h-7 text-sm"
+                            value={getSelectedElementDetails()!.y}
+                            onChange={(e) => handleUpdateElement('y', e.target.value)}
+                          />
+                        </div>
+                      </div>
                       
-                      {areaUtil && (
+                      <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <Label>Etiquetas por Página</Label>
-                          <div className="text-sm font-medium mt-1">
-                            {calcularEtiquetasPorPagina().etiquetasPorLinha * calcularEtiquetasPorPagina().etiquetasPorColuna} 
-                            &nbsp;({calcularEtiquetasPorPagina().etiquetasPorLinha} x {calcularEtiquetasPorPagina().etiquetasPorColuna})
-                          </div>
+                          <Label className="text-xs" htmlFor="element-width">Largura</Label>
+                          <Input
+                            id="element-width"
+                            type="number"
+                            className="h-7 text-sm"
+                            value={getSelectedElementDetails()!.width}
+                            onChange={(e) => handleUpdateElement('width', e.target.value)}
+                          />
                         </div>
-                      )}
-                    </div>
-                    
-                    <div className="border-t pt-4">
-                      <div className="flex items-center justify-between mb-4">
-                        <h4 className="text-sm font-medium">Visualização do Layout da Página</h4>
-                        <ZoomControls 
-                          zoomLevel={zoomLevel} 
-                          onZoomIn={handleZoomIn} 
-                          onZoomOut={handleZoomOut} 
-                          onResetZoom={handleResetZoom}
+                        <div>
+                          <Label className="text-xs" htmlFor="element-height">Altura</Label>
+                          <Input
+                            id="element-height"
+                            type="number"
+                            className="h-7 text-sm"
+                            value={getSelectedElementDetails()!.height}
+                            onChange={(e) => handleUpdateElement('height', e.target.value)}
+                          />
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <Label className="text-xs" htmlFor="element-font-size">Tamanho da Fonte</Label>
+                        <Input
+                          id="element-font-size"
+                          type="number"
+                          className="h-7 text-sm"
+                          value={getSelectedElementDetails()!.fontSize}
+                          onChange={(e) => handleUpdateElement('fontSize', e.target.value)}
                         />
                       </div>
                       
-                      {renderizarVisualizacaoPagina()}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="preview" className="h-full overflow-auto">
-            <div className="space-y-6">
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-base font-medium">Pré-visualização da Etiqueta</h3>
-                    <Button 
-                      variant="outline" 
-                      onClick={gerarPreview}
-                    >
-                      Gerar PDF de Pré-visualização
-                    </Button>
-                  </div>
-                  
-                  <div className="border border-dashed border-gray-300 relative bg-white p-4 rounded-md">
-                    <div 
-                      className="mx-auto border border-gray-200 shadow-sm"
-                      style={{
-                        width: modelo.largura * 3,
-                        height: modelo.altura * 3,
-                      }}
-                    >
-                      {modelo.campos.map((campo, index) => (
-                        <div
-                          key={`preview-${index}`}
-                          className="absolute"
-                          style={{
-                            left: campo.x * 3,
-                            top: campo.y * 3,
-                            width: campo.largura * 3,
-                            height: campo.altura * 3,
-                          }}
-                        >
-                          <div className="w-full h-full flex items-center justify-center p-1">
-                            <div 
-                              className="text-center truncate w-full"
-                              style={{ fontSize: campo.tamanhoFonte * 3 }}
-                            >
-                              {campo.tipo === 'nome' ? 'Pingente Coroa Cristal' :
-                              campo.tipo === 'codigo' ? '123456789' : 
-                              'R$ 59,90'}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="mt-4 text-sm text-gray-500 text-center">
-                      Esta é uma prévia aproximada de como sua etiqueta aparecerá quando impressa.
-                    </div>
-                  </div>
-                  
-                  {showPreview && previewUrl && (
-                    <div className="mt-4">
-                      <div className="border rounded-md overflow-hidden">
-                        <div className="bg-muted px-4 py-2 flex justify-between items-center">
-                          <h3 className="text-sm font-medium">PDF de Pré-visualização</h3>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => setShowPreview(false)}
+                      <div>
+                        <Label className="text-xs mb-1 block">Alinhamento</Label>
+                        <div className="flex items-center space-x-1">
+                          <Button
+                            variant={getSelectedElementDetails()!.align === "left" ? "default" : "outline"}
+                            size="sm"
+                            className="h-7 flex-1"
+                            onClick={() => handleSetAlignment("left")}
                           >
-                            Fechar
+                            <AlignLeft className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant={getSelectedElementDetails()!.align === "center" ? "default" : "outline"}
+                            size="sm"
+                            className="h-7 flex-1"
+                            onClick={() => handleSetAlignment("center")}
+                          >
+                            <AlignCenter className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant={getSelectedElementDetails()!.align === "right" ? "default" : "outline"}
+                            size="sm"
+                            className="h-7 flex-1"
+                            onClick={() => handleSetAlignment("right")}
+                          >
+                            <AlignRight className="h-3 w-3" />
                           </Button>
                         </div>
-                        <iframe
-                          src={previewUrl}
-                          className="w-full h-[500px] border-0"
-                          title="Pré-visualização do PDF"
-                        />
                       </div>
                     </div>
                   )}
-                </CardContent>
-              </Card>
+                </div>
+              )}
             </div>
-          </TabsContent>
+          )}
+          
+          {activeTab === "etiquetas" && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-medium">Etiquetas</h3>
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="h-7 px-2"
+                  onClick={handleAddLabel}
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  <span className="text-xs">Nova</span>
+                </Button>
+              </div>
+              
+              <div className="space-y-2">
+                {labels.map(label => (
+                  <Card 
+                    key={label.id}
+                    className={cn(
+                      "p-2 cursor-pointer",
+                      selectedLabelId === label.id ? "bg-primary/10 border-primary" : "hover:bg-accent"
+                    )}
+                    onClick={() => {
+                      setSelectedLabelId(label.id);
+                      setSelectedElement(null);
+                    }}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="text-sm font-medium">{label.name}</div>
+                      <div className="flex items-center">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDuplicateLabel(label.id);
+                          }}
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 text-destructive"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteLabel(label.id);
+                          }}
+                        >
+                          <Trash className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <div className="text-xs text-muted-foreground">
+                      {label.width} × {label.height} mm • {label.elements.length} elementos
+                    </div>
+                    
+                    {selectedLabelId === label.id && (
+                      <div className="mt-2 pt-2 border-t">
+                        <Label className="text-xs mb-1 block">Nome da Etiqueta</Label>
+                        <Input
+                          value={label.name}
+                          className="h-7 text-sm"
+                          onChange={(e) => handleUpdateLabelName(label.id, e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                        
+                        <div className="grid grid-cols-2 gap-2 mt-2">
+                          <div>
+                            <Label className="text-xs mb-1 block">Largura (mm)</Label>
+                            <Input
+                              type="number"
+                              className="h-7 text-sm"
+                              value={label.width}
+                              onChange={(e) => handleUpdateLabelSize("width", Number(e.target.value))}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs mb-1 block">Altura (mm)</Label>
+                            <Input
+                              type="number"
+                              className="h-7 text-sm"
+                              value={label.height}
+                              onChange={(e) => handleUpdateLabelSize("height", Number(e.target.value))}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          </div>
+                        </div>
+                        
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full mt-2 h-7"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOptimizeLayout();
+                          }}
+                        >
+                          <LayoutGrid className="h-3 w-3 mr-1" />
+                          <span className="text-xs">Otimizar Layout</span>
+                        </Button>
+                      </div>
+                    )}
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {activeTab === "config" && (
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium mb-2">Configurações da Página</h3>
+              
+              <div>
+                <Label className="text-xs mb-1 block">Formato da Página</Label>
+                <Select
+                  value={pageFormat}
+                  onValueChange={handleUpdatePageFormat}
+                >
+                  <SelectTrigger className="h-8">
+                    <SelectValue placeholder="Selecione um formato" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="A4">A4 (210 × 297 mm)</SelectItem>
+                    <SelectItem value="A5">A5 (148 × 210 mm)</SelectItem>
+                    <SelectItem value="Letter">Carta (216 × 279 mm)</SelectItem>
+                    <SelectItem value="Custom">Personalizado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {pageFormat === "Custom" && (
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-xs mb-1 block">Largura da Página (mm)</Label>
+                    <Input
+                      type="number"
+                      className="h-7 text-sm"
+                      value={pageSize.width}
+                      onChange={(e) => setPageSize(prev => ({ ...prev, width: Number(e.target.value) }))}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs mb-1 block">Altura da Página (mm)</Label>
+                    <Input
+                      type="number"
+                      className="h-7 text-sm"
+                      value={pageSize.height}
+                      onChange={(e) => setPageSize(prev => ({ ...prev, height: Number(e.target.value) }))}
+                    />
+                  </div>
+                </div>
+              )}
+              
+              <div>
+                <Label className="text-xs mb-1 block">Tamanho da Grade (mm)</Label>
+                <Input
+                  type="number"
+                  className="h-7 text-sm"
+                  value={gridSize}
+                  onChange={(e) => setGridSize(Number(e.target.value))}
+                />
+              </div>
+              
+              {onToggleAutoAdjust && (
+                <div className="flex items-center space-x-2 pt-2">
+                  <Switch 
+                    id="auto-adjust" 
+                    checked={autoAdjustDimensions}
+                    onCheckedChange={onToggleAutoAdjust}
+                  />
+                  <Label htmlFor="auto-adjust" className="text-sm cursor-pointer">
+                    Ajustar dimensões automaticamente
+                  </Label>
+                </div>
+              )}
+            </div>
+          )}
         </div>
-      </Tabs>
-
-      <div className="flex justify-end gap-2 pt-4 sticky bottom-0 bg-background border-t mt-4">
-        <Button 
-          variant="outline" 
-          onClick={onClose}
-        >
+        
+        {/* Editor Visual */}
+        <div className="flex-1 p-4 overflow-auto bg-gray-100 dark:bg-gray-800/20">
+          <div 
+            className="relative bg-white dark:bg-gray-950 mx-auto border shadow"
+            style={{
+              width: pageSize.width * (zoom / 100),
+              height: pageSize.height * (zoom / 100),
+            }}
+            ref={editorRef}
+            onMouseMove={handleDrag}
+            onMouseUp={handleEndDrag}
+            onMouseLeave={handleEndDrag}
+          >
+            {/* Grade */}
+            {showGrid && (
+              <div 
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  backgroundSize: `${gridSize * (zoom / 100)}px ${gridSize * (zoom / 100)}px`,
+                  backgroundImage: "linear-gradient(to right, #f0f0f0 1px, transparent 1px), linear-gradient(to bottom, #f0f0f0 1px, transparent 1px)",
+                  opacity: 0.4
+                }}
+              />
+            )}
+            
+            {/* Etiquetas */}
+            {labels.map(label => (
+              <div 
+                key={label.id}
+                className={cn(
+                  "absolute border border-dashed cursor-move transition-all",
+                  selectedLabelId === label.id ? "border-primary border-2" : "border-gray-400"
+                )}
+                style={{
+                  left: label.x * (zoom / 100),
+                  top: label.y * (zoom / 100),
+                  width: label.width * (zoom / 100),
+                  height: label.height * (zoom / 100),
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedLabelId(label.id);
+                  setSelectedElement(null);
+                }}
+                onMouseDown={(e) => handleStartDrag(e, "label", label.id, label.x, label.y)}
+              >
+                {/* Elementos da etiqueta */}
+                {label.elements.map(element => (
+                  <div
+                    key={element.id}
+                    className={cn(
+                      "absolute border transition-all",
+                      selectedElement === element.id ? "border-primary-foreground bg-primary" : "border-gray-300 bg-gray-50"
+                    )}
+                    style={{
+                      left: element.x * (zoom / 100),
+                      top: element.y * (zoom / 100),
+                      width: element.width * (zoom / 100),
+                      height: element.height * (zoom / 100),
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedLabelId(label.id);
+                      setSelectedElement(element.id);
+                    }}
+                    onMouseDown={(e) => handleStartDrag(e, "element", element.id, element.x, element.y)}
+                  >
+                    <div 
+                      className={cn(
+                        "w-full h-full flex items-center overflow-hidden px-1",
+                        selectedElement === element.id ? "text-primary-foreground" : "text-foreground"
+                      )}
+                      style={{
+                        fontSize: element.fontSize * (zoom / 100),
+                        textAlign: element.align as any
+                      }}
+                    >
+                      <div className="w-full truncate">
+                        {getElementPreview(element.type)}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                
+                {/* Nome da etiqueta */}
+                <div className="absolute -top-5 left-0 text-xs font-medium">
+                  {label.name}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      
+      {/* Rodapé */}
+      <div className="flex justify-between p-3 border-t">
+        <Button variant="outline" onClick={onClose}>
           Cancelar
         </Button>
-        <Button 
-          onClick={salvarModelo}
-          disabled={isLoading || (validacaoEtiqueta && !validacaoEtiqueta.valido)}
-          className="flex items-center gap-2"
-        >
-          <Save className="h-4 w-4" />
-          {isLoading ? "Salvando..." : (modelo.id ? "Atualizar Modelo" : "Salvar Modelo")}
+        <Button onClick={handleSave}>
+          <Save className="h-4 w-4 mr-2" />
+          Salvar
         </Button>
       </div>
+      
+      {/* Diálogo de Pré-visualização */}
+      <Dialog open={isPreviewDialogOpen} onOpenChange={setIsPreviewDialogOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Pré-visualização da Etiqueta</DialogTitle>
+            <DialogDescription>
+              Esta é uma prévia de como sua etiqueta ficará quando impressa.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {previewPdfUrl && (
+            <div className="mt-4 bg-gray-100 rounded-lg overflow-hidden">
+              <iframe 
+                src={previewPdfUrl} 
+                className="w-full h-[70vh] border-0"
+              />
+            </div>
+          )}
+          
+          <div className="flex justify-end mt-2 space-x-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsPreviewDialogOpen(false)}
+            >
+              Fechar
+            </Button>
+            <Button 
+              onClick={handleDownloadPdf}
+              disabled={!previewPdfUrl}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Baixar PDF
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

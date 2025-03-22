@@ -1,3 +1,4 @@
+
 import { jsPDF } from "jspdf";
 import { generateBarcode } from "./barcodeUtils";
 import { toast } from "sonner";
@@ -40,14 +41,12 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
       if (modeloCustom) {
         console.log("Modelo personalizado encontrado:", modeloCustom);
         console.log("Campos do modelo:", modeloCustom.campos);
-        console.log("Orientação da página:", modeloCustom.orientacao);
         
         // Validar dimensões da página personalizada
         if (modeloCustom.formatoPagina === "Personalizado") {
           console.log("Verificando dimensões personalizadas:", {
             larguraPagina: modeloCustom.larguraPagina,
-            alturaPagina: modeloCustom.alturaPagina,
-            orientacao: modeloCustom.orientacao
+            alturaPagina: modeloCustom.alturaPagina
           });
           
           // Se as dimensões não estiverem definidas, definir um padrão
@@ -66,36 +65,12 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
             throw new Error("Dimensões de página personalizadas inválidas. Os valores devem ser maiores que zero.");
           }
           
-          // Considerar orientação para validação
-          let larguraPagina = modeloCustom.larguraPagina || 210;
-          let alturaPagina = modeloCustom.alturaPagina || 297;
-          
-          // CORREÇÃO: Considerar corretamente orientação
-          let larguraEfetiva = larguraPagina;
-          let alturaEfetiva = alturaPagina;
-          
-          if (modeloCustom.orientacao === 'paisagem') {
-            // Obter dimensões efetivas conforme orientação
-            larguraEfetiva = alturaPagina;
-            alturaEfetiva = larguraPagina;
-          }
-          
-          console.log("Dimensões efetivas após considerar orientação:", {
-            larguraEfetiva, 
-            alturaEfetiva,
-            orientacao: modeloCustom.orientacao
-          });
-          
           // Validar se a etiqueta cabe na página
-          const areaUtilLargura = larguraEfetiva - modeloCustom.margemEsquerda - modeloCustom.margemDireita;
+          const areaUtilLargura = modeloCustom.larguraPagina - modeloCustom.margemEsquerda - modeloCustom.margemDireita;
           if (modeloCustom.largura > areaUtilLargura) {
             console.error("Etiqueta maior que área útil:", {
               larguraEtiqueta: modeloCustom.largura,
-              areaUtilLargura,
-              larguraEfetiva,
-              orientacao: modeloCustom.orientacao,
-              margemEsquerda: modeloCustom.margemEsquerda,
-              margemDireita: modeloCustom.margemDireita
+              areaUtilLargura
             });
             
             const sugestaoLarguraEtiqueta = Math.floor(areaUtilLargura * 0.9);
@@ -106,15 +81,11 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
             );
           }
           
-          const areaUtilAltura = alturaEfetiva - modeloCustom.margemSuperior - modeloCustom.margemInferior;
+          const areaUtilAltura = modeloCustom.alturaPagina - modeloCustom.margemSuperior - modeloCustom.margemInferior;
           if (modeloCustom.altura > areaUtilAltura) {
             console.error("Etiqueta maior que área útil:", {
               alturaEtiqueta: modeloCustom.altura,
-              areaUtilAltura,
-              alturaEfetiva,
-              orientacao: modeloCustom.orientacao,
-              margemSuperior: modeloCustom.margemSuperior,
-              margemInferior: modeloCustom.margemInferior
+              areaUtilAltura
             });
             
             const sugestaoAlturaEtiqueta = Math.floor(areaUtilAltura * 0.9);
