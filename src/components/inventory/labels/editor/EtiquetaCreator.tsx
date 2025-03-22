@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect } from 'react';
 import { toast } from "sonner";
 import {
@@ -488,6 +489,7 @@ export default function EtiquetaCreator({ initialData, onClose, onSave }: Etique
                     type="button"
                     variant="outline"
                     onClick={() => {
+                      // Aqui está a correção - definindo explicitamente todos os campos obrigatórios
                       const newCampo: CampoEtiqueta = {
                         tipo: 'nome',
                         x: 5,
@@ -618,4 +620,3 @@ export default function EtiquetaCreator({ initialData, onClose, onSave }: Etique
     </div>
   );
 }
-
