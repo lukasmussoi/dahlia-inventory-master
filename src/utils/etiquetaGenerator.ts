@@ -1,7 +1,7 @@
 
 import JsPDF from 'jspdf';
 import { toast } from 'sonner';
-import type { LabelType, LabelElement } from '@/components/inventory/labels/editor/EtiquetaCreator';
+import { LabelType, LabelElement } from '@/components/inventory/labels/editor/EtiquetaCreator';
 import type { ModeloEtiqueta } from '@/types/etiqueta';
 
 // Função para gerar um PDF de pré-visualização

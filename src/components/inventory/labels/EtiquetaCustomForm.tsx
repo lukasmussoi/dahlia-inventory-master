@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import EtiquetaCreator from './editor/EtiquetaCreator';
+import { EtiquetaCreator } from './editor/EtiquetaCreator';
 import type { ModeloEtiqueta } from "@/types/etiqueta";
 
 type EtiquetaCustomFormProps = {

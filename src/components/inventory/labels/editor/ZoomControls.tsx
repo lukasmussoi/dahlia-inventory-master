@@ -1,60 +1,47 @@
 
+import React from 'react';
 import { Button } from "@/components/ui/button";
-import { ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
 
-interface ZoomControlsProps {
-  onZoomIn: () => void;
-  onZoomOut: () => void;
-  onReset: () => void;
+export interface ZoomControlsProps {
   zoomLevel: number;
-  className?: string;
+  onZoomIn: (amount?: number) => void;
+  onZoomOut: (amount?: number) => void;
+  onResetZoom: () => void; // Adicionando propriedade obrigatória
 }
 
-export function ZoomControls({ onZoomIn, onZoomOut, onReset, zoomLevel, className }: ZoomControlsProps) {
+export function ZoomControls({ zoomLevel, onZoomIn, onZoomOut, onResetZoom }: ZoomControlsProps) {
   return (
-    <div className={cn("flex items-center gap-2 p-2 bg-white/80 backdrop-blur-sm rounded-lg shadow-sm", className)}>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={(e) => {
-          e.preventDefault(); // Prevent form submission
-          onZoomOut();
-        }}
-        title="Diminuir zoom (Atalho: -)"
-        className="h-8 w-8 p-0"
+    <div className="flex items-center gap-1">
+      <Button 
+        variant="outline" 
+        size="icon" 
+        onClick={() => onZoomOut()}
+        title="Diminuir Zoom"
       >
         <ZoomOut className="h-4 w-4" />
       </Button>
       
-      <div className="text-sm font-medium min-w-[4rem] text-center">
+      <div className="text-xs font-medium px-2 min-w-[60px] text-center">
         {Math.round(zoomLevel * 100)}%
       </div>
       
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={(e) => {
-          e.preventDefault(); // Prevent form submission
-          onZoomIn();
-        }}
-        title="Aumentar zoom (Atalho: +)"
-        className="h-8 w-8 p-0"
+      <Button 
+        variant="outline" 
+        size="icon" 
+        onClick={() => onZoomIn()}
+        title="Aumentar Zoom"
       >
         <ZoomIn className="h-4 w-4" />
       </Button>
       
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={(e) => {
-          e.preventDefault(); // Prevent form submission
-          onReset();
-        }}
-        title="Resetar zoom (Atalho: 0)"
-        className="h-8 w-8 p-0"
+      <Button 
+        variant="outline" 
+        size="icon" 
+        onClick={onResetZoom}
+        title="Resetar Zoom"
       >
-        <Maximize2 className="h-4 w-4" />
+        <RotateCcw className="h-4 w-4" />
       </Button>
     </div>
   );

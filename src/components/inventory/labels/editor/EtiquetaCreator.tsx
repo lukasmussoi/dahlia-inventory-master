@@ -34,6 +34,23 @@ import { AlertCircle } from "lucide-react";
 import { useEtiquetaZoom } from "./useEtiquetaZoom";
 import { ZoomControls } from "./ZoomControls";
 
+// Definir tipos para exportação que estão sendo usados em etiquetaGenerator.ts
+export interface LabelType {
+  width: number;
+  height: number;
+  elements: LabelElement[];
+}
+
+export interface LabelElement {
+  type: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  fontSize: number;
+  align?: 'left' | 'center' | 'right';
+}
+
 interface EtiquetaCreatorProps {
   initialData?: ModeloEtiqueta;
   onClose: () => void;
@@ -273,7 +290,7 @@ export function EtiquetaCreator({ initialData, onClose, onSave }: EtiquetaCreato
                             type="button"
                             variant="outline"
                             onClick={() => {
-                              // Corrigido: definindo explicitamente todos os campos obrigatórios
+                              // Correção: garantir que todos os campos obrigatórios estejam definidos
                               const newCampo: CampoEtiqueta = {
                                 tipo: 'nome',
                                 x: 5,
@@ -293,8 +310,6 @@ export function EtiquetaCreator({ initialData, onClose, onSave }: EtiquetaCreato
                         </div>
                         <ElementosEtiquetaFields 
                           form={form} 
-                          maxWidth={larguraMaxima} 
-                          maxHeight={alturaMaxima} 
                         />
                       </TabsContent>
                     </Tabs>
