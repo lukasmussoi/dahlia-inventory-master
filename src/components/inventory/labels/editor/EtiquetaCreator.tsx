@@ -32,6 +32,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Switch } from "@/components/ui/switch"
+import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import "@/styles/etiqueta-editor.css"
@@ -102,6 +103,16 @@ export default function EtiquetaCreator({
   const [labelSize, setLabelSize] = useState({ 
     width: initialData?.largura || 80, 
     height: initialData?.altura || 40 
+  })
+  const [pageMargins, setPageMargins] = useState({
+    top: initialData?.margemSuperior || 10,
+    bottom: initialData?.margemInferior || 10,
+    left: initialData?.margemEsquerda || 10,
+    right: initialData?.margemDireita || 10
+  })
+  const [labelSpacing, setLabelSpacing] = useState({
+    horizontal: initialData?.espacamentoHorizontal || 2,
+    vertical: initialData?.espacamentoVertical || 2
   })
   const [nextLabelId, setNextLabelId] = useState(1)
   const [selectedLabelId, setSelectedLabelId] = useState<number | null>(0)
@@ -359,6 +370,28 @@ export default function EtiquetaCreator({
     setLabels(updatedLabels);
   }
   
+  // Função para atualizar margens da página
+  const handleUpdatePageMargin = (margin: 'top' | 'bottom' | 'left' | 'right', value: number) => {
+    // Limitar valor entre 0 e 200mm
+    value = Math.max(0, Math.min(200, value));
+    
+    setPageMargins(prev => ({
+      ...prev,
+      [margin]: value
+    }));
+  }
+  
+  // Função para atualizar espaçamento entre etiquetas
+  const handleUpdateLabelSpacing = (direction: 'horizontal' | 'vertical', value: number) => {
+    // Limitar valor entre 0 e 200mm
+    value = Math.max(0, Math.min(200, value));
+    
+    setLabelSpacing(prev => ({
+      ...prev,
+      [direction]: value
+    }));
+  }
+  
   const handleUpdatePageFormat = (value: string) => {
     setPageFormat(value);
     
@@ -566,13 +599,13 @@ export default function EtiquetaCreator({
       largura: primaryLabel.width,
       altura: primaryLabel.height,
       formatoPagina: pageFormat,
-      orientacao: pageOrientation, // Usando a orientação selecionada
-      margemSuperior: 10,
-      margemInferior: 10,
-      margemEsquerda: 10,
-      margemDireita: 10,
-      espacamentoHorizontal: 2,
-      espacamentoVertical: 2,
+      orientacao: pageOrientation,
+      margemSuperior: pageMargins.top,
+      margemInferior: pageMargins.bottom,
+      margemEsquerda: pageMargins.left,
+      margemDireita: pageMargins.right,
+      espacamentoHorizontal: labelSpacing.horizontal,
+      espacamentoVertical: labelSpacing.vertical,
       larguraPagina: pageSize.width,
       alturaPagina: pageSize.height
     };
@@ -673,10 +706,10 @@ export default function EtiquetaCreator({
         labels,
         pageFormat,
         pageSize,
-        { top: 10, right: 10, bottom: 10, left: 10 },
-        { horizontal: 2, vertical: 2 },
+        pageMargins, // Usando as margens da página
+        labelSpacing, // Usando espaçamento entre etiquetas
         autoAdjustDimensions,
-        pageOrientation // Passando a orientação para o gerador de PDF
+        pageOrientation
       );
       
       setPreviewPdfUrl(pdfUrl);
@@ -1106,6 +1139,92 @@ export default function EtiquetaCreator({
                 </Select>
               </div>
               
+              {/* Margens da Página */}
+              <div className="space-y-2">
+                <Label className="text-xs mb-1 block">Margens da Página (mm)</Label>
+                <div className="grid grid-cols-2 gap-x-2 gap-y-2">
+                  <div>
+                    <Label className="text-xs" htmlFor="margin-top">Margem Superior</Label>
+                    <Input
+                      id="margin-top"
+                      type="number"
+                      className="h-7 text-sm"
+                      value={pageMargins.top}
+                      onChange={(e) => handleUpdatePageMargin('top', Number(e.target.value))}
+                      min={0}
+                      max={200}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs" htmlFor="margin-bottom">Margem Inferior</Label>
+                    <Input
+                      id="margin-bottom"
+                      type="number"
+                      className="h-7 text-sm"
+                      value={pageMargins.bottom}
+                      onChange={(e) => handleUpdatePageMargin('bottom', Number(e.target.value))}
+                      min={0}
+                      max={200}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs" htmlFor="margin-left">Margem Esquerda</Label>
+                    <Input
+                      id="margin-left"
+                      type="number"
+                      className="h-7 text-sm"
+                      value={pageMargins.left}
+                      onChange={(e) => handleUpdatePageMargin('left', Number(e.target.value))}
+                      min={0}
+                      max={200}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs" htmlFor="margin-right">Margem Direita</Label>
+                    <Input
+                      id="margin-right"
+                      type="number"
+                      className="h-7 text-sm"
+                      value={pageMargins.right}
+                      onChange={(e) => handleUpdatePageMargin('right', Number(e.target.value))}
+                      min={0}
+                      max={200}
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              {/* Espaçamento entre Etiquetas */}
+              <div className="space-y-2">
+                <Label className="text-xs mb-1 block">Espaçamento entre Etiquetas (mm)</Label>
+                <div className="grid grid-cols-2 gap-x-2 gap-y-2">
+                  <div>
+                    <Label className="text-xs" htmlFor="spacing-horizontal">Espaçamento Horizontal</Label>
+                    <Input
+                      id="spacing-horizontal"
+                      type="number"
+                      className="h-7 text-sm"
+                      value={labelSpacing.horizontal}
+                      onChange={(e) => handleUpdateLabelSpacing('horizontal', Number(e.target.value))}
+                      min={0}
+                      max={200}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs" htmlFor="spacing-vertical">Espaçamento Vertical</Label>
+                    <Input
+                      id="spacing-vertical"
+                      type="number"
+                      className="h-7 text-sm"
+                      value={labelSpacing.vertical}
+                      onChange={(e) => handleUpdateLabelSpacing('vertical', Number(e.target.value))}
+                      min={0}
+                      max={200}
+                    />
+                  </div>
+                </div>
+              </div>
+              
               {pageFormat === "Custom" && (
                 <div className="grid grid-cols-2 gap-2">
                   <div>
@@ -1179,6 +1298,19 @@ export default function EtiquetaCreator({
                 }}
               />
             )}
+            
+            {/* Visualização das margens da página */}
+            <div 
+              className="absolute border border-dashed border-blue-300 pointer-events-none"
+              style={{
+                left: pageMargins.left * (zoom / 100),
+                top: pageMargins.top * (zoom / 100),
+                right: pageMargins.right * (zoom / 100),
+                bottom: pageMargins.bottom * (zoom / 100),
+                width: `calc(100% - ${(pageMargins.left + pageMargins.right) * (zoom / 100)}px)`,
+                height: `calc(100% - ${(pageMargins.top + pageMargins.bottom) * (zoom / 100)}px)`,
+              }}
+            />
             
             {/* Etiquetas */}
             {labels.map(label => (

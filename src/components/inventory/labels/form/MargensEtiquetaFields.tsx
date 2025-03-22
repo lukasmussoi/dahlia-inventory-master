@@ -35,7 +35,7 @@ export function MargensEtiquetaFields({ form }: MargensEtiquetaFieldsProps) {
               <FormControl>
                 <Input 
                   type="number" 
-                  {...field} 
+                  {...field}
                   onChange={e => field.onChange(Number(e.target.value))}
                   min={0}
                   max={200}
@@ -55,7 +55,7 @@ export function MargensEtiquetaFields({ form }: MargensEtiquetaFieldsProps) {
               <FormControl>
                 <Input 
                   type="number" 
-                  {...field} 
+                  {...field}
                   onChange={e => field.onChange(Number(e.target.value))}
                   min={0}
                   max={200}
@@ -65,7 +65,7 @@ export function MargensEtiquetaFields({ form }: MargensEtiquetaFieldsProps) {
             </FormItem>
           )}
         />
-        
+
         <FormField
           control={form.control}
           name="margemEsquerda"
@@ -75,7 +75,7 @@ export function MargensEtiquetaFields({ form }: MargensEtiquetaFieldsProps) {
               <FormControl>
                 <Input 
                   type="number" 
-                  {...field} 
+                  {...field}
                   onChange={e => field.onChange(Number(e.target.value))}
                   min={0}
                   max={200}
@@ -95,7 +95,7 @@ export function MargensEtiquetaFields({ form }: MargensEtiquetaFieldsProps) {
               <FormControl>
                 <Input 
                   type="number" 
-                  {...field} 
+                  {...field}
                   onChange={e => field.onChange(Number(e.target.value))}
                   min={0}
                   max={200}
