@@ -86,7 +86,7 @@ export function useEtiquetaCreator(initialData?: any, autoAdjustDimensions = fal
     labelManagement.setLabels,
     zoom,
     snapToGrid,
-    gridSize
+    gridSize // Aqui era onde estávamos passando o boolean snapToGrid para o parâmetro gridSize
   );
   
   // Geração de PDF
