@@ -90,10 +90,13 @@ export class EtiquetaCustomModel {
   static async update(id: string, modelo: ModeloEtiqueta): Promise<boolean> {
     try {
       const modeloDb = mapModelToDatabase(modelo);
+      
+      // Remover campos que podem causar conflitos com triggers do banco
+      delete (modeloDb as any).atualizado_em;
+      delete (modeloDb as any).updated_at;
+      
       console.log("Atualizando modelo:", id, modeloDb);
 
-      // Remova qualquer propriedade updated_at ou atualizado_em para evitar conflitos
-      // O trigger do banco de dados cuidará da atualização automática desses campos
       const { error } = await supabase
         .from('etiquetas_custom')
         .update(modeloDb)

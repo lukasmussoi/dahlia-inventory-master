@@ -103,18 +103,31 @@ export function mapModelToDatabase(modelo: ModeloEtiqueta) {
   console.log("Mapeando modelo para banco de dados:", modelo);
   
   // Garante que todos os campos tenham os valores obrigatórios
-  const camposValidados = modelo.campos.map(campo => ({
-    tipo: campo.tipo || 'nome',
-    x: Number(campo.x || 0),
-    y: Number(campo.y || 0),
-    largura: Number(campo.largura || 10),
-    altura: Number(campo.altura || 10),
-    tamanhoFonte: Number(campo.tamanhoFonte || 10),
-    valor: campo.valor,
-    alinhamento: campo.alinhamento || 'left'
-  }));
+  const camposValidados = modelo.campos.map(campo => {
+    // Verificar se x e y são NaN ou undefined e normalizá-los
+    const x = isNaN(Number(campo.x)) ? 0 : Number(campo.x);
+    const y = isNaN(Number(campo.y)) ? 0 : Number(campo.y);
+    
+    return {
+      tipo: campo.tipo || 'nome',
+      x: x,
+      y: y,
+      largura: Number(campo.largura || 10),
+      altura: Number(campo.altura || 10),
+      tamanhoFonte: Number(campo.tamanhoFonte || 10),
+      valor: campo.valor,
+      alinhamento: campo.alinhamento || 'left'
+    };
+  });
 
   console.log("Campos validados para salvar:", camposValidados);
+
+  // Garantir que formatoPagina seja enviado corretamente
+  let formatoPagina = modelo.formatoPagina || "A4";
+  // Mapear "Personalizado" para "Custom" para o banco de dados
+  if (formatoPagina === "Personalizado") {
+    formatoPagina = "Custom";
+  }
 
   // Certificando-se de que todos os valores sejam do tipo correto para o banco
   const result = {
@@ -122,7 +135,7 @@ export function mapModelToDatabase(modelo: ModeloEtiqueta) {
     tipo: 'padrao',
     largura: Number(modelo.largura) || 80,
     altura: Number(modelo.altura) || 40,
-    formato_pagina: modelo.formatoPagina || "A4",
+    formato_pagina: formatoPagina,
     orientacao: modelo.orientacao || "retrato",
     margem_superior: Number(modelo.margemSuperior) || 10,
     margem_inferior: Number(modelo.margemInferior) || 10,
