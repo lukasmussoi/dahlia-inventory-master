@@ -7,10 +7,10 @@ export interface PreviewPDFOptions {
   labels: LabelType[];
   pageFormat: string;
   pageSize: { width: number, height: number };
-  margins: { top: number, right: number, bottom: number, left: number };
-  spacing: { horizontal: number, vertical: number };
+  pageMargins: { top: number, bottom: number, left: number, right: number };
+  labelSpacing: { horizontal: number, vertical: number };
   autoAdjustDimensions?: boolean;
-  orientation?: string;
+  pageOrientation?: string;
 }
 
 export interface EtiquetaPrintOptions {
@@ -18,4 +18,3 @@ export interface EtiquetaPrintOptions {
   startColumn: number;
   copias: number;
 }
-

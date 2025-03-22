@@ -4,6 +4,8 @@
  */
 import JsPDF from 'jspdf';
 import type { ModeloEtiqueta } from '@/types/etiqueta';
+import { formatCurrency } from '@/lib/utils';
+import { getElementPreviewText } from './elementUtils';
 
 /**
  * Calcula as dimensões da página com base no formato e orientação
@@ -91,21 +93,23 @@ export const calcularEtiquetasPorPagina = (
 
 /**
  * Cria um novo documento PDF com as configurações corretas
- * @param orientacao Orientação do documento (retrato ou paisagem)
  * @param formatoPagina Formato da página
- * @param dimensoes Dimensões da página se formato for personalizado
+ * @param orientacao Orientação do documento (retrato ou paisagem)
+ * @param width Largura da página se formato for personalizado (mm)
+ * @param height Altura da página se formato for personalizado (mm)
  * @returns Documento PDF configurado
  */
-export const criarDocumentoPDF = (
-  orientacao: string,
-  formatoPagina: string,
-  dimensoes?: { width: number, height: number }
+export const createPdfDocument = (
+  formatoPagina: string, 
+  orientacao: string, 
+  width?: number, 
+  height?: number
 ): JsPDF => {
   return new JsPDF({
     orientation: orientacao === "paisagem" ? "landscape" : "portrait",
     unit: "mm",
-    format: formatoPagina === "Personalizado" && dimensoes ? 
-      [dimensoes.width, dimensoes.height] : formatoPagina
+    format: formatoPagina === "Personalizado" && width && height ? 
+      [width, height] : formatoPagina
   });
 };
 
@@ -147,3 +151,80 @@ export const normalizarEspacamentos = (
   };
 };
 
+/**
+ * Adiciona uma etiqueta à página PDF
+ * @param doc Documento PDF
+ * @param label Etiqueta a ser adicionada
+ * @param pageMargins Margens da página
+ * @param labelSpacing Espaçamento entre etiquetas
+ * @param getElementText Função para obter o texto de cada elemento
+ * @param formatCurrencyFn Função para formatar valores monetários
+ */
+export const addLabelToPage = (
+  doc: JsPDF, 
+  label: any, 
+  pageMargins: { top: number, bottom: number, left: number, right: number },
+  labelSpacing: { horizontal: number, vertical: number },
+  getElementText: any,
+  formatCurrencyFn: any
+) => {
+  // Desenhar borda da etiqueta
+  const x = label.x || pageMargins.left;
+  const y = label.y || pageMargins.top;
+  
+  // Debugar informações de posicionamento
+  // console.log(`Adicionando etiqueta em (${x}, ${y}) com tamanho ${label.width}x${label.height}`);
+  
+  // Desenhar retângulo para a etiqueta (opcional)
+  doc.setDrawColor(200, 200, 200);
+  doc.rect(x, y, label.width, label.height);
+  
+  // Adicionar elementos
+  if (label.elements && Array.isArray(label.elements)) {
+    label.elements.forEach((element: any) => {
+      // Configurar fonte
+      doc.setFontSize(element.fontSize);
+      
+      // Calcular posição do elemento dentro da etiqueta
+      const elementX = x + element.x;
+      const elementY = y + element.y + (element.height / 2);
+      
+      // Determinar o texto a ser mostrado
+      const text = getElementText(element.type);
+      
+      // Definir alinhamento do texto
+      let alignX = elementX;
+      if (element.align === 'center') {
+        alignX = elementX + (element.width / 2);
+      } else if (element.align === 'right') {
+        alignX = elementX + element.width;
+      }
+      
+      // Desenhar texto
+      doc.text(text, alignX, elementY, { 
+        align: element.align as any,
+        baseline: 'middle'
+      });
+    });
+  }
+};
+
+/**
+ * Cria um documento PDF para etiqueta
+ * @param orientacao Orientação do documento (retrato ou paisagem) 
+ * @param formatoPagina Formato da página
+ * @param dimensoes Dimensões da página se formato for personalizado
+ * @returns Documento PDF configurado
+ */
+export const criarDocumentoPDF = (
+  orientacao: string,
+  formatoPagina: string,
+  dimensoes?: { width: number, height: number }
+): JsPDF => {
+  return new JsPDF({
+    orientation: orientacao === "paisagem" ? "landscape" : "portrait",
+    unit: "mm",
+    format: formatoPagina === "Personalizado" && dimensoes ? 
+      [dimensoes.width, dimensoes.height] : formatoPagina
+  });
+};

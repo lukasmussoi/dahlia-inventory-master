@@ -1,6 +1,8 @@
+
 import { getElementPreviewText } from './elementUtils';
 import { formatCurrency } from '@/lib/utils';
 import { createPdfDocument, addLabelToPage } from './documentUtils';
+import type { PreviewPDFOptions } from './types';
 
 /**
  * Gera um PDF de pré-visualização para um modelo de etiqueta
@@ -37,4 +39,33 @@ export const generatePreviewPDF = async (
   // Converter o PDF para URL de dados (data URL)
   const pdfBase64 = doc.output('datauristring');
   return pdfBase64;
+};
+
+/**
+ * Versão da função com um único parâmetro objeto para maior flexibilidade
+ * @param options Opções para geração do PDF
+ * @returns Promise com a URL do PDF gerado
+ */
+export const generatePreview = async (options: PreviewPDFOptions): Promise<string> => {
+  const {
+    modelName,
+    labels,
+    pageFormat,
+    pageSize,
+    pageMargins,
+    labelSpacing,
+    autoAdjustDimensions = false,
+    pageOrientation = 'retrato'
+  } = options;
+
+  return generatePreviewPDF(
+    modelName,
+    labels,
+    pageFormat,
+    pageSize,
+    pageMargins,
+    labelSpacing,
+    autoAdjustDimensions,
+    pageOrientation
+  );
 };
