@@ -89,30 +89,55 @@ export class EtiquetaCustomModel {
 
   static async update(id: string, modelo: ModeloEtiqueta): Promise<boolean> {
     try {
+      // Obter dados atuais do modelo para comparação
+      console.log(`Buscando dados atuais do modelo ${id} antes da atualização...`);
+      const { data: modeloAtual, error: errorBusca } = await supabase
+        .from('etiquetas_custom')
+        .select('*')
+        .eq('id', id)
+        .single();
+        
+      if (errorBusca) {
+        console.error('Erro ao buscar modelo atual:', errorBusca);
+      } else {
+        console.log('Modelo atual recuperado com sucesso:', modeloAtual);
+      }
+      
+      // Preparar modelo para atualização
       const modeloDb = mapModelToDatabase(modelo);
       
-      // Remover campos que podem causar conflitos com triggers do banco
+      // Remover explicitamente campos que podem causar conflitos com triggers
       delete (modeloDb as any).atualizado_em;
       delete (modeloDb as any).updated_at;
+      delete (modeloDb as any).criado_em;
+      delete (modeloDb as any).created_at;
       
-      console.log("Atualizando modelo:", id, modeloDb);
+      console.log("Preparando dados para atualização do modelo:", id);
+      console.log("Dados formatados para envio:", JSON.stringify(modeloDb, null, 2));
 
-      const { error } = await supabase
+      // Executar a atualização com tratamento de erro detalhado
+      const { data, error } = await supabase
         .from('etiquetas_custom')
         .update(modeloDb)
         .eq('id', id);
 
       if (error) {
-        console.error('Erro do Supabase ao atualizar modelo:', error);
+        console.error('Erro detalhado do Supabase ao atualizar modelo:', {
+          código: error.code,
+          mensagem: error.message,
+          detalhes: error.details,
+          dica: error.hint
+        });
         throw error;
       }
       
-      console.log("Modelo atualizado com sucesso");
+      console.log("Modelo atualizado com sucesso:", data);
       return true;
     } catch (error) {
       console.error('Erro ao atualizar modelo de etiqueta:', error);
       
       if (error instanceof Error) {
+        // Mensagem de erro mais detalhada para o usuário
         toast.error(`Erro ao atualizar modelo: ${error.message}`);
       } else {
         toast.error('Erro ao atualizar modelo de etiqueta');

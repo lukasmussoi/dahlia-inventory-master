@@ -37,9 +37,9 @@ export function mapDatabaseToModel(item: EtiquetaCustomDB): ModeloEtiqueta {
       console.error('Erro ao converter campos da etiqueta:', error);
       // Configurar valores padrão para os campos
       campos = [
-        { tipo: 'nome' as const, x: 2, y: 4, largura: 40, altura: 10, tamanhoFonte: 7 },
-        { tipo: 'codigo' as const, x: 20, y: 1, largura: 40, altura: 6, tamanhoFonte: 8 },
-        { tipo: 'preco' as const, x: 70, y: 4, largura: 20, altura: 10, tamanhoFonte: 10 }
+        { tipo: 'nome' as const, x: 2, y: 4, largura: 40, altura: 10, tamanhoFonte: 7, alinhamento: 'left' },
+        { tipo: 'codigo' as const, x: 20, y: 1, largura: 40, altura: 6, tamanhoFonte: 8, alinhamento: 'left' },
+        { tipo: 'preco' as const, x: 70, y: 4, largura: 20, altura: 10, tamanhoFonte: 10, alinhamento: 'left' }
       ];
     }
   }
@@ -47,9 +47,9 @@ export function mapDatabaseToModel(item: EtiquetaCustomDB): ModeloEtiqueta {
   // Se não houver campos, usar os valores padrão
   if (campos.length === 0) {
     campos = [
-      { tipo: 'nome' as const, x: 2, y: 4, largura: 40, altura: 10, tamanhoFonte: 7 },
-      { tipo: 'codigo' as const, x: 20, y: 1, largura: 40, altura: 6, tamanhoFonte: 8 },
-      { tipo: 'preco' as const, x: 70, y: 4, largura: 20, altura: 10, tamanhoFonte: 10 }
+      { tipo: 'nome' as const, x: 2, y: 4, largura: 40, altura: 10, tamanhoFonte: 7, alinhamento: 'left' },
+      { tipo: 'codigo' as const, x: 20, y: 1, largura: 40, altura: 6, tamanhoFonte: 8, alinhamento: 'left' },
+      { tipo: 'preco' as const, x: 70, y: 4, largura: 20, altura: 10, tamanhoFonte: 10, alinhamento: 'left' }
     ];
   }
 

@@ -34,7 +34,11 @@ export function EspacamentoEtiquetaFields({ form }: EspacamentoEtiquetaFieldsPro
                 <Input 
                   type="number" 
                   {...field}
-                  onChange={e => field.onChange(Number(e.target.value))}
+                  onChange={e => {
+                    const value = e.target.value ? Number(e.target.value) : 0;
+                    console.log(`Espaçamento horizontal alterado para: ${value}`);
+                    field.onChange(value);
+                  }}
                   min={0}
                   max={200}
                 />
@@ -54,7 +58,11 @@ export function EspacamentoEtiquetaFields({ form }: EspacamentoEtiquetaFieldsPro
                 <Input 
                   type="number" 
                   {...field}
-                  onChange={e => field.onChange(Number(e.target.value))}
+                  onChange={e => {
+                    const value = e.target.value ? Number(e.target.value) : 0;
+                    console.log(`Espaçamento vertical alterado para: ${value}`);
+                    field.onChange(value);
+                  }}
                   min={0}
                   max={200}
                 />
