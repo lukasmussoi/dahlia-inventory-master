@@ -15,6 +15,7 @@ const campoEtiquetaSchema = z.object({
   altura: z.number().min(0, "Altura deve ser maior que zero"),
   tamanhoFonte: z.number().min(5, "Tamanho da fonte deve ser ao menos 5pt").max(24, "Tamanho da fonte não deve exceder 24pt"),
   align: z.enum(['left', 'center', 'right']).optional(),
+  valor: z.string().optional(),
 });
 
 const formSchema = z.object({
@@ -72,13 +73,14 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
   // Certifique-se de que os campos do modelo, se fornecidos, estejam no formato correto
   const modeloCampos = modelo?.campos 
     ? modelo.campos.map(campo => ({
-        tipo: campo.tipo,
+        tipo: campo.tipo || 'nome', // Garantir tipo como obrigatório
         x: Number(campo.x),
         y: Number(campo.y),
         largura: Number(campo.largura),
         altura: Number(campo.altura),
         tamanhoFonte: Number(campo.tamanhoFonte),
-        align: campo.align || 'left'
+        align: campo.align || 'left',
+        valor: campo.valor
       }))
     : defaultCampos;
 
@@ -94,6 +96,11 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
         if (campo.largura === null) campo.largura = 40;
         if (campo.altura === null) campo.altura = 10;
         if (campo.tamanhoFonte === null) campo.tamanhoFonte = 8;
+      }
+      
+      // Garantir que o tipo sempre esteja definido
+      if (!campo.tipo) {
+        campo.tipo = 'nome';
       }
     });
   }
@@ -240,13 +247,14 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
 
       // Garantir que todos os campos obrigatórios estejam preenchidos e com o tipo correto
       const camposValidados: CampoEtiqueta[] = data.campos.map(campo => ({
-        tipo: campo.tipo,
+        tipo: campo.tipo || 'nome', // Garantir que tipo nunca seja undefined
         x: Number(campo.x),
         y: Number(campo.y),
         largura: Number(campo.largura),
         altura: Number(campo.altura),
         tamanhoFonte: Number(campo.tamanhoFonte),
-        align: campo.align || 'left'
+        align: campo.align || 'left',
+        valor: campo.valor
       }));
 
       // Garantir que todos os campos obrigatórios estejam preenchidos

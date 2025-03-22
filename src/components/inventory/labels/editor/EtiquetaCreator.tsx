@@ -74,7 +74,7 @@ export function EtiquetaCreator({ initialData, onClose, onSave }: EtiquetaCreato
   
   // Verificar se um tipo de elemento já existe nos campos
   const camposAtuais = form.watch("campos") || [];
-  const tiposExistentes = new Set(camposAtuais.map(campo => campo.tipo));
+  const tiposExistentes = new Set(camposAtuais.map(campo => campo.tipo || 'nome')); // Garantir que tipo nunca seja undefined
   
   // Calcular altura e largura atuais
   const larguraEtiqueta = form.watch("largura");
@@ -110,7 +110,13 @@ export function EtiquetaCreator({ initialData, onClose, onSave }: EtiquetaCreato
   }, []);
 
   const handleCamposChange = useCallback((novosCampos: CampoEtiqueta[]) => {
-    form.setValue("campos", novosCampos, { shouldValidate: true });
+    // Garantir que todos os campos tenham tipo definido
+    const camposValidados = novosCampos.map(campo => ({
+      ...campo,
+      tipo: campo.tipo || 'nome' // Definir valor padrão para tipo
+    })) as CampoEtiqueta[];
+    
+    form.setValue("campos", camposValidados, { shouldValidate: true });
   }, [form]);
 
   const handleDimensoesChange = useCallback((largura: number, altura: number) => {
