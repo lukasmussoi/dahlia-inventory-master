@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
 import { toast } from "sonner";
 import {
@@ -68,7 +67,6 @@ export default function EtiquetaCreator({ initialData, onClose, onSave }: Etique
 
   const { form, isLoading, onSubmit, pageAreaWarning, validarDimensoes } = useEtiquetaCustomForm(initialData, onClose, onSave);
 
-  // Converter campos para elementos de pré-visualização
   useEffect(() => {
     const campos = form.watch("campos");
     if (campos) {
@@ -85,10 +83,8 @@ export default function EtiquetaCreator({ initialData, onClose, onSave }: Etique
     }
   }, [form.watch("campos")]);
 
-  // Gerar pré-visualização de PDF
   const handlePreview = useCallback(async () => {
     try {
-      // Validar dimensões antes de gerar a pré-visualização
       validarDimensoes();
       if (pageAreaWarning) {
         toast.error("Há problemas com as dimensões da etiqueta. Por favor, corrija antes de pré-visualizar.");
@@ -97,12 +93,10 @@ export default function EtiquetaCreator({ initialData, onClose, onSave }: Etique
 
       const formValues = form.getValues();
 
-      // Determinar o tamanho da página
       let pageSize: { width: number, height: number };
       if (formValues.formatoPagina === "Personalizado" && formValues.larguraPagina && formValues.alturaPagina) {
         pageSize = { width: formValues.larguraPagina, height: formValues.alturaPagina };
       } else {
-        // Tamanhos padrão (em mm)
         if (formValues.formatoPagina === "A4") {
           pageSize = formValues.orientacao === "retrato" ? { width: 210, height: 297 } : { width: 297, height: 210 };
         } else if (formValues.formatoPagina === "A5") {
@@ -110,12 +104,10 @@ export default function EtiquetaCreator({ initialData, onClose, onSave }: Etique
         } else if (formValues.formatoPagina === "Letter") {
           pageSize = formValues.orientacao === "retrato" ? { width: 216, height: 279 } : { width: 279, height: 216 };
         } else {
-          // Formato padrão (A4 retrato)
           pageSize = { width: 210, height: 297 };
         }
       }
 
-      // Garantir que os campos são válidos antes de gerar o PDF
       const camposValidos = formValues.campos.map(campo => ({
         tipo: campo.tipo,
         x: Number(campo.x) || 0,
@@ -626,3 +618,4 @@ export default function EtiquetaCreator({ initialData, onClose, onSave }: Etique
     </div>
   );
 }
+

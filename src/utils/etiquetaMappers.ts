@@ -1,5 +1,6 @@
 
-import type { ModeloEtiqueta, EtiquetaCustomDB } from "@/types/etiqueta";
+import type { ModeloEtiqueta, EtiquetaCustomDB, CampoEtiqueta } from "@/types/etiqueta";
+import type { Json } from "@/integrations/supabase/types";
 
 /**
  * Mapeia o modelo da interface para o formato do banco de dados
@@ -20,7 +21,7 @@ export function mapModelToDatabase(modelo: ModeloEtiqueta): Omit<EtiquetaCustomD
     espacamento_vertical: modelo.espacamentoVertical,
     largura_pagina: modelo.larguraPagina,
     altura_pagina: modelo.alturaPagina,
-    campos: modelo.campos,
+    campos: modelo.campos as unknown as Json,
     margem_interna_superior: modelo.margemInternaEtiquetaSuperior,
     margem_interna_inferior: modelo.margemInternaEtiquetaInferior,
     margem_interna_esquerda: modelo.margemInternaEtiquetaEsquerda,
@@ -32,6 +33,11 @@ export function mapModelToDatabase(modelo: ModeloEtiqueta): Omit<EtiquetaCustomD
  * Mapeia os dados do banco para o modelo utilizado na interface
  */
 export function mapDatabaseToModel(data: EtiquetaCustomDB): ModeloEtiqueta {
+  // Garantir que campos seja sempre um array válido de CampoEtiqueta
+  const campos: CampoEtiqueta[] = Array.isArray(data.campos) 
+    ? (data.campos as unknown as CampoEtiqueta[])
+    : [];
+  
   return {
     id: data.id,
     nome: data.descricao,
@@ -48,7 +54,7 @@ export function mapDatabaseToModel(data: EtiquetaCustomDB): ModeloEtiqueta {
     espacamentoVertical: data.espacamento_vertical,
     larguraPagina: data.largura_pagina,
     alturaPagina: data.altura_pagina,
-    campos: Array.isArray(data.campos) ? data.campos : [],
+    campos: campos,
     usuario_id: data.criado_por,
     criado_em: data.criado_em,
     atualizado_em: data.atualizado_em,
