@@ -31,12 +31,13 @@ export const generatePreview = async (options: PreviewPDFOptions): Promise<strin
   console.log("Gerando PDF de pré-visualização:", {
     modelName,
     pageFormat,
-    pageSize,
-    pageMargins,
-    labelSpacing,
-    autoAdjustDimensions,
     pageOrientation,
-    gridSize
+    pageSize: `${pageSize.width}x${pageSize.height}`,
+    pageMargins: `top:${pageMargins.top}, bottom:${pageMargins.bottom}, left:${pageMargins.left}, right:${pageMargins.right}`,
+    labelSpacing: `h:${labelSpacing.horizontal}, v:${labelSpacing.vertical}`,
+    autoAdjustDimensions,
+    gridSize,
+    labelCount: labels.length
   });
   
   // Verificar se há etiquetas para incluir
@@ -51,23 +52,40 @@ export const generatePreview = async (options: PreviewPDFOptions): Promise<strin
   }
   
   try {
-    // Ajustar orientação de página 
+    // Ajustar orientação de página para o formato usado pela biblioteca
     const orientation = pageOrientation === 'paisagem' ? 'landscape' : 'portrait';
     console.log(`Criando documento com orientação: ${orientation}`);
     
+    // Determinar dimensões da página de acordo com a orientação
+    let docWidth = pageSize.width;
+    let docHeight = pageSize.height;
+    
+    // No modo paisagem, invertemos largura e altura para o documento
+    if (orientation === 'landscape') {
+      console.log("Invertendo dimensões da página para modo paisagem");
+      [docWidth, docHeight] = [docHeight, docWidth];
+    }
+    
+    console.log(`Dimensões finais do documento: ${docWidth}mm x ${docHeight}mm`);
+    
     // Criar documento PDF com as configurações especificadas
-    const doc = createPdfDocument(
-      pageFormat, 
-      pageOrientation, 
-      pageSize.width, 
-      pageSize.height
-    );
+    const doc = new jsPDF({
+      orientation: orientation,
+      unit: 'mm',
+      format: pageFormat !== "Personalizado" ? pageFormat.toLowerCase() : [docWidth, docHeight]
+    });
+    
+    // Verificar se o documento foi criado com a orientação correta
+    console.log(`Orientação do documento criado: ${doc.getPageInfo(1).pageContext.pageOrientation}`);
+    console.log(`Dimensões da página criada: ${doc.internal.pageSize.getWidth()}mm x ${doc.internal.pageSize.getHeight()}mm`);
     
     // Para cada etiqueta, renderizar no PDF
     labels.forEach((label, index) => {
       // Calcular posição da etiqueta na página - sem offset para título
       const labelX = pageMargins.left + label.x;
       const labelY = pageMargins.top + label.y;
+      
+      console.log(`Renderizando etiqueta ${index+1} na posição (${labelX}, ${labelY})`);
       
       // Desenhar borda da etiqueta
       doc.setDrawColor(100, 100, 100);
@@ -80,6 +98,8 @@ export const generatePreview = async (options: PreviewPDFOptions): Promise<strin
         const elementX = labelX + element.x;
         const elementY = labelY + element.y;
         
+        console.log(`Renderizando elemento ${element.type} na posição (${elementX}, ${elementY})`);
+        
         // Configurar fonte
         doc.setFontSize(element.fontSize);
         
@@ -90,7 +110,12 @@ export const generatePreview = async (options: PreviewPDFOptions): Promise<strin
           generateBarcode(doc, code, elementX, elementY, element.width, element.height);
         } else {
           // Obter texto do elemento
-          const text = getElementPreviewText(element.type);
+          let text = getElementPreviewText(element.type);
+          
+          // Se for preço, formatar como moeda
+          if (element.type === 'preco') {
+            text = formatCurrency(99.90);
+          }
           
           // Ajustar alinhamento
           let alignmentX = elementX;
@@ -110,7 +135,9 @@ export const generatePreview = async (options: PreviewPDFOptions): Promise<strin
     });
     
     // Converter o PDF para URL de dados (data URL)
-    return doc.output('datauristring');
+    const pdfUrl = doc.output('datauristring');
+    console.log("PDF gerado com sucesso");
+    return pdfUrl;
   } catch (error) {
     console.error("Erro ao gerar pré-visualização:", error);
     throw error;

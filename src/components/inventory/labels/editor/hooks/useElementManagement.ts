@@ -46,21 +46,29 @@ export function useElementManagement(
   const handleAddElement = (elementType: string) => {
     if (selectedLabelId === null) {
       toast.error("Selecione uma etiqueta primeiro");
-      return;
+      return "";
     }
     
+    console.log(`Adicionando elemento do tipo ${elementType} à etiqueta ${selectedLabelId}`);
+    
     const labelIndex = labels.findIndex(l => l.id === selectedLabelId);
-    if (labelIndex === -1) return;
+    if (labelIndex === -1) {
+      console.error(`Etiqueta de ID ${selectedLabelId} não encontrada`);
+      return "";
+    }
     
     // Verificar se o elemento já existe
     const elementExists = labels[labelIndex].elements.some((el: any) => el.type === elementType);
     if (elementExists) {
       toast.error(`Este elemento já foi adicionado na etiqueta`);
-      return;
+      return "";
     }
     
     const elementTemplate = elements.find(e => e.id === elementType);
-    if (!elementTemplate) return;
+    if (!elementTemplate) {
+      console.error(`Template para o elemento do tipo ${elementType} não encontrado`);
+      return "";
+    }
     
     // Posicionar o elemento no centro da etiqueta
     const label = labels[labelIndex];
@@ -78,6 +86,8 @@ export function useElementManagement(
       align: elementTemplate.defaultAlign || "left"
     };
     
+    console.log("Novo elemento criado:", newElement);
+    
     const updatedLabels = [...labels];
     updatedLabels[labelIndex].elements.push(newElement);
     setLabels(updatedLabels);
@@ -90,14 +100,28 @@ export function useElementManagement(
    * Remove um elemento de uma etiqueta
    */
   const handleDeleteElement = (elementId: string | null) => {
-    if (!elementId || selectedLabelId === null) return;
+    if (!elementId || selectedLabelId === null) {
+      console.log("Não é possível excluir elemento: ID nulo ou etiqueta não selecionada");
+      return;
+    }
+    
+    console.log(`Excluindo elemento ${elementId} da etiqueta ${selectedLabelId}`);
     
     const updatedLabels = [...labels];
     const labelIndex = updatedLabels.findIndex(l => l.id === selectedLabelId);
-    if (labelIndex === -1) return;
+    if (labelIndex === -1) {
+      console.error(`Etiqueta de ID ${selectedLabelId} não encontrada para exclusão do elemento`);
+      return;
+    }
     
     const elementIndex = updatedLabels[labelIndex].elements.findIndex((el: any) => el.id === elementId);
-    if (elementIndex === -1) return;
+    if (elementIndex === -1) {
+      console.error(`Elemento de ID ${elementId} não encontrado para exclusão`);
+      return;
+    }
+    
+    const elementType = updatedLabels[labelIndex].elements[elementIndex].type;
+    console.log(`Removendo elemento do tipo ${elementType}`);
     
     updatedLabels[labelIndex].elements.splice(elementIndex, 1);
     setLabels(updatedLabels);
@@ -109,17 +133,29 @@ export function useElementManagement(
    * Atualiza um elemento
    */
   const handleUpdateElement = (elementId: string | null, property: string, value: any) => {
-    if (!elementId || selectedLabelId === null) return;
+    if (!elementId || selectedLabelId === null) {
+      console.log("Não é possível atualizar elemento: ID nulo ou etiqueta não selecionada");
+      return;
+    }
+    
+    console.log(`Atualizando elemento ${elementId}, propriedade ${property} para ${value}`);
     
     const updatedLabels = [...labels];
     const labelIndex = updatedLabels.findIndex(l => l.id === selectedLabelId);
-    if (labelIndex === -1) return;
+    if (labelIndex === -1) {
+      console.error(`Etiqueta de ID ${selectedLabelId} não encontrada para atualização do elemento`);
+      return;
+    }
     
     const label = updatedLabels[labelIndex];
     const elementIndex = label.elements.findIndex((el: any) => el.id === elementId);
-    if (elementIndex === -1) return;
+    if (elementIndex === -1) {
+      console.error(`Elemento de ID ${elementId} não encontrado para atualização`);
+      return;
+    }
     
     const element = label.elements[elementIndex];
+    console.log(`Elemento encontrado para atualização:`, element);
     
     // Garantir que os valores estão dentro dos limites
     if (property === 'x' || property === 'y' || property === 'width' || property === 'height') {
@@ -151,10 +187,14 @@ export function useElementManagement(
       value = Math.max(6, Math.min(24, Number(value)));
     }
     
+    console.log(`Valor ajustado para os limites: ${value}`);
+    
     label.elements[elementIndex] = {
       ...label.elements[elementIndex],
       [property]: value
     };
+    
+    console.log(`Elemento atualizado:`, label.elements[elementIndex]);
     
     setLabels(updatedLabels);
   };
@@ -163,7 +203,12 @@ export function useElementManagement(
    * Define o alinhamento de um elemento
    */
   const handleSetAlignment = (elementId: string | null, alignment: string) => {
-    if (!elementId) return;
+    if (!elementId) {
+      console.log("Não é possível atualizar alinhamento: ID do elemento é nulo");
+      return;
+    }
+    
+    console.log(`Definindo alinhamento do elemento ${elementId} para ${alignment}`);
     handleUpdateElement(elementId, 'align', alignment);
   };
 

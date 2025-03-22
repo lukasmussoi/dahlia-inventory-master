@@ -45,6 +45,19 @@ export function VisualEditor({
     }
   };
 
+  const handleElementClick = (e: React.MouseEvent, labelId: number, elementId: string) => {
+    e.stopPropagation();
+    console.log(`Clicou no elemento: ${elementId} da etiqueta: ${labelId}`);
+    
+    // Atualizar a etiqueta selecionada se necessário
+    if (selectedLabelId !== labelId) {
+      setSelectedLabelId(labelId);
+    }
+    
+    // Atualizar o elemento selecionado
+    setSelectedElement(elementId);
+  };
+
   return (
     <div className="flex-1 p-4 overflow-auto bg-gray-100 dark:bg-gray-800/20">
       <div 
@@ -57,6 +70,11 @@ export function VisualEditor({
         onMouseMove={handleDrag}
         onMouseUp={handleEndDrag}
         onMouseLeave={handleEndDrag}
+        onClick={() => {
+          // Ao clicar em um espaço vazio, desselecionar elemento
+          console.log("Clicou no fundo da página, limpando seleção de elemento");
+          setSelectedElement(null);
+        }}
       >
         {/* Grade */}
         {showGrid && (
@@ -99,6 +117,7 @@ export function VisualEditor({
             }}
             onClick={(e) => {
               e.stopPropagation();
+              console.log(`Clicou na etiqueta: ${label.id}`);
               setSelectedLabelId(label.id);
               setSelectedElement(null);
             }}
@@ -109,7 +128,7 @@ export function VisualEditor({
               <div
                 key={element.id}
                 className={cn(
-                  "absolute border transition-all",
+                  "absolute border cursor-move transition-all",
                   selectedElement === element.id ? "border-primary-foreground bg-primary" : "border-gray-300 bg-gray-50"
                 )}
                 style={{
@@ -118,11 +137,7 @@ export function VisualEditor({
                   width: element.width * (zoom / 100),
                   height: element.height * (zoom / 100),
                 }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSelectedLabelId(label.id);
-                  setSelectedElement(element.id);
-                }}
+                onClick={(e) => handleElementClick(e, label.id, element.id)}
                 onMouseDown={(e) => handleStartDrag(e, "element", element.id, element.x, element.y)}
               >
                 <div 

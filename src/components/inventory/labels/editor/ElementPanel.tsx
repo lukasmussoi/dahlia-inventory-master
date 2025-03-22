@@ -1,21 +1,29 @@
 
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
-import { Trash, AlignLeft, AlignCenter, AlignRight } from "lucide-react";
-import { ElementType, LabelElement } from "./types";
-import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Trash2,
+  Move,
+  Type,
+  Ruler,
+  Maximize
+} from "lucide-react";
+import { LabelElement } from "./types";
 
 interface ElementPanelProps {
-  elements: ElementType[];
+  elements: { id: string; name: string }[];
   selectedElement: string | null;
   selectedLabelId: number | null;
   labels: any[];
-  handleAddElement: (elementType: string) => void;
-  handleDeleteElement: () => void;
-  handleUpdateElement: (property: string, value: any) => void;
-  handleSetAlignment: (alignment: string) => void;
+  handleAddElement: (type: string) => string;
+  handleDeleteElement: (elementId: string | null) => void;
+  handleUpdateElement: (elementId: string | null, property: string, value: any) => void;
+  handleSetAlignment: (elementId: string | null, alignment: string) => void;
 }
 
 export function ElementPanel({
@@ -28,14 +36,43 @@ export function ElementPanel({
   handleUpdateElement,
   handleSetAlignment
 }: ElementPanelProps) {
-  const getSelectedElementDetails = () => {
-    if (!selectedElement || selectedLabelId === null) return null;
-    const label = labels.find(l => l.id === selectedLabelId);
-    if (!label) return null;
-    return label.elements.find((e: LabelElement) => e.id === selectedElement);
+  const [selectedElementData, setSelectedElementData] = useState<LabelElement | null>(null);
+  
+  // Atualizar dados do elemento quando um elemento é selecionado
+  useEffect(() => {
+    console.log("ElementPanel: selectedElement mudou para", selectedElement);
+    console.log("ElementPanel: selectedLabelId é", selectedLabelId);
+    
+    if (selectedElement && selectedLabelId !== null) {
+      const label = labels.find(l => l.id === selectedLabelId);
+      if (label) {
+        const element = label.elements.find((el: any) => el.id === selectedElement);
+        if (element) {
+          console.log("ElementPanel: Elemento encontrado", element);
+          setSelectedElementData(element);
+        } else {
+          console.log("ElementPanel: Elemento não encontrado");
+          setSelectedElementData(null);
+        }
+      } else {
+        console.log("ElementPanel: Etiqueta não encontrada");
+        setSelectedElementData(null);
+      }
+    } else {
+      console.log("ElementPanel: Nenhum elemento selecionado");
+      setSelectedElementData(null);
+    }
+  }, [selectedElement, selectedLabelId, labels]);
+
+  // Função para adicionar um elemento e selecioná-lo automaticamente
+  const addElement = (type: string) => {
+    console.log("ElementPanel: Adicionando elemento do tipo", type);
+    const newElementId = handleAddElement(type);
+    console.log("ElementPanel: Novo elemento criado com ID", newElementId);
   };
 
-  const getElementName = (type: string) => {
+  // Função auxiliar para renderizar o nome legível do tipo de elemento
+  const getElementTypeName = (type: string) => {
     switch (type) {
       case "nome": return "Nome do Produto";
       case "codigo": return "Código de Barras";
@@ -44,135 +81,208 @@ export function ElementPanel({
     }
   };
 
+  // Renderizar painel vazio se nenhuma etiqueta estiver selecionada
+  if (selectedLabelId === null) {
+    return (
+      <div className="space-y-4 p-2">
+        <div className="text-center text-sm text-muted-foreground py-6">
+          Selecione uma etiqueta primeiro
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-2">
-      <h3 className="text-sm font-medium mb-3">Elementos Disponíveis</h3>
-      
-      {elements.map(element => (
-        <Card 
-          key={element.id}
-          className="p-2 cursor-pointer hover:bg-accent transition-colors"
-          onClick={() => handleAddElement(element.id)}
-        >
-          <div className="text-sm font-medium mb-1">{element.name}</div>
-          <div className="text-xs text-muted-foreground">
-            Clique para adicionar à etiqueta
-          </div>
-        </Card>
-      ))}
-      
-      {selectedElement && (
-        <div className="mt-6 border-t pt-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-medium">Propriedades do Elemento</h3>
+    <div className="space-y-4 p-2">
+      <div className="space-y-2">
+        <h3 className="text-sm font-medium">Adicionar Elementos</h3>
+        <div className="grid grid-cols-3 gap-2">
+          {elements.map(element => {
+            // Verificar se o elemento já existe na etiqueta selecionada
+            const labelIndex = labels.findIndex(l => l.id === selectedLabelId);
+            if (labelIndex === -1) return null;
+            
+            const elementExists = labels[labelIndex].elements.some(
+              (el: any) => el.type === element.id
+            );
+            
+            return (
+              <Button
+                key={element.id}
+                variant={elementExists ? "outline" : "default"}
+                size="sm"
+                onClick={() => addElement(element.id)}
+                disabled={elementExists}
+                className="text-xs h-auto py-1.5"
+              >
+                {element.name}
+              </Button>
+            );
+          })}
+        </div>
+      </div>
+
+      {selectedElementData ? (
+        <div className="space-y-4 pt-4 border-t">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-medium">
+              Editar {getElementTypeName(selectedElementData.type)}
+            </h3>
             <Button
-              variant="destructive"
-              size="sm"
-              className="h-6 px-2"
-              onClick={handleDeleteElement}
+              variant="ghost"
+              size="icon"
+              onClick={() => handleDeleteElement(selectedElement)}
+              className="h-8 w-8 text-destructive"
             >
-              <Trash className="h-3 w-3 mr-1" />
-              <span className="text-xs">Remover</span>
+              <Trash2 className="h-4 w-4" />
             </Button>
           </div>
-          
-          {getSelectedElementDetails() && (
-            <div className="space-y-2">
-              <div>
-                <Label className="text-xs" htmlFor="element-type">Tipo</Label>
-                <div className="text-sm font-medium" id="element-type">
-                  {getElementName(getSelectedElementDetails()!.type)}
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label className="text-xs" htmlFor="element-x">Posição X</Label>
-                  <Input
-                    id="element-x"
-                    type="number"
-                    className="h-7 text-sm"
-                    value={getSelectedElementDetails()!.x}
-                    onChange={(e) => handleUpdateElement('x', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs" htmlFor="element-y">Posição Y</Label>
-                  <Input
-                    id="element-y"
-                    type="number"
-                    className="h-7 text-sm"
-                    value={getSelectedElementDetails()!.y}
-                    onChange={(e) => handleUpdateElement('y', e.target.value)}
-                  />
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label className="text-xs" htmlFor="element-width">Largura</Label>
-                  <Input
-                    id="element-width"
-                    type="number"
-                    className="h-7 text-sm"
-                    value={getSelectedElementDetails()!.width}
-                    onChange={(e) => handleUpdateElement('width', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs" htmlFor="element-height">Altura</Label>
-                  <Input
-                    id="element-height"
-                    type="number"
-                    className="h-7 text-sm"
-                    value={getSelectedElementDetails()!.height}
-                    onChange={(e) => handleUpdateElement('height', e.target.value)}
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <Label className="text-xs" htmlFor="element-font-size">Tamanho da Fonte</Label>
+
+          <div className="space-y-3">
+            {/* Posição X e Y */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <Label className="text-xs flex items-center">
+                  <Move className="h-3 w-3 mr-1" /> Posição X (mm)
+                </Label>
                 <Input
-                  id="element-font-size"
                   type="number"
-                  className="h-7 text-sm"
-                  value={getSelectedElementDetails()!.fontSize}
-                  onChange={(e) => handleUpdateElement('fontSize', e.target.value)}
+                  value={selectedElementData.x}
+                  onChange={(e) => {
+                    console.log("ElementPanel: Alterando x para", e.target.value);
+                    handleUpdateElement(
+                      selectedElement,
+                      "x",
+                      Number(e.target.value)
+                    );
+                  }}
+                  className="h-8"
                 />
               </div>
-              
-              <div>
-                <Label className="text-xs mb-1 block">Alinhamento</Label>
-                <div className="flex items-center space-x-1">
-                  <Button
-                    variant={getSelectedElementDetails()!.align === "left" ? "default" : "outline"}
-                    size="sm"
-                    className="h-7 flex-1"
-                    onClick={() => handleSetAlignment("left")}
-                  >
-                    <AlignLeft className="h-3 w-3" />
-                  </Button>
-                  <Button
-                    variant={getSelectedElementDetails()!.align === "center" ? "default" : "outline"}
-                    size="sm"
-                    className="h-7 flex-1"
-                    onClick={() => handleSetAlignment("center")}
-                  >
-                    <AlignCenter className="h-3 w-3" />
-                  </Button>
-                  <Button
-                    variant={getSelectedElementDetails()!.align === "right" ? "default" : "outline"}
-                    size="sm"
-                    className="h-7 flex-1"
-                    onClick={() => handleSetAlignment("right")}
-                  >
-                    <AlignRight className="h-3 w-3" />
-                  </Button>
-                </div>
+              <div className="space-y-1">
+                <Label className="text-xs flex items-center">
+                  <Move className="h-3 w-3 mr-1" /> Posição Y (mm)
+                </Label>
+                <Input
+                  type="number"
+                  value={selectedElementData.y}
+                  onChange={(e) => {
+                    console.log("ElementPanel: Alterando y para", e.target.value);
+                    handleUpdateElement(
+                      selectedElement,
+                      "y",
+                      Number(e.target.value)
+                    );
+                  }}
+                  className="h-8"
+                />
               </div>
             </div>
-          )}
+
+            {/* Largura e Altura */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <Label className="text-xs flex items-center">
+                  <Ruler className="h-3 w-3 mr-1" /> Largura (mm)
+                </Label>
+                <Input
+                  type="number"
+                  value={selectedElementData.width}
+                  onChange={(e) => {
+                    console.log("ElementPanel: Alterando largura para", e.target.value);
+                    handleUpdateElement(
+                      selectedElement,
+                      "width",
+                      Number(e.target.value)
+                    );
+                  }}
+                  className="h-8"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs flex items-center">
+                  <Maximize className="h-3 w-3 mr-1" /> Altura (mm)
+                </Label>
+                <Input
+                  type="number"
+                  value={selectedElementData.height}
+                  onChange={(e) => {
+                    console.log("ElementPanel: Alterando altura para", e.target.value);
+                    handleUpdateElement(
+                      selectedElement,
+                      "height",
+                      Number(e.target.value)
+                    );
+                  }}
+                  className="h-8"
+                />
+              </div>
+            </div>
+
+            {/* Tamanho da Fonte */}
+            <div className="space-y-1">
+              <Label className="text-xs flex items-center">
+                <Type className="h-3 w-3 mr-1" /> Tamanho da Fonte (pt)
+              </Label>
+              <Input
+                type="number"
+                value={selectedElementData.fontSize}
+                onChange={(e) => {
+                  console.log("ElementPanel: Alterando fonte para", e.target.value);
+                  handleUpdateElement(
+                    selectedElement,
+                    "fontSize",
+                    Number(e.target.value)
+                  );
+                }}
+                className="h-8"
+              />
+            </div>
+
+            {/* Alinhamento */}
+            <div className="space-y-1">
+              <Label className="text-xs">Alinhamento</Label>
+              <div className="flex">
+                <Button
+                  type="button"
+                  variant={selectedElementData.align === "left" ? "default" : "outline"}
+                  className="flex-1"
+                  onClick={() => {
+                    console.log("ElementPanel: Alterando alinhamento para left");
+                    handleSetAlignment(selectedElement, "left");
+                  }}
+                >
+                  <AlignLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant={selectedElementData.align === "center" ? "default" : "outline"}
+                  className="flex-1"
+                  onClick={() => {
+                    console.log("ElementPanel: Alterando alinhamento para center");
+                    handleSetAlignment(selectedElement, "center");
+                  }}
+                >
+                  <AlignCenter className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant={selectedElementData.align === "right" ? "default" : "outline"}
+                  className="flex-1"
+                  onClick={() => {
+                    console.log("ElementPanel: Alterando alinhamento para right");
+                    handleSetAlignment(selectedElement, "right");
+                  }}
+                >
+                  <AlignRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="text-center text-sm text-muted-foreground py-4 border-t">
+          Selecione um elemento para editar
         </div>
       )}
     </div>

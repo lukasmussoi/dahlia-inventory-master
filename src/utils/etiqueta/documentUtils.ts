@@ -2,235 +2,84 @@
 /**
  * Utilitários para criação e manipulação de documentos PDF
  */
-import JsPDF from 'jspdf';
-import { toast } from 'sonner';
-import 'jspdf-autotable';
-import { ModeloEtiqueta } from '@/types/etiqueta';
+import { jsPDF } from "jspdf";
+import JsBarcode from "jsbarcode";
 
 /**
  * Cria um documento PDF com as configurações especificadas
- * @param formato Formato da página (A4, Letter, etc)
- * @param orientacao Orientação da página (retrato, paisagem)
- * @param largura Largura da página em mm (para formato personalizado)
- * @param altura Altura da página em mm (para formato personalizado)
- * @returns Documento PDF configurado
+ * 
+ * @param pageFormat Formato da página ("A4", "A5", "Carta", "Personalizado")
+ * @param pageOrientation Orientação da página ("retrato" ou "paisagem")
+ * @param pageWidth Largura da página em mm (usado quando o formato é "Personalizado")
+ * @param pageHeight Altura da página em mm (usado quando o formato é "Personalizado")
+ * @returns Instância do jsPDF configurada
  */
 export const createPdfDocument = (
-  formato: string,
-  orientacao: string,
-  largura?: number,
-  altura?: number
-): JsPDF => {
-  console.log("Criando documento PDF:", { formato, orientacao, largura, altura });
+  pageFormat: string,
+  pageOrientation: string,
+  pageWidth: number,
+  pageHeight: number
+): jsPDF => {
+  console.log(`Criando documento PDF com formato ${pageFormat}, orientação ${pageOrientation}`);
+  console.log(`Dimensões da página: ${pageWidth}mm x ${pageHeight}mm`);
   
-  // Converter orientação para o formato esperado pelo jsPDF
-  const orientation = orientacao === 'paisagem' ? 'landscape' : 'portrait';
+  // Converter a orientação para o formato usado pela biblioteca
+  const orientation = pageOrientation === "paisagem" ? "landscape" : "portrait";
   
-  // Formatos padrão
-  if (formato === 'A4' || formato === 'A5' || formato === 'Letter') {
-    return new JsPDF({
-      orientation,
+  // Determinar dimensões da página de acordo com a orientação
+  let docWidth = pageWidth;
+  let docHeight = pageHeight;
+  
+  // Logging para debug
+  console.log(`Orientação solicitada: ${pageOrientation} (${orientation})`);
+  
+  // No modo paisagem, invertemos largura e altura para o documento
+  if (orientation === 'landscape') {
+    console.log("Aplicando modo paisagem: invertendo dimensões");
+    [docWidth, docHeight] = [docHeight, docWidth];
+  }
+  
+  // Criar o documento usando o formato correto
+  let doc: jsPDF;
+  
+  if (pageFormat === "Personalizado" || pageFormat === "Custom") {
+    console.log(`Criando documento com dimensões personalizadas: ${docWidth}mm x ${docHeight}mm`);
+    doc = new jsPDF({
+      orientation: orientation,
       unit: 'mm',
-      format: formato.toLowerCase()
+      format: [docWidth, docHeight]
     });
-  }
-  
-  // Formato personalizado
-  if (formato === 'Personalizado' || formato === 'Custom') {
-    if (!largura || !altura) {
-      console.error("Dimensões personalizadas não definidas:", { largura, altura });
-      throw new Error("Dimensões de página personalizadas não fornecidas");
-    }
-    
-    console.log(`Criando PDF personalizado com orientação ${orientation}: ${largura}x${altura}mm`);
-    
-    if (orientation === 'landscape') {
-      // Para orientação paisagem, já trocamos largura e altura nos hooks, 
-      // então aqui passamos diretamente
-      return new JsPDF({
-        orientation,
-        unit: 'mm',
-        format: [largura, altura]
-      });
-    } else {
-      return new JsPDF({
-        orientation,
-        unit: 'mm',
-        format: [largura, altura]
-      });
-    }
-  }
-  
-  // Fallback para A4
-  console.warn(`Formato de página desconhecido "${formato}", usando A4 como padrão`);
-  return new JsPDF({
-    orientation,
-    unit: 'mm',
-    format: 'a4'
-  });
-};
-
-/**
- * Calcula as dimensões da página com base no formato e orientação
- */
-export const calcularDimensoesPagina = (
-  formatoPagina: string,
-  orientacao: string,
-  larguraPagina?: number,
-  alturaPagina?: number
-): { pageWidth: number; pageHeight: number } => {
-  let pageWidth: number;
-  let pageHeight: number;
-  
-  // Definir dimensões baseadas no formato padrão
-  if (formatoPagina === 'A4') {
-    pageWidth = 210;
-    pageHeight = 297;
-  } else if (formatoPagina === 'A5') {
-    pageWidth = 148;
-    pageHeight = 210;
-  } else if (formatoPagina === 'Letter') {
-    pageWidth = 216;
-    pageHeight = 279;
-  } else if (formatoPagina === 'Personalizado' || formatoPagina === 'Custom') {
-    // Para formato personalizado, usar dimensões fornecidas
-    if (!larguraPagina || !alturaPagina) {
-      console.error("Dimensões personalizadas não definidas:", { larguraPagina, alturaPagina });
-      throw new Error("Dimensões de página personalizadas não fornecidas");
-    }
-    pageWidth = larguraPagina;
-    pageHeight = alturaPagina;
   } else {
-    // Fallback para A4
-    console.warn(`Formato de página desconhecido "${formatoPagina}", usando A4 como padrão`);
-    pageWidth = 210;
-    pageHeight = 297;
-  }
-  
-  // Ajustar para orientação paisagem se necessário
-  if (orientacao === 'paisagem') {
-    console.log(`Ajustando dimensões para paisagem: ${pageHeight}x${pageWidth}`);
-    [pageWidth, pageHeight] = [pageHeight, pageWidth];
-  }
-  
-  return { pageWidth, pageHeight };
-};
-
-/**
- * Normaliza as margens da página, garantindo valores válidos
- */
-export const normalizarMargens = (
-  margemSuperior?: number,
-  margemInferior?: number,
-  margemEsquerda?: number,
-  margemDireita?: number
-): { superior: number; inferior: number; esquerda: number; direita: number } => {
-  return {
-    superior: Math.max(0, margemSuperior || 0),
-    inferior: Math.max(0, margemInferior || 0),
-    esquerda: Math.max(0, margemEsquerda || 0),
-    direita: Math.max(0, margemDireita || 0)
-  };
-};
-
-/**
- * Normaliza os espaçamentos entre etiquetas, garantindo valores válidos
- */
-export const normalizarEspacamentos = (
-  espacamentoHorizontal?: number,
-  espacamentoVertical?: number
-): { horizontal: number; vertical: number } => {
-  return {
-    horizontal: Math.max(0, espacamentoHorizontal || 0),
-    vertical: Math.max(0, espacamentoVertical || 0)
-  };
-};
-
-/**
- * Calcula quantas etiquetas cabem na página
- */
-export const calcularEtiquetasPorPagina = (
-  larguraPagina: number,
-  alturaPagina: number,
-  larguraEtiqueta: number,
-  alturaEtiqueta: number,
-  margens: { superior: number; inferior: number; esquerda: number; direita: number },
-  espacamentos: { horizontal: number; vertical: number }
-): { etiquetasPorLinha: number; etiquetasPorColuna: number } => {
-  // Calcular a área útil da página
-  const larguraUtil = larguraPagina - margens.esquerda - margens.direita;
-  const alturaUtil = alturaPagina - margens.superior - margens.inferior;
-  
-  // Calcular quantas etiquetas cabem na largura e altura
-  const etiquetasPorLinha = Math.floor(larguraUtil / (larguraEtiqueta + espacamentos.horizontal));
-  const etiquetasPorColuna = Math.floor(alturaUtil / (alturaEtiqueta + espacamentos.vertical));
-  
-  return {
-    etiquetasPorLinha: Math.max(1, etiquetasPorLinha),
-    etiquetasPorColuna: Math.max(1, etiquetasPorColuna)
-  };
-};
-
-/**
- * Adiciona uma etiqueta ao documento PDF
- */
-export const addLabelToPage = (
-  doc: JsPDF,
-  label: any,
-  pageMargins: { top: number; bottom: number; left: number; right: number },
-  labelSpacing: { horizontal: number; vertical: number },
-  getElementText: (type: string, item: any) => string,
-  formatPrice: (price: number) => string,
-  row = 0,
-  column = 0
-): void => {
-  // Calcular a posição da etiqueta na página
-  const x = pageMargins.left + column * (label.width + labelSpacing.horizontal);
-  const y = pageMargins.top + row * (label.height + labelSpacing.vertical);
-  
-  // Desenhar borda da etiqueta (opcional, para depuração)
-  // doc.setDrawColor(200, 200, 200);
-  // doc.rect(x, y, label.width, label.height);
-  
-  // Renderizar elementos
-  label.elements.forEach((element: any) => {
-    // Posicionar elemento em relação à etiqueta
-    const elementX = x + element.x;
-    const elementY = y + element.y;
-    
-    // Configurar fonte
-    doc.setFontSize(element.fontSize);
-    
-    // Obter texto do elemento
-    let text = getElementText(element.type, {});
-    
-    // Ajustar alinhamento
-    let alignmentX = elementX;
-    if (element.align === 'center') {
-      alignmentX = elementX + element.width / 2;
-    } else if (element.align === 'right') {
-      alignmentX = elementX + element.width;
-    }
-    
-    // Render text with alignment
-    doc.text(text, alignmentX, elementY + element.fontSize / 2, {
-      align: element.align as any,
-      baseline: 'middle'
+    // Para formatos padrão como A4, A5, etc.
+    console.log(`Criando documento com formato padrão: ${pageFormat.toLowerCase()}`);
+    doc = new jsPDF({
+      orientation: orientation,
+      unit: 'mm',
+      format: pageFormat.toLowerCase()
     });
-  });
+  }
+  
+  // Verificar as dimensões finais do documento
+  const finalWidth = doc.internal.pageSize.getWidth();
+  const finalHeight = doc.internal.pageSize.getHeight();
+  console.log(`Documento criado com dimensões: ${finalWidth}mm x ${finalHeight}mm`);
+  console.log(`Orientação resultante: ${doc.getPageInfo(1).pageContext.pageOrientation}`);
+  
+  return doc;
 };
 
 /**
  * Gera um código de barras no documento PDF
+ * 
  * @param doc Documento PDF
  * @param code Código a ser gerado
- * @param x Posição X
- * @param y Posição Y
- * @param width Largura
- * @param height Altura
+ * @param x Posição X no documento
+ * @param y Posição Y no documento
+ * @param width Largura do código de barras
+ * @param height Altura do código de barras
  */
 export const generateBarcode = (
-  doc: JsPDF,
+  doc: jsPDF,
   code: string,
   x: number,
   y: number,
@@ -238,28 +87,30 @@ export const generateBarcode = (
   height: number
 ): void => {
   try {
-    // Usar o módulo autotable do jsPDF para gerar o código de barras
-    // @ts-ignore - o módulo está configurado mas o TS não reconhece a propriedade
-    if (doc.barcode) {
-      // @ts-ignore
-      doc.barcode(code, x, y, {
-        width,
-        height,
-        fontSize: 10,
-        textAlign: "center",
-        fontName: "courier",
-        showText: true,
-        codeType: "CODE128"
-      });
-    } else {
-      // Fallback caso o módulo barcode não esteja disponível
-      doc.setFontSize(10);
-      doc.text(`Código: ${code}`, x, y + height / 2, { baseline: 'middle' });
-    }
+    // Criar um canvas temporário para o código de barras
+    console.log(`Gerando código de barras: ${code}`);
+    const canvas = document.createElement('canvas');
+    
+    // Configurar o JsBarcode para gerar o código de barras no canvas
+    JsBarcode(canvas, code, {
+      format: "CODE128",
+      width: 1,
+      height: height - 10, // Altura ajustada para caber o texto
+      displayValue: true,
+      fontSize: 8,
+      margin: 0
+    });
+    
+    // Converter o canvas para uma imagem base64
+    const imgData = canvas.toDataURL('image/png');
+    
+    // Adicionar a imagem ao PDF
+    doc.addImage(imgData, 'PNG', x, y, width, height);
+    
+    console.log(`Código de barras gerado com sucesso na posição (${x}, ${y})`);
   } catch (error) {
     console.error("Erro ao gerar código de barras:", error);
-    // Exibir texto alternativo se falhar
-    doc.setFontSize(10);
-    doc.text(`Código: ${code}`, x, y + height / 2, { baseline: 'middle' });
+    // Em caso de erro, adicionamos apenas o texto do código
+    doc.text(code, x + width / 2, y + height / 2, { align: 'center' });
   }
 };

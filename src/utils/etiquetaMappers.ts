@@ -6,9 +6,16 @@ import type { Json } from "@/integrations/supabase/types";
  * Converte um registro do banco de dados para o formato usado no frontend
  */
 export function mapDatabaseToModel(item: EtiquetaCustomDB): ModeloEtiqueta {
-  let campos: CampoEtiqueta[] = [];
+  console.log("Mapeando item do banco para modelo:", {
+    id: item.id,
+    descricao: item.descricao,
+    formato_pagina: item.formato_pagina,
+    orientacao: item.orientacao,
+    largura: item.largura,
+    altura: item.altura
+  });
   
-  console.log("Mapeando item do banco para modelo:", JSON.stringify(item, null, 2));
+  let campos: CampoEtiqueta[] = [];
   
   // Certifica que campos seja tratado como um array de CampoEtiqueta
   if (item.campos) {
@@ -71,20 +78,15 @@ export function mapDatabaseToModel(item: EtiquetaCustomDB): ModeloEtiqueta {
     formatoPagina = "Personalizado";
   }
 
-  // Garantir que a orientação tenha um valor válido
+  // Garantir que a orientação tenha um valor válido (e faça o log)
   const orientacao = item.orientacao || "retrato";
+  console.log(`Orientação carregada do banco: "${orientacao}"`);
   
-  // Registro completo da conversão do banco para o modelo
-  console.log(`Valores mapeados do BD para o frontend:
-    - formato_pagina: "${item.formato_pagina}" -> formatoPagina: "${formatoPagina}"
-    - orientacao: "${orientacao}"
-    - margens: superior=${item.margem_superior || 10}, inferior=${item.margem_inferior || 10}, esquerda=${item.margem_esquerda || 10}, direita=${item.margem_direita || 10}
-    - espacamento: horizontal=${item.espacamento_horizontal || 0}, vertical=${item.espacamento_vertical || 0}
-    - dimensões da página: ${item.largura_pagina || 'null'}x${item.altura_pagina || 'null'}
-  `);
-
+  // Verificar valores do tamanho da grade
+  console.log(`Tamanho da grade no banco: ${item.tamanho_grade || 'não definido'}`);
+  
   // Construir o modelo usando valores do banco com fallbacks para valores padrão
-  return {
+  const modeloMapeado: ModeloEtiqueta = {
     id: item.id,
     nome: item.descricao,
     descricao: item.descricao,
@@ -103,12 +105,30 @@ export function mapDatabaseToModel(item: EtiquetaCustomDB): ModeloEtiqueta {
     tamanhoGrade: Number(item.tamanho_grade) || 5,
     campos: campos
   };
+  
+  console.log("Modelo mapeado do banco para o frontend:", {
+    id: modeloMapeado.id,
+    nome: modeloMapeado.nome,
+    formatoPagina: modeloMapeado.formatoPagina,
+    orientacao: modeloMapeado.orientacao,
+    tamanhoGrade: modeloMapeado.tamanhoGrade,
+    campos: modeloMapeado.campos.length
+  });
+  
+  return modeloMapeado;
 }
 
 /**
  * Converte um modelo do frontend para o formato usado no banco de dados
  */
 export function mapModelToDatabase(modelo: ModeloEtiqueta): Partial<EtiquetaCustomDB> {
+  console.log("Mapeando modelo para o banco:", {
+    nome: modelo.nome,
+    formatoPagina: modelo.formatoPagina,
+    orientacao: modelo.orientacao,
+    tamanhoGrade: modelo.tamanhoGrade
+  });
+  
   // Convertendo 'Personalizado' para 'Custom' para o banco
   let formatoPagina = modelo.formatoPagina;
   if (formatoPagina === "Personalizado") {
@@ -165,7 +185,13 @@ export function mapModelToDatabase(modelo: ModeloEtiqueta): Partial<EtiquetaCust
     ] as Json;
   }
   
-  console.log("Modelo mapeado para o banco:", JSON.stringify(dbModel, null, 2));
+  console.log("Modelo DB pronto para salvar:", {
+    descricao: dbModel.descricao,
+    formato_pagina: dbModel.formato_pagina,
+    orientacao: dbModel.orientacao,
+    tamanho_grade: dbModel.tamanho_grade,
+    campCount: Array.isArray(dbModel.campos) ? dbModel.campos.length : 'N/A'
+  });
   
   return dbModel;
 }
