@@ -15,7 +15,8 @@
 /* Estilo para elementos selecionados */
 .selected-element {
   border-color: hsl(var(--primary)) !important;
-  box-shadow: 0 0 0 1px hsl(var(--primary));
+  box-shadow: 0 0 0 2px hsl(var(--primary));
+  z-index: 10 !important;
 }
 
 /* Animações suaves */
@@ -110,30 +111,69 @@
   background-color: rgba(239, 68, 68, 0.05);
 }
 
-/* Estilo para alertas de erro na pré-visualização */
-.pdf-error-alert {
+/* Estilo para indicação visual de elementos arrastáveis */
+.campo-draggable {
+  cursor: move;
+}
+
+.campo-draggable:hover {
+  outline: 1px dashed hsl(var(--primary));
+}
+
+/* Melhoria visual para elementos de etiqueta */
+.campo-etiqueta {
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+/* Estilos para campos interativos */
+.input-compact {
+  width: 60px;
+  text-align: center;
+}
+
+/* Melhorias visuais para controles de edição */
+.controls-floating {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 90%;
-  max-width: 500px;
-  z-index: 100;
-  animation: fadeIn 0.3s ease-in-out;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-/* Estilos para o toggle de ajuste automático */
-.auto-adjust-toggle {
+  top: 4px;
+  right: 4px;
   display: flex;
-  align-items: center;
-  padding: 6px 12px;
-  border-radius: 4px;
-  font-size: 0.875rem;
-  background-color: rgba(0, 0, 0, 0.05);
-  margin-bottom: 8px;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.etiqueta-grid:hover .controls-floating {
+  opacity: 1;
+}
+
+/* Estilos para layout da página */
+.page-layout {
+  position: relative;
+  margin: 0 auto;
+  background-color: white;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.page-layout .area-util {
+  position: absolute;
+  border: 1px dashed rgba(59, 130, 246, 0.5);
+  background-color: rgba(59, 130, 246, 0.03);
+}
+
+.page-layout .etiqueta-placeholder {
+  position: absolute;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background-color: rgba(255, 255, 255, 0.8);
+}
+
+/* Estilos para tabs responsivos */
+@media (max-width: 640px) {
+  .tabs-container {
+    flex-direction: column;
+  }
+  
+  .tab-panel {
+    padding: 0.5rem;
+  }
 }

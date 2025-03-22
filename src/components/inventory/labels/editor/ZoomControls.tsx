@@ -1,61 +1,87 @@
 
 import { Button } from "@/components/ui/button";
-import { ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { ZoomIn, ZoomOut, RotateCw } from "lucide-react";
+import { 
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface ZoomControlsProps {
+  zoomLevel: number;
   onZoomIn: () => void;
   onZoomOut: () => void;
-  onReset: () => void;
-  zoomLevel: number;
-  className?: string;
+  onResetZoom: () => void;
+  compact?: boolean;
 }
 
-export function ZoomControls({ onZoomIn, onZoomOut, onReset, zoomLevel, className }: ZoomControlsProps) {
+export default function ZoomControls({ 
+  zoomLevel, 
+  onZoomIn, 
+  onZoomOut, 
+  onResetZoom,
+  compact = false
+}: ZoomControlsProps) {
+  const percentage = Math.round(zoomLevel * 100);
+  
   return (
-    <div className={cn("flex items-center gap-2 p-2 bg-white/80 backdrop-blur-sm rounded-lg shadow-sm", className)}>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={(e) => {
-          e.preventDefault(); // Prevent form submission
-          onZoomOut();
-        }}
-        title="Diminuir zoom (Atalho: -)"
-        className="h-8 w-8 p-0"
-      >
-        <ZoomOut className="h-4 w-4" />
-      </Button>
+    <div className={`flex items-center ${compact ? 'gap-1' : 'gap-2'}`}>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button 
+              variant="ghost" 
+              size={compact ? "icon" : "sm"} 
+              onClick={onZoomOut}
+              className={compact ? "h-6 w-6" : ""}
+            >
+              <ZoomOut className={compact ? "h-3 w-3" : "h-4 w-4"} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Diminuir (-)</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
       
-      <div className="text-sm font-medium min-w-[4rem] text-center">
-        {Math.round(zoomLevel * 100)}%
-      </div>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button 
+              variant="ghost" 
+              size={compact ? "icon" : "sm"} 
+              onClick={onResetZoom}
+              className={compact ? "h-6 w-6" : ""}
+            >
+              <span className={compact ? "text-xs" : "text-sm"}>
+                {percentage}%
+              </span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Resetar zoom (0)</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
       
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={(e) => {
-          e.preventDefault(); // Prevent form submission
-          onZoomIn();
-        }}
-        title="Aumentar zoom (Atalho: +)"
-        className="h-8 w-8 p-0"
-      >
-        <ZoomIn className="h-4 w-4" />
-      </Button>
-      
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={(e) => {
-          e.preventDefault(); // Prevent form submission
-          onReset();
-        }}
-        title="Resetar zoom (Atalho: 0)"
-        className="h-8 w-8 p-0"
-      >
-        <Maximize2 className="h-4 w-4" />
-      </Button>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button 
+              variant="ghost" 
+              size={compact ? "icon" : "sm"} 
+              onClick={onZoomIn}
+              className={compact ? "h-6 w-6" : ""}
+            >
+              <ZoomIn className={compact ? "h-3 w-3" : "h-4 w-4"} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Aumentar (+)</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     </div>
   );
 }
