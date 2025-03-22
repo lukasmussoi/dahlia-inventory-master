@@ -15,8 +15,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { Switch } from "@/components/ui/switch";
-import { AlertCircle, WrenchIcon, ArrowLeft, ArrowRight, Layout, File, LayoutGrid } from "lucide-react";
+import { AlertCircle, ArrowLeft, ArrowRight, Layout, File, LayoutGrid } from "lucide-react";
 import { useState } from "react";
 
 type EtiquetaCustomFormProps = {
@@ -30,10 +29,7 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
     form, 
     isLoading, 
     onSubmit, 
-    pageAreaWarning, 
-    corrigirDimensoesAutomaticamente,
-    ajustarDimensoesAutomaticamente,
-    toggleAjusteAutomatico 
+    pageAreaWarning
   } = useEtiquetaCustomForm(modelo, onClose, onSuccess);
   
   const [useNewEditor, setUseNewEditor] = useState(true);
@@ -74,8 +70,6 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
         onClose={onClose}
         onSave={handleSave}
         initialData={modelo}
-        autoAdjustDimensions={ajustarDimensoesAutomaticamente}
-        onToggleAutoAdjust={toggleAjusteAutomatico}
       />
     );
   }
@@ -196,44 +190,12 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
                 )}
               />
               
-              <div className="flex items-center space-x-2 mb-4">
-                <Switch 
-                  id="ajuste-automatico" 
-                  checked={ajustarDimensoesAutomaticamente} 
-                  onCheckedChange={toggleAjusteAutomatico} 
-                />
-                <FormLabel htmlFor="ajuste-automatico" className="cursor-pointer">
-                  Ajustar dimensões automaticamente
-                </FormLabel>
-              </div>
-              
               {pageAreaWarning && (
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
                   <AlertTitle>Problema nas dimensões</AlertTitle>
                   <AlertDescription className="flex flex-col space-y-2">
                     <span>{pageAreaWarning}</span>
-                    <div className="flex gap-2 mt-2">
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={corrigirDimensoesAutomaticamente}
-                        className="w-fit"
-                      >
-                        <WrenchIcon className="h-4 w-4 mr-2" />
-                        Corrigir automaticamente
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        onClick={toggleAjusteAutomatico}
-                        className="w-fit"
-                      >
-                        {ajustarDimensoesAutomaticamente ? "Desativar ajuste automático" : "Ativar ajuste automático"}
-                      </Button>
-                    </div>
                   </AlertDescription>
                 </Alert>
               )}
@@ -351,7 +313,7 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
           </Button>
           <Button 
             type="submit"
-            disabled={isLoading || (!!pageAreaWarning && !ajustarDimensoesAutomaticamente)}
+            disabled={isLoading || !!pageAreaWarning}
             className="flex items-center gap-2 submit-button"
           >
             {isLoading ? "Salvando..." : (modelo?.id ? "Atualizar" : "Criar")}

@@ -20,25 +20,25 @@ const campoEtiquetaSchema = z.object({
 const formSchema = z.object({
   nome: z.string().min(3, "Nome deve ter pelo menos 3 caracteres"),
   descricao: z.string().min(3, "Descrição deve ter pelo menos 3 caracteres"),
-  largura: z.number().min(10, "Largura mínima de 10mm").max(210, "Largura máxima de 210mm"),
-  altura: z.number().min(5, "Altura mínima de 5mm").max(297, "Altura máxima de 297mm"),
+  largura: z.number().min(1, "Largura mínima de 1mm").max(300, "Largura máxima de 300mm"),
+  altura: z.number().min(1, "Altura mínima de 1mm").max(300, "Altura máxima de 300mm"),
   formatoPagina: z.string(),
   orientacao: z.enum(['retrato', 'paisagem']),
-  margemSuperior: z.number().min(0, "Margem superior deve ser positiva").max(50, "Margem superior muito grande"),
-  margemInferior: z.number().min(0, "Margem inferior deve ser positiva").max(50, "Margem inferior muito grande"),
-  margemEsquerda: z.number().min(0, "Margem esquerda deve ser positiva").max(50, "Margem esquerda muito grande"),
-  margemDireita: z.number().min(0, "Margem direita deve ser positiva").max(50, "Margem direita muito grande"),
-  espacamentoHorizontal: z.number().min(0, "Espaçamento horizontal deve ser positivo").max(20, "Espaçamento horizontal muito grande"),
-  espacamentoVertical: z.number().min(0, "Espaçamento vertical deve ser positivo").max(20, "Espaçamento vertical muito grande"),
-  larguraPagina: z.number().optional().refine(value => !value || value >= 50, {
-    message: "Largura da página deve ser pelo menos 50mm"
-  }).refine(value => !value || value <= 300, {
-    message: "Largura da página não deve exceder 300mm"
+  margemSuperior: z.number().min(0, "Margem superior deve ser positiva").max(200, "Margem superior muito grande"),
+  margemInferior: z.number().min(0, "Margem inferior deve ser positiva").max(200, "Margem inferior muito grande"),
+  margemEsquerda: z.number().min(0, "Margem esquerda deve ser positiva").max(200, "Margem esquerda muito grande"),
+  margemDireita: z.number().min(0, "Margem direita deve ser positiva").max(200, "Margem direita muito grande"),
+  espacamentoHorizontal: z.number().min(0, "Espaçamento horizontal deve ser positivo").max(200, "Espaçamento horizontal muito grande"),
+  espacamentoVertical: z.number().min(0, "Espaçamento vertical deve ser positivo").max(200, "Espaçamento vertical muito grande"),
+  larguraPagina: z.number().optional().refine(value => !value || value >= 10, {
+    message: "Largura da página deve ser pelo menos 10mm"
+  }).refine(value => !value || value <= 1000, {
+    message: "Largura da página não deve exceder 1000mm"
   }),
-  alturaPagina: z.number().optional().refine(value => !value || value >= 50, {
-    message: "Altura da página deve ser pelo menos 50mm"
-  }).refine(value => !value || value <= 420, {
-    message: "Altura da página não deve exceder 420mm"
+  alturaPagina: z.number().optional().refine(value => !value || value >= 10, {
+    message: "Altura da página deve ser pelo menos 10mm"
+  }).refine(value => !value || value <= 1000, {
+    message: "Altura da página não deve exceder 1000mm"
   }),
   campos: z.array(campoEtiquetaSchema),
 }).refine((data) => {
@@ -62,7 +62,6 @@ const defaultCampos: CampoEtiqueta[] = [
 export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => void, onSuccess?: () => void) {
   const [isLoading, setIsLoading] = useState(false);
   const [pageAreaWarning, setPageAreaWarning] = useState<string | null>(null);
-  const [ajustarDimensoesAutomaticamente, setAjustarDimensoesAutomaticamente] = useState(false);
 
   const modeloCampos = modelo?.campos 
     ? modelo.campos.map(campo => ({
@@ -103,10 +102,10 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
       altura: modelo?.altura || 30,
       formatoPagina: modelo?.formatoPagina || "A4",
       orientacao: orientacaoSegura,
-      margemSuperior: modelo?.margemSuperior || 5,  // CORREÇÃO: Reduzimos as margens padrão para 5mm
-      margemInferior: modelo?.margemInferior || 5,
-      margemEsquerda: modelo?.margemEsquerda || 5,
-      margemDireita: modelo?.margemDireita || 5,
+      margemSuperior: modelo?.margemSuperior !== undefined ? modelo.margemSuperior : 0,
+      margemInferior: modelo?.margemInferior !== undefined ? modelo.margemInferior : 0,
+      margemEsquerda: modelo?.margemEsquerda !== undefined ? modelo.margemEsquerda : 0,
+      margemDireita: modelo?.margemDireita !== undefined ? modelo.margemDireita : 0,
       espacamentoHorizontal: modelo?.espacamentoHorizontal || 0,
       espacamentoVertical: modelo?.espacamentoVertical || 0,
       larguraPagina: modelo?.larguraPagina || 210,
@@ -203,88 +202,12 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
     }
   };
 
-  const corrigirDimensoesAutomaticamente = () => {
-    const values = form.getValues();
-    
-    let larguraPagina: number;
-    let alturaPagina: number;
-    
-    if (values.formatoPagina === "Personalizado") {
-      larguraPagina = values.larguraPagina || 210;
-      alturaPagina = values.alturaPagina || 297;
-    } else {
-      // Dimensões padrão para formatos conhecidos
-      switch (values.formatoPagina) {
-        case "A4":
-          larguraPagina = 210;
-          alturaPagina = 297;
-          break;
-        case "Letter":
-          larguraPagina = 216;
-          alturaPagina = 279;
-          break;
-        case "Legal":
-          larguraPagina = 216;
-          alturaPagina = 356;
-          break;
-        default:
-          larguraPagina = 210;
-          alturaPagina = 297;
-      }
-    }
-    
-    // Considerar a orientação da página
-    let larguraEfetiva = larguraPagina;
-    let alturaEfetiva = alturaPagina;
-    
-    if (values.orientacao === "paisagem") {
-      larguraEfetiva = alturaPagina;
-      alturaEfetiva = larguraPagina;
-    }
-    
-    // Calcular área útil
-    const areaUtilLargura = larguraEfetiva - values.margemEsquerda - values.margemDireita;
-    const areaUtilAltura = alturaEfetiva - values.margemSuperior - values.margemInferior;
-    
-    // Ajustar dimensões da etiqueta para caber na área útil
-    if (values.largura > areaUtilLargura) {
-      const novaLargura = Math.floor(areaUtilLargura * 0.95); // 95% da área útil
-      form.setValue("largura", novaLargura);
-    }
-    
-    if (values.altura > areaUtilAltura) {
-      const novaAltura = Math.floor(areaUtilAltura * 0.95); // 95% da área útil
-      form.setValue("altura", novaAltura);
-    }
-    
-    // Revalidar após ajustes
-    validarDimensoes();
-    
-    toast.success("Dimensões ajustadas automaticamente.");
-  };
-
-  const toggleAjusteAutomatico = () => {
-    setAjustarDimensoesAutomaticamente(prev => !prev);
-    toast.info(ajustarDimensoesAutomaticamente ? 
-      "Ajuste automático de dimensões desativado" : 
-      "Ajuste automático de dimensões ativado");
-  };
-
   async function onSubmit(data: FormValues) {
     try {
       validarDimensoes();
-      if (pageAreaWarning && !ajustarDimensoesAutomaticamente) {
-        toast.error("Há problemas com as dimensões da etiqueta. Por favor, corrija antes de salvar ou ative o ajuste automático.");
+      if (pageAreaWarning) {
+        toast.error("Há problemas com as dimensões da etiqueta. Por favor, corrija antes de salvar.");
         return;
-      }
-      
-      // Se o ajuste automático estiver ativado e houver avisos, corrigir automaticamente
-      if (pageAreaWarning && ajustarDimensoesAutomaticamente) {
-        corrigirDimensoesAutomaticamente();
-        if (pageAreaWarning) {
-          // Se ainda houver avisos após correção, não prosseguir
-          return;
-        }
       }
       
       setIsLoading(true);
@@ -348,9 +271,6 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
     form,
     isLoading,
     onSubmit,
-    pageAreaWarning,
-    corrigirDimensoesAutomaticamente,
-    ajustarDimensoesAutomaticamente,
-    toggleAjusteAutomatico
+    pageAreaWarning
   };
 }

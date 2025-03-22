@@ -65,7 +65,8 @@ export function getDimensoesPagina(
 }
 
 /**
- * Valida se uma etiqueta cabe dentro de uma página com as margens especificadas
+ * Valida se uma etiqueta cabe dentro de uma página com as margens especificadas.
+ * Leva em consideração a orientação da página para calcular corretamente as dimensões efetivas.
  * @param etiquetaLargura Largura da etiqueta em mm
  * @param etiquetaAltura Altura da etiqueta em mm
  * @param pagina Dimensões e configurações da página
@@ -83,7 +84,7 @@ export function validarDimensoesEtiqueta(
     margemDireita: number,
     orientacao?: 'retrato' | 'paisagem'
   }
-): { valido: boolean, mensagem?: string } {
+): { valido: boolean, mensagem?: string, areaUtil?: { largura: number, altura: number } } {
   // Log detalhado para depuração
   console.log("Validando dimensões:", {
     etiqueta: { largura: etiquetaLargura, altura: etiquetaAltura },
@@ -94,13 +95,10 @@ export function validarDimensoesEtiqueta(
   let larguraEfetiva = pagina.largura;
   let alturaEfetiva = pagina.altura;
   
-  // CORREÇÃO: Garantir que estamos usando as dimensões corretas para a orientação
+  // Para paisagem, a largura da página se torna a altura original e vice-versa
   if (pagina.orientacao === 'paisagem') {
-    // Para paisagem, a largura da página se torna a altura e vice-versa
-    // Esta é a representação real para cálculos de área útil
-    const temp = larguraEfetiva;
-    larguraEfetiva = alturaEfetiva;
-    alturaEfetiva = temp;
+    larguraEfetiva = pagina.altura;
+    alturaEfetiva = pagina.largura;
   }
   
   // Calcular área útil da página após aplicar margens
@@ -125,14 +123,16 @@ export function validarDimensoesEtiqueta(
   if (areaUtilLargura <= 0) {
     return {
       valido: false,
-      mensagem: `As margens laterais (${pagina.margemEsquerda}mm + ${pagina.margemDireita}mm) excedem a largura da página (${larguraEfetiva}mm).`
+      mensagem: `As margens laterais (${pagina.margemEsquerda}mm + ${pagina.margemDireita}mm) excedem a largura da página (${larguraEfetiva}mm).`,
+      areaUtil: { largura: 0, altura: 0 }
     };
   }
 
   if (areaUtilAltura <= 0) {
     return {
       valido: false,
-      mensagem: `As margens verticais (${pagina.margemSuperior}mm + ${pagina.margemInferior}mm) excedem a altura da página (${alturaEfetiva}mm).`
+      mensagem: `As margens verticais (${pagina.margemSuperior}mm + ${pagina.margemInferior}mm) excedem a altura da página (${alturaEfetiva}mm).`,
+      areaUtil: { largura: 0, altura: 0 }
     };
   }
 
@@ -140,16 +140,21 @@ export function validarDimensoesEtiqueta(
   if (etiquetaLargura > areaUtilLargura) {
     return {
       valido: false,
-      mensagem: `A largura da etiqueta (${etiquetaLargura}mm) excede a área útil (${areaUtilLargura}mm).`
+      mensagem: `A largura da etiqueta (${etiquetaLargura}mm) excede a área útil (${areaUtilLargura}mm).`,
+      areaUtil: { largura: areaUtilLargura, altura: areaUtilAltura }
     };
   }
 
   if (etiquetaAltura > areaUtilAltura) {
     return {
       valido: false,
-      mensagem: `A altura da etiqueta (${etiquetaAltura}mm) excede a área útil (${areaUtilAltura}mm).`
+      mensagem: `A altura da etiqueta (${etiquetaAltura}mm) excede a área útil (${areaUtilAltura}mm).`,
+      areaUtil: { largura: areaUtilLargura, altura: areaUtilAltura }
     };
   }
 
-  return { valido: true };
+  return { 
+    valido: true,
+    areaUtil: { largura: areaUtilLargura, altura: areaUtilAltura }
+  };
 }
