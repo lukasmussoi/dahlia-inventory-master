@@ -175,7 +175,7 @@ export function useEtiquetaCreator(initialData?: any, autoAdjustDimensions = fal
       // Chamar a função onSave e verificar se houve sucesso
       if (typeof onSave === 'function') {
         toast.info("Salvando modelo de etiqueta...");
-        // Correção: Chamar onSave sem atribuir o retorno
+        // A correção está aqui: apenas chamar onSave sem tentar usar seu retorno
         onSave(modelData);
       } else {
         console.error("A função onSave não foi fornecida ao componente EtiquetaCreator");
