@@ -26,7 +26,6 @@ export function PrintLabelDialog({
   onClose,
   item
 }: PrintLabelDialogProps) {
-  const [labelModel, setLabelModel] = useState("Padrão");
   const [copies, setCopies] = useState("1");
   const [startRow, setStartRow] = useState("1");
   const [startColumn, setStartColumn] = useState("1");
@@ -47,6 +46,11 @@ export function PrintLabelDialog({
         const modelos = await EtiquetaCustomModel.getAll();
         console.log("Modelos carregados:", modelos);
         setModelosCustom(modelos);
+        
+        // Se houver modelos e nenhum modelo estiver selecionado, seleciona o primeiro
+        if (modelos.length > 0 && !selectedModeloId) {
+          setSelectedModeloId(modelos[0].id);
+        }
       } catch (error) {
         console.error("Erro ao carregar modelos:", error);
         toast.error("Erro ao carregar modelos de etiquetas");
@@ -55,7 +59,7 @@ export function PrintLabelDialog({
     if (isOpen) {
       loadModelosCustom();
     }
-  }, [isOpen]);
+  }, [isOpen, selectedModeloId]);
 
   // Reset form when dialog opens
   useEffect(() => {
@@ -64,10 +68,9 @@ export function PrintLabelDialog({
       setStartRow("1");
       setStartColumn("1");
       setMultiplyByStock(false);
-      setSelectedModeloId(undefined);
-      setSelectedModelo(null);
       setModeloWarning(null);
       setEtiquetaParaDuplicar(null);
+      // Não resetamos selectedModeloId para manter a seleção anterior
     }
   }, [isOpen]);
 
@@ -83,6 +86,13 @@ export function PrintLabelDialog({
           if (modelo) {
             setSelectedModelo(modelo);
             console.log("Campos do modelo carregado:", modelo.campos);
+            console.log("Formato da página:", modelo.formatoPagina);
+            console.log("Dimensões:", {
+              larguraPagina: modelo.larguraPagina,
+              alturaPagina: modelo.alturaPagina,
+              larguraEtiqueta: modelo.largura,
+              alturaEtiqueta: modelo.altura
+            });
 
             // Verificar se as dimensões são válidas
             if (modelo.formatoPagina === "Personalizado") {
@@ -123,6 +133,12 @@ export function PrintLabelDialog({
       toast.error("Nenhum item selecionado para impressão");
       return false;
     }
+    
+    if (!selectedModeloId) {
+      toast.error("Selecione um modelo de etiqueta");
+      return false;
+    }
+    
     const copiesNum = parseInt(copies);
     const startRowNum = parseInt(startRow);
     const startColNum = parseInt(startColumn);
@@ -153,6 +169,11 @@ export function PrintLabelDialog({
       console.log("Iniciando impressão com modelo:", selectedModeloId);
       console.log("Detalhes do modelo para impressão:", selectedModelo);
       console.log("Item para impressão:", item);
+
+      // Validar que um modelo foi selecionado
+      if (!selectedModeloId) {
+        throw new Error("Nenhum modelo de etiqueta selecionado");
+      }
 
       // Usar a interface correta para o generatePdfLabel
       const pdfUrl = await generatePdfLabel({
@@ -254,13 +275,21 @@ export function PrintLabelDialog({
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="label-model">Modelo da etiqueta</Label>
-              <Select value={labelModel} disabled>
+              <Label htmlFor="label-model">Modelo de Etiqueta</Label>
+              <Select value={selectedModeloId} onValueChange={setSelectedModeloId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione o modelo" />
+                  <SelectValue placeholder="Selecione um modelo" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Padrão">Padrão</SelectItem>
+                  {modelosCustom.length > 0 ? modelosCustom.map(modelo => (
+                    <SelectItem key={modelo.id} value={modelo.id || ""}>
+                      {modelo.nome}
+                    </SelectItem>
+                  )) : (
+                    <SelectItem value="sem-modelos" disabled>
+                      Nenhum modelo disponível
+                    </SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -286,7 +315,7 @@ export function PrintLabelDialog({
         </div>
         <div className="space-y-4">
           <div className="flex justify-between items-center">
-            <h3 className="text-sm font-medium">Modelo de Etiqueta</h3>
+            <h3 className="text-sm font-medium">Gerenciar Modelos</h3>
             <div className="flex gap-2">
               <Button 
                 variant="outline" 
@@ -302,23 +331,6 @@ export function PrintLabelDialog({
                 <Plus className="h-4 w-4" />
                 Novo Modelo
               </Button>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="modelos-custom">Modelos personalizados</Label>
-              <Select value={selectedModeloId} onValueChange={setSelectedModeloId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o modelo" />
-                </SelectTrigger>
-                <SelectContent>
-                  {modelosCustom.length > 0 ? modelosCustom.map(modelo => <SelectItem key={modelo.id} value={modelo.id || ""}>
-                        {modelo.nome}
-                      </SelectItem>) : <SelectItem value="sem-modelos" disabled>
-                      Nenhum modelo disponível
-                    </SelectItem>}
-                </SelectContent>
-              </Select>
             </div>
           </div>
           
@@ -345,7 +357,7 @@ export function PrintLabelDialog({
           <Button variant="outline" onClick={onClose} disabled={isProcessing}>
             Cancelar
           </Button>
-          <Button onClick={handlePrint} disabled={isProcessing}>
+          <Button onClick={handlePrint} disabled={isProcessing || !selectedModeloId}>
             {isProcessing ? "Processando..." : "Imprimir"}
           </Button>
         </div>

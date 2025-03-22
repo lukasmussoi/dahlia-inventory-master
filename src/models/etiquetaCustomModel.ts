@@ -112,7 +112,14 @@ export class EtiquetaCustomModel {
       const modeloDb = mapModelToDatabase(modelo);
       
       // Garantir que NÃO enviemos campos que possam conflitar com triggers do banco
-      const camposParaExcluir = ['atualizado_em', 'updated_at', 'criado_em', 'created_at'];
+      const camposParaExcluir = [
+        'atualizado_em', 
+        'updated_at', 
+        'criado_em', 
+        'created_at', 
+        'criado_por'
+      ];
+      
       camposParaExcluir.forEach(campo => {
         if ((modeloDb as any)[campo] !== undefined) {
           delete (modeloDb as any)[campo];

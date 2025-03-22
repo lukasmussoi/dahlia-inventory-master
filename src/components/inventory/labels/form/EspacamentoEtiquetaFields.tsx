@@ -41,7 +41,7 @@ export function EspacamentoEtiquetaFields({ form }: EspacamentoEtiquetaFieldsPro
               <FormControl>
                 <Input 
                   type="number" 
-                  value={field.value === undefined ? '' : field.value}
+                  value={field.value === undefined || isNaN(field.value) ? '' : field.value}
                   onChange={e => {
                     // Garantir que o valor seja sempre um número, mesmo se o campo estiver vazio
                     const value = e.target.value === "" ? 0 : Number(e.target.value);
@@ -56,6 +56,8 @@ export function EspacamentoEtiquetaFields({ form }: EspacamentoEtiquetaFieldsPro
                   }}
                   min={0}
                   max={200}
+                  step={0.5}
+                  className="appearance-none"
                 />
               </FormControl>
               <FormMessage />
@@ -72,7 +74,7 @@ export function EspacamentoEtiquetaFields({ form }: EspacamentoEtiquetaFieldsPro
               <FormControl>
                 <Input 
                   type="number" 
-                  value={field.value === undefined ? '' : field.value}
+                  value={field.value === undefined || isNaN(field.value) ? '' : field.value}
                   onChange={e => {
                     // Garantir que o valor seja sempre um número, mesmo se o campo estiver vazio
                     const value = e.target.value === "" ? 0 : Number(e.target.value);
@@ -87,6 +89,8 @@ export function EspacamentoEtiquetaFields({ form }: EspacamentoEtiquetaFieldsPro
                   }}
                   min={0}
                   max={200}
+                  step={0.5}
+                  className="appearance-none"
                 />
               </FormControl>
               <FormMessage />

@@ -80,6 +80,7 @@ export function mapDatabaseToModel(item: EtiquetaCustomDB): ModeloEtiqueta {
     - dimensões da página: ${item.largura_pagina || 'null'}x${item.altura_pagina || 'null'}
   `);
 
+  // Construir o modelo usando valores do banco com fallbacks para valores padrão
   return {
     id: item.id,
     nome: item.descricao,
@@ -92,8 +93,8 @@ export function mapDatabaseToModel(item: EtiquetaCustomDB): ModeloEtiqueta {
     margemInferior: Number(item.margem_inferior) || 10,
     margemEsquerda: Number(item.margem_esquerda) || 10,
     margemDireita: Number(item.margem_direita) || 10,
-    espacamentoHorizontal: Number(item.espacamento_horizontal) || 0,
-    espacamentoVertical: Number(item.espacamento_vertical) || 0,
+    espacamentoHorizontal: Number(item.espacamento_horizontal ?? 0), // Use null coalescing para manter zero como valor válido
+    espacamentoVertical: Number(item.espacamento_vertical ?? 0), // Use null coalescing para manter zero como valor válido
     larguraPagina: item.largura_pagina !== null ? Number(item.largura_pagina) : undefined,
     alturaPagina: item.altura_pagina !== null ? Number(item.altura_pagina) : undefined,
     campos: campos,
@@ -144,20 +145,31 @@ export function mapModelToDatabase(modelo: ModeloEtiqueta) {
     alturaPagina = Number(modelo.alturaPagina) || 297;
   } else {
     // Para formatos padrão, ainda salvar as dimensões no banco
-    // Isso garante que mesmo que o formato seja A4, Letter, etc, as dimensões sejam preservadas
     if (modelo.larguraPagina !== undefined && modelo.alturaPagina !== undefined) {
       larguraPagina = Number(modelo.larguraPagina);
       alturaPagina = Number(modelo.alturaPagina);
+    } else {
+      // Para formatos padrão, usar dimensões padrão
+      if (modelo.formatoPagina === "A4") {
+        larguraPagina = modelo.orientacao === "paisagem" ? 297 : 210;
+        alturaPagina = modelo.orientacao === "paisagem" ? 210 : 297;
+      } else if (modelo.formatoPagina === "A5") {
+        larguraPagina = modelo.orientacao === "paisagem" ? 210 : 148;
+        alturaPagina = modelo.orientacao === "paisagem" ? 148 : 210;
+      } else if (modelo.formatoPagina === "Carta") {
+        larguraPagina = modelo.orientacao === "paisagem" ? 279 : 216;
+        alturaPagina = modelo.orientacao === "paisagem" ? 216 : 279;
+      }
     }
   }
 
   // Garantir que todos os valores numéricos sejam números válidos
-  const margemSuperior = Number(modelo.margemSuperior) || 10;
-  const margemInferior = Number(modelo.margemInferior) || 10;
-  const margemEsquerda = Number(modelo.margemEsquerda) || 10;
-  const margemDireita = Number(modelo.margemDireita) || 10;
-  const espacamentoHorizontal = Number(modelo.espacamentoHorizontal) || 0;
-  const espacamentoVertical = Number(modelo.espacamentoVertical) || 0;
+  const margemSuperior = Number(modelo.margemSuperior ?? 10);
+  const margemInferior = Number(modelo.margemInferior ?? 10);
+  const margemEsquerda = Number(modelo.margemEsquerda ?? 10);
+  const margemDireita = Number(modelo.margemDireita ?? 10);
+  const espacamentoHorizontal = Number(modelo.espacamentoHorizontal ?? 0);
+  const espacamentoVertical = Number(modelo.espacamentoVertical ?? 0);
 
   // Logging para depuração
   console.log(`Valores mapeados do frontend para o BD:
