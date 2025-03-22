@@ -21,46 +21,49 @@ type EspacamentoEtiquetaFieldsProps = {
 
 export function EspacamentoEtiquetaFields({ form }: EspacamentoEtiquetaFieldsProps) {
   return (
-    <div className="grid grid-cols-2 gap-4">
-      <FormField
-        control={form.control}
-        name="espacamentoHorizontal"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Espaçamento Horizontal (mm)</FormLabel>
-            <FormControl>
-              <Input 
-                type="number" 
-                {...field}
-                onChange={e => field.onChange(Number(e.target.value))}
-                min={0}
-                max={200}
-              />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+    <div>
+      <h3 className="text-sm font-medium mb-3">Espaçamento entre Etiquetas (mm)</h3>
+      <div className="grid grid-cols-2 gap-4">
+        <FormField
+          control={form.control}
+          name="espacamentoHorizontal"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Espaçamento Horizontal</FormLabel>
+              <FormControl>
+                <Input 
+                  type="number" 
+                  {...field}
+                  onChange={e => field.onChange(Number(e.target.value))}
+                  min={0}
+                  max={200}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-      <FormField
-        control={form.control}
-        name="espacamentoVertical"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Espaçamento Vertical (mm)</FormLabel>
-            <FormControl>
-              <Input 
-                type="number" 
-                {...field}
-                onChange={e => field.onChange(Number(e.target.value))}
-                min={0}
-                max={200}
-              />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+        <FormField
+          control={form.control}
+          name="espacamentoVertical"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Espaçamento Vertical</FormLabel>
+              <FormControl>
+                <Input 
+                  type="number" 
+                  {...field}
+                  onChange={e => field.onChange(Number(e.target.value))}
+                  min={0}
+                  max={200}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
     </div>
   );
 }

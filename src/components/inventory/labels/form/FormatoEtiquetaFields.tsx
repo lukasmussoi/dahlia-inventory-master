@@ -17,6 +17,8 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { UseFormReturn } from "react-hook-form";
 import * as z from "zod";
+import { MargensEtiquetaFields } from "./MargensEtiquetaFields";
+import { EspacamentoEtiquetaFields } from "./EspacamentoEtiquetaFields";
 
 const formSchema = z.object({
   formatoPagina: z.string(),
@@ -131,137 +133,13 @@ export function FormatoEtiquetaFields({ form }: FormatoEtiquetaFieldsProps) {
 
       <Separator className="my-4" />
       
-      <div>
-        <h3 className="text-sm font-medium mb-3">Margens da Página (mm)</h3>
-        <div className="grid grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="margemSuperior"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Margem Superior</FormLabel>
-                <FormControl>
-                  <Input 
-                    type="number" 
-                    {...field} 
-                    onChange={e => field.onChange(Number(e.target.value))}
-                    min={0}
-                    max={200}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="margemInferior"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Margem Inferior</FormLabel>
-                <FormControl>
-                  <Input 
-                    type="number" 
-                    {...field} 
-                    onChange={e => field.onChange(Number(e.target.value))}
-                    min={0}
-                    max={200}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={form.control}
-            name="margemEsquerda"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Margem Esquerda</FormLabel>
-                <FormControl>
-                  <Input 
-                    type="number" 
-                    {...field} 
-                    onChange={e => field.onChange(Number(e.target.value))}
-                    min={0}
-                    max={200}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="margemDireita"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Margem Direita</FormLabel>
-                <FormControl>
-                  <Input 
-                    type="number" 
-                    {...field} 
-                    onChange={e => field.onChange(Number(e.target.value))}
-                    min={0}
-                    max={200}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-      </div>
-
+      {/* Componente para as margens da página */}
+      <MargensEtiquetaFields form={form} />
+      
       <Separator className="my-4" />
       
-      <div>
-        <h3 className="text-sm font-medium mb-3">Espaçamento entre Etiquetas (mm)</h3>
-        <div className="grid grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="espacamentoHorizontal"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Espaçamento Horizontal</FormLabel>
-                <FormControl>
-                  <Input 
-                    type="number" 
-                    {...field}
-                    onChange={e => field.onChange(Number(e.target.value))}
-                    min={0}
-                    max={200}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="espacamentoVertical"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Espaçamento Vertical</FormLabel>
-                <FormControl>
-                  <Input 
-                    type="number" 
-                    {...field}
-                    onChange={e => field.onChange(Number(e.target.value))}
-                    min={0}
-                    max={200}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-      </div>
+      {/* Componente para o espaçamento entre etiquetas */}
+      <EspacamentoEtiquetaFields form={form} />
     </div>
   );
 }
