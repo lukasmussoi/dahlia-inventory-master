@@ -8,6 +8,7 @@ import { useDragAndDrop } from "./useDragAndDrop";
 import { usePDFGeneration } from "./usePDFGeneration";
 import { LabelElement, LabelType } from "../types";
 import { EtiquetaCustomModel } from "@/models/etiquetaCustomModel";
+import type { CampoEtiqueta } from "@/types/etiqueta";
 
 export function useEtiquetaCreator(initialData?: any, autoAdjustDimensions = false) {
   // Estado básico
@@ -61,7 +62,12 @@ export function useEtiquetaCreator(initialData?: any, autoAdjustDimensions = fal
   ] : [];
   
   // Gerenciamento de etiquetas
-  const labelManagement = useLabelManagement(initialLabels);
+  const labelManagement = useLabelManagement(
+    initialLabels,
+    pageConfiguration.pageSize,
+    snapToGrid,
+    gridSize
+  );
   
   // Gerenciamento de elementos
   const elementManagement = useElementManagement(
@@ -140,6 +146,17 @@ export function useEtiquetaCreator(initialData?: any, autoAdjustDimensions = fal
         pageSize: pageConfiguration.pageSize
       });
       
+      // Mapear os elementos para o formato esperado pelo backend
+      const camposMapeados: CampoEtiqueta[] = primeiraEtiqueta.elements.map((element: LabelElement) => ({
+        tipo: element.type as "nome" | "codigo" | "preco",
+        x: element.x,
+        y: element.y,
+        largura: element.width,
+        altura: element.height,
+        tamanhoFonte: element.fontSize,
+        alinhamento: element.align as "left" | "center" | "right"
+      }));
+      
       // Preparar os dados para salvamento
       const modelData = {
         nome: modelName,
@@ -156,15 +173,7 @@ export function useEtiquetaCreator(initialData?: any, autoAdjustDimensions = fal
         espacamentoVertical: pageConfiguration.labelSpacing.vertical,
         larguraPagina: pageConfiguration.pageSize.width,
         alturaPagina: pageConfiguration.pageSize.height,
-        campos: primeiraEtiqueta.elements.map((element: LabelElement) => ({
-          tipo: element.type,
-          x: element.x,
-          y: element.y,
-          largura: element.width,
-          altura: element.height,
-          tamanhoFonte: element.fontSize,
-          alinhamento: element.align
-        }))
+        campos: camposMapeados
       };
       
       // Verificar se estamos editando ou criando

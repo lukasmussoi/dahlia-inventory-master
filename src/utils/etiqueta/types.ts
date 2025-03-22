@@ -24,3 +24,10 @@ export interface PreviewPDFOptions {
   autoAdjustDimensions?: boolean;
   pageOrientation: string;
 }
+
+export interface EtiquetaPrintOptions {
+  copias: number;
+  mostrarValores?: boolean;
+  mostrarCodigos?: boolean;
+  incluirBordas?: boolean;
+}
