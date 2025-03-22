@@ -87,6 +87,7 @@ export function useEtiquetaCreator(initialData?: any, autoAdjustDimensions = fal
         pageOrientation: pageConfig.pageOrientation
       });
       
+      // Corrigindo o erro: chamando setPreviewPdfUrl com o valor pdfUrl
       etiquetaState.setPreviewPdfUrl(pdfUrl);
       etiquetaState.setIsPreviewDialogOpen(true);
     } catch (error) {
