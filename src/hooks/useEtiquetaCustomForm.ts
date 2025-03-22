@@ -14,6 +14,7 @@ const campoEtiquetaSchema = z.object({
   largura: z.number().min(0, "Largura deve ser maior que zero"),
   altura: z.number().min(0, "Altura deve ser maior que zero"),
   tamanhoFonte: z.number().min(5, "Tamanho da fonte deve ser ao menos 5pt").max(24, "Tamanho da fonte não deve exceder 24pt"),
+  align: z.enum(['left', 'center', 'right']).optional(),
 });
 
 const formSchema = z.object({
@@ -23,12 +24,12 @@ const formSchema = z.object({
   altura: z.number().min(5, "Altura mínima de 5mm").max(297, "Altura máxima de 297mm"),
   formatoPagina: z.string(),
   orientacao: z.string(),
-  margemSuperior: z.number().min(0, "Margem superior deve ser positiva").max(50, "Margem superior muito grande"),
-  margemInferior: z.number().min(0, "Margem inferior deve ser positiva").max(50, "Margem inferior muito grande"),
-  margemEsquerda: z.number().min(0, "Margem esquerda deve ser positiva").max(50, "Margem esquerda muito grande"),
-  margemDireita: z.number().min(0, "Margem direita deve ser positiva").max(50, "Margem direita muito grande"),
-  espacamentoHorizontal: z.number().min(0, "Espaçamento horizontal deve ser positivo").max(20, "Espaçamento horizontal muito grande"),
-  espacamentoVertical: z.number().min(0, "Espaçamento vertical deve ser positivo").max(20, "Espaçamento vertical muito grande"),
+  margemSuperior: z.number().min(0, "Margem superior deve ser positiva").max(200, "Margem superior muito grande"),
+  margemInferior: z.number().min(0, "Margem inferior deve ser positiva").max(200, "Margem inferior muito grande"),
+  margemEsquerda: z.number().min(0, "Margem esquerda deve ser positiva").max(200, "Margem esquerda muito grande"),
+  margemDireita: z.number().min(0, "Margem direita deve ser positiva").max(200, "Margem direita muito grande"),
+  espacamentoHorizontal: z.number().min(0, "Espaçamento horizontal deve ser positivo").max(200, "Espaçamento horizontal muito grande"),
+  espacamentoVertical: z.number().min(0, "Espaçamento vertical deve ser positivo").max(200, "Espaçamento vertical muito grande"),
   larguraPagina: z.number().optional().refine(value => !value || value >= 50, {
     message: "Largura da página deve ser pelo menos 50mm"
   }).refine(value => !value || value <= 300, {
@@ -39,9 +40,13 @@ const formSchema = z.object({
   }).refine(value => !value || value <= 420, {
     message: "Altura da página não deve exceder 420mm"
   }),
+  margemInternaEtiquetaSuperior: z.number().min(0, "Margem interna superior deve ser positiva").max(200, "Margem interna superior muito grande"),
+  margemInternaEtiquetaInferior: z.number().min(0, "Margem interna inferior deve ser positiva").max(200, "Margem interna inferior muito grande"),
+  margemInternaEtiquetaEsquerda: z.number().min(0, "Margem interna esquerda deve ser positiva").max(200, "Margem interna esquerda muito grande"),
+  margemInternaEtiquetaDireita: z.number().min(0, "Margem interna direita deve ser positiva").max(200, "Margem interna direita muito grande"),
   campos: z.array(campoEtiquetaSchema),
 }).refine((data) => {
-  // Se o formato for personalizado, largura e altura da página são obrigatórios
+  // Verificar se o formato é personalizado, largura e altura da página são obrigatórios
   if (data.formatoPagina === "Personalizado") {
     return !!data.larguraPagina && !!data.alturaPagina;
   }
@@ -63,7 +68,6 @@ const defaultCampos: CampoEtiqueta[] = [
 export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => void, onSuccess?: () => void) {
   const [isLoading, setIsLoading] = useState(false);
   const [pageAreaWarning, setPageAreaWarning] = useState<string | null>(null);
-  const [ajustarDimensoesAutomaticamente, setAjustarDimensoesAutomaticamente] = useState(false);
 
   // Certifique-se de que os campos do modelo, se fornecidos, estejam no formato correto
   const modeloCampos = modelo?.campos 
@@ -73,7 +77,8 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
         y: Number(campo.y),
         largura: Number(campo.largura),
         altura: Number(campo.altura),
-        tamanhoFonte: Number(campo.tamanhoFonte)
+        tamanhoFonte: Number(campo.tamanhoFonte),
+        align: campo.align || 'left'
       }))
     : defaultCampos;
 
@@ -110,6 +115,10 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
       espacamentoVertical: modelo?.espacamentoVertical || 0,
       larguraPagina: modelo?.larguraPagina || 210,
       alturaPagina: modelo?.alturaPagina || 297,
+      margemInternaEtiquetaSuperior: modelo?.margemInternaEtiquetaSuperior || 0,
+      margemInternaEtiquetaInferior: modelo?.margemInternaEtiquetaInferior || 0,
+      margemInternaEtiquetaEsquerda: modelo?.margemInternaEtiquetaEsquerda || 0,
+      margemInternaEtiquetaDireita: modelo?.margemInternaEtiquetaDireita || 0,
       campos: modeloCampos,
     },
     mode: "onChange",
@@ -153,25 +162,17 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
       }
       
       if (values.largura > areaUtilLargura) {
-        const sugestaoLarguraEtiqueta = Math.floor(areaUtilLargura * 0.9);
-        const sugestaoLarguraPagina = Math.ceil(values.largura + values.margemEsquerda + values.margemDireita + 10);
-        
         setPageAreaWarning(
           `A largura da etiqueta (${values.largura}mm) excede a área útil (${areaUtilLargura}mm). ` +
-          `Sugestão: Reduza a largura da etiqueta para ${sugestaoLarguraEtiqueta}mm ou ` +
-          `aumente a largura da página para ${sugestaoLarguraPagina}mm.`
+          `Reduza a largura da etiqueta ou aumente a largura da página.`
         );
         return;
       }
       
       if (values.altura > areaUtilAltura) {
-        const sugestaoAlturaEtiqueta = Math.floor(areaUtilAltura * 0.9);
-        const sugestaoAlturaPagina = Math.ceil(values.altura + values.margemSuperior + values.margemInferior + 10);
-        
         setPageAreaWarning(
           `A altura da etiqueta (${values.altura}mm) excede a área útil (${areaUtilAltura}mm). ` +
-          `Sugestão: Reduza a altura da etiqueta para ${sugestaoAlturaEtiqueta}mm ou ` +
-          `aumente a altura da página para ${sugestaoAlturaPagina}mm.`
+          `Reduza a altura da etiqueta ou aumente a altura da página.`
         );
         return;
       }
@@ -190,7 +191,7 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
           larguraPagina = 148;
           alturaPagina = 210;
           break;
-        case "Carta":
+        case "Letter":
           larguraPagina = 216;
           alturaPagina = 279;
           break;
@@ -225,116 +226,12 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
     setPageAreaWarning(null);
   };
 
-  // Função para corrigir automaticamente as dimensões
-  const corrigirDimensoesAutomaticamente = () => {
-    const values = form.getValues();
-    
-    if (values.formatoPagina === "Personalizado") {
-      // Se a página for personalizada
-      if (!values.larguraPagina || !values.alturaPagina) {
-        // Definir dimensões padrão
-        form.setValue("larguraPagina", 210);
-        form.setValue("alturaPagina", 297);
-      }
-      
-      const areaUtilLargura = values.larguraPagina - values.margemEsquerda - values.margemDireita;
-      const areaUtilAltura = values.alturaPagina - values.margemSuperior - values.margemInferior;
-      
-      // Corrigir margens se necessário
-      if (areaUtilLargura <= 0) {
-        const novaMargemLateral = Math.floor(values.larguraPagina / 4);
-        form.setValue("margemEsquerda", novaMargemLateral);
-        form.setValue("margemDireita", novaMargemLateral);
-      }
-      
-      if (areaUtilAltura <= 0) {
-        const novaMargemVertical = Math.floor(values.alturaPagina / 4);
-        form.setValue("margemSuperior", novaMargemVertical);
-        form.setValue("margemInferior", novaMargemVertical);
-      }
-      
-      // Recalcular área útil após ajustes nas margens
-      const novaAreaUtilLargura = values.larguraPagina - form.getValues("margemEsquerda") - form.getValues("margemDireita");
-      const novaAreaUtilAltura = values.alturaPagina - form.getValues("margemSuperior") - form.getValues("margemInferior");
-      
-      // Corrigir largura da etiqueta se necessário
-      if (values.largura > novaAreaUtilLargura) {
-        const novaLargura = Math.floor(novaAreaUtilLargura * 0.9);
-        form.setValue("largura", novaLargura);
-      }
-      
-      // Corrigir altura da etiqueta se necessário
-      if (values.altura > novaAreaUtilAltura) {
-        const novaAltura = Math.floor(novaAreaUtilAltura * 0.9);
-        form.setValue("altura", novaAltura);
-      }
-      
-      // Recalcular depois das correções
-      validarDimensoes();
-      
-      toast.success("Dimensões ajustadas automaticamente.");
-    } else {
-      // Formatos predefinidos
-      let larguraPagina = 210; // A4 padrão
-      let alturaPagina = 297;
-      
-      // Definir dimensões com base no formato de página
-      switch (values.formatoPagina) {
-        case "A4":
-          larguraPagina = 210;
-          alturaPagina = 297;
-          break;
-        case "A5":
-          larguraPagina = 148;
-          alturaPagina = 210;
-          break;
-        case "Carta":
-          larguraPagina = 216;
-          alturaPagina = 279;
-          break;
-      }
-      
-      // Considerar orientação
-      if (values.orientacao === "paisagem") {
-        [larguraPagina, alturaPagina] = [alturaPagina, larguraPagina];
-      }
-      
-      const areaUtilLargura = larguraPagina - values.margemEsquerda - values.margemDireita;
-      const areaUtilAltura = alturaPagina - values.margemSuperior - values.margemInferior;
-      
-      // Corrigir largura da etiqueta se necessário
-      if (values.largura > areaUtilLargura) {
-        const novaLargura = Math.floor(areaUtilLargura * 0.9);
-        form.setValue("largura", novaLargura);
-      }
-      
-      // Corrigir altura da etiqueta se necessário
-      if (values.altura > areaUtilAltura) {
-        const novaAltura = Math.floor(areaUtilAltura * 0.9);
-        form.setValue("altura", novaAltura);
-      }
-      
-      // Recalcular depois das correções
-      validarDimensoes();
-      
-      toast.success("Dimensões ajustadas automaticamente.");
-    }
-  };
-
-  // Toggle para ajuste automático de dimensões na pré-visualização
-  const toggleAjusteAutomatico = () => {
-    setAjustarDimensoesAutomaticamente(prev => !prev);
-    toast.info(ajustarDimensoesAutomaticamente ? 
-      "Ajuste automático de dimensões desativado" : 
-      "Ajuste automático de dimensões ativado");
-  };
-
   async function onSubmit(data: FormValues) {
     try {
       // Validar novamente antes de salvar
       validarDimensoes();
-      if (pageAreaWarning && !ajustarDimensoesAutomaticamente) {
-        toast.error("Há problemas com as dimensões da etiqueta. Por favor, corrija antes de salvar ou ative o ajuste automático.");
+      if (pageAreaWarning) {
+        toast.error("Há problemas com as dimensões da etiqueta. Por favor, corrija antes de salvar.");
         return;
       }
       
@@ -349,6 +246,7 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
         largura: Number(campo.largura),
         altura: Number(campo.altura),
         tamanhoFonte: Number(campo.tamanhoFonte),
+        align: campo.align || 'left'
       }));
 
       // Garantir que todos os campos obrigatórios estejam preenchidos
@@ -367,6 +265,10 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
         espacamentoVertical: data.espacamentoVertical,
         larguraPagina: data.larguraPagina,
         alturaPagina: data.alturaPagina,
+        margemInternaEtiquetaSuperior: data.margemInternaEtiquetaSuperior,
+        margemInternaEtiquetaInferior: data.margemInternaEtiquetaInferior,
+        margemInternaEtiquetaEsquerda: data.margemInternaEtiquetaEsquerda,
+        margemInternaEtiquetaDireita: data.margemInternaEtiquetaDireita,
         campos: camposValidados,
       };
 
@@ -397,8 +299,6 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
     isLoading,
     onSubmit,
     pageAreaWarning,
-    corrigirDimensoesAutomaticamente,
-    ajustarDimensoesAutomaticamente,
-    toggleAjusteAutomatico
+    validarDimensoes
   };
 }

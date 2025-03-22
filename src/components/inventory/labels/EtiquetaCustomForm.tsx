@@ -11,9 +11,9 @@ type EtiquetaCustomFormProps = {
 
 /**
  * Componente principal para criar ou editar modelos de etiqueta
+ * Usa exclusivamente o editor visual
  */
 export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCustomFormProps) {
-  // Usar somente o editor visual, removendo completamente o editor tradicional
   return (
     <EtiquetaCreator 
       onClose={onClose}

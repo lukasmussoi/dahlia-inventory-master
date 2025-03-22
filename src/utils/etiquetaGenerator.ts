@@ -12,16 +12,16 @@ export const generatePreviewPDF = async (
   pageSize: { width: number, height: number },
   margins: { top: number, right: number, bottom: number, left: number },
   spacing: { horizontal: number, vertical: number },
-  internalMargins?: { top?: number, right?: number, bottom?: number, left?: number },
+  internalMargins: { top?: number, right?: number, bottom?: number, left?: number },
   autoAdjustDimensions: boolean = false
 ): Promise<string> => {
   try {
     // Normalizar margens internas
     const normalizedInternalMargins = {
-      top: internalMargins?.top || 0,
-      right: internalMargins?.right || 0,
-      bottom: internalMargins?.bottom || 0,
-      left: internalMargins?.left || 0
+      top: internalMargins?.top ?? 0,
+      right: internalMargins?.right ?? 0,
+      bottom: internalMargins?.bottom ?? 0,
+      left: internalMargins?.left ?? 0
     };
     
     // Log das configurações
@@ -395,8 +395,21 @@ export const generateEtiquetaPDF = async (
             const posX = x + campo.x + margensInternas.esquerda;
             const posY = y + campo.y + margensInternas.superior;
             
-            // Converter coordenadas para string conforme esperado pelo jsPDF
-            pdf.text(conteudo, posX, posY);
+            // Aplicar alinhamento, se especificado
+            if (campo.align) {
+              let textX = posX;
+              
+              if (campo.align === 'center') {
+                textX = posX + (campo.largura / 2);
+              } else if (campo.align === 'right') {
+                textX = posX + campo.largura;
+              }
+              
+              pdf.text(conteudo, textX, posY, { align: campo.align });
+            } else {
+              // Modo padrão para compatibilidade com versões antigas
+              pdf.text(conteudo, posX, posY);
+            }
           });
         } else {
           console.warn("Modelo sem campos definidos ou campos inválidos");

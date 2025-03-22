@@ -9,6 +9,7 @@ export interface CampoEtiqueta {
   altura: number;
   tamanhoFonte: number;
   valor?: string;
+  align?: 'left' | 'center' | 'right';
 }
 
 export interface ModeloEtiqueta {
@@ -31,11 +32,11 @@ export interface ModeloEtiqueta {
   usuario_id?: string;
   criado_em?: string;
   atualizado_em?: string;
-  // Margens internas da etiqueta (novo)
-  margemInternaEtiquetaSuperior?: number;
-  margemInternaEtiquetaInferior?: number;
-  margemInternaEtiquetaEsquerda?: number;
-  margemInternaEtiquetaDireita?: number;
+  // Margens internas da etiqueta
+  margemInternaEtiquetaSuperior: number;
+  margemInternaEtiquetaInferior: number;
+  margemInternaEtiquetaEsquerda: number;
+  margemInternaEtiquetaDireita: number;
 }
 
 export interface EtiquetaCustomDB {
@@ -58,9 +59,9 @@ export interface EtiquetaCustomDB {
   criado_por: string;
   criado_em: string;
   atualizado_em: string;
-  // Margens internas da etiqueta (novo)
-  margem_interna_superior?: number;
-  margem_interna_inferior?: number;
-  margem_interna_esquerda?: number;
-  margem_interna_direita?: number;
+  // Margens internas da etiqueta
+  margem_interna_superior: number;
+  margem_interna_inferior: number;
+  margem_interna_esquerda: number;
+  margem_interna_direita: number;
 }
