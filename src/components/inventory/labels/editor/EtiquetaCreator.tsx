@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react"
 import { 
   AlignCenter, 
@@ -18,7 +17,9 @@ import {
   CheckSquare,
   Minus,
   FileText,
-  Download
+  Download,
+  Smartphone,
+  Monitor
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -97,6 +98,7 @@ export default function EtiquetaCreator({
   const [gridSize, setGridSize] = useState(5)
   const [pageSize, setPageSize] = useState({ width: initialData?.larguraPagina || 210, height: initialData?.alturaPagina || 297 })
   const [pageFormat, setPageFormat] = useState(initialData?.formatoPagina || "A4")
+  const [pageOrientation, setPageOrientation] = useState(initialData?.orientacao || "retrato")
   const [labelSize, setLabelSize] = useState({ 
     width: initialData?.largura || 80, 
     height: initialData?.altura || 40 
@@ -360,14 +362,42 @@ export default function EtiquetaCreator({
   const handleUpdatePageFormat = (value: string) => {
     setPageFormat(value);
     
-    if (value === "A4") {
-      setPageSize({ width: 210, height: 297 });
-    } else if (value === "A5") {
-      setPageSize({ width: 148, height: 210 });
-    } else if (value === "Letter") {
-      setPageSize({ width: 216, height: 279 });
+    // Define os tamanhos padrão com base no formato e orientação
+    updatePageSizeBasedOnFormatAndOrientation(value, pageOrientation);
+  }
+  
+  const handleUpdatePageOrientation = (value: string) => {
+    setPageOrientation(value);
+    
+    // Atualiza as dimensões da página com base na nova orientação
+    updatePageSizeBasedOnFormatAndOrientation(pageFormat, value);
+  }
+  
+  const updatePageSizeBasedOnFormatAndOrientation = (format: string, orientation: string) => {
+    let width, height;
+    
+    // Definir dimensões padrão baseadas no formato
+    if (format === "A4") {
+      width = 210;
+      height = 297;
+    } else if (format === "A5") {
+      width = 148;
+      height = 210;
+    } else if (format === "Letter") {
+      width = 216;
+      height = 279;
+    } else {
+      // Para outros formatos, usar os valores atuais
+      width = pageSize.width;
+      height = pageSize.height;
     }
-    // Outros formatos podem ser adicionados conforme necessário
+    
+    // Inverter largura e altura se for paisagem
+    if (orientation === "paisagem") {
+      setPageSize({ width: height, height: width });
+    } else {
+      setPageSize({ width, height });
+    }
   }
   
   const handleUpdateLabelSize = (dimension: "width" | "height", value: number) => {
@@ -536,7 +566,7 @@ export default function EtiquetaCreator({
       largura: primaryLabel.width,
       altura: primaryLabel.height,
       formatoPagina: pageFormat,
-      orientacao: "retrato", // Pode ser dinâmico no futuro
+      orientacao: pageOrientation, // Usando a orientação selecionada
       margemSuperior: 10,
       margemInferior: 10,
       margemEsquerda: 10,
@@ -645,7 +675,8 @@ export default function EtiquetaCreator({
         pageSize,
         { top: 10, right: 10, bottom: 10, left: 10 },
         { horizontal: 2, vertical: 2 },
-        autoAdjustDimensions
+        autoAdjustDimensions,
+        pageOrientation // Passando a orientação para o gerador de PDF
       );
       
       setPreviewPdfUrl(pdfUrl);
@@ -1045,6 +1076,32 @@ export default function EtiquetaCreator({
                     <SelectItem value="A5">A5 (148 × 210 mm)</SelectItem>
                     <SelectItem value="Letter">Carta (216 × 279 mm)</SelectItem>
                     <SelectItem value="Custom">Personalizado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label className="text-xs mb-1 block">Orientação da Página</Label>
+                <Select
+                  value={pageOrientation}
+                  onValueChange={handleUpdatePageOrientation}
+                >
+                  <SelectTrigger className="h-8">
+                    <SelectValue placeholder="Selecione a orientação" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="retrato">
+                      <div className="flex items-center gap-2">
+                        <Smartphone className="h-4 w-4" />
+                        <span>Retrato</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="paisagem">
+                      <div className="flex items-center gap-2">
+                        <Monitor className="h-4 w-4" />
+                        <span>Paisagem</span>
+                      </div>
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>

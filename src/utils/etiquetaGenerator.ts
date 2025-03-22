@@ -1,4 +1,3 @@
-
 import JsPDF from 'jspdf';
 import { toast } from 'sonner';
 import type { LabelType, LabelElement } from '@/components/inventory/labels/editor/EtiquetaCreator';
@@ -12,7 +11,8 @@ export const generatePreviewPDF = async (
   pageSize: { width: number, height: number },
   margins: { top: number, right: number, bottom: number, left: number },
   spacing: { horizontal: number, vertical: number },
-  autoAdjustDimensions: boolean = false
+  autoAdjustDimensions: boolean = false,
+  orientation: string = 'retrato'
 ): Promise<string> => {
   try {
     // Verificar se as dimensões são válidas
@@ -38,9 +38,9 @@ export const generatePreviewPDF = async (
       }
     }
 
-    // Criar o documento PDF
+    // Criar o documento PDF com a orientação correta
     const pdf = new JsPDF({
-      orientation: 'portrait',
+      orientation: orientation === 'paisagem' ? 'landscape' : 'portrait',
       unit: 'mm',
       format: pageFormat === 'A4' || pageFormat === 'A5' || pageFormat === 'Letter' ? pageFormat : [pageSize.width, pageSize.height]
     });
@@ -57,8 +57,9 @@ export const generatePreviewPDF = async (
     // Configurações de página
     pdf.setFontSize(10);
     pdf.text(`Formato: ${pageFormat}`, 10, 30);
-    pdf.text(`Dimensões: ${pageSize.width} × ${pageSize.height} mm`, 10, 35);
-    pdf.text(`Dimensões da etiqueta: ${labels[0].width} × ${labels[0].height} mm`, 10, 40);
+    pdf.text(`Orientação: ${orientation === 'paisagem' ? 'Paisagem' : 'Retrato'}`, 10, 35);
+    pdf.text(`Dimensões: ${pageSize.width} × ${pageSize.height} mm`, 10, 40);
+    pdf.text(`Dimensões da etiqueta: ${labels[0].width} × ${labels[0].height} mm`, 10, 45);
 
     // Desenhar borda da página
     pdf.setDrawColor(200, 200, 200);
@@ -69,8 +70,8 @@ export const generatePreviewPDF = async (
     const rowsPerPage = Math.floor((pageSize.height - margins.top - margins.bottom) / (labels[0].height + spacing.vertical));
 
     pdf.setFontSize(10);
-    pdf.text(`Disposição: ${columnsPerPage} × ${rowsPerPage} (colunas × linhas)`, 10, 45);
-    pdf.text(`Total de etiquetas por página: ${columnsPerPage * rowsPerPage}`, 10, 50);
+    pdf.text(`Disposição: ${columnsPerPage} × ${rowsPerPage} (colunas × linhas)`, 10, 50);
+    pdf.text(`Total de etiquetas por página: ${columnsPerPage * rowsPerPage}`, 10, 55);
 
     // Adicionar uma nova página para a visualização da etiqueta
     pdf.addPage();
@@ -185,18 +186,23 @@ export const generateEtiquetaPDF = async (
     } else {
       // Tamanhos padrão (em mm)
       if (formatoPagina === "A4") {
-        pageWidth = orientacao === "retrato" ? 210 : 297;
-        pageHeight = orientacao === "retrato" ? 297 : 210;
+        pageWidth = 210;
+        pageHeight = 297;
       } else if (formatoPagina === "A5") {
-        pageWidth = orientacao === "retrato" ? 148 : 210;
-        pageHeight = orientacao === "retrato" ? 210 : 148;
+        pageWidth = 148;
+        pageHeight = 210;
       } else if (formatoPagina === "Letter") {
-        pageWidth = orientacao === "retrato" ? 216 : 279;
-        pageHeight = orientacao === "retrato" ? 279 : 216;
+        pageWidth = 216;
+        pageHeight = 279;
       } else {
         // Formato padrão (A4 retrato)
         pageWidth = 210;
         pageHeight = 297;
+      }
+      
+      // Inverter dimensões se orientação for paisagem
+      if (orientacao === "paisagem") {
+        [pageWidth, pageHeight] = [pageHeight, pageWidth];
       }
     }
     
@@ -204,11 +210,11 @@ export const generateEtiquetaPDF = async (
     if (!pageWidth || pageWidth <= 0) pageWidth = 210;
     if (!pageHeight || pageHeight <= 0) pageHeight = 297;
     
-    console.log("Dimensões da página:", pageWidth, "x", pageHeight);
+    console.log("Dimensões da página:", pageWidth, "x", pageHeight, "orientação:", orientacao);
     
     // Criar documento PDF
     const pdf = new JsPDF({
-      orientation: orientacao === "retrato" ? "portrait" : "landscape",
+      orientation: orientacao === "paisagem" ? "landscape" : "portrait",
       unit: "mm",
       format: formatoPagina === "Personalizado" ? [pageWidth, pageHeight] : formatoPagina
     });
