@@ -16,9 +16,9 @@ type EtiquetaCustomFormProps = {
 export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCustomFormProps) {
   return (
     <EtiquetaCreator 
+      initialData={modelo}
       onClose={onClose}
       onSave={onSuccess}
-      initialData={modelo}
     />
   );
 }
