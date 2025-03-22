@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,7 +18,7 @@ import { validarDimensoesEtiqueta } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import type { ModeloEtiqueta, CampoEtiqueta } from "@/types/etiqueta";
 import ZoomControls from "./ZoomControls";
-import "../../../../../../src/styles/etiqueta-editor.css";
+import "@/styles/etiqueta-editor.css";
 
 interface CampoDrag {
   isDragging: boolean;
@@ -50,7 +49,6 @@ const tiposCampo = [
 ];
 
 export default function EtiquetaCreator({ onClose, onSave, initialData, isLoading }: EtiquetaCreatorProps) {
-  // Estado para armazenar o modelo atual
   const [modelo, setModelo] = useState<ModeloEtiqueta>(() => {
     if (initialData) return { ...initialData };
     
@@ -77,7 +75,6 @@ export default function EtiquetaCreator({ onClose, onSave, initialData, isLoadin
     };
   });
 
-  // Estado para controle de arraste de elementos
   const [campoDrag, setCampoDrag] = useState<CampoDrag>({
     isDragging: false,
     initialX: 0,
@@ -86,10 +83,8 @@ export default function EtiquetaCreator({ onClose, onSave, initialData, isLoadin
     offsetY: 0
   });
 
-  // Estado para controle do campo selecionado
   const [campoSelecionado, setCampoSelecionado] = useState<number | null>(null);
 
-  // Estado para configurações de visualização e validação
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [showPageView, setShowPageView] = useState(false);
@@ -97,14 +92,11 @@ export default function EtiquetaCreator({ onClose, onSave, initialData, isLoadin
   const [areaUtil, setAreaUtil] = useState<{largura: number, altura: number} | null>(null);
   const [autoAjustar, setAutoAjustar] = useState(true);
 
-  // Referências para elementos DOM
   const etiquetaRef = useRef<HTMLDivElement>(null);
   const paginaRef = useRef<HTMLDivElement>(null);
 
-  // Hook para controle de zoom
   const { zoomLevel, setZoomLevel, handleZoomIn, handleZoomOut, handleResetZoom } = useEtiquetaZoom(1);
 
-  // Efeito para validação de dimensões e atualização da área útil
   useEffect(() => {
     validarDimensoes();
   }, [
@@ -120,15 +112,12 @@ export default function EtiquetaCreator({ onClose, onSave, initialData, isLoadin
     modelo.alturaPagina
   ]);
 
-  // Função para validar se a etiqueta cabe na página
   const validarDimensoes = () => {
-    // Se não houver valores definidos, não valida
     if (!modelo.formatoPagina) return;
     
     let larguraPagina = modelo.larguraPagina || 0;
     let alturaPagina = modelo.alturaPagina || 0;
     
-    // Para formatos predefinidos
     if (modelo.formatoPagina !== "Personalizado") {
       switch (modelo.formatoPagina) {
         case "A4":
@@ -149,10 +138,8 @@ export default function EtiquetaCreator({ onClose, onSave, initialData, isLoadin
       }
     }
     
-    // Se não houver largura e altura válidas, não continua
     if (!larguraPagina || !alturaPagina) return;
     
-    // Usar a função utilitária para validação, incluindo orientação
     const resultado = validarDimensoesEtiqueta(
       modelo.largura || 0,
       modelo.altura || 0,
@@ -177,7 +164,6 @@ export default function EtiquetaCreator({ onClose, onSave, initialData, isLoadin
     }
   };
 
-  // Funções para manipulação de elementos na etiqueta
   const iniciarArraste = (index: number, e: React.MouseEvent<HTMLDivElement>) => {
     e.preventDefault();
     
@@ -212,11 +198,9 @@ export default function EtiquetaCreator({ onClose, onSave, initialData, isLoadin
     const zoom = zoomLevel;
     const campo = modelo.campos[campoSelecionado];
     
-    // Calcular novas coordenadas
     const novoX = Math.max(0, campo.x + (campoDrag.offsetX / zoom));
     const novoY = Math.max(0, campo.y + (campoDrag.offsetY / zoom));
     
-    // Atualizar o campo
     const camposAtualizados = [...modelo.campos];
     camposAtualizados[campoSelecionado] = {
       ...campo,
@@ -238,7 +222,6 @@ export default function EtiquetaCreator({ onClose, onSave, initialData, isLoadin
     });
   };
 
-  // Atualiza um campo específico
   const atualizarCampo = (index: number, chave: keyof CampoEtiqueta, valor: any) => {
     const novosCampos = [...modelo.campos];
     novosCampos[index] = {
@@ -252,7 +235,6 @@ export default function EtiquetaCreator({ onClose, onSave, initialData, isLoadin
     }));
   };
 
-  // Adiciona um novo campo
   const adicionarCampo = (tipo: 'nome' | 'codigo' | 'preco') => {
     const novoCampo: CampoEtiqueta = {
       tipo: tipo,
@@ -268,11 +250,9 @@ export default function EtiquetaCreator({ onClose, onSave, initialData, isLoadin
       campos: [...prev.campos, novoCampo]
     }));
     
-    // Selecionar o novo campo
     setCampoSelecionado(modelo.campos.length);
   };
 
-  // Remove o campo selecionado
   const removerCampoSelecionado = () => {
     if (campoSelecionado === null) return;
     
@@ -286,7 +266,6 @@ export default function EtiquetaCreator({ onClose, onSave, initialData, isLoadin
     setCampoSelecionado(null);
   };
 
-  // Atualiza uma propriedade do modelo
   const atualizarModelo = (chave: keyof ModeloEtiqueta, valor: any) => {
     setModelo(prev => ({
       ...prev,
@@ -294,7 +273,6 @@ export default function EtiquetaCreator({ onClose, onSave, initialData, isLoadin
     }));
   };
 
-  // Gera uma pré-visualização do PDF
   const gerarPreview = async () => {
     try {
       const url = await generatePreviewPDF(modelo);
@@ -316,7 +294,6 @@ export default function EtiquetaCreator({ onClose, onSave, initialData, isLoadin
     }
   };
 
-  // Calcula dimensões da página para visualização
   const calcularDimensoesPagina = () => {
     let larguraPagina = modelo.larguraPagina || 210;
     let alturaPagina = modelo.alturaPagina || 297;
@@ -341,7 +318,6 @@ export default function EtiquetaCreator({ onClose, onSave, initialData, isLoadin
       }
     }
     
-    // Considerar orientação
     if (modelo.orientacao === 'paisagem') {
       return { 
         largura: alturaPagina, 
@@ -355,7 +331,6 @@ export default function EtiquetaCreator({ onClose, onSave, initialData, isLoadin
     };
   };
 
-  // Calcula quantas etiquetas cabem por página
   const calcularEtiquetasPorPagina = () => {
     if (!areaUtil) return { etiquetasPorLinha: 0, etiquetasPorColuna: 0 };
     
@@ -368,16 +343,13 @@ export default function EtiquetaCreator({ onClose, onSave, initialData, isLoadin
     return { etiquetasPorLinha, etiquetasPorColuna };
   };
 
-  // Salva o modelo
   const salvarModelo = () => {
-    // Validar antes de salvar
     validarDimensoes();
     
     if (validacaoEtiqueta && !validacaoEtiqueta.valido) {
       return;
     }
     
-    // Verificar se tem nome
     if (!modelo.nome.trim()) {
       setValidacaoEtiqueta({
         valido: false,
@@ -389,14 +361,12 @@ export default function EtiquetaCreator({ onClose, onSave, initialData, isLoadin
     onSave(modelo);
   };
 
-  // Exibir visualização da página com layout de etiquetas
   const renderizarVisualizacaoPagina = () => {
     if (!areaUtil) return null;
     
     const dimensoesPagina = calcularDimensoesPagina();
     const { etiquetasPorLinha, etiquetasPorColuna } = calcularEtiquetasPorPagina();
     
-    // Criar grid de etiquetas
     const etiquetas = [];
     for (let coluna = 0; coluna < etiquetasPorLinha; coluna++) {
       for (let linha = 0; linha < etiquetasPorColuna; linha++) {
@@ -429,7 +399,6 @@ export default function EtiquetaCreator({ onClose, onSave, initialData, isLoadin
             height: dimensoesPagina.altura * zoomLevel,
           }}
         >
-          {/* Margens */}
           <div 
             className="absolute border border-dashed border-blue-300"
             style={{
@@ -441,19 +410,16 @@ export default function EtiquetaCreator({ onClose, onSave, initialData, isLoadin
             }}
           />
           
-          {/* Grade de etiquetas */}
           {etiquetas}
         </div>
       </div>
     );
   };
 
-  // Para renderizar a posição dos elementos na visualização da etiqueta
   const renderizarPosicaoElementos = () => {
     return modelo.campos.map((campo, index) => {
       const isSelected = index === campoSelecionado;
       
-      // Calcular posição durante o arraste
       let posX = campo.x;
       let posY = campo.y;
       
@@ -492,7 +458,6 @@ export default function EtiquetaCreator({ onClose, onSave, initialData, isLoadin
               <div className="text-center flex items-center justify-center" style={{ fontSize: campo.tamanhoFonte * zoomLevel }}>
                 <svg width={campo.largura * zoomLevel * 0.8} height={campo.altura * zoomLevel * 0.6} className="mx-auto">
                   <rect x="0" y="0" width="100%" height="80%" fill="#ECECEC" />
-                  {/* Simulação visual de código de barras */}
                   {Array.from({ length: 15 }).map((_, i) => (
                     <rect 
                       key={i} 
@@ -539,9 +504,7 @@ export default function EtiquetaCreator({ onClose, onSave, initialData, isLoadin
         <div className="flex-1 overflow-hidden">
           <TabsContent value="editor" className="h-full overflow-auto">
             <div className="grid grid-cols-8 gap-4 h-full">
-              {/* Coluna da esquerda - Campos e propriedades */}
               <div className="col-span-3 space-y-4 overflow-auto pr-2">
-                {/* Propriedades Básicas */}
                 <Card>
                   <CardContent className="pt-6 space-y-4">
                     <div className="space-y-2">
@@ -566,7 +529,6 @@ export default function EtiquetaCreator({ onClose, onSave, initialData, isLoadin
                   </CardContent>
                 </Card>
 
-                {/* Dimensões da Etiqueta */}
                 <Card>
                   <CardContent className="pt-6 space-y-4">
                     <h3 className="text-base font-medium flex items-center gap-1">
@@ -607,7 +569,6 @@ export default function EtiquetaCreator({ onClose, onSave, initialData, isLoadin
                   </CardContent>
                 </Card>
 
-                {/* Formato da Página */}
                 <Card>
                   <CardContent className="pt-6 space-y-4">
                     <h3 className="text-base font-medium flex items-center gap-1">
@@ -685,7 +646,6 @@ export default function EtiquetaCreator({ onClose, onSave, initialData, isLoadin
                   </CardContent>
                 </Card>
 
-                {/* Margens da Página */}
                 <Card>
                   <CardContent className="pt-6 space-y-4">
                     <h3 className="text-base font-medium flex items-center gap-1">
@@ -746,7 +706,6 @@ export default function EtiquetaCreator({ onClose, onSave, initialData, isLoadin
                   </CardContent>
                 </Card>
 
-                {/* Espaçamento entre Etiquetas */}
                 <Card>
                   <CardContent className="pt-6 space-y-4">
                     <h3 className="text-base font-medium flex items-center gap-1">
@@ -788,9 +747,7 @@ export default function EtiquetaCreator({ onClose, onSave, initialData, isLoadin
                 </Card>
               </div>
 
-              {/* Coluna da direita - Visualização da etiqueta e propriedades do elemento selecionado */}
               <div className="col-span-5 space-y-4">
-                {/* Informações e validações */}
                 {validacaoEtiqueta && !validacaoEtiqueta.valido && (
                   <Alert variant="destructive">
                     <AlertCircle className="h-4 w-4" />
@@ -812,7 +769,6 @@ export default function EtiquetaCreator({ onClose, onSave, initialData, isLoadin
                   </div>
                 )}
 
-                {/* Ferramentas para adicionar elementos */}
                 <div className="flex items-center gap-2 bg-muted p-2 rounded-md">
                   <span className="text-sm font-medium">Adicionar Elemento:</span>
                   <Button 
@@ -855,7 +811,6 @@ export default function EtiquetaCreator({ onClose, onSave, initialData, isLoadin
                   )}
                 </div>
 
-                {/* Propriedades do elemento selecionado */}
                 {campoSelecionado !== null && (
                   <Card>
                     <CardContent className="pt-6 space-y-4">
@@ -924,7 +879,6 @@ export default function EtiquetaCreator({ onClose, onSave, initialData, isLoadin
                   </Card>
                 )}
 
-                {/* Visualização da etiqueta */}
                 <div className="bg-white border rounded-md shadow-sm overflow-hidden">
                   <div className="flex items-center justify-between p-2 bg-muted">
                     <h3 className="text-sm font-medium">Visualização da Etiqueta</h3>
@@ -1123,7 +1077,6 @@ export default function EtiquetaCreator({ onClose, onSave, initialData, isLoadin
         </div>
       </Tabs>
 
-      {/* Botões de ação */}
       <div className="flex justify-end gap-2 pt-4 sticky bottom-0 bg-background border-t mt-4">
         <Button 
           variant="outline" 
