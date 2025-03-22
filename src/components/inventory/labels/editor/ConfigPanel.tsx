@@ -93,8 +93,8 @@ export function ConfigPanel({
                 <Monitor className="h-4 w-4" />
                 <span>Paisagem</span>
               </div>
-            </SelectContent>
-          </SelectTrigger>
+            </SelectItem>
+          </SelectContent>
         </Select>
       </div>
       
