@@ -21,8 +21,17 @@ export function mapModelToDatabase(modelo: ModeloEtiqueta): Omit<EtiquetaCustomD
     espacamento_vertical: modelo.espacamentoVertical,
     largura_pagina: modelo.larguraPagina,
     altura_pagina: modelo.alturaPagina,
-    // Usando uma asserção de tipo para resolver o problema de tipagem
-    campos: modelo.campos as unknown as Json,
+    // Garantir que todos os campos tenham as propriedades obrigatórias
+    campos: modelo.campos.map(campo => ({
+      tipo: campo.tipo,
+      x: campo.x,
+      y: campo.y,
+      largura: campo.largura,
+      altura: campo.altura,
+      tamanhoFonte: campo.tamanhoFonte,
+      align: campo.align || 'left',
+      valor: campo.valor
+    })) as unknown as Json,
     margem_interna_superior: modelo.margemInternaEtiquetaSuperior,
     margem_interna_inferior: modelo.margemInternaEtiquetaInferior,
     margem_interna_esquerda: modelo.margemInternaEtiquetaEsquerda,
@@ -38,6 +47,18 @@ export function mapDatabaseToModel(item: EtiquetaCustomDB): ModeloEtiqueta {
   const camposFromDB = item.campos ? 
     (Array.isArray(item.campos) ? item.campos : []) : 
     [];
+
+  // Garantir que todos os campos tenham as propriedades obrigatórias
+  const camposValidados = camposFromDB.map((campo: any) => ({
+    tipo: campo.tipo || 'nome', // Valor padrão para garantir que o tipo seja definido
+    x: campo.x || 0,
+    y: campo.y || 0,
+    largura: campo.largura || 100,
+    altura: campo.altura || 20,
+    tamanhoFonte: campo.tamanhoFonte || 12,
+    align: campo.align || 'left',
+    valor: campo.valor
+  })) as CampoEtiqueta[];
 
   return {
     id: item.id,
@@ -55,8 +76,7 @@ export function mapDatabaseToModel(item: EtiquetaCustomDB): ModeloEtiqueta {
     espacamentoVertical: item.espacamento_vertical,
     larguraPagina: item.largura_pagina,
     alturaPagina: item.altura_pagina,
-    // Usar asserção de tipo para resolver problemas de compatibilidade
-    campos: camposFromDB as unknown as CampoEtiqueta[],
+    campos: camposValidados,
     usuario_id: item.criado_por,
     criado_em: item.criado_em,
     atualizado_em: item.atualizado_em,

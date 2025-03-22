@@ -7,7 +7,7 @@ export interface ZoomControlsProps {
   zoomLevel: number;
   onZoomIn: (amount?: number) => void;
   onZoomOut: (amount?: number) => void;
-  onResetZoom: () => void; // Adicionando propriedade obrigatória
+  onResetZoom: () => void;
 }
 
 export function ZoomControls({ zoomLevel, onZoomIn, onZoomOut, onResetZoom }: ZoomControlsProps) {
