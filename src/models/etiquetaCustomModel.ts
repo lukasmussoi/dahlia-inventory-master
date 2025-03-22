@@ -107,7 +107,7 @@ export class EtiquetaCustomModel {
         espacamento_vertical: Number(modelo.espacamentoVertical) || 0,
         altura_pagina: modelo.alturaPagina ? Number(modelo.alturaPagina) : 297,
         largura_pagina: modelo.larguraPagina ? Number(modelo.larguraPagina) : 210,
-        tamanho_grade: modelo.tamanhoGrade ? Number(modelo.tamanhoGrade) : 5,
+        // Removendo o campo tamanho_grade que não existe na tabela
         campos: modeloDb.campos,
         criado_por: user.data.user.id
       };
@@ -116,7 +116,6 @@ export class EtiquetaCustomModel {
         descricao: modeloCompleto.descricao,
         formato_pagina: modeloCompleto.formato_pagina,
         orientacao: modeloCompleto.orientacao,
-        tamanho_grade: modeloCompleto.tamanho_grade,
         campos_count: modeloCompleto.campos ? (modeloCompleto.campos as any).length : 'N/A'
       });
 
@@ -175,6 +174,11 @@ export class EtiquetaCustomModel {
       // Mapear o modelo para o formato do banco
       const modeloDb = mapModelToDatabase(modelo);
       
+      // Remover a propriedade tamanho_grade do objeto modeloDb
+      if ('tamanho_grade' in modeloDb) {
+        delete modeloDb.tamanho_grade;
+      }
+      
       // Dados para atualização
       console.log("Dados do modelo a serem atualizados:", {
         nome: modelo.nome,
@@ -183,7 +187,6 @@ export class EtiquetaCustomModel {
         largura: modelo.largura,
         altura: modelo.altura,
         margens: `${modelo.margemSuperior}/${modelo.margemInferior}/${modelo.margemEsquerda}/${modelo.margemDireita}`,
-        tamanhoGrade: modelo.tamanhoGrade,
         campos_count: modelo.campos ? modelo.campos.length : 'N/A'
       });
       
@@ -192,7 +195,6 @@ export class EtiquetaCustomModel {
         descricao: modeloDb.descricao,
         formato_pagina: modeloDb.formato_pagina,
         orientacao: modeloDb.orientacao,
-        tamanho_grade: modeloDb.tamanho_grade,
         campos_count: modeloDb.campos ? (modeloDb.campos as any).length : 'N/A'
       });
       

@@ -83,7 +83,8 @@ export function mapDatabaseToModel(item: EtiquetaCustomDB): ModeloEtiqueta {
   console.log(`Orientação carregada do banco: "${orientacao}"`);
   
   // Verificar valores do tamanho da grade
-  console.log(`Tamanho da grade no banco: ${item.tamanho_grade || 'não definido'}`);
+  const tamanhoGrade = 5; // Valor padrão para o frontend, já que não existe na tabela
+  console.log(`Usando tamanho de grade padrão: ${tamanhoGrade}`);
   
   // Construir o modelo usando valores do banco com fallbacks para valores padrão
   const modeloMapeado: ModeloEtiqueta = {
@@ -102,7 +103,7 @@ export function mapDatabaseToModel(item: EtiquetaCustomDB): ModeloEtiqueta {
     espacamentoVertical: Number(item.espacamento_vertical) || 0,
     larguraPagina: Number(item.largura_pagina) || 210,
     alturaPagina: Number(item.altura_pagina) || 297,
-    tamanhoGrade: Number(item.tamanho_grade) || 5,
+    tamanhoGrade: tamanhoGrade, // Valor padrão
     campos: campos
   };
   
@@ -149,7 +150,7 @@ export function mapModelToDatabase(modelo: ModeloEtiqueta): Partial<EtiquetaCust
     margem_direita: Number(modelo.margemDireita) || 10,
     espacamento_horizontal: Number(modelo.espacamentoHorizontal) || 0,
     espacamento_vertical: Number(modelo.espacamentoVertical) || 0,
-    tamanho_grade: Number(modelo.tamanhoGrade) || 5
+    // Removendo o campo tamanho_grade que não existe na tabela
   };
   
   // Adicionar dimensões da página sempre, mas especialmente se for formato personalizado
@@ -189,7 +190,6 @@ export function mapModelToDatabase(modelo: ModeloEtiqueta): Partial<EtiquetaCust
     descricao: dbModel.descricao,
     formato_pagina: dbModel.formato_pagina,
     orientacao: dbModel.orientacao,
-    tamanho_grade: dbModel.tamanho_grade,
     campCount: Array.isArray(dbModel.campos) ? dbModel.campos.length : 'N/A'
   });
   
