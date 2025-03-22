@@ -75,8 +75,9 @@ export function useEtiquetaCreator(initialData?: any, autoAdjustDimensions = fal
     etiquetaState.setIsGeneratingPdf(true);
     
     try {
-      // Chamando handlePreview e armazenando o resultado em uma variável
-      const pdfUrl = await pdfGeneration.handlePreview({
+      // Chamando o método handlePreview do hook usePDFGeneration
+      // Este método gerencia o estado internamente e não retorna o pdfUrl
+      await pdfGeneration.handlePreview({
         modelName: etiquetaState.modelName || "Modelo sem nome",
         labels: labelManagement.labels,
         pageFormat: pageConfig.pageFormat,
@@ -87,13 +88,10 @@ export function useEtiquetaCreator(initialData?: any, autoAdjustDimensions = fal
         pageOrientation: pageConfig.pageOrientation
       });
       
-      // Usando o valor retornado para atualizar o estado
-      if (pdfUrl) {
-        etiquetaState.setPreviewPdfUrl(pdfUrl);
-        etiquetaState.setIsPreviewDialogOpen(true);
-      } else {
-        throw new Error("Falha ao gerar PDF: URL não retornada");
-      }
+      // Como o hook pdfGeneration já gerencia o estado do previewPdfUrl,
+      // atualizamos apenas nossos estados locais com base nos estados dele
+      etiquetaState.setPreviewPdfUrl(pdfGeneration.previewPdfUrl);
+      etiquetaState.setIsPreviewDialogOpen(true);
     } catch (error) {
       console.error("Erro ao gerar pré-visualização:", error);
       if (error instanceof Error) {
@@ -180,7 +178,7 @@ export function useEtiquetaCreator(initialData?: any, autoAdjustDimensions = fal
       // Chamar a função onSave e verificar se houve sucesso
       if (typeof onSave === 'function') {
         toast.info("Salvando modelo de etiqueta...");
-        // Chamando onSave com os dados do modelo, sem usar seu retorno
+        // Chamando onSave com os dados do modelo
         onSave(modelData);
       } else {
         console.error("A função onSave não foi fornecida ao componente EtiquetaCreator");
