@@ -5,7 +5,7 @@
 import JsPDF from 'jspdf';
 import { toast } from 'sonner';
 import type { ModeloEtiqueta } from '@/types/etiqueta';
-import { calcularDimensoesPagina, calcularEtiquetasPorPagina, criarDocumentoPDF, normalizarMargens, normalizarEspacamentos } from './documentUtils';
+import { calcularDimensoesPagina, calcularEtiquetasPorPagina, createPdfDocument, normalizarMargens, normalizarEspacamentos } from './documentUtils';
 import { EtiquetaPrintOptions } from './types';
 
 /**
@@ -58,10 +58,12 @@ export const generateEtiquetaPDF = async (
     console.log("Espaçamentos:", espacamentoHorizontal, espacamentoVertical);
     
     // Criar documento PDF
-    const pdf = criarDocumentoPDF(orientacao, formatoPagina, {
-      width: pageWidth,
-      height: pageHeight
-    });
+    const pdf = createPdfDocument(
+      formatoPagina, 
+      orientacao, 
+      pageWidth, 
+      pageHeight
+    );
     
     // Normalizar margens e espaçamentos
     const margensValidas = normalizarMargens(margemSuperior, margemInferior, margemEsquerda, margemDireita);

@@ -19,7 +19,11 @@ export const renderLabelElements = (pdf: JsPDF, elements: LabelElement[], offset
     pdf.setFontSize(element.fontSize);
 
     // Obter dados de exemplo para o elemento
-    const text = getElementPreviewText(element.type);
+    const text = getElementPreviewText(element, {
+      name: "Nome do Produto",
+      sku: "SKU12345",
+      price: 99.90
+    });
 
     // Calcular a posição do texto baseado no alinhamento
     let x = offsetX + element.x;
