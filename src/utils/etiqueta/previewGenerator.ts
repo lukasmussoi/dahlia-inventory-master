@@ -1,4 +1,9 @@
 
+/**
+ * Utilitários para renderização de elementos em PDFs
+ */
+import { jsPDF } from "jspdf";
+import 'jspdf-autotable';
 import { getElementPreviewText } from './elementUtils';
 import { formatCurrency } from '@/lib/utils';
 import { createPdfDocument, addLabelToPage } from './documentUtils';
@@ -27,9 +32,6 @@ export const generatePreviewPDF = async (
   autoAdjustDimensions: boolean,
   pageOrientation: string
 ): Promise<string> => {
-  const { jsPDF } = require("jspdf");
-  require('jspdf-autotable');
-
   const doc = createPdfDocument(pageFormat, pageOrientation, pageSize.width, pageSize.height);
 
   for (const label of labels) {

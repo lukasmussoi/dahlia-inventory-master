@@ -1,8 +1,8 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { generatePreviewPDF } from "@/utils/etiquetaGenerator";
-import { PreviewPDFOptions } from "@/utils/etiqueta/types";
+import { generatePreview } from "@/utils/etiqueta/previewGenerator";
+import type { PreviewPDFOptions } from "@/utils/etiqueta/types";
 
 /**
  * Hook para gerenciar a geração de PDFs
@@ -26,8 +26,8 @@ export function usePDFGeneration() {
     setIsGeneratingPdf(true);
     
     try {
-      // Usando a nova interface da função generatePreviewPDF que espera um único objeto
-      const pdfUrl = await generatePreviewPDF({
+      // Usando a função generatePreview que recebe um único objeto de configuração
+      const pdfUrl = await generatePreview({
         modelName: modelName || "Modelo sem nome",
         labels,
         pageFormat,

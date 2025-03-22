@@ -7,18 +7,7 @@
 import { generatePreviewPDF as generatePreview, generatePreview as generatePreviewObj } from './etiqueta/previewGenerator';
 import { generateEtiquetaPDF } from './etiqueta/printGenerator';
 import { getElementPreviewText } from './etiqueta/elementUtils';
-
-// Interface para o parâmetro único de generatePreviewPDF
-export interface PreviewPDFOptions {
-  modelName: string;
-  labels: any[];
-  pageFormat: string;
-  pageSize: { width: number; height: number };
-  pageMargins: { top: number; bottom: number; left: number; right: number };
-  labelSpacing: { horizontal: number; vertical: number };
-  autoAdjustDimensions: boolean;
-  pageOrientation: string;
-}
+import type { PreviewPDFOptions } from './etiqueta/types';
 
 // Função de adaptação para manter compatibilidade com versões anteriores que usam múltiplos parâmetros
 export const generatePreviewPDF = (
@@ -51,3 +40,6 @@ export const generatePreviewPDF = (
 
 // Re-exportar outras funções
 export { getElementPreviewText, generateEtiquetaPDF as generatePrintablePDF };
+
+// Re-exportar tipos
+export type { PreviewPDFOptions };
