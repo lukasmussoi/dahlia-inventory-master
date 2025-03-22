@@ -1,19 +1,15 @@
 
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, AlertTriangle, Copy } from "lucide-react";
 import { LabelModel } from "@/models/labelModel";
-import { generatePdfLabel, type GeneratePdfLabelOptions } from "@/utils/pdfUtils";
+import { generatePdfLabel } from "@/utils/pdfUtils";
 import { EtiquetaCustomModel } from "@/models/etiquetaCustomModel";
 import { EtiquetaCustomForm } from "./EtiquetaCustomForm";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import type { ModeloEtiqueta } from "@/types/etiqueta";
+import { PrintLabelForm } from "./print/PrintLabelForm";
+import { ModeloDetails } from "./print/ModeloDetails";
+import { ModeloManager } from "./print/ModeloManager";
 
 interface PrintLabelDialogProps {
   isOpen: boolean;
@@ -26,11 +22,14 @@ export function PrintLabelDialog({
   onClose,
   item
 }: PrintLabelDialogProps) {
+  // Estados para configuração de impressão
   const [copies, setCopies] = useState("1");
   const [startRow, setStartRow] = useState("1");
   const [startColumn, setStartColumn] = useState("1");
   const [multiplyByStock, setMultiplyByStock] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  
+  // Estados para gerenciamento de modelos
   const [showModeloForm, setShowModeloForm] = useState(false);
   const [modelosCustom, setModelosCustom] = useState<ModeloEtiqueta[]>([]);
   const [selectedModeloId, setSelectedModeloId] = useState<string | undefined>(undefined);
@@ -38,7 +37,7 @@ export function PrintLabelDialog({
   const [modeloWarning, setModeloWarning] = useState<string | null>(null);
   const [etiquetaParaDuplicar, setEtiquetaParaDuplicar] = useState<ModeloEtiqueta | null>(null);
 
-  // Load custom models when dialog opens
+  // Carregar modelos personalizados
   useEffect(() => {
     const loadModelosCustom = async () => {
       try {
@@ -61,7 +60,7 @@ export function PrintLabelDialog({
     }
   }, [isOpen, selectedModeloId]);
 
-  // Reset form when dialog opens
+  // Resetar formulário quando o diálogo é aberto
   useEffect(() => {
     if (isOpen) {
       setCopies("1");
@@ -70,7 +69,6 @@ export function PrintLabelDialog({
       setMultiplyByStock(false);
       setModeloWarning(null);
       setEtiquetaParaDuplicar(null);
-      // Não resetamos selectedModeloId para manter a seleção anterior
     }
   }, [isOpen]);
 
@@ -85,16 +83,8 @@ export function PrintLabelDialog({
           console.log("Detalhes do modelo carregado:", modelo);
           if (modelo) {
             setSelectedModelo(modelo);
-            console.log("Campos do modelo carregado:", modelo.campos);
-            console.log("Formato da página:", modelo.formatoPagina);
-            console.log("Dimensões:", {
-              larguraPagina: modelo.larguraPagina,
-              alturaPagina: modelo.alturaPagina,
-              larguraEtiqueta: modelo.largura,
-              alturaEtiqueta: modelo.altura
-            });
-
-            // Verificar se as dimensões são válidas
+            
+            // Verificar dimensões do modelo
             if (modelo.formatoPagina === "Personalizado") {
               if (!modelo.larguraPagina || !modelo.alturaPagina) {
                 setModeloWarning("Este modelo tem formato personalizado, mas as dimensões da página não estão definidas.");
@@ -104,12 +94,14 @@ export function PrintLabelDialog({
               // Verificar se a etiqueta cabe na página
               const areaUtilLargura = modelo.larguraPagina - modelo.margemEsquerda - modelo.margemDireita;
               if (modelo.largura > areaUtilLargura) {
-                setModeloWarning(`A largura da etiqueta (${modelo.largura}mm) é maior que a área útil disponível (${areaUtilLargura}mm). ` + `Isso pode causar problemas na impressão. Considere editar o modelo.`);
+                setModeloWarning(`A largura da etiqueta (${modelo.largura}mm) é maior que a área útil disponível (${areaUtilLargura}mm). ` + 
+                  `Isso pode causar problemas na impressão. Considere editar o modelo.`);
                 return;
               }
               const areaUtilAltura = modelo.alturaPagina - modelo.margemSuperior - modelo.margemInferior;
               if (modelo.altura > areaUtilAltura) {
-                setModeloWarning(`A altura da etiqueta (${modelo.altura}mm) é maior que a área útil disponível (${areaUtilAltura}mm). ` + `Isso pode causar problemas na impressão. Considere editar o modelo.`);
+                setModeloWarning(`A altura da etiqueta (${modelo.altura}mm) é maior que a área útil disponível (${areaUtilAltura}mm). ` + 
+                  `Isso pode causar problemas na impressão. Considere editar o modelo.`);
                 return;
               }
             }
@@ -128,6 +120,7 @@ export function PrintLabelDialog({
     }
   }, [selectedModeloId]);
 
+  // Validação do formulário
   const validateInput = (): boolean => {
     if (!item) {
       toast.error("Nenhum item selecionado para impressão");
@@ -162,20 +155,17 @@ export function PrintLabelDialog({
     return true;
   };
 
+  // Função para imprimir
   const handlePrint = async () => {
     if (!validateInput()) return;
     try {
       setIsProcessing(true);
       console.log("Iniciando impressão com modelo:", selectedModeloId);
-      console.log("Detalhes do modelo para impressão:", selectedModelo);
-      console.log("Item para impressão:", item);
-
-      // Validar que um modelo foi selecionado
+      
       if (!selectedModeloId) {
         throw new Error("Nenhum modelo de etiqueta selecionado");
       }
 
-      // Usar a interface correta para o generatePdfLabel
       const pdfUrl = await generatePdfLabel({
         item,
         copies: parseInt(copies),
@@ -204,6 +194,7 @@ export function PrintLabelDialog({
     }
   };
 
+  // Função para adicionar novo modelo
   const handleModeloSuccess = async () => {
     setShowModeloForm(false);
     setEtiquetaParaDuplicar(null);
@@ -216,15 +207,7 @@ export function PrintLabelDialog({
     }
   };
 
-  const editarModeloSelecionado = () => {
-    if (selectedModelo && selectedModelo.id) {
-      // Funcionalidade futura: implementar edição do modelo
-      toast.info("Funcionalidade de edição de modelo será implementada em breve");
-    } else {
-      toast.error("Nenhum modelo selecionado para editar");
-    }
-  };
-
+  // Função para duplicar modelo
   const duplicarModelo = async () => {
     if (!selectedModelo) {
       toast.error("Selecione um modelo para duplicar");
@@ -250,6 +233,7 @@ export function PrintLabelDialog({
     }
   };
 
+  // Renderizar o formulário de criação/edição de modelo
   if (showModeloForm) {
     return <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden">
@@ -264,6 +248,7 @@ export function PrintLabelDialog({
       </Dialog>;
   }
 
+  // Renderizar o diálogo principal
   return <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl">
         <DialogHeader>
@@ -272,94 +257,39 @@ export function PrintLabelDialog({
             Configure as opções de impressão para gerar etiquetas para o item selecionado.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="label-model">Modelo de Etiqueta</Label>
-              <Select value={selectedModeloId} onValueChange={setSelectedModeloId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione um modelo" />
-                </SelectTrigger>
-                <SelectContent>
-                  {modelosCustom.length > 0 ? modelosCustom.map(modelo => (
-                    <SelectItem key={modelo.id} value={modelo.id || ""}>
-                      {modelo.nome}
-                    </SelectItem>
-                  )) : (
-                    <SelectItem value="sem-modelos" disabled>
-                      Nenhum modelo disponível
-                    </SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="copies">Cópias</Label>
-              <Input id="copies" type="number" min="1" value={copies} onChange={e => setCopies(e.target.value)} />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="start-row">Linha início</Label>
-              <Input id="start-row" type="number" min="1" value={startRow} onChange={e => setStartRow(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="start-column">Coluna início</Label>
-              <Input id="start-column" type="number" min="1" value={startColumn} onChange={e => setStartColumn(e.target.value)} />
-            </div>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Switch id="multiply-stock" checked={multiplyByStock} onCheckedChange={setMultiplyByStock} />
-            <Label htmlFor="multiply-stock">Multiplicar por estoque</Label>
-          </div>
-        </div>
+        
+        {/* Formulário de impressão */}
+        <PrintLabelForm
+          modelosCustom={modelosCustom}
+          selectedModeloId={selectedModeloId}
+          setSelectedModeloId={setSelectedModeloId}
+          copies={copies}
+          setCopies={setCopies}
+          startRow={startRow}
+          setStartRow={setStartRow}
+          startColumn={startColumn}
+          setStartColumn={setStartColumn}
+          multiplyByStock={multiplyByStock}
+          setMultiplyByStock={setMultiplyByStock}
+          onPrint={handlePrint}
+          onCancel={onClose}
+          isProcessing={isProcessing}
+          modeloWarning={modeloWarning}
+        />
+        
         <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-sm font-medium">Gerenciar Modelos</h3>
-            <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={duplicarModelo} 
-                disabled={!selectedModelo}
-                className="flex items-center gap-2"
-              >
-                <Copy className="h-4 w-4" />
-                Duplicar
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setShowModeloForm(true)} className="flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                Novo Modelo
-              </Button>
-            </div>
-          </div>
+          {/* Gerenciador de modelos */}
+          <ModeloManager
+            selectedModelo={selectedModelo}
+            onDuplicar={duplicarModelo}
+            onNovo={() => setShowModeloForm(true)}
+          />
           
-          {selectedModelo && <div className="border p-4 rounded-md bg-slate-50">
-              <h4 className="font-medium mb-2">Detalhes do modelo: {selectedModelo.nome}</h4>
-              <div className="text-sm space-y-1">
-                <p>Dimensões da etiqueta: {selectedModelo.largura}mm × {selectedModelo.altura}mm</p>
-                <p>Formato da página: {selectedModelo.formatoPagina} 
-                  {selectedModelo.formatoPagina === "Personalizado" && selectedModelo.larguraPagina && selectedModelo.alturaPagina ? ` (${selectedModelo.larguraPagina}mm × ${selectedModelo.alturaPagina}mm)` : ""}
-                </p>
-                <p>Orientação: {selectedModelo.orientacao === "retrato" ? "Retrato" : "Paisagem"}</p>
-              </div>
-            </div>}
-          
-          {modeloWarning && <Alert variant="warning" className="bg-yellow-50 border-yellow-200">
-              <AlertTriangle className="h-4 w-4 text-yellow-700" />
-              <AlertTitle className="text-yellow-800">Atenção</AlertTitle>
-              <AlertDescription className="text-yellow-700">
-                {modeloWarning}
-              </AlertDescription>
-            </Alert>}
-        </div>
-        <div className="flex justify-end space-x-2">
-          <Button variant="outline" onClick={onClose} disabled={isProcessing}>
-            Cancelar
-          </Button>
-          <Button onClick={handlePrint} disabled={isProcessing || !selectedModeloId}>
-            {isProcessing ? "Processando..." : "Imprimir"}
-          </Button>
+          {/* Detalhes do modelo selecionado */}
+          <ModeloDetails
+            selectedModelo={selectedModelo}
+            modeloWarning={modeloWarning}
+          />
         </div>
       </DialogContent>
     </Dialog>;
