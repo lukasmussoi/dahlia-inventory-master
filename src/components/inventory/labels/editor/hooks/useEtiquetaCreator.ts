@@ -23,7 +23,7 @@ export function useEtiquetaCreator(initialData?: any, autoAdjustDimensions = fal
   );
   const elementManagement = useElementManagement(
     labelManagement.labels,
-    labelManagement.setSelectedLabelId as any,
+    labelManagement.setLabels,
     labelManagement.selectedLabelId,
     labelManagement.snapToGridValue
   );
@@ -36,6 +36,25 @@ export function useEtiquetaCreator(initialData?: any, autoAdjustDimensions = fal
     labelManagement.snapToGridValue
   );
   const pdfGeneration = usePDFGeneration();
+
+  // Funções adaptadoras para o componente ElementPanel
+  const handleDeleteElement = () => {
+    if (etiquetaState.selectedElement) {
+      elementManagement.handleDeleteElement(etiquetaState.selectedElement);
+    }
+  };
+
+  const handleUpdateElement = (property: string, value: any) => {
+    if (etiquetaState.selectedElement) {
+      elementManagement.handleUpdateElement(etiquetaState.selectedElement, property, value);
+    }
+  };
+
+  const handleSetAlignment = (alignment: string) => {
+    if (etiquetaState.selectedElement) {
+      elementManagement.handleSetAlignment(etiquetaState.selectedElement, alignment);
+    }
+  };
 
   /**
    * Manipula a geração de prévia do PDF
@@ -134,8 +153,11 @@ export function useEtiquetaCreator(initialData?: any, autoAdjustDimensions = fal
     // Gerenciamento de etiquetas
     ...labelManagement,
     
-    // Elementos
+    // Elementos - incluir as funções adaptadas para o elemento selecionado
     ...elementManagement,
+    handleDeleteElement,
+    handleUpdateElement,
+    handleSetAlignment,
     
     // Arrastar e soltar
     ...dragAndDrop,
