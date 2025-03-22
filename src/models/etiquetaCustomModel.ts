@@ -58,15 +58,27 @@ export class EtiquetaCustomModel {
 
       console.log("Criando modelo de etiqueta:", JSON.stringify(modelo, null, 2));
 
-      // Garantir que todos os campos obrigatórios estejam presentes
+      // Mapear o modelo para o formato do banco
       const modeloDb = mapModelToDatabase(modelo);
+      
+      // Garantir que todos os campos obrigatórios estejam presentes
       const modeloCompleto = {
-        ...modeloDb,
-        criado_por: user.data.user.id,
-        altura: Number(modelo.altura) || 30,  // Valor padrão caso não esteja definido
-        largura: Number(modelo.largura) || 80, // Valor padrão caso não esteja definido
+        altura: Number(modelo.altura) || 30,
+        largura: Number(modelo.largura) || 80,
         descricao: modelo.nome || modelo.descricao || "Modelo sem nome",
-        tipo: "custom" // Garantir que o tipo seja definido
+        tipo: "custom",
+        formato_pagina: modelo.formatoPagina || "A4",
+        orientacao: modelo.orientacao || "retrato",
+        margem_superior: Number(modelo.margemSuperior) || 10,
+        margem_inferior: Number(modelo.margemInferior) || 10,
+        margem_esquerda: Number(modelo.margemEsquerda) || 10,
+        margem_direita: Number(modelo.margemDireita) || 10,
+        espacamento_horizontal: Number(modelo.espacamentoHorizontal) || 0,
+        espacamento_vertical: Number(modelo.espacamentoVertical) || 0,
+        altura_pagina: modelo.alturaPagina ? Number(modelo.alturaPagina) : null,
+        largura_pagina: modelo.larguraPagina ? Number(modelo.larguraPagina) : null,
+        campos: modeloDb.campos,
+        criado_por: user.data.user.id
       };
 
       console.log("Dados preparados para o banco:", JSON.stringify(modeloCompleto, null, 2));
@@ -114,10 +126,33 @@ export class EtiquetaCustomModel {
         console.log('Modelo atual recuperado com sucesso:', JSON.stringify(modeloAtual, null, 2));
       }
       
-      // Preparar modelo para atualização, garantindo campos obrigatórios
-      const modeloDbBase = mapModelToDatabase(modelo);
+      // Mapear o modelo para o formato do banco
+      const modeloDb = mapModelToDatabase(modelo);
       
-      // Garantir que NÃO enviemos campos que possam conflitar com triggers do banco
+      // Garantir que todos os campos obrigatórios estejam presentes
+      const modeloCompleto = {
+        altura: Number(modelo.altura) || 30,
+        largura: Number(modelo.largura) || 80,
+        descricao: modelo.nome || modelo.descricao || "Modelo sem nome",
+        tipo: "custom",
+        formato_pagina: modelo.formatoPagina || "A4",
+        orientacao: modelo.orientacao || "retrato",
+        margem_superior: Number(modelo.margemSuperior) || 10,
+        margem_inferior: Number(modelo.margemInferior) || 10,
+        margem_esquerda: Number(modelo.margemEsquerda) || 10,
+        margem_direita: Number(modelo.margemDireita) || 10,
+        espacamento_horizontal: Number(modelo.espacamentoHorizontal) || 0,
+        espacamento_vertical: Number(modelo.espacamentoVertical) || 0,
+        campos: modeloDb.campos
+      };
+      
+      // Adicionar dimensões da página apenas se for formato personalizado
+      if (modelo.formatoPagina === "Custom" || modelo.formatoPagina === "Personalizado") {
+        modeloCompleto['altura_pagina'] = Number(modelo.alturaPagina) || 297;
+        modeloCompleto['largura_pagina'] = Number(modelo.larguraPagina) || 210;
+      }
+      
+      // Remover campos que não devem ser atualizados
       const camposParaExcluir = [
         'atualizado_em', 
         'updated_at', 
@@ -126,28 +161,19 @@ export class EtiquetaCustomModel {
         'criado_por'
       ];
       
-      const modeloDb: any = { ...modeloDbBase };
-      
       camposParaExcluir.forEach(campo => {
-        if (modeloDb[campo] !== undefined) {
-          delete modeloDb[campo];
-          console.log(`Campo removido antes da atualização: ${campo}`);
+        if (modeloCompleto[campo as keyof typeof modeloCompleto] !== undefined) {
+          delete modeloCompleto[campo as keyof typeof modeloCompleto];
         }
       });
-      
-      // Garantir que campos obrigatórios estejam presentes
-      modeloDb.altura = Number(modelo.altura) || 30;
-      modeloDb.largura = Number(modelo.largura) || 80;
-      modeloDb.descricao = modelo.nome || modelo.descricao || "Modelo sem nome";
-      modeloDb.tipo = "custom";
-      
-      console.log("Preparando dados para atualização do modelo:", id);
-      console.log("Dados formatados para envio:", JSON.stringify(modeloDb, null, 2));
 
-      // Executar a atualização com tratamento de erro detalhado
+      console.log("Preparando dados para atualização do modelo:", id);
+      console.log("Dados formatados para envio:", JSON.stringify(modeloCompleto, null, 2));
+
+      // Executar a atualização
       const { data, error } = await supabase
         .from('etiquetas_custom')
-        .update(modeloDb)
+        .update(modeloCompleto)
         .eq('id', id)
         .select();
 
