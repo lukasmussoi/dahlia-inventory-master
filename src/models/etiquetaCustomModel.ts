@@ -58,16 +58,22 @@ export class EtiquetaCustomModel {
 
       console.log("Criando modelo de etiqueta:", JSON.stringify(modelo, null, 2));
 
-      const modeloDb = {
-        ...mapModelToDatabase(modelo),
-        criado_por: user.data.user.id
+      // Garantir que todos os campos obrigatórios estejam presentes
+      const modeloDb = mapModelToDatabase(modelo);
+      const modeloCompleto = {
+        ...modeloDb,
+        criado_por: user.data.user.id,
+        altura: Number(modelo.altura) || 30,  // Valor padrão caso não esteja definido
+        largura: Number(modelo.largura) || 80, // Valor padrão caso não esteja definido
+        descricao: modelo.nome || modelo.descricao || "Modelo sem nome",
+        tipo: "custom" // Garantir que o tipo seja definido
       };
 
-      console.log("Dados preparados para o banco:", JSON.stringify(modeloDb, null, 2));
+      console.log("Dados preparados para o banco:", JSON.stringify(modeloCompleto, null, 2));
 
       const { data, error } = await supabase
         .from('etiquetas_custom')
-        .insert(modeloDb)
+        .insert(modeloCompleto)
         .select('id')
         .single();
 
@@ -108,8 +114,8 @@ export class EtiquetaCustomModel {
         console.log('Modelo atual recuperado com sucesso:', JSON.stringify(modeloAtual, null, 2));
       }
       
-      // Preparar modelo para atualização
-      const modeloDb = mapModelToDatabase(modelo);
+      // Preparar modelo para atualização, garantindo campos obrigatórios
+      const modeloDbBase = mapModelToDatabase(modelo);
       
       // Garantir que NÃO enviemos campos que possam conflitar com triggers do banco
       const camposParaExcluir = [
@@ -120,12 +126,20 @@ export class EtiquetaCustomModel {
         'criado_por'
       ];
       
+      const modeloDb: any = { ...modeloDbBase };
+      
       camposParaExcluir.forEach(campo => {
-        if ((modeloDb as any)[campo] !== undefined) {
-          delete (modeloDb as any)[campo];
+        if (modeloDb[campo] !== undefined) {
+          delete modeloDb[campo];
           console.log(`Campo removido antes da atualização: ${campo}`);
         }
       });
+      
+      // Garantir que campos obrigatórios estejam presentes
+      modeloDb.altura = Number(modelo.altura) || 30;
+      modeloDb.largura = Number(modelo.largura) || 80;
+      modeloDb.descricao = modelo.nome || modelo.descricao || "Modelo sem nome";
+      modeloDb.tipo = "custom";
       
       console.log("Preparando dados para atualização do modelo:", id);
       console.log("Dados formatados para envio:", JSON.stringify(modeloDb, null, 2));

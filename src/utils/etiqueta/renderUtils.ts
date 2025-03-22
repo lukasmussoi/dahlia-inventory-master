@@ -19,7 +19,7 @@ export const renderLabelElements = (pdf: JsPDF, elements: LabelElement[], offset
     pdf.setFontSize(element.fontSize);
 
     // Obter dados de exemplo para o elemento
-    const text = getElementPreviewText(element, {
+    const text = getElementPreviewText(element.type, {
       name: "Nome do Produto",
       sku: "SKU12345",
       price: 99.90
@@ -44,4 +44,3 @@ export const renderLabelElements = (pdf: JsPDF, elements: LabelElement[], offset
     pdf.text(text, x, y, { align: textAlign });
   });
 };
-

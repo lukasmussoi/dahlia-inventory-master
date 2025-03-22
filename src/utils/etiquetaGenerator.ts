@@ -4,8 +4,8 @@
  * Este arquivo serve como um façade para os módulos mais específicos
  */
 
-import { generatePreviewPDF as generatePreview, generatePreview as generatePreviewObj } from './etiqueta/previewGenerator';
-import { generateEtiquetaPDF } from './etiqueta/printGenerator';
+import { generatePreview } from './etiqueta/previewGenerator';
+import { generatePrintablePDF } from './etiqueta/printGenerator';
 import { getElementPreviewText } from './etiqueta/elementUtils';
 import type { PreviewPDFOptions } from './etiqueta/types';
 
@@ -22,24 +22,25 @@ export const generatePreviewPDF = (
 ): Promise<string> => {
   // Verificar se está sendo chamado com o novo formato (objeto único)
   if (typeof options === 'object' && !Array.isArray(options)) {
-    return generatePreviewObj(options);
+    return generatePreview(options);
   }
 
   // Chamada no formato antigo com múltiplos parâmetros
-  return generatePreview(
-    options as string, // modelName
-    labels as any[],
-    pageFormat as string,
-    pageSize as { width: number; height: number },
-    pageMargins as { top: number; bottom: number; left: number; right: number },
-    labelSpacing as { horizontal: number; vertical: number },
-    autoAdjustDimensions as boolean,
-    pageOrientation as string
-  );
+  // Adaptador para compatibilidade com versões anteriores
+  return generatePreview({
+    modelName: options as string,
+    labels: labels || [],
+    pageFormat: pageFormat || 'A4',
+    pageSize: pageSize || { width: 210, height: 297 },
+    pageMargins: pageMargins || { top: 10, bottom: 10, left: 10, right: 10 },
+    labelSpacing: labelSpacing || { horizontal: 0, vertical: 0 },
+    autoAdjustDimensions: autoAdjustDimensions || false,
+    pageOrientation: pageOrientation || 'retrato'
+  });
 };
 
 // Re-exportar outras funções
-export { getElementPreviewText, generateEtiquetaPDF as generatePrintablePDF };
+export { getElementPreviewText, generatePrintablePDF };
 
 // Re-exportar tipos
 export type { PreviewPDFOptions };
