@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Plus, AlertTriangle, Copy } from "lucide-react";
 import { LabelModel } from "@/models/labelModel";
-import { generatePdfLabel } from "@/utils/pdfUtils";
+import { generatePdfLabel, type GeneratePdfLabelOptions } from "@/utils/pdfUtils";
 import { EtiquetaCustomModel } from "@/models/etiquetaCustomModel";
 import { EtiquetaCustomForm } from "./EtiquetaCustomForm";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
