@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react"
 import { Save } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -19,7 +18,7 @@ export default function EtiquetaCreator({
   autoAdjustDimensions = false,
   onToggleAutoAdjust
 }: EtiquetaCreatorProps) {
-  // Estado principal
+  // Usando o novo editor de etiquetas 
   const [activeTab, setActiveTab] = useState("elementos")
   const [modelName, setModelName] = useState(initialData?.nome || "")
   const [selectedElement, setSelectedElement] = useState<string | null>(null)
@@ -533,7 +532,21 @@ export default function EtiquetaCreator({
       alturaPagina: pageSize.height
     };
     
-    onSave(modelData);
+    console.log("Dados do modelo a serem salvos:", modelData);
+    
+    try {
+      // Chamar a função onSave e verificar se houve sucesso
+      if (typeof onSave === 'function') {
+        toast.info("Salvando modelo de etiqueta...");
+        onSave(modelData);
+      } else {
+        console.error("A função onSave não foi fornecida ao componente EtiquetaCreator");
+        toast.error("Erro ao salvar: configuração incorreta");
+      }
+    } catch (error) {
+      console.error("Erro ao chamar onSave:", error);
+      toast.error("Erro ao salvar modelo de etiqueta");
+    }
   }
   
   const handleOptimizeLayout = () => {
@@ -737,7 +750,10 @@ export default function EtiquetaCreator({
         <Button variant="outline" onClick={onClose}>
           Cancelar
         </Button>
-        <Button onClick={handleSave}>
+        <Button 
+          onClick={handleSave}
+          className="bg-primary text-primary-foreground hover:bg-primary/90"
+        >
           <Save className="h-4 w-4 mr-2" />
           Salvar
         </Button>
