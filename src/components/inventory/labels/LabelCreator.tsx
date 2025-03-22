@@ -101,6 +101,19 @@ export function LabelCreator() {
     toast.success("Modelo de etiqueta salvo com sucesso");
   };
 
+  // Wrapper functions for zoom handlers to fix TypeScript errors
+  const handleZoomInClick = () => {
+    handleZoomIn();
+  };
+
+  const handleZoomOutClick = () => {
+    handleZoomOut();
+  };
+
+  const handleResetZoomClick = () => {
+    handleResetZoom();
+  };
+
   const filteredModels = models?.filter(model => 
     model.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
     model.descricao?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -323,9 +336,9 @@ export function LabelCreator() {
           
           <div className="flex flex-col items-center justify-center p-4 bg-gray-50 rounded-md">
             <div className="flex justify-center mb-4 gap-2">
-              <Button variant="outline" size="sm" onClick={handleZoomOut}>-</Button>
-              <Button variant="outline" size="sm" onClick={handleResetZoom}>100%</Button>
-              <Button variant="outline" size="sm" onClick={handleZoomIn}>+</Button>
+              <Button variant="outline" size="sm" onClick={handleZoomOutClick}>-</Button>
+              <Button variant="outline" size="sm" onClick={handleResetZoomClick}>100%</Button>
+              <Button variant="outline" size="sm" onClick={handleZoomInClick}>+</Button>
             </div>
             
             <div className="bg-white p-8 border rounded-md shadow-sm overflow-auto">
