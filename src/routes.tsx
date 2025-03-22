@@ -13,6 +13,7 @@ import PlatingTypes from "@/routes/plating-types";
 import { DashboardContent } from "@/components/dashboard/DashboardContent";
 import InventoryReports from "@/routes/inventory-reports";
 import InventoryLabelsRoute from "@/routes/inventory-labels";
+import InventoryLabelCreatorRoute from "@/routes/inventory-label-creator";
 import ResellersPage from "@/routes/sales/resellers";
 import PromotersPage from "@/routes/sales/promoters";
 import ResellerFormPage from "@/routes/sales/reseller-form";
@@ -29,6 +30,7 @@ const Router = () => {
           <Route index element={<DashboardContent />} />
           <Route path="inventory" element={<Inventory />} />
           <Route path="inventory/labels" element={<InventoryLabelsRoute />} />
+          <Route path="inventory/label-creator" element={<InventoryLabelCreatorRoute />} />
           <Route path="inventory/reports" element={<InventoryReports />} />
           <Route path="suitcases" element={<Suitcases />} />
           <Route path="suppliers" element={<Suppliers />} />
