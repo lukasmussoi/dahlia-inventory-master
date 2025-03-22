@@ -19,6 +19,8 @@ export function useEtiquetaCreator(initialData?: any, autoAdjustDimensions = fal
   const [snapToGrid, setSnapToGrid] = useState(true);
   const [gridSize, setGridSize] = useState(5);
   const editorRef = useRef<HTMLDivElement>(null);
+  // Adicionando o estado selectedElement que estava faltando
+  const [selectedElement, setSelectedElement] = useState<string | null>(null);
 
   // Log para debug
   useEffect(() => {
@@ -73,7 +75,8 @@ export function useEtiquetaCreator(initialData?: any, autoAdjustDimensions = fal
   const elementManagement = useElementManagement(
     labelManagement.labels, 
     labelManagement.setLabels, 
-    labelManagement.selectedLabelId
+    labelManagement.selectedLabelId,
+    selectedElement // Passando o selectedElement para o hook
   );
 
   // Drag & Drop
@@ -283,6 +286,9 @@ export function useEtiquetaCreator(initialData?: any, autoAdjustDimensions = fal
     gridSize,
     setGridSize,
     editorRef,
+    // Adicionando selectedElement e setSelectedElement ao retorno
+    selectedElement,
+    setSelectedElement,
     
     // Labels
     ...labelManagement,
