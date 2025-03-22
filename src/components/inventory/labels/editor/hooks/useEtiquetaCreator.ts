@@ -76,7 +76,7 @@ export function useEtiquetaCreator(initialData?: any, autoAdjustDimensions = fal
     labelManagement.labels, 
     labelManagement.setLabels, 
     labelManagement.selectedLabelId,
-    selectedElement // Passando o selectedElement para o hook
+    labelManagement.snapToGridValue // Usando a função snapToGridValue do labelManagement
   );
 
   // Drag & Drop
