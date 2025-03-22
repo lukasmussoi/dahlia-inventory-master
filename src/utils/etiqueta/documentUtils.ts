@@ -1,4 +1,3 @@
-
 /**
  * Utilitários para criação e manipulação de documentos PDF
  */
@@ -47,7 +46,7 @@ export const createPdfDocument = (
     const height = orientation === 'landscape' ? Math.min(largura, altura) : Math.max(largura, altura);
     
     return new JsPDF({
-      orientation: 'portrait', // Sempre portrait para formato personalizado, controlamos as dimensões manualmente
+      orientation,
       unit: 'mm',
       format: [width, height]
     });

@@ -1,4 +1,3 @@
-
 import type { ModeloEtiqueta, EtiquetaCustomDB, CampoEtiqueta } from "@/types/etiqueta";
 import type { Json } from "@/integrations/supabase/types";
 
@@ -100,7 +99,7 @@ export function mapDatabaseToModel(item: EtiquetaCustomDB): ModeloEtiqueta {
     espacamentoVertical: Number(item.espacamento_vertical) || 0,
     larguraPagina: Number(item.largura_pagina) || 210,
     alturaPagina: Number(item.altura_pagina) || 297,
-    campos
+    campos: campos
   };
 }
 
