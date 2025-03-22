@@ -35,7 +35,11 @@ export class EtiquetaCustomModel {
 
       if (error) throw error;
       
-      return mapDatabaseToModel(data);
+      const modeloMapeado = mapDatabaseToModel(data);
+      console.log(`Modelo ${id} carregado do banco:`, data);
+      console.log(`Modelo ${id} mapeado para o frontend:`, modeloMapeado);
+      
+      return modeloMapeado;
     } catch (error) {
       console.error(`Erro ao buscar modelo de etiqueta ID ${id}:`, error);
       toast.error('Erro ao carregar modelo de etiqueta');
@@ -99,6 +103,7 @@ export class EtiquetaCustomModel {
         
       if (errorBusca) {
         console.error('Erro ao buscar modelo atual:', errorBusca);
+        throw new Error(`Erro ao buscar modelo atual: ${errorBusca.message}`);
       } else {
         console.log('Modelo atual recuperado com sucesso:', modeloAtual);
       }
@@ -106,11 +111,15 @@ export class EtiquetaCustomModel {
       // Preparar modelo para atualização
       const modeloDb = mapModelToDatabase(modelo);
       
-      // Remover explicitamente campos que podem causar conflitos com triggers
-      delete (modeloDb as any).atualizado_em;
-      delete (modeloDb as any).updated_at;
-      delete (modeloDb as any).criado_em;
-      delete (modeloDb as any).created_at;
+      // Garantir que NÃO enviemos campos que possam conflitar com triggers do banco
+      // A declaração é explícita para deixar claro o que estamos removendo
+      const camposParaExcluir = ['atualizado_em', 'updated_at', 'criado_em', 'created_at'];
+      camposParaExcluir.forEach(campo => {
+        if ((modeloDb as any)[campo] !== undefined) {
+          delete (modeloDb as any)[campo];
+          console.log(`Campo removido antes da atualização: ${campo}`);
+        }
+      });
       
       console.log("Preparando dados para atualização do modelo:", id);
       console.log("Dados formatados para envio:", JSON.stringify(modeloDb, null, 2));
@@ -119,7 +128,8 @@ export class EtiquetaCustomModel {
       const { data, error } = await supabase
         .from('etiquetas_custom')
         .update(modeloDb)
-        .eq('id', id);
+        .eq('id', id)
+        .select();
 
       if (error) {
         console.error('Erro detalhado do Supabase ao atualizar modelo:', {

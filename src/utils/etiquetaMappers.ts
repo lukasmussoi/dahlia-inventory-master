@@ -67,11 +67,20 @@ export function mapDatabaseToModel(item: EtiquetaCustomDB): ModeloEtiqueta {
 
   console.log("Campos mapeados:", campos);
 
-  // Assegura que formatoPagina seja tratado corretamente, inclusive valores personalizados
+  // Para formato de página, verificar se é "Custom" e converter para "Personalizado" no front
   let formatoPagina = item.formato_pagina || "A4";
-  if (formatoPagina === "Custom" || formatoPagina === "Personalizado") {
+  if (formatoPagina === "Custom") {
     formatoPagina = "Personalizado";
   }
+
+  // Registro completo da conversão do banco para o modelo
+  console.log(`Valores mapeados do BD para o frontend:
+    - formato_pagina: "${item.formato_pagina}" -> formatoPagina: "${formatoPagina}"
+    - orientacao: "${item.orientacao}"
+    - margens: superior=${item.margem_superior}, inferior=${item.margem_inferior}, esquerda=${item.margem_esquerda}, direita=${item.margem_direita}
+    - espacamento: horizontal=${item.espacamento_horizontal}, vertical=${item.espacamento_vertical}
+    - dimensões da página: ${item.largura_pagina}x${item.altura_pagina}
+  `);
 
   return {
     id: item.id,
@@ -122,12 +131,29 @@ export function mapModelToDatabase(modelo: ModeloEtiqueta) {
 
   console.log("Campos validados para salvar:", camposValidados);
 
-  // Garantir que formatoPagina seja enviado corretamente
+  // Garantir que formatoPagina seja enviado corretamente (converter "Personalizado" para "Custom" no BD)
   let formatoPagina = modelo.formatoPagina || "A4";
-  // Mapear "Personalizado" para "Custom" para o banco de dados
   if (formatoPagina === "Personalizado") {
     formatoPagina = "Custom";
   }
+
+  // Certifique-se de que as dimensões da página personalizadas sejam salvas corretamente
+  const larguraPagina = modelo.formatoPagina === "Personalizado" || modelo.formatoPagina === "Custom" 
+    ? Number(modelo.larguraPagina) || 210 
+    : null;
+  
+  const alturaPagina = modelo.formatoPagina === "Personalizado" || modelo.formatoPagina === "Custom" 
+    ? Number(modelo.alturaPagina) || 297 
+    : null;
+
+  // Logging para depuração
+  console.log(`Valores mapeados do frontend para o BD:
+    - formatoPagina: "${modelo.formatoPagina}" -> formato_pagina: "${formatoPagina}"
+    - orientacao: "${modelo.orientacao}"
+    - margens: superior=${modelo.margemSuperior}, inferior=${modelo.margemInferior}, esquerda=${modelo.margemEsquerda}, direita=${modelo.margemDireita}
+    - espacamento: horizontal=${modelo.espacamentoHorizontal}, vertical=${modelo.espacamentoVertical}
+    - dimensões da página: ${larguraPagina}x${alturaPagina}
+  `);
 
   // Certificando-se de que todos os valores sejam do tipo correto para o banco
   const result = {
@@ -143,8 +169,8 @@ export function mapModelToDatabase(modelo: ModeloEtiqueta) {
     margem_direita: Number(modelo.margemDireita) || 10,
     espacamento_horizontal: Number(modelo.espacamentoHorizontal) || 0,
     espacamento_vertical: Number(modelo.espacamentoVertical) || 0,
-    largura_pagina: modelo.larguraPagina ? Number(modelo.larguraPagina) : null,
-    altura_pagina: modelo.alturaPagina ? Number(modelo.alturaPagina) : null,
+    largura_pagina: larguraPagina,
+    altura_pagina: alturaPagina,
     campos: camposValidados as unknown as Json
   };
   

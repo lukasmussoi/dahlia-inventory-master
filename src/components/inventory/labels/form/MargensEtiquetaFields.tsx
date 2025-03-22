@@ -9,6 +9,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { UseFormReturn } from "react-hook-form";
 import * as z from "zod";
+import { useEffect } from "react";
 
 const formSchema = z.object({
   margemSuperior: z.number().min(0).max(200),
@@ -22,6 +23,17 @@ type MargensEtiquetaFieldsProps = {
 };
 
 export function MargensEtiquetaFields({ form }: MargensEtiquetaFieldsProps) {
+  // Log dos valores iniciais para depuração
+  useEffect(() => {
+    const margens = {
+      superior: form.getValues("margemSuperior"),
+      inferior: form.getValues("margemInferior"),
+      esquerda: form.getValues("margemEsquerda"),
+      direita: form.getValues("margemDireita"),
+    };
+    console.log("Valores iniciais de margens:", margens);
+  }, [form]);
+
   return (
     <div>
       <h3 className="text-sm font-medium mb-3">Margens da Página (mm)</h3>
@@ -35,8 +47,15 @@ export function MargensEtiquetaFields({ form }: MargensEtiquetaFieldsProps) {
               <FormControl>
                 <Input 
                   type="number" 
-                  {...field}
-                  onChange={e => field.onChange(Number(e.target.value))}
+                  {...field} 
+                  onChange={e => {
+                    const value = e.target.value ? Number(e.target.value) : 0;
+                    console.log(`Margem superior alterada para: ${value}`);
+                    field.onChange(value);
+                  }}
+                  onBlur={() => {
+                    console.log(`Margem superior confirmada: ${field.value}`);
+                  }}
                   min={0}
                   max={200}
                 />
@@ -55,8 +74,15 @@ export function MargensEtiquetaFields({ form }: MargensEtiquetaFieldsProps) {
               <FormControl>
                 <Input 
                   type="number" 
-                  {...field}
-                  onChange={e => field.onChange(Number(e.target.value))}
+                  {...field} 
+                  onChange={e => {
+                    const value = e.target.value ? Number(e.target.value) : 0;
+                    console.log(`Margem inferior alterada para: ${value}`);
+                    field.onChange(value);
+                  }}
+                  onBlur={() => {
+                    console.log(`Margem inferior confirmada: ${field.value}`);
+                  }}
                   min={0}
                   max={200}
                 />
@@ -75,8 +101,15 @@ export function MargensEtiquetaFields({ form }: MargensEtiquetaFieldsProps) {
               <FormControl>
                 <Input 
                   type="number" 
-                  {...field}
-                  onChange={e => field.onChange(Number(e.target.value))}
+                  {...field} 
+                  onChange={e => {
+                    const value = e.target.value ? Number(e.target.value) : 0;
+                    console.log(`Margem esquerda alterada para: ${value}`);
+                    field.onChange(value);
+                  }}
+                  onBlur={() => {
+                    console.log(`Margem esquerda confirmada: ${field.value}`);
+                  }}
                   min={0}
                   max={200}
                 />
@@ -95,8 +128,15 @@ export function MargensEtiquetaFields({ form }: MargensEtiquetaFieldsProps) {
               <FormControl>
                 <Input 
                   type="number" 
-                  {...field}
-                  onChange={e => field.onChange(Number(e.target.value))}
+                  {...field} 
+                  onChange={e => {
+                    const value = e.target.value ? Number(e.target.value) : 0;
+                    console.log(`Margem direita alterada para: ${value}`);
+                    field.onChange(value);
+                  }}
+                  onBlur={() => {
+                    console.log(`Margem direita confirmada: ${field.value}`);
+                  }}
                   min={0}
                   max={200}
                 />

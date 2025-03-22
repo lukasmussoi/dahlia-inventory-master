@@ -9,6 +9,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { UseFormReturn } from "react-hook-form";
 import * as z from "zod";
+import { useEffect } from "react";
 
 const formSchema = z.object({
   espacamentoHorizontal: z.number().min(0).max(200),
@@ -20,6 +21,13 @@ type EspacamentoEtiquetaFieldsProps = {
 };
 
 export function EspacamentoEtiquetaFields({ form }: EspacamentoEtiquetaFieldsProps) {
+  // Log dos valores iniciais para depuração
+  useEffect(() => {
+    const espacamentoH = form.getValues("espacamentoHorizontal");
+    const espacamentoV = form.getValues("espacamentoVertical");
+    console.log(`Valores iniciais de espaçamento: horizontal=${espacamentoH}, vertical=${espacamentoV}`);
+  }, [form]);
+
   return (
     <div>
       <h3 className="text-sm font-medium mb-3">Espaçamento entre Etiquetas (mm)</h3>
@@ -38,6 +46,9 @@ export function EspacamentoEtiquetaFields({ form }: EspacamentoEtiquetaFieldsPro
                     const value = e.target.value ? Number(e.target.value) : 0;
                     console.log(`Espaçamento horizontal alterado para: ${value}`);
                     field.onChange(value);
+                  }}
+                  onBlur={e => {
+                    console.log(`Espaçamento horizontal confirmado: ${field.value}`);
                   }}
                   min={0}
                   max={200}
@@ -62,6 +73,9 @@ export function EspacamentoEtiquetaFields({ form }: EspacamentoEtiquetaFieldsPro
                     const value = e.target.value ? Number(e.target.value) : 0;
                     console.log(`Espaçamento vertical alterado para: ${value}`);
                     field.onChange(value);
+                  }}
+                  onBlur={e => {
+                    console.log(`Espaçamento vertical confirmado: ${field.value}`);
                   }}
                   min={0}
                   max={200}
