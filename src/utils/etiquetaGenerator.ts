@@ -1,3 +1,4 @@
+
 import JsPDF from 'jspdf';
 import { toast } from 'sonner';
 import type { LabelType, LabelElement } from '@/components/inventory/labels/editor/EtiquetaCreator';
@@ -60,18 +61,20 @@ export const generatePreviewPDF = async (
     pdf.text(`Orientação: ${orientation === 'paisagem' ? 'Paisagem' : 'Retrato'}`, 10, 35);
     pdf.text(`Dimensões: ${pageSize.width} × ${pageSize.height} mm`, 10, 40);
     pdf.text(`Dimensões da etiqueta: ${labels[0].width} × ${labels[0].height} mm`, 10, 45);
+    pdf.text(`Margens: Superior: ${margins.top}mm, Inferior: ${margins.bottom}mm, Esquerda: ${margins.left}mm, Direita: ${margins.right}mm`, 10, 50);
+    pdf.text(`Espaçamento: Horizontal: ${spacing.horizontal}mm, Vertical: ${spacing.vertical}mm`, 10, 55);
 
     // Desenhar borda da página
     pdf.setDrawColor(200, 200, 200);
     pdf.rect(margins.left, margins.top, pageSize.width - margins.left - margins.right, pageSize.height - margins.top - margins.bottom);
 
     // Calcular quantas etiquetas cabem na página
-    const columnsPerPage = Math.floor((pageSize.width - margins.left - margins.right) / (labels[0].width + spacing.horizontal));
-    const rowsPerPage = Math.floor((pageSize.height - margins.top - margins.bottom) / (labels[0].height + spacing.vertical));
+    const columnsPerPage = Math.floor((pageSize.width - margins.left - margins.right + spacing.horizontal) / (labels[0].width + spacing.horizontal));
+    const rowsPerPage = Math.floor((pageSize.height - margins.top - margins.bottom + spacing.vertical) / (labels[0].height + spacing.vertical));
 
     pdf.setFontSize(10);
-    pdf.text(`Disposição: ${columnsPerPage} × ${rowsPerPage} (colunas × linhas)`, 10, 50);
-    pdf.text(`Total de etiquetas por página: ${columnsPerPage * rowsPerPage}`, 10, 55);
+    pdf.text(`Disposição: ${columnsPerPage} × ${rowsPerPage} (colunas × linhas)`, 10, 60);
+    pdf.text(`Total de etiquetas por página: ${columnsPerPage * rowsPerPage}`, 10, 65);
 
     // Adicionar uma nova página para a visualização da etiqueta
     pdf.addPage();
@@ -211,6 +214,8 @@ export const generateEtiquetaPDF = async (
     if (!pageHeight || pageHeight <= 0) pageHeight = 297;
     
     console.log("Dimensões da página:", pageWidth, "x", pageHeight, "orientação:", orientacao);
+    console.log("Margens:", margemSuperior, margemInferior, margemEsquerda, margemDireita);
+    console.log("Espaçamentos:", espacamentoHorizontal, espacamentoVertical);
     
     // Criar documento PDF
     const pdf = new JsPDF({
@@ -221,10 +226,10 @@ export const generateEtiquetaPDF = async (
     
     // Calcular quantas etiquetas cabem na página
     const margensValidas = {
-      superior: margemSuperior > 0 ? margemSuperior : 10,
-      inferior: margemInferior > 0 ? margemInferior : 10,
-      esquerda: margemEsquerda > 0 ? margemEsquerda : 10,
-      direita: margemDireita > 0 ? margemDireita : 10
+      superior: margemSuperior >= 0 ? margemSuperior : 10,
+      inferior: margemInferior >= 0 ? margemInferior : 10,
+      esquerda: margemEsquerda >= 0 ? margemEsquerda : 10,
+      direita: margemDireita >= 0 ? margemDireita : 10
     };
     
     const espacamentosValidos = {
@@ -236,8 +241,8 @@ export const generateEtiquetaPDF = async (
     const etiquetaLargura = largura > 0 ? largura : 50;
     const etiquetaAltura = altura > 0 ? altura : 30;
     
-    const labelsPerRow = Math.floor((pageWidth - margensValidas.esquerda - margensValidas.direita) / (etiquetaLargura + espacamentosValidos.horizontal));
-    const labelsPerColumn = Math.floor((pageHeight - margensValidas.superior - margensValidas.inferior) / (etiquetaAltura + espacamentosValidos.vertical));
+    const labelsPerRow = Math.floor((pageWidth - margensValidas.esquerda - margensValidas.direita + espacamentosValidos.horizontal) / (etiquetaLargura + espacamentosValidos.horizontal));
+    const labelsPerColumn = Math.floor((pageHeight - margensValidas.superior - margensValidas.inferior + espacamentosValidos.vertical) / (etiquetaAltura + espacamentosValidos.vertical));
     
     // Verificar se os cálculos resultaram em valores válidos
     const etiquetasPorLinha = labelsPerRow > 0 ? labelsPerRow : 1;

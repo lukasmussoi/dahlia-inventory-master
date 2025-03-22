@@ -11,8 +11,8 @@ import { UseFormReturn } from "react-hook-form";
 import * as z from "zod";
 
 const formSchema = z.object({
-  espacamentoHorizontal: z.number().min(0),
-  espacamentoVertical: z.number().min(0),
+  espacamentoHorizontal: z.number().min(0).max(200),
+  espacamentoVertical: z.number().min(0).max(200),
 });
 
 type EspacamentoEtiquetaFieldsProps = {
@@ -33,6 +33,8 @@ export function EspacamentoEtiquetaFields({ form }: EspacamentoEtiquetaFieldsPro
                 type="number" 
                 {...field}
                 onChange={e => field.onChange(Number(e.target.value))}
+                min={0}
+                max={200}
               />
             </FormControl>
             <FormMessage />
@@ -51,6 +53,8 @@ export function EspacamentoEtiquetaFields({ form }: EspacamentoEtiquetaFieldsPro
                 type="number" 
                 {...field}
                 onChange={e => field.onChange(Number(e.target.value))}
+                min={0}
+                max={200}
               />
             </FormControl>
             <FormMessage />
