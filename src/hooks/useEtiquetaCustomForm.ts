@@ -1,3 +1,4 @@
+
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -340,28 +341,35 @@ export function useEtiquetaCustomForm(modelo?: ModeloEtiqueta, onClose?: () => v
       console.log("useEtiquetaCustomForm: Salvando modelo:", modeloData);
 
       let success: boolean | string | null;
-      if (modelo?.id) {
-        console.log(`useEtiquetaCustomForm: Atualizando modelo existente ID ${modelo.id}`);
-        success = await EtiquetaCustomModel.update(modelo.id, modeloData);
-      } else {
-        console.log("useEtiquetaCustomForm: Criando novo modelo");
-        success = await EtiquetaCustomModel.create(modeloData);
-      }
-
-      console.log("useEtiquetaCustomForm: Resultado da operação:", success);
-
-      if (success) {
-        toast.success(modelo?.id ? "Modelo atualizado com sucesso!" : "Modelo criado com sucesso!");
-        if (onSuccess) {
-          console.log("useEtiquetaCustomForm: Chamando callback de sucesso");
-          onSuccess();
+      try {
+        if (modelo?.id) {
+          console.log(`useEtiquetaCustomForm: Atualizando modelo existente ID ${modelo.id}`);
+          success = await EtiquetaCustomModel.update(modelo.id, modeloData);
+        } else {
+          console.log("useEtiquetaCustomForm: Criando novo modelo");
+          success = await EtiquetaCustomModel.create(modeloData);
         }
-        if (onClose) {
-          console.log("useEtiquetaCustomForm: Chamando callback de fechamento");
-          onClose();
+        
+        console.log("useEtiquetaCustomForm: Resultado da operação:", success);
+
+        if (success) {
+          toast.success(modelo?.id ? "Modelo atualizado com sucesso!" : "Modelo criado com sucesso!");
+          if (onSuccess) {
+            console.log("useEtiquetaCustomForm: Chamando callback de sucesso");
+            onSuccess();
+          }
+          if (onClose) {
+            console.log("useEtiquetaCustomForm: Chamando callback de fechamento");
+            onClose();
+          }
+        } else {
+          console.error("Falha ao salvar modelo: resposta não contém ID ou status de sucesso");
+          toast.error("Erro ao salvar modelo de etiqueta");
         }
-      } else {
-        toast.error("Erro ao salvar modelo de etiqueta");
+      } catch (error) {
+        console.error("Erro na chamada ao modelo:", error);
+        toast.error("Erro ao salvar modelo de etiqueta: falha na operação");
+        throw error;
       }
     } catch (error) {
       console.error("Erro ao salvar modelo:", error);

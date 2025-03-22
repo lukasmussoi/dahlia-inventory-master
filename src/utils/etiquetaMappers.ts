@@ -102,13 +102,15 @@ export function mapModelToDatabase(modelo: ModeloEtiqueta) {
     largura: Number(campo.largura || 10),
     altura: Number(campo.altura || 10),
     tamanhoFonte: Number(campo.tamanhoFonte || 10),
-    valor: campo.valor
+    valor: campo.valor,
+    alinhamento: (campo as any).alinhamento || 'left'
   }));
 
   console.log("Campos validados para salvar:", camposValidados);
 
-  return {
-    descricao: modelo.nome,
+  // Certificando-se de que todos os valores sejam do tipo correto para o banco
+  const result = {
+    descricao: modelo.nome, // Usamos o nome como descrição no banco (coluna histórica)
     tipo: 'padrao',
     largura: Number(modelo.largura) || 80,
     altura: Number(modelo.altura) || 40,
@@ -124,4 +126,8 @@ export function mapModelToDatabase(modelo: ModeloEtiqueta) {
     altura_pagina: modelo.alturaPagina ? Number(modelo.alturaPagina) : null,
     campos: camposValidados as unknown as Json
   };
+  
+  console.log("Dados finais para o banco:", result);
+  
+  return result;
 }

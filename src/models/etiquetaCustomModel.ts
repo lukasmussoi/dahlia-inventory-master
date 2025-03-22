@@ -47,6 +47,8 @@ export class EtiquetaCustomModel {
     try {
       const user = await supabase.auth.getUser();
       if (!user.data.user) {
+        console.error('Erro: Usuário não autenticado');
+        toast.error('Erro ao salvar: usuário não autenticado');
         throw new Error('Usuário não autenticado');
       }
 
@@ -57,17 +59,30 @@ export class EtiquetaCustomModel {
         criado_por: user.data.user.id
       };
 
+      console.log("Dados preparados para o banco:", modeloDb);
+
       const { data, error } = await supabase
         .from('etiquetas_custom')
         .insert(modeloDb)
         .select('id')
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro do Supabase ao criar modelo:', error);
+        throw error;
+      }
+      
+      console.log("Modelo criado com sucesso:", data);
       return data?.id || null;
     } catch (error) {
       console.error('Erro ao criar modelo de etiqueta:', error);
-      toast.error('Erro ao salvar modelo de etiqueta');
+      
+      if (error instanceof Error) {
+        toast.error(`Erro ao salvar modelo: ${error.message}`);
+      } else {
+        toast.error('Erro ao salvar modelo de etiqueta');
+      }
+      
       return null;
     }
   }
@@ -75,6 +90,7 @@ export class EtiquetaCustomModel {
   static async update(id: string, modelo: ModeloEtiqueta): Promise<boolean> {
     try {
       const modeloDb = mapModelToDatabase(modelo);
+      console.log("Atualizando modelo:", id, modeloDb);
 
       const { error } = await supabase
         .from('etiquetas_custom')
@@ -82,10 +98,17 @@ export class EtiquetaCustomModel {
         .eq('id', id);
 
       if (error) throw error;
+      console.log("Modelo atualizado com sucesso");
       return true;
     } catch (error) {
       console.error('Erro ao atualizar modelo de etiqueta:', error);
-      toast.error('Erro ao atualizar modelo de etiqueta');
+      
+      if (error instanceof Error) {
+        toast.error(`Erro ao atualizar modelo: ${error.message}`);
+      } else {
+        toast.error('Erro ao atualizar modelo de etiqueta');
+      }
+      
       return false;
     }
   }

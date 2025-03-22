@@ -1,3 +1,4 @@
+
 import { Form } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -60,8 +61,8 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
       
       console.log("EtiquetaCustomForm: Valores definidos no formulário, enviando...");
       
-      // Submeter o formulário
-      form.handleSubmit(onSubmit)();
+      // Submeter o formulário manualmente
+      onSubmit(form.getValues());
     } catch (error) {
       console.error("Erro ao processar dados do editor:", error);
     }
