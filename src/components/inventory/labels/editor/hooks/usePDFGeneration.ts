@@ -16,7 +16,7 @@ export function usePDFGeneration() {
    * Gera uma pré-visualização do PDF
    */
   const handlePreview = async (options: PreviewPDFOptions) => {
-    const { modelName, labels, pageFormat, pageSize, pageMargins, labelSpacing, autoAdjustDimensions, pageOrientation } = options;
+    const { modelName, labels, pageFormat, pageSize, pageMargins, labelSpacing, autoAdjustDimensions, pageOrientation, gridSize } = options;
     
     if (labels.length === 0 || labels[0].elements.length === 0) {
       toast.error("Adicione pelo menos uma etiqueta com elementos para visualizar");
@@ -36,7 +36,8 @@ export function usePDFGeneration() {
         pageMargins,
         labelSpacing,
         autoAdjustDimensions,
-        pageOrientation
+        pageOrientation,
+        gridSize
       });
       
       setPreviewPdfUrl(pdfUrl);

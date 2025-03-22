@@ -23,6 +23,7 @@ export interface PreviewPDFOptions {
   };
   autoAdjustDimensions?: boolean;
   pageOrientation: string;
+  gridSize?: number;
 }
 
 export interface EtiquetaPrintOptions {

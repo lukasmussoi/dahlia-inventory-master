@@ -24,7 +24,8 @@ export const generatePreview = async (options: PreviewPDFOptions): Promise<strin
     pageMargins,
     labelSpacing,
     autoAdjustDimensions = false,
-    pageOrientation = 'retrato'
+    pageOrientation = 'retrato',
+    gridSize
   } = options;
 
   console.log("Gerando PDF de pré-visualização:", {
@@ -34,7 +35,8 @@ export const generatePreview = async (options: PreviewPDFOptions): Promise<strin
     pageMargins,
     labelSpacing,
     autoAdjustDimensions,
-    pageOrientation
+    pageOrientation,
+    gridSize
   });
   
   // Verificar se há etiquetas para incluir
@@ -49,6 +51,10 @@ export const generatePreview = async (options: PreviewPDFOptions): Promise<strin
   }
   
   try {
+    // Ajustar orientação de página 
+    const orientation = pageOrientation === 'paisagem' ? 'landscape' : 'portrait';
+    console.log(`Criando documento com orientação: ${orientation}`);
+    
     // Criar documento PDF com as configurações especificadas
     const doc = createPdfDocument(
       pageFormat, 
@@ -57,22 +63,11 @@ export const generatePreview = async (options: PreviewPDFOptions): Promise<strin
       pageSize.height
     );
     
-    // Desenhar borda da página (para depuração) - comentado para não aparecer no PDF final
-    // doc.setDrawColor(200, 200, 200);
-    // doc.rect(5, 5, pageSize.width - 10, pageSize.height - 10);
-    
-    // Removido: Não adicionamos mais título e informações ao documento
-    // doc.setFontSize(16);
-    // doc.text(`Modelo: ${modelName}`, 10, 10);
-    // doc.setFontSize(10);
-    // doc.text(`Formato: ${pageFormat} - ${pageOrientation}`, 10, 15);
-    // doc.text(`Dimensões: ${pageSize.width}mm x ${pageSize.height}mm`, 10, 20);
-    
     // Para cada etiqueta, renderizar no PDF
     labels.forEach((label, index) => {
       // Calcular posição da etiqueta na página - sem offset para título
       const labelX = pageMargins.left + label.x;
-      const labelY = pageMargins.top + label.y; // Removido offset de 25mm para o título
+      const labelY = pageMargins.top + label.y;
       
       // Desenhar borda da etiqueta
       doc.setDrawColor(100, 100, 100);
@@ -111,16 +106,7 @@ export const generatePreview = async (options: PreviewPDFOptions): Promise<strin
             baseline: 'middle'
           });
         }
-        
-        // Desenhar borda do elemento (para depuração) - comentado para não aparecer no PDF final
-        // doc.setDrawColor(200, 200, 200);
-        // doc.setLineWidth(0.1);
-        // doc.rect(elementX, elementY, element.width, element.height);
       });
-      
-      // Removido: Não adicionamos mais o nome da etiqueta abaixo dela
-      // doc.setFontSize(8);
-      // doc.text(label.name, labelX, labelY - 2);
     });
     
     // Converter o PDF para URL de dados (data URL)

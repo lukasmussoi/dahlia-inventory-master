@@ -75,8 +75,9 @@ export class EtiquetaCustomModel {
         margem_direita: Number(modelo.margemDireita) || 10,
         espacamento_horizontal: Number(modelo.espacamentoHorizontal) || 0,
         espacamento_vertical: Number(modelo.espacamentoVertical) || 0,
-        altura_pagina: modelo.alturaPagina ? Number(modelo.alturaPagina) : null,
-        largura_pagina: modelo.larguraPagina ? Number(modelo.larguraPagina) : null,
+        altura_pagina: modelo.alturaPagina ? Number(modelo.alturaPagina) : 297,
+        largura_pagina: modelo.larguraPagina ? Number(modelo.larguraPagina) : 210,
+        tamanho_grade: modelo.tamanhoGrade ? Number(modelo.tamanhoGrade) : 5,
         campos: modeloDb.campos,
         criado_por: user.data.user.id
       };
@@ -143,14 +144,11 @@ export class EtiquetaCustomModel {
         margem_direita: Number(modelo.margemDireita) || 10,
         espacamento_horizontal: Number(modelo.espacamentoHorizontal) || 0,
         espacamento_vertical: Number(modelo.espacamentoVertical) || 0,
+        largura_pagina: Number(modelo.larguraPagina) || 210,
+        altura_pagina: Number(modelo.alturaPagina) || 297,
+        tamanho_grade: Number(modelo.tamanhoGrade) || 5,
         campos: modeloDb.campos
       };
-      
-      // Adicionar dimensões da página apenas se for formato personalizado
-      if (modelo.formatoPagina === "Custom" || modelo.formatoPagina === "Personalizado") {
-        modeloCompleto['altura_pagina'] = Number(modelo.alturaPagina) || 297;
-        modeloCompleto['largura_pagina'] = Number(modelo.larguraPagina) || 210;
-      }
       
       // Remover campos que não devem ser atualizados
       const camposParaExcluir = [

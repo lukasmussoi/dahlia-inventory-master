@@ -22,7 +22,7 @@ export function mapDatabaseToModel(item: EtiquetaCustomDB): ModeloEtiqueta {
             ? (item.campos as any).data 
             : [];
             
-        campos = camposArray.map((campo: any) => ({
+        campos = camposArray.map((campo: any, index: number) => ({
           tipo: campo.tipo || 'nome',
           x: Number(campo.x || 0),
           y: Number(campo.y || 0),
@@ -100,6 +100,7 @@ export function mapDatabaseToModel(item: EtiquetaCustomDB): ModeloEtiqueta {
     espacamentoVertical: Number(item.espacamento_vertical) || 0,
     larguraPagina: Number(item.largura_pagina) || 210,
     alturaPagina: Number(item.altura_pagina) || 297,
+    tamanhoGrade: Number(item.tamanho_grade) || 5,
     campos: campos
   };
 }
@@ -127,11 +128,16 @@ export function mapModelToDatabase(modelo: ModeloEtiqueta): Partial<EtiquetaCust
     margem_esquerda: Number(modelo.margemEsquerda) || 10,
     margem_direita: Number(modelo.margemDireita) || 10,
     espacamento_horizontal: Number(modelo.espacamentoHorizontal) || 0,
-    espacamento_vertical: Number(modelo.espacamentoVertical) || 0
+    espacamento_vertical: Number(modelo.espacamentoVertical) || 0,
+    tamanho_grade: Number(modelo.tamanhoGrade) || 5
   };
   
-  // Adicionar dimensões da página apenas se for formato personalizado
+  // Adicionar dimensões da página sempre, mas especialmente se for formato personalizado
   if (formatoPagina === "Custom" || formatoPagina === "Personalizado") {
+    dbModel.largura_pagina = Number(modelo.larguraPagina) || 210;
+    dbModel.altura_pagina = Number(modelo.alturaPagina) || 297;
+  } else {
+    // Mesmo para formatos padrão, salvamos as dimensões para manter consistência
     dbModel.largura_pagina = Number(modelo.larguraPagina) || 210;
     dbModel.altura_pagina = Number(modelo.alturaPagina) || 297;
   }

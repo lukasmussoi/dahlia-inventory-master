@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { usePageConfiguration } from "./usePageConfiguration";
@@ -17,7 +16,7 @@ export function useEtiquetaCreator(initialData?: any, autoAdjustDimensions = fal
   const [zoom, setZoom] = useState(100);
   const [showGrid, setShowGrid] = useState(true);
   const [snapToGrid, setSnapToGrid] = useState(true);
-  const [gridSize, setGridSize] = useState(5);
+  const [gridSize, setGridSize] = useState(initialData?.tamanhoGrade || 5);
   const editorRef = useRef<HTMLDivElement>(null);
   // Adicionando o estado selectedElement que estava faltando
   const [selectedElement, setSelectedElement] = useState<string | null>(null);
@@ -84,9 +83,9 @@ export function useEtiquetaCreator(initialData?: any, autoAdjustDimensions = fal
     editorRef,
     labelManagement.labels,
     labelManagement.setLabels,
-    labelManagement.selectedLabelId, // Passando selectedLabelId em vez de snapToGrid
+    labelManagement.selectedLabelId,
     zoom,
-    labelManagement.snapToGridValue // Passando a função snapToGridValue
+    labelManagement.snapToGridValue
   );
   
   // Geração de PDF
@@ -119,7 +118,8 @@ export function useEtiquetaCreator(initialData?: any, autoAdjustDimensions = fal
       },
       labelSpacing: pageConfiguration.labelSpacing,
       autoAdjustDimensions,
-      pageOrientation: pageConfiguration.pageOrientation
+      pageOrientation: pageConfiguration.pageOrientation,
+      gridSize: gridSize
     });
   };
   
@@ -176,6 +176,7 @@ export function useEtiquetaCreator(initialData?: any, autoAdjustDimensions = fal
         espacamentoVertical: pageConfiguration.labelSpacing.vertical,
         larguraPagina: pageConfiguration.pageSize.width,
         alturaPagina: pageConfiguration.pageSize.height,
+        tamanhoGrade: gridSize,
         campos: camposMapeados
       };
       
@@ -308,6 +309,6 @@ export function useEtiquetaCreator(initialData?: any, autoAdjustDimensions = fal
     
     // Funções adicionais
     handleSave,
-    handleOptimizeLayout
+    handleOptimizeLayout: labelManagement.handleOptimizeLayout
   };
 }

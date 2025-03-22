@@ -28,6 +28,7 @@ export interface ModeloEtiqueta {
   espacamentoVertical: number;
   larguraPagina?: number;
   alturaPagina?: number;
+  tamanhoGrade?: number;
   campos: CampoEtiqueta[];
   usuario_id?: string;
   criado_em?: string;
@@ -50,6 +51,7 @@ export interface EtiquetaCustomDB {
   espacamento_vertical: number;
   largura_pagina?: number;
   altura_pagina?: number;
+  tamanho_grade?: number;
   campos: Json;
   criado_por: string;
   criado_em: string;

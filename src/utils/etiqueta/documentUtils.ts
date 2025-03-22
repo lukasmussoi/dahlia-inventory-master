@@ -31,7 +31,7 @@ export const createPdfDocument = (
     return new JsPDF({
       orientation,
       unit: 'mm',
-      format: formato
+      format: formato.toLowerCase()
     });
   }
   
@@ -42,15 +42,23 @@ export const createPdfDocument = (
       throw new Error("Dimensões de página personalizadas não fornecidas");
     }
     
-    // Para orientação paisagem, inverter largura e altura
-    const width = orientation === 'landscape' ? Math.max(largura, altura) : Math.min(largura, altura);
-    const height = orientation === 'landscape' ? Math.min(largura, altura) : Math.max(largura, altura);
+    console.log(`Criando PDF personalizado com orientação ${orientation}: ${largura}x${altura}mm`);
     
-    return new JsPDF({
-      orientation,
-      unit: 'mm',
-      format: [width, height]
-    });
+    if (orientation === 'landscape') {
+      // Para orientação paisagem, já trocamos largura e altura nos hooks, 
+      // então aqui passamos diretamente
+      return new JsPDF({
+        orientation,
+        unit: 'mm',
+        format: [largura, altura]
+      });
+    } else {
+      return new JsPDF({
+        orientation,
+        unit: 'mm',
+        format: [largura, altura]
+      });
+    }
   }
   
   // Fallback para A4
@@ -101,6 +109,7 @@ export const calcularDimensoesPagina = (
   
   // Ajustar para orientação paisagem se necessário
   if (orientacao === 'paisagem') {
+    console.log(`Ajustando dimensões para paisagem: ${pageHeight}x${pageWidth}`);
     [pageWidth, pageHeight] = [pageHeight, pageWidth];
   }
   
