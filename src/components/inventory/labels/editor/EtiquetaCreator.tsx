@@ -618,17 +618,17 @@ export default function EtiquetaCreator({
     setIsGeneratingPdf(true);
     
     try {
-      // Gerar PDF de pré-visualização
-      const pdfUrl = await generatePreviewPDF(
-        modelName || "Modelo sem nome",
+      // Corrigindo a chamada para passar um objeto único com todos os parâmetros
+      const pdfUrl = await generatePreviewPDF({
+        modelName: modelName || "Modelo sem nome",
         labels,
         pageFormat,
         pageSize,
-        pageMargins, // Usando as margens da página
-        labelSpacing, // Usando espaçamento entre etiquetas
+        pageMargins,
+        labelSpacing,
         autoAdjustDimensions,
         pageOrientation
-      );
+      });
       
       setPreviewPdfUrl(pdfUrl);
       setIsPreviewDialogOpen(true);
