@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { toast } from "sonner";
 import { useEtiquetaState } from "./useEtiquetaState";
@@ -23,14 +22,14 @@ export function useEtiquetaCreator(initialData?: any, autoAdjustDimensions = fal
   );
   const elementManagement = useElementManagement(
     labelManagement.labels,
-    labelManagement.setLabels, // 🔴 Erro: 'setLabels' não existe no resultado de useLabelManagement
+    labelManagement.setLabels,
     labelManagement.selectedLabelId,
     labelManagement.snapToGridValue
   );
   const dragAndDrop = useDragAndDrop(
     etiquetaState.editorRef,
     labelManagement.labels,
-    labelManagement.setSelectedLabelId as any,
+    labelManagement.setLabels,
     labelManagement.selectedLabelId,
     etiquetaState.zoom,
     labelManagement.snapToGridValue

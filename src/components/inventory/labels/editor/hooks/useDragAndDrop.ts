@@ -50,8 +50,8 @@ export function useDragAndDrop(
     const rect = editorRef.current.getBoundingClientRect();
     const zoomFactor = zoom / 100;
     
-    const x = snapToGridValue((e.clientX - rect.left - dragRef.current.offsetX) / zoomFactor);
-    const y = snapToGridValue((e.clientY - rect.top - dragRef.current.offsetY) / zoomFactor);
+    const x = snapToGridValue((e.clientX - rect.left) / zoomFactor);
+    const y = snapToGridValue((e.clientY - rect.top) / zoomFactor);
     
     const updatedLabels = [...labels];
     
