@@ -64,27 +64,48 @@ export async function generateEtiquetaPDF(
     }
   }
   
-  console.log("Dimensões originais da página:", { larguraPagina, alturaPagina });
+  console.log("Dimensões originais da página:", { larguraPagina, alturaPagina, orientacao });
   
-  // Para o cálculo da área útil, precisamos considerar a orientação
-  // mas não inverter as dimensões para manter coerência no cálculo
+  // CORREÇÃO: Para o cálculo da área útil, precisamos considerar corretamente a orientação
+  // Calcular as dimensões efetivas baseadas na orientação
+  let larguraEfetiva = larguraPagina;
+  let alturaEfetiva = alturaPagina;
+  
+  if (orientacao === "paisagem") {
+    // Trocar largura e altura para representar a página em paisagem
+    larguraEfetiva = alturaPagina;
+    alturaEfetiva = larguraPagina;
+  }
+  
+  console.log("Dimensões efetivas para cálculos:", { larguraEfetiva, alturaEfetiva, orientacao });
+  
+  // Configurações de margens
   const margemSuperior = modelo.margemSuperior || 10;
   const margemInferior = modelo.margemInferior || 10;
   const margemEsquerda = modelo.margemEsquerda || 10;
   const margemDireita = modelo.margemDireita || 10;
   
-  // Aqui é importante: jsPDF inverte automaticamente as dimensões para paisagem
-  // então precisamos trabalhar com as dimensões corretas para o cálculo
+  // Importante: jsPDF inverte automaticamente as dimensões para paisagem quando criamos o documento
+  // Aqui usamos as dimensões originais pois o jsPDF já fará a troca quando criarmos o documento
   const docWidth = orientacao === "paisagem" ? alturaPagina : larguraPagina;
   const docHeight = orientacao === "paisagem" ? larguraPagina : alturaPagina;
   
   console.log("Dimensões do documento PDF:", { docWidth, docHeight, orientacao });
   
-  // Calcular área útil
-  const areaUtilLargura = docWidth - margemEsquerda - margemDireita;
-  const areaUtilAltura = docHeight - margemSuperior - margemInferior;
+  // Calcular área útil considerando as dimensões efetivas para cálculos
+  const areaUtilLargura = larguraEfetiva - margemEsquerda - margemDireita;
+  const areaUtilAltura = alturaEfetiva - margemSuperior - margemInferior;
   
-  console.log("Área útil calculada:", { areaUtilLargura, areaUtilAltura });
+  console.log("Área útil calculada:", { 
+    areaUtilLargura, 
+    areaUtilAltura,
+    margens: { 
+      superior: margemSuperior, 
+      inferior: margemInferior, 
+      esquerda: margemEsquerda, 
+      direita: margemDireita 
+    }
+  });
   
   // Validar dimensões da etiqueta
   if (modelo.largura > areaUtilLargura) {
@@ -92,7 +113,7 @@ export async function generateEtiquetaPDF(
     console.error(mensagemErro, {
       larguraEtiqueta: modelo.largura,
       areaUtilLargura,
-      larguraPagina,
+      larguraEfetiva,
       orientacao,
       margens: { esquerda: margemEsquerda, direita: margemDireita }
     });
@@ -104,7 +125,7 @@ export async function generateEtiquetaPDF(
     console.error(mensagemErro, {
       alturaEtiqueta: modelo.altura,
       areaUtilAltura,
-      alturaPagina,
+      alturaEfetiva,
       orientacao,
       margens: { superior: margemSuperior, inferior: margemInferior }
     });
