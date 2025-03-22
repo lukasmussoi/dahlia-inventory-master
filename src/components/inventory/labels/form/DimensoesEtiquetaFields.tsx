@@ -79,7 +79,7 @@ export function DimensoesEtiquetaFields({ form }: DimensoesEtiquetaFieldsProps) 
           alturaPagina = 356;
           break;
         default:
-          larguraPagina =, 210;
+          larguraPagina = 210;
           alturaPagina = 297;
       }
     }
