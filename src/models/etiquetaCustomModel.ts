@@ -36,8 +36,8 @@ export class EtiquetaCustomModel {
       if (error) throw error;
       
       const modeloMapeado = mapDatabaseToModel(data);
-      console.log(`Modelo ${id} carregado do banco:`, data);
-      console.log(`Modelo ${id} mapeado para o frontend:`, modeloMapeado);
+      console.log(`Modelo ${id} carregado do banco:`, JSON.stringify(data, null, 2));
+      console.log(`Modelo ${id} mapeado para o frontend:`, JSON.stringify(modeloMapeado, null, 2));
       
       return modeloMapeado;
     } catch (error) {
@@ -56,14 +56,14 @@ export class EtiquetaCustomModel {
         throw new Error('Usuário não autenticado');
       }
 
-      console.log("Criando modelo de etiqueta:", modelo);
+      console.log("Criando modelo de etiqueta:", JSON.stringify(modelo, null, 2));
 
       const modeloDb = {
         ...mapModelToDatabase(modelo),
         criado_por: user.data.user.id
       };
 
-      console.log("Dados preparados para o banco:", modeloDb);
+      console.log("Dados preparados para o banco:", JSON.stringify(modeloDb, null, 2));
 
       const { data, error } = await supabase
         .from('etiquetas_custom')
@@ -105,14 +105,13 @@ export class EtiquetaCustomModel {
         console.error('Erro ao buscar modelo atual:', errorBusca);
         throw new Error(`Erro ao buscar modelo atual: ${errorBusca.message}`);
       } else {
-        console.log('Modelo atual recuperado com sucesso:', modeloAtual);
+        console.log('Modelo atual recuperado com sucesso:', JSON.stringify(modeloAtual, null, 2));
       }
       
       // Preparar modelo para atualização
       const modeloDb = mapModelToDatabase(modelo);
       
       // Garantir que NÃO enviemos campos que possam conflitar com triggers do banco
-      // A declaração é explícita para deixar claro o que estamos removendo
       const camposParaExcluir = ['atualizado_em', 'updated_at', 'criado_em', 'created_at'];
       camposParaExcluir.forEach(campo => {
         if ((modeloDb as any)[campo] !== undefined) {
@@ -141,7 +140,7 @@ export class EtiquetaCustomModel {
         throw error;
       }
       
-      console.log("Modelo atualizado com sucesso:", data);
+      console.log("Modelo atualizado com sucesso:", JSON.stringify(data, null, 2));
       return true;
     } catch (error) {
       console.error('Erro ao atualizar modelo de etiqueta:', error);

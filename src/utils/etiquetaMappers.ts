@@ -8,7 +8,7 @@ import type { Json } from "@/integrations/supabase/types";
 export function mapDatabaseToModel(item: EtiquetaCustomDB): ModeloEtiqueta {
   let campos: CampoEtiqueta[] = [];
   
-  console.log("Mapeando item do banco para modelo:", item);
+  console.log("Mapeando item do banco para modelo:", JSON.stringify(item, null, 2));
   
   // Certifica que campos seja tratado como um array de CampoEtiqueta
   if (item.campos) {
@@ -65,8 +65,6 @@ export function mapDatabaseToModel(item: EtiquetaCustomDB): ModeloEtiqueta {
     alinhamento: campo.alinhamento || 'left'
   }));
 
-  console.log("Campos mapeados:", campos);
-
   // Para formato de página, verificar se é "Custom" e converter para "Personalizado" no front
   let formatoPagina = item.formato_pagina || "A4";
   if (formatoPagina === "Custom") {
@@ -76,10 +74,10 @@ export function mapDatabaseToModel(item: EtiquetaCustomDB): ModeloEtiqueta {
   // Registro completo da conversão do banco para o modelo
   console.log(`Valores mapeados do BD para o frontend:
     - formato_pagina: "${item.formato_pagina}" -> formatoPagina: "${formatoPagina}"
-    - orientacao: "${item.orientacao}"
-    - margens: superior=${item.margem_superior}, inferior=${item.margem_inferior}, esquerda=${item.margem_esquerda}, direita=${item.margem_direita}
-    - espacamento: horizontal=${item.espacamento_horizontal}, vertical=${item.espacamento_vertical}
-    - dimensões da página: ${item.largura_pagina}x${item.altura_pagina}
+    - orientacao: "${item.orientacao || 'retrato'}"
+    - margens: superior=${item.margem_superior || 10}, inferior=${item.margem_inferior || 10}, esquerda=${item.margem_esquerda || 10}, direita=${item.margem_direita || 10}
+    - espacamento: horizontal=${item.espacamento_horizontal || 0}, vertical=${item.espacamento_vertical || 0}
+    - dimensões da página: ${item.largura_pagina || 'null'}x${item.altura_pagina || 'null'}
   `);
 
   return {
@@ -96,8 +94,8 @@ export function mapDatabaseToModel(item: EtiquetaCustomDB): ModeloEtiqueta {
     margemDireita: Number(item.margem_direita) || 10,
     espacamentoHorizontal: Number(item.espacamento_horizontal) || 0,
     espacamentoVertical: Number(item.espacamento_vertical) || 0,
-    larguraPagina: Number(item.largura_pagina) || undefined,
-    alturaPagina: Number(item.altura_pagina) || undefined,
+    larguraPagina: item.largura_pagina !== null ? Number(item.largura_pagina) : undefined,
+    alturaPagina: item.altura_pagina !== null ? Number(item.altura_pagina) : undefined,
     campos: campos,
     usuario_id: item.criado_por,
     criado_em: item.criado_em,
@@ -109,7 +107,7 @@ export function mapDatabaseToModel(item: EtiquetaCustomDB): ModeloEtiqueta {
  * Prepara um modelo para inclusão no banco de dados
  */
 export function mapModelToDatabase(modelo: ModeloEtiqueta) {
-  console.log("Mapeando modelo para banco de dados:", modelo);
+  console.log("Mapeando modelo para banco de dados:", JSON.stringify(modelo, null, 2));
   
   // Garante que todos os campos tenham os valores obrigatórios
   const camposValidados = modelo.campos.map(campo => {
@@ -138,20 +136,28 @@ export function mapModelToDatabase(modelo: ModeloEtiqueta) {
   }
 
   // Certifique-se de que as dimensões da página personalizadas sejam salvas corretamente
-  const larguraPagina = modelo.formatoPagina === "Personalizado" || modelo.formatoPagina === "Custom" 
-    ? Number(modelo.larguraPagina) || 210 
-    : null;
+  let larguraPagina = null;
+  let alturaPagina = null;
   
-  const alturaPagina = modelo.formatoPagina === "Personalizado" || modelo.formatoPagina === "Custom" 
-    ? Number(modelo.alturaPagina) || 297 
-    : null;
+  if (modelo.formatoPagina === "Personalizado" || modelo.formatoPagina === "Custom") {
+    larguraPagina = Number(modelo.larguraPagina) || 210;
+    alturaPagina = Number(modelo.alturaPagina) || 297;
+  }
+
+  // Garantir que todos os valores numéricos sejam números válidos
+  const margemSuperior = Number(modelo.margemSuperior) || 10;
+  const margemInferior = Number(modelo.margemInferior) || 10;
+  const margemEsquerda = Number(modelo.margemEsquerda) || 10;
+  const margemDireita = Number(modelo.margemDireita) || 10;
+  const espacamentoHorizontal = Number(modelo.espacamentoHorizontal) || 0;
+  const espacamentoVertical = Number(modelo.espacamentoVertical) || 0;
 
   // Logging para depuração
   console.log(`Valores mapeados do frontend para o BD:
     - formatoPagina: "${modelo.formatoPagina}" -> formato_pagina: "${formatoPagina}"
     - orientacao: "${modelo.orientacao}"
-    - margens: superior=${modelo.margemSuperior}, inferior=${modelo.margemInferior}, esquerda=${modelo.margemEsquerda}, direita=${modelo.margemDireita}
-    - espacamento: horizontal=${modelo.espacamentoHorizontal}, vertical=${modelo.espacamentoVertical}
+    - margens: superior=${margemSuperior}, inferior=${margemInferior}, esquerda=${margemEsquerda}, direita=${margemDireita}
+    - espacamento: horizontal=${espacamentoHorizontal}, vertical=${espacamentoVertical}
     - dimensões da página: ${larguraPagina}x${alturaPagina}
   `);
 
@@ -163,18 +169,18 @@ export function mapModelToDatabase(modelo: ModeloEtiqueta) {
     altura: Number(modelo.altura) || 40,
     formato_pagina: formatoPagina,
     orientacao: modelo.orientacao || "retrato",
-    margem_superior: Number(modelo.margemSuperior) || 10,
-    margem_inferior: Number(modelo.margemInferior) || 10,
-    margem_esquerda: Number(modelo.margemEsquerda) || 10,
-    margem_direita: Number(modelo.margemDireita) || 10,
-    espacamento_horizontal: Number(modelo.espacamentoHorizontal) || 0,
-    espacamento_vertical: Number(modelo.espacamentoVertical) || 0,
+    margem_superior: margemSuperior,
+    margem_inferior: margemInferior,
+    margem_esquerda: margemEsquerda,
+    margem_direita: margemDireita,
+    espacamento_horizontal: espacamentoHorizontal,
+    espacamento_vertical: espacamentoVertical,
     largura_pagina: larguraPagina,
     altura_pagina: alturaPagina,
     campos: camposValidados as unknown as Json
   };
   
-  console.log("Dados finais para o banco:", result);
+  console.log("Dados finais para o banco:", JSON.stringify(result, null, 2));
   
   return result;
 }

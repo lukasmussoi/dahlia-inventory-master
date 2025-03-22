@@ -43,12 +43,16 @@ export function EspacamentoEtiquetaFields({ form }: EspacamentoEtiquetaFieldsPro
                   type="number" 
                   {...field}
                   onChange={e => {
-                    const value = e.target.value ? Number(e.target.value) : 0;
+                    // Garantir que o valor seja sempre um número, mesmo se o campo estiver vazio
+                    const value = e.target.value === "" ? 0 : Number(e.target.value);
                     console.log(`Espaçamento horizontal alterado para: ${value}`);
                     field.onChange(value);
                   }}
                   onBlur={e => {
-                    console.log(`Espaçamento horizontal confirmado: ${field.value}`);
+                    // Garantir que o valor seja sempre um número válido ao perder o foco
+                    const value = field.value === undefined || isNaN(field.value) ? 0 : field.value;
+                    console.log(`Espaçamento horizontal confirmado: ${value}`);
+                    form.setValue("espacamentoHorizontal", value);
                   }}
                   min={0}
                   max={200}
@@ -70,12 +74,16 @@ export function EspacamentoEtiquetaFields({ form }: EspacamentoEtiquetaFieldsPro
                   type="number" 
                   {...field}
                   onChange={e => {
-                    const value = e.target.value ? Number(e.target.value) : 0;
+                    // Garantir que o valor seja sempre um número, mesmo se o campo estiver vazio
+                    const value = e.target.value === "" ? 0 : Number(e.target.value);
                     console.log(`Espaçamento vertical alterado para: ${value}`);
                     field.onChange(value);
                   }}
                   onBlur={e => {
-                    console.log(`Espaçamento vertical confirmado: ${field.value}`);
+                    // Garantir que o valor seja sempre um número válido ao perder o foco
+                    const value = field.value === undefined || isNaN(field.value) ? 0 : field.value;
+                    console.log(`Espaçamento vertical confirmado: ${value}`);
+                    form.setValue("espacamentoVertical", value);
                   }}
                   min={0}
                   max={200}
