@@ -246,6 +246,7 @@ export function useLabelManagement(
     labels,
     selectedLabelId,
     setSelectedLabelId,
+    setLabels, // Adicionamos setLabels ao retorno do hook
     
     // Funções
     handleAddLabel,

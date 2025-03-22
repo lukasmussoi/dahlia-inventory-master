@@ -23,7 +23,7 @@ export function useEtiquetaCreator(initialData?: any, autoAdjustDimensions = fal
   );
   const elementManagement = useElementManagement(
     labelManagement.labels,
-    labelManagement.setLabels,
+    labelManagement.setLabels, // 🔴 Erro: 'setLabels' não existe no resultado de useLabelManagement
     labelManagement.selectedLabelId,
     labelManagement.snapToGridValue
   );
