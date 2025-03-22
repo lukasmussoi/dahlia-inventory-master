@@ -24,6 +24,7 @@ export function usePDFGeneration() {
     }
     
     setIsGeneratingPdf(true);
+    console.log("Gerando pré-visualização com orientação:", pageOrientation);
     
     try {
       // Usando a função generatePreview que recebe um único objeto de configuração

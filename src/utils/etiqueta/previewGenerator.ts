@@ -32,6 +32,7 @@ export const generatePreviewPDF = async (
   autoAdjustDimensions: boolean,
   pageOrientation: string
 ): Promise<string> => {
+  console.log("Gerando PDF com orientação:", pageOrientation);
   const doc = createPdfDocument(pageFormat, pageOrientation, pageSize.width, pageSize.height);
 
   for (const label of labels) {
@@ -60,6 +61,7 @@ export const generatePreview = async (options: PreviewPDFOptions): Promise<strin
     pageOrientation = 'retrato'
   } = options;
 
+  console.log("generatePreview recebeu orientação:", pageOrientation);
   return generatePreviewPDF(
     modelName,
     labels,

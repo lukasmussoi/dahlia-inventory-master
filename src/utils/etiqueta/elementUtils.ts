@@ -1,23 +1,34 @@
 
 /**
- * Utilitários para elementos de etiquetas
+ * Utilitários para manipulação de elementos de etiquetas
  */
 
 /**
- * Obtém texto de exemplo para cada tipo de elemento
- * @param type Tipo do elemento
- * @returns Texto de exemplo para o tipo especificado
+ * Obtém o texto apropriado para um elemento em modo de pré-visualização
+ * @param element Elemento da etiqueta
+ * @param item Item de dados para o elemento
+ * @returns Texto formatado para o elemento
  */
-export const getElementPreviewText = (type: string): string => {
-  switch (type) {
+export const getElementPreviewText = (element: any, item: any): string => {
+  if (!element || !element.type) return "";
+
+  // Usar valor específico para o tipo de elemento, ou valor padrão
+  switch (element.type) {
     case 'nome':
-      return 'Pingente Cristal';
+      return element.valor || item?.name || "Nome do Produto";
+    
     case 'codigo':
-      return '123456789';
+      return element.valor || item?.sku || item?.code || "SKU12345";
+    
     case 'preco':
-      return 'R$ 99,90';
+      if (element.valor) return element.valor;
+      const preco = item?.price || 99.90;
+      return `R$ ${typeof preco === 'number' ? preco.toFixed(2) : preco}`;
+    
+    case 'texto':
+      return element.valor || "Texto";
+    
     default:
-      return 'Exemplo';
+      return element.valor || "Elemento";
   }
 };
-

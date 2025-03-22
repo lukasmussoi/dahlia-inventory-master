@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { toast } from "sonner";
 import { useEtiquetaState } from "./useEtiquetaState";
@@ -59,6 +60,7 @@ export function useEtiquetaCreator(initialData?: any, autoAdjustDimensions = fal
    * Manipula a geração de prévia do PDF
    */
   const handlePreview = async () => {
+    console.log("Iniciando preview com orientação:", pageConfig.pageOrientation);
     await pdfGeneration.handlePreview({
       modelName: etiquetaState.modelName || "Modelo sem nome",
       labels: labelManagement.labels,

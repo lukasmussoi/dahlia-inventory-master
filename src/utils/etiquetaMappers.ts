@@ -71,10 +71,13 @@ export function mapDatabaseToModel(item: EtiquetaCustomDB): ModeloEtiqueta {
     formatoPagina = "Personalizado";
   }
 
+  // Garantir que a orientação tenha um valor válido
+  const orientacao = item.orientacao || "retrato";
+  
   // Registro completo da conversão do banco para o modelo
   console.log(`Valores mapeados do BD para o frontend:
     - formato_pagina: "${item.formato_pagina}" -> formatoPagina: "${formatoPagina}"
-    - orientacao: "${item.orientacao || 'retrato'}"
+    - orientacao: "${orientacao}"
     - margens: superior=${item.margem_superior || 10}, inferior=${item.margem_inferior || 10}, esquerda=${item.margem_esquerda || 10}, direita=${item.margem_direita || 10}
     - espacamento: horizontal=${item.espacamento_horizontal || 0}, vertical=${item.espacamento_vertical || 0}
     - dimensões da página: ${item.largura_pagina || 'null'}x${item.altura_pagina || 'null'}
@@ -88,7 +91,7 @@ export function mapDatabaseToModel(item: EtiquetaCustomDB): ModeloEtiqueta {
     largura: Number(item.largura) || 80,
     altura: Number(item.altura) || 40,
     formatoPagina: formatoPagina,
-    orientacao: item.orientacao || "retrato",
+    orientacao: orientacao,
     margemSuperior: Number(item.margem_superior) || 10,
     margemInferior: Number(item.margem_inferior) || 10,
     margemEsquerda: Number(item.margem_esquerda) || 10,
@@ -136,6 +139,10 @@ export function mapModelToDatabase(modelo: ModeloEtiqueta) {
     formatoPagina = "Custom";
   }
 
+  // Garantir que a orientação tenha um valor válido
+  const orientacao = modelo.orientacao || "retrato";
+  console.log("Orientação para salvar no banco:", orientacao);
+
   // Certifique-se de que as dimensões da página personalizadas sejam salvas corretamente
   let larguraPagina = null;
   let alturaPagina = null;
@@ -151,14 +158,14 @@ export function mapModelToDatabase(modelo: ModeloEtiqueta) {
     } else {
       // Para formatos padrão, usar dimensões padrão
       if (modelo.formatoPagina === "A4") {
-        larguraPagina = modelo.orientacao === "paisagem" ? 297 : 210;
-        alturaPagina = modelo.orientacao === "paisagem" ? 210 : 297;
+        larguraPagina = orientacao === "paisagem" ? 297 : 210;
+        alturaPagina = orientacao === "paisagem" ? 210 : 297;
       } else if (modelo.formatoPagina === "A5") {
-        larguraPagina = modelo.orientacao === "paisagem" ? 210 : 148;
-        alturaPagina = modelo.orientacao === "paisagem" ? 148 : 210;
+        larguraPagina = orientacao === "paisagem" ? 210 : 148;
+        alturaPagina = orientacao === "paisagem" ? 148 : 210;
       } else if (modelo.formatoPagina === "Carta") {
-        larguraPagina = modelo.orientacao === "paisagem" ? 279 : 216;
-        alturaPagina = modelo.orientacao === "paisagem" ? 216 : 279;
+        larguraPagina = orientacao === "paisagem" ? 279 : 216;
+        alturaPagina = orientacao === "paisagem" ? 216 : 279;
       }
     }
   }
@@ -174,7 +181,7 @@ export function mapModelToDatabase(modelo: ModeloEtiqueta) {
   // Logging para depuração
   console.log(`Valores mapeados do frontend para o BD:
     - formatoPagina: "${modelo.formatoPagina}" -> formato_pagina: "${formatoPagina}"
-    - orientacao: "${modelo.orientacao}"
+    - orientacao: "${orientacao}"
     - margens: superior=${margemSuperior}, inferior=${margemInferior}, esquerda=${margemEsquerda}, direita=${margemDireita}
     - espacamento: horizontal=${espacamentoHorizontal}, vertical=${espacamentoVertical}
     - dimensões da página: ${larguraPagina}x${alturaPagina}
@@ -187,7 +194,7 @@ export function mapModelToDatabase(modelo: ModeloEtiqueta) {
     largura: Number(modelo.largura) || 80,
     altura: Number(modelo.altura) || 40,
     formato_pagina: formatoPagina,
-    orientacao: modelo.orientacao || "retrato",
+    orientacao: orientacao,
     margem_superior: margemSuperior,
     margem_inferior: margemInferior,
     margem_esquerda: margemEsquerda,
