@@ -1,82 +1,52 @@
 
 /**
- * Utilitários para validação de dimensões de etiquetas e páginas
+ * Utilitários para validação de PDFs
  */
-import type { ModeloEtiqueta } from "@/types/etiqueta";
+import { ModeloEtiqueta } from "@/types/etiqueta";
 
 /**
- * Valida as dimensões da etiqueta em relação à página
- * @param modelo O modelo de etiqueta para validação
- * @returns Uma mensagem de erro se houver problemas, ou null se estiver tudo correto
+ * Validar as dimensões do modelo de etiqueta
+ * @param modelo Modelo de etiqueta a ser validado
+ * @returns Mensagem de erro ou null se válido
  */
 export function validateLabelDimensions(modelo: ModeloEtiqueta): string | null {
-  // Validar dimensões da página personalizada
-  if (modelo.formatoPagina === "Personalizado" || modelo.formatoPagina === "Custom") {
-    console.log("Verificando dimensões personalizadas:", {
-      larguraPagina: modelo.larguraPagina,
-      alturaPagina: modelo.alturaPagina,
-      orientacao: modelo.orientacao
-    });
-    
-    // Verificar se as dimensões da página estão definidas
+  // Verificar se largura e altura estão definidos
+  if (!modelo.largura || !modelo.altura) {
+    return "Dimensões da etiqueta não definidas";
+  }
+
+  // Verificar se largura e altura são valores razoáveis
+  if (modelo.largura <= 0 || modelo.altura <= 0) {
+    return "Dimensões da etiqueta devem ser maiores que zero";
+  }
+
+  // Verificar formato personalizado da página
+  if (modelo.formatoPagina === "Personalizado") {
     if (!modelo.larguraPagina || !modelo.alturaPagina) {
-      return "Dimensões personalizadas não definidas. Por favor, defina a largura e altura da página.";
+      return "Dimensões da página não definidas para formato personalizado";
     }
-    
-    // Validar valores positivos
-    if (modelo.larguraPagina <= 0 || modelo.alturaPagina <= 0) {
-      console.error("Dimensões de página inválidas:", { 
-        largura: modelo.larguraPagina, 
-        altura: modelo.alturaPagina 
-      });
-      return "Dimensões de página personalizadas inválidas. Os valores devem ser maiores que zero.";
-    }
-    
-    // Obter largura e altura efetivas considerando a orientação
-    let pageWidth = modelo.larguraPagina;
-    let pageHeight = modelo.alturaPagina;
-    
-    if (modelo.orientacao === 'paisagem') {
-      pageWidth = Math.max(modelo.larguraPagina, modelo.alturaPagina);
-      pageHeight = Math.min(modelo.larguraPagina, modelo.alturaPagina);
-    } else {
-      pageWidth = Math.min(modelo.larguraPagina, modelo.alturaPagina);
-      pageHeight = Math.max(modelo.larguraPagina, modelo.alturaPagina);
-    }
-    
-    // Validar se a etiqueta cabe na página
-    const areaUtilLargura = pageWidth - modelo.margemEsquerda - modelo.margemDireita;
+
+    // Verificar se as dimensões da etiqueta cabem na página
+    const areaUtilLargura = modelo.larguraPagina - modelo.margemEsquerda - modelo.margemDireita;
     if (modelo.largura > areaUtilLargura) {
-      console.error("Etiqueta maior que área útil:", {
-        larguraEtiqueta: modelo.largura,
-        areaUtilLargura
-      });
-      
-      const sugestaoLarguraEtiqueta = Math.floor(areaUtilLargura * 0.9);
-      return `A largura da etiqueta (${modelo.largura}mm) é maior que a área útil disponível (${areaUtilLargura}mm). ` +
-        `Sugestão: Reduza a largura da etiqueta para ${sugestaoLarguraEtiqueta}mm ou ` +
-        `aumente a largura da página/reduza as margens.`;
+      return `A largura da etiqueta (${modelo.largura}mm) é maior que a área útil disponível (${areaUtilLargura}mm)`;
     }
-    
-    const areaUtilAltura = pageHeight - modelo.margemSuperior - modelo.margemInferior;
+
+    const areaUtilAltura = modelo.alturaPagina - modelo.margemSuperior - modelo.margemInferior;
     if (modelo.altura > areaUtilAltura) {
-      console.error("Etiqueta maior que área útil:", {
-        alturaEtiqueta: modelo.altura,
-        areaUtilAltura
-      });
-      
-      const sugestaoAlturaEtiqueta = Math.floor(areaUtilAltura * 0.9);
-      return `A altura da etiqueta (${modelo.altura}mm) é maior que a área útil disponível (${areaUtilAltura}mm). ` +
-        `Sugestão: Reduza a altura da etiqueta para ${sugestaoAlturaEtiqueta}mm ou ` +
-        `aumente a altura da página/reduza as margens.`;
+      return `A altura da etiqueta (${modelo.altura}mm) é maior que a área útil disponível (${areaUtilAltura}mm)`;
     }
   }
-  
-  // Validar se há campos definidos
-  if (!modelo.campos || modelo.campos.length === 0) {
-    console.error("Modelo sem campos definidos");
-    return "O modelo de etiqueta não possui elementos para impressão. Adicione elementos ao modelo.";
-  }
-  
+
   return null;
+}
+
+/**
+ * Validar se uma string é uma URL de dados PDF válida
+ * @param dataUrl String a ser validada
+ * @returns Verdadeiro se for uma URL de dados PDF válida
+ */
+export function validatePdfDataUrl(dataUrl: string): boolean {
+  if (!dataUrl) return false;
+  return dataUrl.startsWith('data:application/pdf;base64,') && dataUrl.length > 100;
 }
