@@ -390,11 +390,16 @@ export const acertoMaletaController = {
   
   async generateReceiptPDF(acertoId: string): Promise<string> {
     try {
+      console.log(`Iniciando geração de PDF para acerto ${acertoId}`);
+      
       // Buscar dados completos do acerto
       const acerto = await this.getAcertoById(acertoId);
       if (!acerto) {
+        console.error("Erro: Acerto não encontrado");
         throw new Error("Acerto não encontrado");
       }
+      
+      console.log(`Dados do acerto recuperados: ${acerto.id}, itens: ${acerto.items_vendidos?.length || 0}`);
       
       // Obter informações da promotora, se disponível
       let promotora = null;
@@ -417,279 +422,280 @@ export const acertoMaletaController = {
         format: 'a4'
       });
       
-      // Configurações de fontes e estilos
-      const titleFontSize = 16;
-      const subtitleFontSize = 12;
-      const normalFontSize = 10;
-      const smallFontSize = 8;
-      
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      const margin = 20;
-      const contentWidth = pageWidth - 2 * margin;
-      
-      // Cabeçalho
-      doc.setFontSize(titleFontSize);
-      doc.setFont('helvetica', 'bold');
-      doc.text("RECIBO DE ACERTO DE MALETA", pageWidth / 2, margin, { align: 'center' });
-      
-      // Informações gerais
-      doc.setFontSize(subtitleFontSize);
-      doc.text("INFORMAÇÕES DO ACERTO", margin, margin + 10);
-      
-      // Adicionar linha
-      doc.setDrawColor(200, 200, 200);
-      doc.line(margin, margin + 12, pageWidth - margin, margin + 12);
-      
-      // Detalhes do acerto
-      doc.setFontSize(normalFontSize);
-      doc.setFont('helvetica', 'normal');
-      
-      let y = margin + 20;
-      const lineHeight = 7;
-      
-      // Informações da maleta e revendedora
-      doc.text(`Maleta: ${acerto.suitcase?.code || ''}`, margin, y);
-      doc.text(`Data do Acerto: ${format(new Date(acerto.settlement_date), 'dd/MM/yyyy')}`, pageWidth - margin, y, { align: 'right' });
-      y += lineHeight;
-      
-      doc.text(`Revendedora: ${acerto.seller?.name || ''}`, margin, y);
-      if (promotora) {
-        doc.text(`Promotora: ${promotora.name || ''}`, pageWidth - margin, y, { align: 'right' });
-      }
-      y += lineHeight;
+      try {
+        // Configurações de fontes e estilos
+        const titleFontSize = 16;
+        const subtitleFontSize = 12;
+        const normalFontSize = 10;
+        const smallFontSize = 8;
+        
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const margin = 20;
+        const contentWidth = pageWidth - 2 * margin;
+        
+        console.log(`Dimensões do PDF: ${pageWidth}x${pageHeight}mm, margens: ${margin}mm`);
+        
+        // Cabeçalho
+        doc.setFontSize(titleFontSize);
+        doc.setFont('helvetica', 'bold');
+        doc.text("RECIBO DE ACERTO DE MALETA", pageWidth / 2, margin, { align: 'center' });
+        
+        // Informações gerais
+        doc.setFontSize(subtitleFontSize);
+        doc.text("INFORMAÇÕES DO ACERTO", margin, margin + 10);
+        
+        // Adicionar linha
+        doc.setDrawColor(200, 200, 200);
+        doc.line(margin, margin + 12, pageWidth - margin, margin + 12);
+        
+        // Detalhes do acerto
+        doc.setFontSize(normalFontSize);
+        doc.setFont('helvetica', 'normal');
+        
+        let y = margin + 20;
+        const lineHeight = 7;
+        
+        // Informações da maleta e revendedora
+        doc.text(`Maleta: ${acerto.suitcase?.code || 'N/A'}`, margin, y);
+        doc.text(`Data do Acerto: ${format(new Date(acerto.settlement_date), 'dd/MM/yyyy')}`, pageWidth - margin, y, { align: 'right' });
+        y += lineHeight;
+        
+        doc.text(`Revendedora: ${acerto.seller?.name || 'N/A'}`, margin, y);
+        if (promotora) {
+          doc.text(`Promotora: ${promotora.name || 'N/A'}`, pageWidth - margin, y, { align: 'right' });
+        }
+        y += lineHeight;
 
-      const suitcaseCity = acerto.suitcase?.city || '';
-      const suitcaseNeighborhood = acerto.suitcase?.neighborhood || '';
-      
-      if (suitcaseCity || suitcaseNeighborhood) {
-        doc.text(`Cidade: ${suitcaseCity}${suitcaseNeighborhood ? `, ${suitcaseNeighborhood}` : ''}`, margin, y);
+        const suitcaseCity = acerto.suitcase?.city || '';
+        const suitcaseNeighborhood = acerto.suitcase?.neighborhood || '';
+        
+        if (suitcaseCity || suitcaseNeighborhood) {
+          doc.text(`Cidade: ${suitcaseCity}${suitcaseNeighborhood ? `, ${suitcaseNeighborhood}` : ''}`, margin, y);
+          y += lineHeight;
+        }
+        
+        if (acerto.next_settlement_date) {
+          doc.text(`Próximo Acerto: ${format(new Date(acerto.next_settlement_date), 'dd/MM/yyyy')}`, margin, y);
+          y += lineHeight;
+        }
+        
         y += lineHeight;
-      }
-      
-      if (acerto.next_settlement_date) {
-        doc.text(`Próximo Acerto: ${format(new Date(acerto.next_settlement_date), 'dd/MM/yyyy')}`, margin, y);
-        y += lineHeight;
-      }
-      
-      y += lineHeight;
-      
-      // Resumo financeiro
-      doc.setFontSize(subtitleFontSize);
-      doc.setFont('helvetica', 'bold');
-      doc.text("RESUMO FINANCEIRO", margin, y);
-      y += lineHeight;
-      
-      doc.setDrawColor(200, 200, 200);
-      doc.line(margin, y, pageWidth - margin, y);
-      y += lineHeight;
-      
-      doc.setFontSize(normalFontSize);
-      doc.setFont('helvetica', 'normal');
-      
-      // Formatação de valores monetários
-      const formatCurrency = (value: number) => {
-        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
-      };
-      
-      doc.text(`Total em Vendas:`, margin, y);
-      doc.text(`${formatCurrency(acerto.total_sales)}`, pageWidth - margin, y, { align: 'right' });
-      y += lineHeight;
-      
-      const commissionRate = acerto.seller?.commission_rate || 0.3;
-      doc.text(`Comissão (${(commissionRate * 100).toFixed(0)}%):`, margin, y);
-      doc.text(`${formatCurrency(acerto.commission_amount)}`, pageWidth - margin, y, { align: 'right' });
-      y += lineHeight * 2;
-      
-      // Listagem de itens vendidos
-      if (acerto.items_vendidos && acerto.items_vendidos.length > 0) {
+        
+        // Resumo financeiro
         doc.setFontSize(subtitleFontSize);
         doc.setFont('helvetica', 'bold');
-        doc.text(`ITENS VENDIDOS (${acerto.items_vendidos.length})`, margin, y);
+        doc.text("RESUMO FINANCEIRO", margin, y);
         y += lineHeight;
         
         doc.setDrawColor(200, 200, 200);
         doc.line(margin, y, pageWidth - margin, y);
         y += lineHeight;
         
-        // Cabeçalhos da tabela
-        doc.setFontSize(smallFontSize);
-        doc.setFont('helvetica', 'bold');
-        
-        // Definir colunas da tabela
-        const col1Width = contentWidth * 0.15; // SKU
-        const col2Width = contentWidth * 0.45; // Produto
-        const col3Width = contentWidth * 0.2; // Cliente
-        const col4Width = contentWidth * 0.2; // Preço
-        
-        doc.text("SKU", margin, y);
-        doc.text("Produto", margin + col1Width, y);
-        doc.text("Cliente", margin + col1Width + col2Width, y);
-        doc.text("Preço", pageWidth - margin, y, { align: 'right' });
-        y += lineHeight;
-        
-        // Linha separadora dos cabeçalhos
-        doc.setDrawColor(200, 200, 200);
-        doc.line(margin, y - 2, pageWidth - margin, y - 2);
-        
-        // Listar itens
-        doc.setFontSize(smallFontSize);
+        doc.setFontSize(normalFontSize);
         doc.setFont('helvetica', 'normal');
         
-        // Calcular quantos itens cabem por página
-        const itemsPerPage = Math.floor((pageHeight - y - margin) / (lineHeight * 3)); // Espaço para imagem
-        let itemsOnCurrentPage = 0;
+        // Formatação de valores monetários
+        const formatCurrency = (value: number) => {
+          return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+        };
         
-        for (let i = 0; i < acerto.items_vendidos.length; i++) {
-          const item = acerto.items_vendidos[i];
-          
-          // Verificar se precisa de uma nova página
-          if (itemsOnCurrentPage >= itemsPerPage) {
-            doc.addPage();
-            y = margin;
-            itemsOnCurrentPage = 0;
-            
-            // Adicionar cabeçalhos na nova página
-            doc.setFontSize(smallFontSize);
-            doc.setFont('helvetica', 'bold');
-            
-            doc.text("SKU", margin, y);
-            doc.text("Produto", margin + col1Width, y);
-            doc.text("Cliente", margin + col1Width + col2Width, y);
-            doc.text("Preço", pageWidth - margin, y, { align: 'right' });
-            y += lineHeight;
-            
-            // Linha separadora dos cabeçalhos
-            doc.setDrawColor(200, 200, 200);
-            doc.line(margin, y - 2, pageWidth - margin, y - 2);
-            
-            doc.setFontSize(smallFontSize);
-            doc.setFont('helvetica', 'normal');
-          }
-          
-          // Altura inicial do item
-          const startY = y;
-          
-          // Obter URL da imagem, se disponível
-          let photoUrl = undefined;
-          if (item.product && item.product.photo_url) {
-            if (typeof item.product.photo_url === 'string') {
-              photoUrl = item.product.photo_url;
-            } else if (Array.isArray(item.product.photo_url) && item.product.photo_url.length > 0) {
-              // Se for array de objetos com photo_url
-              photoUrl = getProductPhotoUrl(item.product.photo_url);
-            }
-          }
-          
-          // Se tem foto, adicionar imagem
-          const imageHeight = lineHeight * 2;
-          const imageWidth = col1Width * 0.8;
-          const imageX = margin;
-          const imageY = y;
-          
-          // Adicionar imagem se disponível
-          let hasImage = false;
-          if (photoUrl) {
-            try {
-              // Como o jsPDF não suporta carregar imagens assíncronas facilmente,
-              // vamos apenas indicar que há uma imagem (na implementação real, seria necessário 
-              // carregar a imagem antes de adicioná-la ao PDF)
-              doc.setFillColor(240, 240, 240);
-              doc.rect(imageX, imageY, imageWidth, imageHeight, 'F');
-              doc.setFontSize(6);
-              doc.text("Foto do", imageX + imageWidth/2, imageY + imageHeight/2 - 2, { align: 'center' });
-              doc.text("produto", imageX + imageWidth/2, imageY + imageHeight/2 + 2, { align: 'center' });
-              hasImage = true;
-            } catch (error) {
-              console.error("Erro ao adicionar imagem:", error);
-            }
-          }
-          
-          // Ajustar Y para texto ao lado da imagem
-          const textY = hasImage ? y + 5 : y;
-          
-          // Informações do item
-          doc.setFontSize(smallFontSize);
-          doc.text(item.product?.sku || "-", hasImage ? margin + imageWidth + 2 : margin, textY);
-          doc.text(item.product?.name || "Produto não encontrado", margin + col1Width, textY);
-          doc.text(item.customer_name || "-", margin + col1Width + col2Width, textY);
-          doc.text(formatCurrency(item.price), pageWidth - margin, textY, { align: 'right' });
-          
-          // Avançar Y para o próximo item
-          y += hasImage ? imageHeight + 2 : lineHeight * 1.5;
-          itemsOnCurrentPage++;
-          
-          // Linha separadora entre itens
-          if (i < acerto.items_vendidos.length - 1) {
-            doc.setDrawColor(240, 240, 240);
-            doc.line(margin, y - 1, pageWidth - margin, y - 1);
-          }
-        }
-      } else {
-        // Se não houver itens vendidos
-        doc.setFontSize(normalFontSize);
-        doc.setFont('helvetica', 'italic');
-        doc.text("Nenhum item vendido neste acerto.", margin, y);
+        doc.text(`Total em Vendas:`, margin, y);
+        doc.text(`${formatCurrency(acerto.total_sales)}`, pageWidth - margin, y, { align: 'right' });
+        y += lineHeight;
+        
+        const commissionRate = acerto.seller?.commission_rate || 0.3;
+        doc.text(`Comissão (${(commissionRate * 100).toFixed(0)}%):`, margin, y);
+        doc.text(`${formatCurrency(acerto.commission_amount)}`, pageWidth - margin, y, { align: 'right' });
         y += lineHeight * 2;
+        
+        // Listagem de itens vendidos
+        if (acerto.items_vendidos && acerto.items_vendidos.length > 0) {
+          doc.setFontSize(subtitleFontSize);
+          doc.setFont('helvetica', 'bold');
+          doc.text(`ITENS VENDIDOS (${acerto.items_vendidos.length})`, margin, y);
+          y += lineHeight;
+          
+          doc.setDrawColor(200, 200, 200);
+          doc.line(margin, y, pageWidth - margin, y);
+          y += lineHeight;
+          
+          // Cabeçalhos da tabela
+          doc.setFontSize(smallFontSize);
+          doc.setFont('helvetica', 'bold');
+          
+          // Definir colunas da tabela
+          const col1Width = contentWidth * 0.15; // SKU
+          const col2Width = contentWidth * 0.45; // Produto
+          const col3Width = contentWidth * 0.2; // Cliente
+          const col4Width = contentWidth * 0.2; // Preço
+          
+          doc.text("SKU", margin, y);
+          doc.text("Produto", margin + col1Width, y);
+          doc.text("Cliente", margin + col1Width + col2Width, y);
+          doc.text("Preço", pageWidth - margin, y, { align: 'right' });
+          y += lineHeight;
+          
+          // Linha separadora dos cabeçalhos
+          doc.setDrawColor(200, 200, 200);
+          doc.line(margin, y - 2, pageWidth - margin, y - 2);
+          
+          // Listar itens
+          doc.setFontSize(smallFontSize);
+          doc.setFont('helvetica', 'normal');
+          
+          // Calcular quantos itens cabem por página
+          const itemsPerPage = Math.floor((pageHeight - y - margin) / (lineHeight * 2)); // Espaço reduzido
+          let itemsOnCurrentPage = 0;
+          
+          for (let i = 0; i < acerto.items_vendidos.length; i++) {
+            const item = acerto.items_vendidos[i];
+            
+            // Verificar se precisa de uma nova página
+            if (itemsOnCurrentPage >= itemsPerPage) {
+              doc.addPage();
+              y = margin;
+              itemsOnCurrentPage = 0;
+              
+              // Adicionar cabeçalhos na nova página
+              doc.setFontSize(smallFontSize);
+              doc.setFont('helvetica', 'bold');
+              
+              doc.text("SKU", margin, y);
+              doc.text("Produto", margin + col1Width, y);
+              doc.text("Cliente", margin + col1Width + col2Width, y);
+              doc.text("Preço", pageWidth - margin, y, { align: 'right' });
+              y += lineHeight;
+              
+              // Linha separadora dos cabeçalhos
+              doc.setDrawColor(200, 200, 200);
+              doc.line(margin, y - 2, pageWidth - margin, y - 2);
+              
+              doc.setFontSize(smallFontSize);
+              doc.setFont('helvetica', 'normal');
+            }
+            
+            // Obter URL da imagem, se disponível
+            let photoUrl = undefined;
+            if (item.product && item.product.photo_url) {
+              if (typeof item.product.photo_url === 'string') {
+                photoUrl = item.product.photo_url;
+              } else if (Array.isArray(item.product.photo_url) && item.product.photo_url.length > 0) {
+                photoUrl = getProductPhotoUrl(item.product.photo_url);
+              }
+            }
+            
+            // Informações do item - simplificado sem imagens para evitar problemas
+            doc.setFontSize(smallFontSize);
+            doc.text(item.product?.sku || "-", margin, y);
+            doc.text(item.product?.name || "Produto não encontrado", margin + col1Width, y);
+            doc.text(item.customer_name || "-", margin + col1Width + col2Width, y);
+            doc.text(formatCurrency(item.price), pageWidth - margin, y, { align: 'right' });
+            
+            // Avançar Y para o próximo item
+            y += lineHeight;
+            itemsOnCurrentPage++;
+            
+            // Linha separadora entre itens
+            if (i < acerto.items_vendidos.length - 1) {
+              doc.setDrawColor(240, 240, 240);
+              doc.line(margin, y - 1, pageWidth - margin, y - 1);
+            }
+          }
+        } else {
+          // Se não houver itens vendidos
+          doc.setFontSize(normalFontSize);
+          doc.setFont('helvetica', 'italic');
+          doc.text("Nenhum item vendido neste acerto.", margin, y);
+          y += lineHeight * 2;
+        }
+        
+        // Adicionar espaço para assinaturas
+        y += lineHeight * 3;
+        
+        if (y + lineHeight * 6 > pageHeight) {
+          doc.addPage();
+          y = margin;
+        }
+        
+        doc.setFontSize(normalFontSize);
+        
+        // Linhas para assinaturas
+        const signatureWidth = contentWidth / 2 - 10;
+        
+        doc.line(margin, y + lineHeight, margin + signatureWidth, y + lineHeight);
+        doc.line(margin + contentWidth - signatureWidth, y + lineHeight, pageWidth - margin, y + lineHeight);
+        
+        // Texto sob as linhas de assinatura
+        doc.setFontSize(smallFontSize);
+        doc.text("Revendedora", margin + signatureWidth / 2, y + lineHeight + 5, { align: 'center' });
+        doc.text("Empresa", margin + contentWidth - signatureWidth / 2, y + lineHeight + 5, { align: 'center' });
+        
+        // Campo de observações
+        y += lineHeight * 5;
+        
+        doc.setFontSize(subtitleFontSize);
+        doc.setFont('helvetica', 'bold');
+        doc.text("OBSERVAÇÕES:", margin, y);
+        y += lineHeight;
+        
+        // Linhas para observações
+        doc.setDrawColor(200, 200, 200);
+        doc.line(margin, y, pageWidth - margin, y);
+        y += lineHeight;
+        doc.line(margin, y, pageWidth - margin, y);
+        y += lineHeight;
+        doc.line(margin, y, pageWidth - margin, y);
+        
+        // Rodapé
+        y = pageHeight - margin;
+        doc.setFontSize(smallFontSize);
+        doc.setFont('helvetica', 'normal');
+        doc.text("Dalia Manager - Recibo de Acerto de Maleta", pageWidth / 2, y, { align: 'center' });
+        
+        console.log("PDF gerado com sucesso, gerando URI...");
+      } catch (renderError) {
+        console.error("Erro durante a renderização do PDF:", renderError);
       }
       
-      // Adicionar espaço para assinaturas
-      y += lineHeight * 3;
-      
-      if (y + lineHeight * 6 > pageHeight) {
-        doc.addPage();
-        y = margin;
+      // Gerar o PDF como Data URL - MODIFICAÇÃO AQUI
+      try {
+        // Usar toDataURL em vez de output('datauristring')
+        const blob = doc.output('blob');
+        const reader = new FileReader();
+        
+        // Criar uma Promise para esperar a conclusão do FileReader
+        const pdfDataUri = await new Promise<string>((resolve, reject) => {
+          reader.onload = () => {
+            const result = reader.result as string;
+            resolve(result);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+        
+        // Verificar se o dataURI foi gerado corretamente
+        if (!pdfDataUri.startsWith('data:application/pdf;base64,')) {
+          console.error("Erro no formato do URI do PDF");
+          throw new Error("Formato inválido do URI do PDF");
+        }
+        
+        // Atualizar o recibo no acerto
+        const { error: updateError } = await supabase
+          .from('acertos_maleta')
+          .update({ receipt_url: pdfDataUri })
+          .eq('id', acertoId);
+        
+        if (updateError) {
+          console.error("Erro ao salvar URL do recibo:", updateError);
+        }
+        
+        console.log("URI do PDF gerado e salvo com sucesso");
+        return pdfDataUri;
+      } catch (uriError) {
+        console.error("Erro ao gerar URI do PDF:", uriError);
+        throw new Error("Erro ao gerar URI do PDF");
       }
-      
-      doc.setFontSize(normalFontSize);
-      
-      // Linhas para assinaturas
-      const signatureWidth = contentWidth / 2 - 10;
-      
-      doc.line(margin, y + lineHeight, margin + signatureWidth, y + lineHeight);
-      doc.line(margin + contentWidth - signatureWidth, y + lineHeight, pageWidth - margin, y + lineHeight);
-      
-      // Texto sob as linhas de assinatura
-      doc.setFontSize(smallFontSize);
-      doc.text("Revendedora", margin + signatureWidth / 2, y + lineHeight + 5, { align: 'center' });
-      doc.text("Empresa", margin + contentWidth - signatureWidth / 2, y + lineHeight + 5, { align: 'center' });
-      
-      // Campo de observações
-      y += lineHeight * 5;
-      
-      doc.setFontSize(subtitleFontSize);
-      doc.setFont('helvetica', 'bold');
-      doc.text("OBSERVAÇÕES:", margin, y);
-      y += lineHeight;
-      
-      // Linhas para observações
-      doc.setDrawColor(200, 200, 200);
-      doc.line(margin, y, pageWidth - margin, y);
-      y += lineHeight;
-      doc.line(margin, y, pageWidth - margin, y);
-      y += lineHeight;
-      doc.line(margin, y, pageWidth - margin, y);
-      
-      // Rodapé
-      y = pageHeight - margin;
-      doc.setFontSize(smallFontSize);
-      doc.setFont('helvetica', 'normal');
-      doc.text("Dalia Manager - Recibo de Acerto de Maleta", pageWidth / 2, y, { align: 'center' });
-      
-      // Gerar o PDF como Data URL
-      const pdfDataUri = doc.output('datauristring');
-      
-      // Atualizar o recibo no acerto
-      const { error: updateError } = await supabase
-        .from('acertos_maleta')
-        .update({ receipt_url: pdfDataUri })
-        .eq('id', acertoId);
-      
-      if (updateError) {
-        console.error("Erro ao salvar URL do recibo:", updateError);
-      }
-      
-      return pdfDataUri;
     } catch (error) {
       console.error("Erro ao gerar PDF:", error);
       throw new Error("Erro ao gerar recibo PDF");
