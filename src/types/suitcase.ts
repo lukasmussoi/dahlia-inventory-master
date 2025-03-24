@@ -1,3 +1,4 @@
+
 export type SuitcaseStatus = 'in_use' | 'returned' | 'in_replenishment' | 'lost' | 'in_audit';
 export type SuitcaseItemStatus = 'in_possession' | 'sold' | 'returned' | 'lost';
 export type AcertoStatus = 'pendente' | 'concluido';
@@ -136,8 +137,8 @@ export interface Acerto {
 export interface SuitcaseSettlementFormData {
   suitcase_id: string;
   seller_id: string;
-  settlement_date: Date | string;
-  next_settlement_date?: Date | string;
+  settlement_date: Date;
+  next_settlement_date?: Date;
   items_present: string[]; // IDs dos itens escaneados/confirmados como presentes
   items_sold: {
     suitcase_item_id: string;

@@ -5,17 +5,6 @@
  */
 
 import { generatePdfLabel } from "./pdf/labelGenerator";
-import { 
-  GeneratePdfLabelOptions, 
-  PdfGenerationResult, 
-  downloadPdfFromDataUrl,
-  openPdfInNewTab
-} from "./pdf/types";
+import type { GeneratePdfLabelOptions, PdfGenerationResult } from "./pdf/types";
 
-export { 
-  generatePdfLabel, 
-  downloadPdfFromDataUrl,
-  openPdfInNewTab,
-  type GeneratePdfLabelOptions, 
-  type PdfGenerationResult 
-};
+export { generatePdfLabel, type GeneratePdfLabelOptions, type PdfGenerationResult };
