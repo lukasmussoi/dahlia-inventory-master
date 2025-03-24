@@ -1,10 +1,9 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Briefcase } from "lucide-react";
 import { toast } from "sonner";
-import { Suitcase } from "@/types/suitcase";
+import { Suitcase, SuitcaseItem, Acerto } from "@/types/suitcase";
 import { SuitcaseController } from "@/controllers/suitcaseController";
 import { AcertoMaletaController } from "@/controllers/acertoMaletaController";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -209,14 +208,12 @@ export function SuitcaseDetailsDialog({
       setIsPrintingPdf(true);
       toast.info("Gerando PDF da maleta...");
       
-      // Chamar o método para gerar o PDF e obter a URL
       const pdfUrl = await SuitcaseController.generateSuitcasePDF(
         suitcase.id, 
         suitcaseItems, 
         promoterInfo
       );
       
-      // Abrir o PDF em uma nova aba
       openPdfInNewTab(pdfUrl);
       
       toast.success("PDF da maleta gerado com sucesso");

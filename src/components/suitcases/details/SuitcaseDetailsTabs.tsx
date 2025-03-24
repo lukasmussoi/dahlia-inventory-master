@@ -1,4 +1,3 @@
-
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { SuitcaseInfo } from "./SuitcaseInfo";
 import { SuitcaseItems } from "./SuitcaseItems";
