@@ -58,10 +58,7 @@ export class EtiquetaCustomModel {
         formatoPagina: modeloMapeado.formatoPagina,
         orientacao: modeloMapeado.orientacao,
         margens: `${modeloMapeado.margemSuperior}/${modeloMapeado.margemInferior}/${modeloMapeado.margemEsquerda}/${modeloMapeado.margemDireita}`,
-        tamanhoGrade: modeloMapeado.tamanhoGrade,
-        posicao: modeloMapeado.x !== undefined && modeloMapeado.y !== undefined 
-          ? `(${modeloMapeado.x}, ${modeloMapeado.y})` 
-          : 'posição não definida'
+        tamanhoGrade: modeloMapeado.tamanhoGrade
       });
       
       return modeloMapeado;
@@ -88,10 +85,7 @@ export class EtiquetaCustomModel {
         orientacao: modelo.orientacao,
         largura: modelo.largura,
         altura: modelo.altura,
-        tamanhoGrade: modelo.tamanhoGrade,
-        posicao: modelo.x !== undefined && modelo.y !== undefined 
-          ? `(${modelo.x}, ${modelo.y})` 
-          : 'posição não definida'
+        tamanhoGrade: modelo.tamanhoGrade
       });
 
       // Mapear o modelo para o formato do banco
@@ -113,19 +107,16 @@ export class EtiquetaCustomModel {
         espacamento_vertical: Number(modelo.espacamentoVertical) || 0,
         altura_pagina: modelo.alturaPagina ? Number(modelo.alturaPagina) : 297,
         largura_pagina: modelo.larguraPagina ? Number(modelo.larguraPagina) : 210,
+        // Removendo o campo tamanho_grade que não existe na tabela
         campos: modeloDb.campos,
-        criado_por: user.data.user.id,
-        // Adicionar posições
-        x: modelo.x,
-        y: modelo.y
+        criado_por: user.data.user.id
       };
 
       console.log("Modelo completo para inserção no banco:", {
         descricao: modeloCompleto.descricao,
         formato_pagina: modeloCompleto.formato_pagina,
         orientacao: modeloCompleto.orientacao,
-        campos_count: modeloCompleto.campos ? (modeloCompleto.campos as any).length : 'N/A',
-        posicao: `(${modeloCompleto.x}, ${modeloCompleto.y})`
+        campos_count: modeloCompleto.campos ? (modeloCompleto.campos as any).length : 'N/A'
       });
 
       const { data, error } = await supabase
@@ -157,13 +148,6 @@ export class EtiquetaCustomModel {
   static async update(id: string, modelo: ModeloEtiqueta): Promise<boolean> {
     try {
       console.log(`Iniciando atualização do modelo ${id}`);
-      
-      // Verificar se o ID está definido no modelo
-      if (!id) {
-        console.error("ID não fornecido para atualização");
-        throw new Error("ID do modelo não fornecido");
-      }
-      
       // Obter dados atuais do modelo para verificação
       console.log(`Buscando dados atuais do modelo ${id} antes da atualização...`);
       const { data: modeloAtual, error: errorBusca } = await supabase
@@ -183,17 +167,14 @@ export class EtiquetaCustomModel {
           id: modeloAtual.id,
           descricao: modeloAtual.descricao,
           formato_pagina: modeloAtual.formato_pagina,
-          orientacao: modeloAtual.orientacao,
-          posicao: modeloAtual.x !== undefined && modeloAtual.y !== undefined 
-            ? `(${modeloAtual.x}, ${modeloAtual.y})` 
-            : 'posição não definida'
+          orientacao: modeloAtual.orientacao
         });
       }
       
       // Mapear o modelo para o formato do banco
       const modeloDb = mapModelToDatabase(modelo);
       
-      // Remover a propriedade tamanho_grade do objeto modeloDb, já que ela não existe no banco
+      // Remover a propriedade tamanho_grade do objeto modeloDb
       if ('tamanho_grade' in modeloDb) {
         delete modeloDb.tamanho_grade;
       }
@@ -206,10 +187,7 @@ export class EtiquetaCustomModel {
         largura: modelo.largura,
         altura: modelo.altura,
         margens: `${modelo.margemSuperior}/${modelo.margemInferior}/${modelo.margemEsquerda}/${modelo.margemDireita}`,
-        campos_count: modelo.campos ? modelo.campos.length : 'N/A',
-        posicao: modelo.x !== undefined && modelo.y !== undefined 
-          ? `(${modelo.x}, ${modelo.y})` 
-          : 'posição não definida'
+        campos_count: modelo.campos ? modelo.campos.length : 'N/A'
       });
       
       // Dados mapeados para o banco
@@ -217,16 +195,8 @@ export class EtiquetaCustomModel {
         descricao: modeloDb.descricao,
         formato_pagina: modeloDb.formato_pagina,
         orientacao: modeloDb.orientacao,
-        campos_count: modeloDb.campos ? (modeloDb.campos as any).length : 'N/A',
-        posicao: modeloDb.x !== undefined && modeloDb.y !== undefined 
-          ? `(${modeloDb.x}, ${modeloDb.y})` 
-          : 'posição não definida'
+        campos_count: modeloDb.campos ? (modeloDb.campos as any).length : 'N/A'
       });
-      
-      // Remover o id do objeto modeloDb para evitar erro na atualização
-      if ('id' in modeloDb) {
-        delete modeloDb.id;
-      }
       
       // Executar a atualização
       const { data, error } = await supabase

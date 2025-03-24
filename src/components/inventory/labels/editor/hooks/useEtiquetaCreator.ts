@@ -45,24 +45,13 @@ export function useEtiquetaCreator(initialData?: any, autoAdjustDimensions = fal
     espacamentoVertical: initialData?.espacamentoVertical || 2
   });
   
-  // Definir posição inicial da etiqueta para ficar dentro das margens da página
-  const getInitialLabelPosition = () => {
-    // Usar as margens como posição inicial da etiqueta
-    const initialX = initialData?.x || pageConfiguration.pageMargins.left;
-    const initialY = initialData?.y || pageConfiguration.pageMargins.top;
-    
-    return { x: initialX, y: initialY };
-  };
-  
-  const initialPosition = getInitialLabelPosition();
-  
   // Inicializar as etiquetas se houver dados iniciais
   const initialLabels = initialData?.campos ? [
     {
       id: 0, // Mudado para 0 para garantir compatibilidade com o hook de gerenciamento
       name: initialData.nome || "Etiqueta",
-      x: initialPosition.x,
-      y: initialPosition.y,
+      x: 10,
+      y: 10,
       width: initialData.largura || 80,
       height: initialData.altura || 30,
       elements: initialData.campos.map((campo: any, index: number) => ({
@@ -164,7 +153,7 @@ export function useEtiquetaCreator(initialData?: any, autoAdjustDimensions = fal
     });
   };
   
-  // Salvar o modelo - corrigido para evitar a duplicação e corrigir erro na atualização
+  // Salvar o modelo - corrigido para evitar a duplicação
   const handleSave = async (onSave: (data: any) => void) => {
     if (!modelName.trim()) {
       toast.error("O nome do modelo é obrigatório");
@@ -211,7 +200,6 @@ export function useEtiquetaCreator(initialData?: any, autoAdjustDimensions = fal
       
       // Preparar os dados para salvamento
       const modelData = {
-        id: initialData?.id, // Importante: passar o id para atualização
         nome: modelName,
         descricao: modelName,
         largura: primeiraEtiqueta.width,
@@ -227,9 +215,7 @@ export function useEtiquetaCreator(initialData?: any, autoAdjustDimensions = fal
         larguraPagina: pageConfiguration.pageSize.width,
         alturaPagina: pageConfiguration.pageSize.height,
         tamanhoGrade: gridSize,
-        campos: camposMapeados,
-        x: primeiraEtiqueta.x, // Salvar posição X da etiqueta
-        y: primeiraEtiqueta.y  // Salvar posição Y da etiqueta
+        campos: camposMapeados
       };
       
       console.log("Dados completos para salvar:", modelData);
@@ -243,12 +229,8 @@ export function useEtiquetaCreator(initialData?: any, autoAdjustDimensions = fal
         
         if (result) {
           toast.success("Modelo atualizado com sucesso!");
-          // Chama onSave após atualizar com sucesso - passando o id e posições
-          onSave({
-            id: initialData.id,
-            x: primeiraEtiqueta.x,
-            y: primeiraEtiqueta.y
-          });
+          // Chama onSave após atualizar com sucesso - não passa o modelData para evitar dupla atualização
+          onSave({id: initialData.id});
         } else {
           console.error("Falha na atualização do modelo");
           toast.error("Erro ao atualizar modelo");
@@ -261,12 +243,8 @@ export function useEtiquetaCreator(initialData?: any, autoAdjustDimensions = fal
         
         if (result) {
           toast.success("Modelo criado com sucesso!");
-          // Chama onSave após criar com sucesso - passando o id e posições
-          onSave({
-            id: result,
-            x: primeiraEtiqueta.x,
-            y: primeiraEtiqueta.y
-          });
+          // Chama onSave após criar com sucesso - não passa o modelData para evitar dupla criação
+          onSave({id: result});
         } else {
           console.error("Falha na criação do modelo");
           toast.error("Erro ao criar modelo");
