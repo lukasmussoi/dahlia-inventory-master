@@ -67,7 +67,7 @@ export function SuitcasesContent({ isAdmin, userProfile }: SuitcasesContentProps
     refetch: refetchSummary 
   } = useQuery({
     queryKey: ['suitcases-summary'],
-    queryFn: () => suitcaseController.getSuitcaseSummary(),
+    queryFn: () => SuitcaseController.getSuitcaseSummary(),
   });
 
   // Refazer consultas quando necessário
@@ -97,7 +97,7 @@ export function SuitcasesContent({ isAdmin, userProfile }: SuitcasesContentProps
   // Lidar com criação de nova maleta
   const handleCreateSuitcase = async (data: any) => {
     try {
-      await suitcaseController.createSuitcase(data);
+      await SuitcaseController.createSuitcase(data);
       setShowNewSuitcaseDialog(false);
       refreshData();
       toast.success("Maleta criada com sucesso");
