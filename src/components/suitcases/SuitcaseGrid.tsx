@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import {
   Card,
@@ -42,32 +43,31 @@ import { SuitcaseAcertoDialog } from "@/components/suitcases/SuitcaseAcertoDialo
 
 interface SuitcaseGridProps {
   suitcases: Suitcase[];
-  isLoading: boolean;
+  isAdmin: boolean | undefined;
   onRefresh: () => void;
-  isAdmin: boolean;
+  onOpenAcertoDialog: (suitcase: Suitcase) => void;
 }
 
-export function SuitcaseGrid({ suitcases, isLoading, onRefresh, isAdmin }: SuitcaseGridProps) {
+export function SuitcaseGrid({ suitcases, isAdmin, onRefresh, onOpenAcertoDialog }: SuitcaseGridProps) {
   const [deleteSuitcaseId, setDeleteSuitcaseId] = useState<string | null>(null);
   const [openAcertoDialog, setOpenAcertoDialog] = useState(false);
   const [selectedSuitcase, setSelectedSuitcase] = useState<Suitcase | null>(null);
 
   const queryClient = useQueryClient();
 
-  const deleteSuitcaseMutation = useMutation(
-    (id: string) => suitcaseController.deleteSuitcase(id),
-    {
-      onSuccess: () => {
-        toast.success("Maleta excluída com sucesso!");
-        queryClient.invalidateQueries(['suitcases']);
-        setDeleteSuitcaseId(null);
-        onRefresh();
-      },
-      onError: (error: any) => {
-        toast.error(error?.message || "Erro ao excluir a maleta.");
-      },
-    }
-  );
+  // Corrigindo a mutação para usar a sintaxe correta
+  const deleteSuitcaseMutation = useMutation({
+    mutationFn: (id: string) => suitcaseController.deleteSuitcase(id),
+    onSuccess: () => {
+      toast.success("Maleta excluída com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ['suitcases'] });
+      setDeleteSuitcaseId(null);
+      onRefresh();
+    },
+    onError: (error: any) => {
+      toast.error(error?.message || "Erro ao excluir a maleta.");
+    },
+  });
 
   const formatDate = (date: string) => {
     return format(new Date(date), 'dd/MM/yyyy', { locale: ptBR });
@@ -119,15 +119,7 @@ export function SuitcaseGrid({ suitcases, isLoading, onRefresh, isAdmin }: Suitc
     toast.info(`Editar maleta ${suitcase.code}`);
   };
 
-  if (isLoading) {
-    return (
-      <div className="w-full h-64 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-gold"></div>
-      </div>
-    );
-  }
-
-  if (suitcases.length === 0) {
+  if (!suitcases || suitcases.length === 0) {
     return (
       <div className="text-center py-8">
         <p className="text-gray-500">Nenhuma maleta encontrada.</p>
@@ -173,7 +165,7 @@ export function SuitcaseGrid({ suitcases, isLoading, onRefresh, isAdmin }: Suitc
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                      <DropdownMenuItem onClick={() => handleOpenAcertoDialog(suitcase)}>
+                      <DropdownMenuItem onClick={() => onOpenAcertoDialog(suitcase)}>
                         <FileDown className="mr-2 h-4 w-4" />
                         Registrar Acerto
                       </DropdownMenuItem>
@@ -211,8 +203,8 @@ export function SuitcaseGrid({ suitcases, isLoading, onRefresh, isAdmin }: Suitc
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={handleCloseDeleteConfirmation}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction disabled={deleteSuitcaseMutation.isLoading} onClick={handleDeleteSuitcase}>
-              {deleteSuitcaseMutation.isLoading ? "Excluindo..." : "Excluir"}
+            <AlertDialogAction disabled={deleteSuitcaseMutation.isPending} onClick={handleDeleteSuitcase}>
+              {deleteSuitcaseMutation.isPending ? "Excluindo..." : "Excluir"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

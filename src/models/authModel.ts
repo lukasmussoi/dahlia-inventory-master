@@ -69,17 +69,7 @@ export class AuthModel {
         return [];
       }
       
-      const { data: roles, error } = await supabase
-        .from('user_roles')
-        .select('user_role')
-        .eq('user_id', userId);
-      
-      if (error) {
-        console.error("Model: Erro ao buscar papéis do usuário:", error);
-        throw error;
-      }
-      
-      return roles.map(r => r.user_role as UserRole) || [];
+      return await UserRoleModel.getUserRoles(userId);
     } catch (error) {
       console.error("Model: Erro ao buscar papéis do usuário:", error);
       return [];

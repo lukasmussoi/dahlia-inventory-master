@@ -57,7 +57,7 @@ export function SuitcaseDetailsDialog({ suitcaseId }: SuitcaseDetailsDialogProps
     }
   }, [suitcase]);
 
-  // Mutação para atualizar os dados da maleta
+  // Mutação para atualizar os dados da maleta - corrigida para usar a sintaxe correta
   const updateSuitcaseMutation = useMutation({
     mutationFn: (data: any) => suitcaseController.updateSuitcase(suitcaseId || '', data),
     onSuccess: () => {

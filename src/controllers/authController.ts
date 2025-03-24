@@ -42,7 +42,7 @@ export class AuthController {
       
       // Buscar os papéis do usuário
       const roles = await AuthModel.getUserRoles(user.id);
-      console.log("Perfil do usuário:", profileData, "Roles:", roles);
+      console.log("Perfil do usuário:", profileData.profile, "Roles:", roles);
       
       return {
         profile: profileData.profile,
