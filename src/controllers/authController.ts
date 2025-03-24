@@ -1,6 +1,15 @@
 
 import { AuthModel } from "@/models/authModel";
 import { toast } from "sonner";
+import { UserProfile } from "@/models/userModel";
+import { UserRole } from "@/models/userRoleModel";
+
+// Interface para o perfil de usuário com roles
+export interface UserProfileWithRoles {
+  profile: UserProfile | null;
+  isAdmin: boolean;
+  roles: UserRole[];
+}
 
 export class AuthController {
   // Função para verificar autenticação e redirecionar se necessário
@@ -21,7 +30,7 @@ export class AuthController {
   }
 
   // Função para buscar perfil do usuário com suas permissões
-  static async getUserProfileWithRoles() {
+  static async getUserProfileWithRoles(): Promise<UserProfileWithRoles> {
     try {
       const { data: { user }, error: authError } = await AuthModel.supabase.auth.getUser();
       if (authError || !user) {
@@ -30,8 +39,16 @@ export class AuthController {
       }
       
       const profileData = await AuthModel.getCurrentUserProfile();
-      console.log("Perfil do usuário:", profileData);
-      return profileData;
+      
+      // Buscar os papéis do usuário
+      const roles = await AuthModel.getUserRoles(user.id);
+      console.log("Perfil do usuário:", profileData, "Roles:", roles);
+      
+      return {
+        profile: profileData.profile,
+        isAdmin: profileData.isAdmin,
+        roles: roles || []
+      };
     } catch (error) {
       console.error('Erro ao buscar perfil do usuário:', error);
       throw error;

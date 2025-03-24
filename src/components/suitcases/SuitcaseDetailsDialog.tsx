@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -57,20 +58,18 @@ export function SuitcaseDetailsDialog({ suitcaseId }: SuitcaseDetailsDialogProps
   }, [suitcase]);
 
   // Mutação para atualizar os dados da maleta
-  const updateSuitcaseMutation = useMutation(
-    (data: any) => suitcaseController.updateSuitcase(suitcaseId || '', data),
-    {
-      onSuccess: () => {
-        toast.success("Maleta atualizada com sucesso!");
-        queryClient.invalidateQueries(['suitcase', suitcaseId]);
-        queryClient.invalidateQueries(['suitcases']);
-        setIsEditable(false);
-      },
-      onError: (error: any) => {
-        toast.error(error?.message || "Erro ao atualizar a maleta.");
-      },
-    }
-  );
+  const updateSuitcaseMutation = useMutation({
+    mutationFn: (data: any) => suitcaseController.updateSuitcase(suitcaseId || '', data),
+    onSuccess: () => {
+      toast.success("Maleta atualizada com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ['suitcase', suitcaseId] });
+      queryClient.invalidateQueries({ queryKey: ['suitcases'] });
+      setIsEditable(false);
+    },
+    onError: (error: any) => {
+      toast.error(error?.message || "Erro ao atualizar a maleta.");
+    },
+  });
 
   // Buscar perfil e permissões do usuário
   const { data: userProfile } = useQuery({
@@ -110,13 +109,13 @@ export function SuitcaseDetailsDialog({ suitcaseId }: SuitcaseDetailsDialogProps
   // Função para lidar com a adição de um item
   const handleItemAdded = () => {
     // Invalida a query de itens da maleta para atualizar a lista
-    queryClient.invalidateQueries(['suitcase', suitcaseId]);
+    queryClient.invalidateQueries({ queryKey: ['suitcase', suitcaseId] });
   };
 
   // Função para lidar com a alteração dos itens
   const handleItemsChange = () => {
     // Invalida a query de itens da maleta para atualizar a lista
-    queryClient.invalidateQueries(['suitcase', suitcaseId]);
+    queryClient.invalidateQueries({ queryKey: ['suitcase', suitcaseId] });
   };
 
   if (isLoading || !suitcase) {
@@ -218,7 +217,7 @@ export function SuitcaseDetailsDialog({ suitcaseId }: SuitcaseDetailsDialogProps
                   <CalendarIcon className="ml-2 h-4 w-4 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="right">
+              <PopoverContent className="w-auto p-0" align="start">
                 <Calendar
                   mode="single"
                   selected={nextSettlementDate}
@@ -237,7 +236,7 @@ export function SuitcaseDetailsDialog({ suitcaseId }: SuitcaseDetailsDialogProps
             {showItemSearch && (
               <SuitcaseInventorySearch 
                 suitcaseId={suitcase?.id || ''} 
-                onClose={handleCloseSearch}
+                handleClose={handleCloseSearch}
                 onItemAdded={handleItemAdded}
               />
             )}
@@ -272,8 +271,8 @@ export function SuitcaseDetailsDialog({ suitcaseId }: SuitcaseDetailsDialogProps
               <Button variant="ghost" onClick={() => setIsEditable(false)}>
                 Cancelar
               </Button>
-              <Button onClick={handleUpdate} disabled={updateSuitcaseMutation.isLoading}>
-                {updateSuitcaseMutation.isLoading ? "Salvando..." : "Salvar"}
+              <Button onClick={handleUpdate} disabled={updateSuitcaseMutation.isPending}>
+                {updateSuitcaseMutation.isPending ? "Salvando..." : "Salvar"}
               </Button>
             </div>
           ) : (

@@ -423,11 +423,11 @@ export const suitcaseController = {
     }
   },
 
-  async returnItemToInventory(itemId: string): Promise<void> {
+  static async returnItemToInventory(itemId: string): Promise<void> {
     try {
       // Verificar se o usuário tem permissão para esta ação
       const userProfile = await AuthController.getUserProfileWithRoles();
-      const isAdminOrPromoter = userProfile?.roles?.some(role => 
+      const isAdminOrPromoter = userProfile.roles?.some(role => 
         role === 'admin' || role === 'promoter'
       );
       

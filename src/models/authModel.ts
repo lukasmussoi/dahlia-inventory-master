@@ -1,7 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { UserProfile } from "./userModel";
-import { UserRoleModel } from "./userRoleModel";
+import { UserRoleModel, UserRole } from "./userRoleModel";
 
 export class AuthModel {
   // Expor o cliente supabase para ser usado em outros métodos
@@ -57,6 +57,32 @@ export class AuthModel {
     } catch (error) {
       console.error("Model: Erro ao obter perfil do usuário:", error);
       throw error;
+    }
+  }
+
+  // Função para buscar os papéis do usuário
+  static async getUserRoles(userId: string): Promise<UserRole[]> {
+    try {
+      console.log("Model: Buscando papéis do usuário...");
+      if (!userId) {
+        console.error("Model: ID do usuário não fornecido");
+        return [];
+      }
+      
+      const { data: roles, error } = await supabase
+        .from('user_roles')
+        .select('user_role')
+        .eq('user_id', userId);
+      
+      if (error) {
+        console.error("Model: Erro ao buscar papéis do usuário:", error);
+        throw error;
+      }
+      
+      return roles.map(r => r.user_role as UserRole) || [];
+    } catch (error) {
+      console.error("Model: Erro ao buscar papéis do usuário:", error);
+      return [];
     }
   }
 

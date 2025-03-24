@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { SuitcaseController } from "@/controllers/suitcaseController";
 import { Input } from "@/components/ui/input";
@@ -10,10 +9,11 @@ import { Search, PlusCircle, AlertCircle, Archive } from "lucide-react";
 
 interface SuitcaseInventorySearchProps {
   suitcaseId: string;
+  handleClose: () => void;
   onItemAdded?: () => void;
 }
 
-export function SuitcaseInventorySearch({ suitcaseId, onItemAdded }: SuitcaseInventorySearchProps) {
+export function SuitcaseInventorySearch({ suitcaseId, handleClose, onItemAdded }: SuitcaseInventorySearchProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
