@@ -349,6 +349,23 @@ export class InventoryModel {
     }
   }
 
+  // Verificar se um item possui movimentações registradas
+  static async checkItemHasMovements(id: string): Promise<boolean> {
+    try {
+      const { count, error } = await supabase
+        .from('inventory_movements')
+        .select('*', { count: 'exact', head: true })
+        .eq('inventory_id', id);
+      
+      if (error) throw error;
+      
+      return (count || 0) > 0;
+    } catch (error) {
+      console.error("Erro ao verificar movimentações do item:", error);
+      throw error;
+    }
+  }
+
   // CATEGORIAS
   
   // Buscar todas as categorias

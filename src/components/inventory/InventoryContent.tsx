@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { InventoryItem, InventoryModel, InventoryFilters, InventoryCategory } from "@/models/inventoryModel";
@@ -91,13 +90,23 @@ export function InventoryContent({ isAdmin }: InventoryContentProps) {
       }
 
       if (window.confirm("Tem certeza que deseja excluir este item?")) {
-        await InventoryModel.deleteItem(id);
-        toast.success("Item removido com sucesso!");
-        refetchItems();
+        try {
+          await InventoryModel.deleteItem(id);
+          toast.success("Item removido com sucesso!");
+          refetchItems();
+        } catch (error: any) {
+          console.error('Erro ao deletar item:', error);
+          // Tratamento específico para mensagens de erro vindas do controller
+          if (error.message) {
+            toast.error(error.message);
+          } else {
+            toast.error("Erro ao remover item. Verifique se não há movimentações de estoque associadas.");
+          }
+        }
       }
     } catch (error) {
-      console.error('Erro ao deletar item:', error);
-      toast.error("Erro ao remover item");
+      console.error('Erro ao verificar item:', error);
+      toast.error("Erro ao verificar disponibilidade do item");
     }
   };
 
