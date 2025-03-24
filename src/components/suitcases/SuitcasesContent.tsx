@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { SuitcaseController } from "@/controllers/suitcaseController";
 import { SuitcaseGrid } from "@/components/suitcases/SuitcaseGrid";
@@ -30,7 +30,7 @@ export function SuitcasesContent({ isAdmin, userProfile }: SuitcasesContentProps
   const [activeTab, setActiveTab] = useState("suitcases");
   const [filters, setFilters] = useState({
     search: "",
-    status: "in_use", // Alterado o valor padrão para "in_use" (em uso)
+    status: "in_use", // Valor padrão é "in_use" (em uso)
     city: "",
     neighborhood: ""
   });
@@ -49,14 +49,10 @@ export function SuitcasesContent({ isAdmin, userProfile }: SuitcasesContentProps
     isLoading: isLoadingSuitcases,
     refetch: refetchSuitcases
   } = useQuery({
-    queryKey: ['suitcases', isSearching, filters],
+    queryKey: ['suitcases', filters],
     queryFn: () => {
-      if (isSearching) {
-        return SuitcaseController.searchSuitcases(filters);
-      } else {
-        // Alterando para incluir o filtro de status "in_use" por padrão
-        return SuitcaseController.getAllSuitcases({ status: "in_use" });
-      }
+      // Sempre usar searchSuitcases para aplicar os filtros consistentemente
+      return SuitcaseController.searchSuitcases(filters);
     },
   });
 
@@ -69,6 +65,11 @@ export function SuitcasesContent({ isAdmin, userProfile }: SuitcasesContentProps
     queryKey: ['suitcases-summary'],
     queryFn: () => SuitcaseController.getSuitcaseSummary(),
   });
+
+  // Efetuar a primeira busca com filtro "in_use" ao carregar o componente
+  useEffect(() => {
+    setIsSearching(true);
+  }, []);
 
   // Refazer consultas quando necessário
   const refreshData = () => {
@@ -87,11 +88,11 @@ export function SuitcasesContent({ isAdmin, userProfile }: SuitcasesContentProps
   const handleClearFilters = () => {
     setFilters({
       search: "",
-      status: "in_use", // Alterado para limpar para "in_use" em vez de "todos"
+      status: "in_use", // Limpar para "in_use" em vez de "todos"
       city: "",
       neighborhood: ""
     });
-    setIsSearching(false);
+    setIsSearching(true); // Manter o estado de busca ativo, mas com filtros padrão
   };
 
   // Lidar com criação de nova maleta

@@ -28,12 +28,12 @@ export function SuitcaseFilters({
   onClear
 }: SuitcaseFiltersProps) {
   const [searchTerm, setSearchTerm] = useState(filters.search || '');
-  const [status, setStatus] = useState(filters.status || 'in_use'); // Alterado o valor padrão para "in_use"
+  const [status, setStatus] = useState(filters.status || 'in_use');
 
   // Atualizar valores quando os filtros mudam
   useEffect(() => {
     setSearchTerm(filters.search || '');
-    setStatus(filters.status || 'in_use'); // Alterado o valor padrão para "in_use"
+    setStatus(filters.status || 'in_use');
   }, [filters]);
 
   // Aplicar filtros
@@ -48,7 +48,7 @@ export function SuitcaseFilters({
   // Limpar filtros
   const handleClearFilters = () => {
     setSearchTerm('');
-    setStatus('todos');
+    setStatus('in_use');
     onClear();
   };
 
@@ -76,7 +76,15 @@ export function SuitcaseFilters({
       <div className="w-full sm:w-64">
         <Select
           value={status}
-          onValueChange={setStatus}
+          onValueChange={(value) => {
+            setStatus(value);
+            // Aplicar filtro imediatamente ao mudar o status
+            onSearch({
+              ...filters,
+              search: searchTerm,
+              status: value
+            });
+          }}
         >
           <SelectTrigger>
             <SelectValue placeholder="Filtrar por status" />

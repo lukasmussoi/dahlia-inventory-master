@@ -639,7 +639,7 @@ export class SuitcaseModel {
       // Garantir que o status é um dos valores válidos
       const validStatuses = ['in_use', 'returned', 'lost', 'in_audit', 'in_replenishment'];
       if (validStatuses.includes(filters.status)) {
-        query = query.eq('status', filters.status as SuitcaseStatus);
+        query = query.eq('status', filters.status);
       }
     }
     
@@ -652,8 +652,8 @@ export class SuitcaseModel {
     }
     
     if (filters.search) {
-      // Buscar por código da maleta ou nome da revendedora
-      query = query.or(`code.ilike.%${filters.search}%`);
+      // Buscar por código da maleta, nome da revendedora ou bairro
+      query = query.or(`code.ilike.%${filters.search}%,seller.name.ilike.%${filters.search}%,neighborhood.ilike.%${filters.search}%`);
     }
     
     const { data, error } = await query.order('created_at', { ascending: false });
