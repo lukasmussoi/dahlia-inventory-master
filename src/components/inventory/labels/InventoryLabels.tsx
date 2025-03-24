@@ -61,12 +61,12 @@ export function InventoryLabels() {
     // Obter os dados completos dos itens selecionados
     const itemsToprint = items?.filter(item => selectedItems.includes(item.id)) || [];
     
-    if (itemsTorint.length === 0) {
+    if (itemsToprint.length === 0) {
       toast.error("Não foi possível encontrar os itens selecionados");
       return;
     }
     
-    setSelectedItemsForPrint(itemsToImp);
+    setSelectedItemsForPrint(itemsToprint);
   };
 
   const handleGoToLabelCreator = () => {
