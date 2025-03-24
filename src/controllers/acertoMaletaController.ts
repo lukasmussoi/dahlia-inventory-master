@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { Acerto, AcertoItem, SuitcaseSettlementFormData, PhotoUrl } from "@/types/suitcase";
@@ -378,7 +379,8 @@ export const acertoMaletaController = {
         data: acerto.settlement_date
       }));
       
-      const promotora = null;
+      // Corrigindo a declaração da variável promotora - usando let em vez de const
+      let promotora = null;
       if (acerto.seller) {
         const { data: promoterData, error: promoterError } = await supabase
           .from('promoters')
