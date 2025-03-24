@@ -15,7 +15,7 @@ export class UserRoleModel {
       console.log("UserRoleModel: Verificando se usuário é admin:", userId);
       if (!userId) return false;
       
-      const { data, error } = await supabase.rpc('is_user_admin', { user_id: userId });
+      const { data, error } = await supabase.rpc('is_admin', { user_id: userId });
       
       if (error) {
         console.error("UserRoleModel: Erro ao verificar se usuário é admin:", error);

@@ -1,6 +1,5 @@
 
 import { AuthModel } from "@/models/authModel";
-import { toast } from "sonner";
 import { UserProfile } from "@/models/userModel";
 import { UserRole } from "@/models/userRoleModel";
 

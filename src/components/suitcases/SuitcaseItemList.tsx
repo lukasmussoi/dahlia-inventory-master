@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { SuitcaseItem, SuitcaseItemStatus, SuitcaseStatus } from "@/types/suitcase";
 import { SuitcaseController } from "@/controllers/suitcaseController";
@@ -39,6 +38,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { UserRole } from "@/models/userRoleModel";
 
 interface SuitcaseItemListProps {
   suitcaseId: string;
@@ -134,7 +134,7 @@ export function SuitcaseItemList({
     try {
       setUpdating(prev => ({ ...prev, [itemId]: true }));
       
-      await SuitcaseController.updateSuitcaseItemQuantity(itemId, newQuantity);
+      await SuitcaseModel.updateSuitcaseItemQuantity(itemId, newQuantity);
       
       await fetchItems();
       
@@ -161,7 +161,14 @@ export function SuitcaseItemList({
     try {
       setUpdating(prev => ({ ...prev, [itemToReturn.id]: true }));
       
-      await SuitcaseController.returnItemToInventory(itemToReturn.id);
+      const userRolesEnum = userRoles.map(role => {
+        if (role === 'admin') return UserRole.ADMIN;
+        if (role === 'promoter') return UserRole.PROMOTER;
+        if (role === 'reseller') return UserRole.RESELLER;
+        return UserRole.USER;
+      });
+      
+      await SuitcaseController.returnItemToInventory(itemToReturn.id, userRolesEnum);
       
       await fetchItems();
       

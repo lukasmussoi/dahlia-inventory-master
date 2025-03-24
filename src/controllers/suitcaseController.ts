@@ -1,6 +1,7 @@
+
 import { SuitcaseModel } from "@/models/suitcaseModel";
-import { InventoryItemFilters } from "@/types/inventory";
-import { SuitcaseFilters, UserRole } from "@/types/suitcase";
+import { SuitcaseFilters } from "@/types/suitcase";
+import { UserRole } from "@/models/userRoleModel";
 
 export class SuitcaseController {
   // Função para buscar todas as maletas
@@ -154,8 +155,8 @@ export class SuitcaseController {
         throw new Error("Você não tem permissão para retornar itens ao estoque.");
       }
       
-      const result = await SuitcaseModel.returnItemToInventory(suitcaseItemId);
-      return result;
+      await SuitcaseModel.returnItemToInventory(suitcaseItemId);
+      return true;
     } catch (error: any) {
       console.error("Controller: Erro ao retornar item para o estoque:", error);
       throw new Error(error.message || "Erro ao retornar item para o estoque.");

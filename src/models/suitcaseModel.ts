@@ -700,7 +700,7 @@ export class SuitcaseModel {
   }
 
   // Adicionar métodos que estavam faltando
-  static async removeSuitcaseItem(itemId: string): Promise<void> {
+  static async removeItemFromSuitcase(itemId: string): Promise<void> {
     if (!itemId) throw new Error("ID do item é necessário");
     
     const { error } = await supabase

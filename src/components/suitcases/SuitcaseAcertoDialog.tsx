@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -9,7 +9,6 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Suitcase } from "@/types/suitcase";
-import { toast } from "sonner";
 import { FileDown } from "lucide-react";
 
 interface SuitcaseAcertoDialogProps {
