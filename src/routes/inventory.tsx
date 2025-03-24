@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { InventoryContent } from "@/components/inventory/InventoryContent";
 import { AuthController } from "@/controllers/authController";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const Inventory = () => {
   const navigate = useNavigate();
@@ -25,6 +26,16 @@ const Inventory = () => {
         const userProfile = await AuthController.getUserProfileWithRoles();
         if (userProfile) {
           setIsAdmin(userProfile.isAdmin);
+        }
+        
+        // Verificar estrutura da tabela inventory para diagnóstico
+        const { data: columnInfo, error: columnError } = await supabase
+          .rpc('debug_check_table_columns', { table_name: 'inventory' });
+          
+        if (!columnError && columnInfo) {
+          console.log("Estrutura da tabela inventory:", columnInfo);
+        } else if (columnError) {
+          console.error("Erro ao verificar estrutura da tabela:", columnError);
         }
         
         setIsLoading(false);

@@ -85,53 +85,81 @@ export interface InventoryFilters {
 export class InventoryModel {
   // Buscar todos os itens do inventário
   static async getAllItems(filters?: InventoryFilters): Promise<InventoryItem[]> {
+    console.log("getAllItems chamado com filtros:", filters);
+    
     let query = supabase
       .from('inventory')
       .select(`
         *,
         category_name:inventory_categories(name),
         supplier_name:suppliers(name),
+        plating_type_name:plating_types(name),
         inventory_photos:inventory_photos(id, photo_url, is_primary)
       `);
-
+    
     // Aplicar filtro de arquivados
     if (filters?.status === 'archived') {
+      console.log("Filtrando apenas itens arquivados");
       query = query.eq('archived', true);
-    } else if (filters?.showArchived !== true) {
-      // Se não estiver explicitamente pedindo para mostrar arquivados, filtrar apenas os não-arquivados
-      query = query.eq('archived', false).or('archived.is.null');
+    } else {
+      // Por padrão, não mostrar itens arquivados
+      console.log("Filtrando para excluir itens arquivados");
+      query = query.or('archived.is.null,archived.eq.false');
     }
     
     // Aplicar filtros se fornecidos
     if (filters) {
       if (filters.search) {
+        console.log("Aplicando filtro de busca:", filters.search);
         query = query.or(`name.ilike.%${filters.search}%,sku.ilike.%${filters.search}%,barcode.ilike.%${filters.search}%`);
       }
       
       if (filters.category_id && filters.category_id !== 'all') {
+        console.log("Aplicando filtro de categoria:", filters.category_id);
         query = query.eq('category_id', filters.category_id);
       }
       
       if (filters.min_price) {
+        console.log("Aplicando filtro de preço mínimo:", filters.min_price);
         query = query.gte('price', filters.min_price);
       }
       
       if (filters.max_price) {
+        console.log("Aplicando filtro de preço máximo:", filters.max_price);
         query = query.lte('price', filters.max_price);
       }
       
       if (filters.status === 'in_stock') {
+        console.log("Aplicando filtro de itens em estoque");
         query = query.gt('quantity', 0);
       } else if (filters.status === 'out_of_stock') {
+        console.log("Aplicando filtro de itens sem estoque");
         query = query.eq('quantity', 0);
       } else if (filters.status === 'low_stock') {
+        console.log("Aplicando filtro de itens com estoque baixo");
         query = query.lt('quantity', 5).gt('quantity', 0);
+      }
+
+      if (filters.minQuantity !== undefined) {
+        console.log("Aplicando filtro de quantidade mínima:", filters.minQuantity);
+        query = query.gte('quantity', filters.minQuantity);
+      }
+      
+      if (filters.maxQuantity !== undefined) {
+        console.log("Aplicando filtro de quantidade máxima:", filters.maxQuantity);
+        query = query.lte('quantity', filters.maxQuantity);
       }
     }
 
+    console.log("Executando consulta ao banco de dados");
     const { data, error } = await query.order('created_at', { ascending: false });
     
-    if (error) throw error;
+    if (error) {
+      console.error("Erro ao buscar itens:", error);
+      throw error;
+    }
+    
+    console.log(`Retornados ${data?.length || 0} itens do inventário`);
     
     const items = data?.map(item => {
       const photosData = item.inventory_photos || [];
@@ -147,7 +175,8 @@ export class InventoryModel {
         photos: processedPhotos,
         inventory_photos: processedPhotos,
         category_name: item.category_name?.name || '',
-        supplier_name: item.supplier_name?.name || ''
+        supplier_name: item.supplier_name?.name || '',
+        plating_type_name: item.plating_type_name?.name || ''
       };
       
       return processedItem;
@@ -270,6 +299,7 @@ export class InventoryModel {
   // Arquivar item (marcar como arquivado)
   static async archiveItem(id: string): Promise<void> {
     try {
+      console.log("Arquivando item:", id);
       const { error } = await supabase
         .from('inventory')
         .update({ archived: true })
@@ -285,6 +315,7 @@ export class InventoryModel {
   // Restaurar item arquivado
   static async restoreItem(id: string): Promise<void> {
     try {
+      console.log("Restaurando item:", id);
       const { error } = await supabase
         .from('inventory')
         .update({ archived: false })

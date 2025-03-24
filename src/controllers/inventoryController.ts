@@ -4,9 +4,10 @@ import { SuitcaseController } from "./suitcaseController";
 
 export const InventoryController = {
   // Buscar todos os itens do inventário
-  async getAllItems() {
+  async getAllItems(filters = {}) {
     try {
-      const items = await InventoryModel.getAllItems();
+      console.log("Controller: Buscando todos os itens", filters);
+      const items = await InventoryModel.getAllItems(filters);
       return items;
     } catch (error) {
       console.error("Erro ao buscar itens do inventário:", error);
@@ -90,6 +91,7 @@ export const InventoryController = {
   // Buscar itens com filtros
   async getFilteredItems(filters: any) {
     try {
+      console.log("Controller: Buscando itens filtrados", filters);
       // Usar o método getAllItems com os filtros, já que não existe getFilteredItems
       const items = await InventoryModel.getAllItems(filters);
       return items;

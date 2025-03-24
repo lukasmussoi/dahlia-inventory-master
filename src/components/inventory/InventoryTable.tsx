@@ -35,6 +35,8 @@ export function InventoryTable({
   onRestore,
   showArchivedControls = false
 }: InventoryTableProps) {
+  console.log("InventoryTable - recebeu items:", items.length, "showArchivedControls:", showArchivedControls);
+
   if (isLoading) {
     return (
       <div className="w-full h-64 flex items-center justify-center">

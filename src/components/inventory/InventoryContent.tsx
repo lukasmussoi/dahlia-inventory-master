@@ -18,7 +18,9 @@ export function InventoryContent({ isAdmin }: InventoryContentProps) {
   // Estados para controle dos modais e filtros
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
-  const [filters, setFilters] = useState<InventoryFilters>({});
+  const [filters, setFilters] = useState<InventoryFilters>({
+    showArchived: false
+  });
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<InventoryCategory | null>(null);
 
@@ -32,6 +34,8 @@ export function InventoryContent({ isAdmin }: InventoryContentProps) {
     queryKey: ['inventory-categories'],
     queryFn: () => InventoryModel.getAllCategories(),
   });
+
+  console.log("Itens carregados:", items.length);
 
   // Função para abrir o modal de edição de item
   const handleEditItem = async (item: InventoryItem) => {
@@ -177,6 +181,7 @@ export function InventoryContent({ isAdmin }: InventoryContentProps) {
 
   // Função para atualizar filtros
   const handleFilter = (newFilters: InventoryFilters) => {
+    console.log("Aplicando novos filtros:", newFilters);
     setFilters(newFilters);
   };
 

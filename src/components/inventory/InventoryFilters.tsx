@@ -34,6 +34,7 @@ export function InventoryFilters({ categories, onFilter }: InventoryFiltersProps
 
   // Atualizar filtros e notificar componente pai
   const updateFilters = (updates: Partial<Filters>) => {
+    console.log("Atualizando filtros:", updates);
     const newFilters = { ...filters, ...updates };
     setFilters(newFilters);
     onFilter(newFilters);
@@ -41,6 +42,7 @@ export function InventoryFilters({ categories, onFilter }: InventoryFiltersProps
 
   // Limpar todos os filtros
   const clearFilters = () => {
+    console.log("Limpando todos os filtros");
     const clearedFilters: Filters = {
       search: '',
       category_id: undefined,
@@ -73,7 +75,7 @@ export function InventoryFilters({ categories, onFilter }: InventoryFiltersProps
           <Label>Buscar</Label>
           <Input
             type="text"
-            placeholder="Nome ou categoria..."
+            placeholder="Nome ou código..."
             value={filters.search || ''}
             onChange={(e) => updateFilters({ 
               search: e.target.value, 
@@ -88,8 +90,8 @@ export function InventoryFilters({ categories, onFilter }: InventoryFiltersProps
           <Select
             value={filters.category_id || ''}
             onValueChange={(value) => updateFilters({ 
-              category_id: value, 
-              category: value 
+              category_id: value === 'all' ? undefined : value,
+              category: value === 'all' ? undefined : value
             })}
           >
             <SelectTrigger>
@@ -138,11 +140,13 @@ export function InventoryFilters({ categories, onFilter }: InventoryFiltersProps
             value={filters.status || ''}
             onValueChange={(value) => {
               if (value === 'archived') {
+                console.log("Selecionando visualização de itens arquivados");
                 updateFilters({ 
                   status: value, 
                   showArchived: true 
                 });
               } else {
+                console.log("Selecionando outro status (não arquivados):", value);
                 updateFilters({ 
                   status: value === 'all' ? undefined : value,
                   showArchived: false 
