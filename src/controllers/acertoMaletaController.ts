@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { Acerto, AcertoItem, SuitcaseSettlementFormData, PhotoUrl } from "@/types/suitcase";
@@ -6,6 +7,7 @@ import jsPDF from "jspdf";
 import { SuitcaseController } from "./suitcaseController";
 import { getProductPhotoUrl } from "@/utils/photoUtils";
 import { AcertoMaletaModel } from "@/models/acertoMaletaModel";
+import { SuitcaseModel } from "@/models/suitcaseModel";
 
 export const acertoMaletaController = {
   async getAllAcertos(filters?: any) {
@@ -394,6 +396,20 @@ export const acertoMaletaController = {
         throw new Error("Acerto não encontrado");
       }
       
+      // Obter informações da promotora, se disponível
+      let promotora = null;
+      if (acerto.seller) {
+        const { data: promoterData, error: promoterError } = await supabase
+          .from('promoters')
+          .select('*')
+          .eq('id', acerto.seller.id)
+          .maybeSingle();
+        
+        if (!promoterError && promoterData) {
+          promotora = promoterData;
+        }
+      }
+      
       // Criar um documento PDF
       const doc = new jsPDF({
         orientation: 'portrait',
@@ -408,6 +424,7 @@ export const acertoMaletaController = {
       const smallFontSize = 8;
       
       const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
       const margin = 20;
       const contentWidth = pageWidth - 2 * margin;
       
@@ -437,10 +454,17 @@ export const acertoMaletaController = {
       y += lineHeight;
       
       doc.text(`Revendedora: ${acerto.seller?.name || ''}`, margin, y);
-      if (acerto.next_settlement_date) {
-        doc.text(`Próximo Acerto: ${format(new Date(acerto.next_settlement_date), 'dd/MM/yyyy')}`, pageWidth - margin, y, { align: 'right' });
+      if (promotora) {
+        doc.text(`Promotora: ${promotora.name || ''}`, pageWidth - margin, y, { align: 'right' });
       }
-      y += lineHeight * 2;
+      y += lineHeight;
+      
+      if (acerto.next_settlement_date) {
+        doc.text(`Próximo Acerto: ${format(new Date(acerto.next_settlement_date), 'dd/MM/yyyy')}`, margin, y);
+        y += lineHeight;
+      }
+      
+      y += lineHeight;
       
       // Resumo financeiro
       doc.setFontSize(subtitleFontSize);
@@ -566,6 +590,22 @@ export const acertoMaletaController = {
       doc.setFontSize(smallFontSize);
       doc.text("Revendedora", margin + signatureWidth / 2, y + lineHeight + 5, { align: 'center' });
       doc.text("Empresa", margin + contentWidth - signatureWidth / 2, y + lineHeight + 5, { align: 'center' });
+      
+      // Campo de observações
+      y += lineHeight * 5;
+      
+      doc.setFontSize(subtitleFontSize);
+      doc.setFont('helvetica', 'bold');
+      doc.text("OBSERVAÇÕES:", margin, y);
+      y += lineHeight;
+      
+      // Linhas para observações
+      doc.setDrawColor(200, 200, 200);
+      doc.line(margin, y, pageWidth - margin, y);
+      y += lineHeight;
+      doc.line(margin, y, pageWidth - margin, y);
+      y += lineHeight;
+      doc.line(margin, y, pageWidth - margin, y);
       
       // Gerar o PDF como Data URL
       const pdfDataUri = doc.output('datauristring');

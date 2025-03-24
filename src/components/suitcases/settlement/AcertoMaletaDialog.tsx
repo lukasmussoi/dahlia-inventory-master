@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { SuitcaseSettlementFormData } from "@/types/suitcase";
 import { getProductPhotoUrl } from "@/utils/photoUtils";
 import { useQueryClient } from "@tanstack/react-query";
+import { SuitcaseModel } from "@/models/suitcaseModel";
 
 interface AcertoMaletaDialogProps {
   open: boolean;
@@ -117,6 +118,53 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
     }
   };
 
+  // Função para devolver itens verificados ao estoque
+  const returnVerifiedItemsToInventory = async () => {
+    // Para cada item verificado (presente), devolver ao estoque
+    for (const itemId of scannedItemsIds) {
+      try {
+        await SuitcaseModel.returnItemToInventory(itemId);
+      } catch (error) {
+        console.error(`Erro ao devolver item ${itemId} ao estoque:`, error);
+        // Continuar com os próximos itens mesmo se houver erro
+      }
+    }
+  };
+
+  // Função para marcar itens não verificados como vendidos
+  const markUnverifiedItemsAsSold = async () => {
+    // Encontrar itens não verificados (não presentes nos scannedItemsIds)
+    const unverifiedItemIds = suitcaseItems
+      .filter(item => !scannedItemsIds.includes(item.id))
+      .map(item => item.id);
+    
+    // Para cada item não verificado, marcar como vendido
+    for (const itemId of unverifiedItemIds) {
+      try {
+        await SuitcaseController.updateSuitcaseItemStatus(itemId, 'sold');
+      } catch (error) {
+        console.error(`Erro ao marcar item ${itemId} como vendido:`, error);
+        // Continuar com os próximos itens mesmo se houver erro
+      }
+    }
+  };
+
+  // Função para gerar o PDF do recibo
+  const generateReceiptPDF = async (acertoId: string) => {
+    try {
+      setGeneratingPdf(true);
+      const pdfDataUrl = await AcertoMaletaController.generateReceiptPDF(acertoId);
+      setPdfUrl(pdfDataUrl);
+      return pdfDataUrl;
+    } catch (error) {
+      console.error("Erro ao gerar PDF do recibo:", error);
+      toast.error("Não foi possível gerar o PDF do recibo");
+      return null;
+    } finally {
+      setGeneratingPdf(false);
+    }
+  };
+
   const handleFinishSettlement = async () => {
     if (!suitcase) return;
     
@@ -132,14 +180,26 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
         items_sold: [] // Array vazio para items_sold, serão detectados pelo backend
       };
       
+      // 1. Criar o acerto no banco de dados
       const result = await AcertoMaletaController.createAcerto(formData);
+      setCreatedAcertoId(result.id);
+      
+      // 2. Devolver itens verificados ao estoque
+      await returnVerifiedItemsToInventory();
+      
+      // 3. Marcar itens não verificados como vendidos
+      await markUnverifiedItemsAsSold();
+      
+      // 4. Gerar o PDF do recibo
+      await generateReceiptPDF(result.id);
       
       toast.success("Acerto da maleta realizado com sucesso!");
       
       queryClient.invalidateQueries({ queryKey: ['suitcases'] });
       queryClient.invalidateQueries({ queryKey: ['acertos'] });
       
-      onOpenChange(false);
+      // Não fechar o diálogo imediatamente para mostrar o PDF gerado
+      // onOpenChange(false);
       
       if (onSuccess) {
         onSuccess();
@@ -550,11 +610,20 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
                   </Button>
                   <Button 
                     onClick={handleFinishSettlement}
-                    disabled={loading || (nextSettlementDate === undefined)}
+                    disabled={loading || isSubmitting || (nextSettlementDate === undefined)}
                     className="bg-pink-500 hover:bg-pink-600"
                   >
-                    <FileText className="h-4 w-4 mr-2" />
-                    Finalizar Acerto
+                    {isSubmitting ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2" />
+                        Processando...
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="h-4 w-4 mr-2" />
+                        Finalizar Acerto
+                      </>
+                    )}
                   </Button>
                 </CardFooter>
               </Card>
