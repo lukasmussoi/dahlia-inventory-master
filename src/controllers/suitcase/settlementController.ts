@@ -6,6 +6,12 @@
 import { SuitcaseModel } from "@/models/suitcaseModel";
 
 export class SettlementController {
+  /**
+   * Cria um acerto pendente para uma maleta
+   * @param suitcaseId ID da maleta
+   * @param settlementDate Data do acerto
+   * @returns Informações do acerto criado
+   */
   static async createPendingSettlement(suitcaseId: string, settlementDate: Date) {
     try {
       const acertoPendente = {
@@ -17,6 +23,7 @@ export class SettlementController {
       };
 
       console.log("Acerto pendente criado:", acertoPendente);
+      return acertoPendente;
     } catch (error) {
       console.error("Erro ao criar acerto pendente:", error);
       throw error;
