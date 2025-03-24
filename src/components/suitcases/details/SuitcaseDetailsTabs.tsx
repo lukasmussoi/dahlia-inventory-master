@@ -1,8 +1,9 @@
+
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { SuitcaseInfo } from "./SuitcaseInfo";
 import { SuitcaseItems } from "./SuitcaseItems";
 import { SuitcaseHistory } from "./SuitcaseHistory";
-import { Briefcase, Printer } from "lucide-react";
+import { Briefcase, Printer, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Suitcase, SuitcaseItem, Acerto } from "@/types/suitcase";
 
@@ -30,6 +31,8 @@ interface SuitcaseDetailsTabsProps {
   handleViewReceipt: (acertoId: string) => void;
   handlePrint: () => void;
   isPrintingPdf: boolean;
+  isAdmin?: boolean;
+  onDeleteClick?: () => void;
 }
 
 export function SuitcaseDetailsTabs({
@@ -55,7 +58,9 @@ export function SuitcaseDetailsTabs({
   isLoadingAcertos,
   handleViewReceipt,
   handlePrint,
-  isPrintingPdf
+  isPrintingPdf,
+  isAdmin = false,
+  onDeleteClick
 }: SuitcaseDetailsTabsProps) {
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -81,7 +86,18 @@ export function SuitcaseDetailsTabs({
               Histórico
             </TabsTrigger>
           </TabsList>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-2">
+            {isAdmin && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={onDeleteClick} 
+                className="gap-1 text-red-500 hover:text-red-700 hover:bg-red-50"
+              >
+                <Trash2 className="h-4 w-4" />
+                Excluir
+              </Button>
+            )}
             <Button 
               variant="ghost" 
               size="sm" 

@@ -9,6 +9,7 @@ import { SellerController } from "./sellerController";
 import { InventorySearchController } from "./inventorySearchController";
 import { SettlementController } from "./settlementController";
 import { SuitcasePdfController } from "./pdfController";
+import { DeleteSuitcaseController } from "./deleteSuitcaseController";
 
 // Reexportando as classes para manter a compatibilidade com o código existente
 export {
@@ -17,7 +18,8 @@ export {
   SellerController,
   InventorySearchController,
   SettlementController,
-  SuitcasePdfController
+  SuitcasePdfController,
+  DeleteSuitcaseController
 };
 
 // Criando uma classe combinada para manter a compatibilidade com o código existente
@@ -32,6 +34,7 @@ export class CombinedSuitcaseController {
   static searchSuitcases = SuitcaseController.searchSuitcases;
   static generateSuitcaseCode = SuitcaseController.generateSuitcaseCode;
   static getSuitcaseSummary = SuitcaseController.getSuitcaseSummary;
+  static deleteSuitcaseWithCascade = DeleteSuitcaseController.deleteSuitcaseWithCascade;
 
   // Operações de itens da maleta
   static addItemToSuitcase = SuitcaseItemController.addItemToSuitcase;

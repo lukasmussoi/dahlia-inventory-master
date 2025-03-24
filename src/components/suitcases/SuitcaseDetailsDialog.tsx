@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,16 @@ import { AcertoMaletaController } from "@/controllers/acertoMaletaController";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { openPdfInNewTab } from "@/utils/pdfUtils";
 import { SuitcaseDetailsTabs } from "./details/SuitcaseDetailsTabs";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface SuitcaseDetailsDialogProps {
   open: boolean;
@@ -39,6 +50,8 @@ export function SuitcaseDetailsDialog({
     suitcase?.next_settlement_date ? new Date(suitcase.next_settlement_date) : undefined
   );
   const [isPrintingPdf, setIsPrintingPdf] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (suitcase) {
@@ -244,77 +257,138 @@ export function SuitcaseDetailsDialog({
     }, 100);
   };
 
+  const handleDeleteClick = () => {
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!suitcase) return;
+    
+    try {
+      setIsDeleting(true);
+      await SuitcaseController.deleteSuitcaseWithCascade(suitcase.id);
+      
+      toast.success("Maleta excluída com sucesso");
+      setIsDeleteDialogOpen(false);
+      onOpenChange(false);
+      
+      if (onRefresh) {
+        setTimeout(() => {
+          onRefresh();
+        }, 100);
+      }
+    } catch (error: any) {
+      console.error("Erro ao excluir maleta:", error);
+      toast.error(error.message || "Erro ao excluir maleta");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   if (!suitcase) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-auto p-0">
-        <div className="p-6 pb-2">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <Briefcase className="h-5 w-5 text-pink-500" />
-              <h2 className="text-xl font-semibold">Detalhes da Maleta {suitcase.code}</h2>
-            </div>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-8 w-8" 
-              onClick={() => onOpenChange(false)}
-            >
-              &times;
-            </Button>
-          </div>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
-            <p>Revendedora: <span className="font-medium text-foreground">{getSellerName()}</span></p>
-            
-            {promoterInfo && (
-              <div className="flex items-center gap-1">
-                <User className="h-3.5 w-3.5" />
-                <p>Promotora: <span className="font-medium text-foreground">{promoterInfo.name}</span></p>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-auto p-0">
+          <div className="p-6 pb-2">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Briefcase className="h-5 w-5 text-pink-500" />
+                <h2 className="text-xl font-semibold">Detalhes da Maleta {suitcase.code}</h2>
               </div>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-8 w-8" 
+                onClick={() => onOpenChange(false)}
+              >
+                &times;
+              </Button>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+              <p>Revendedora: <span className="font-medium text-foreground">{getSellerName()}</span></p>
+              
+              {promoterInfo && (
+                <div className="flex items-center gap-1">
+                  <User className="h-3.5 w-3.5" />
+                  <p>Promotora: <span className="font-medium text-foreground">{promoterInfo.name}</span></p>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          <SuitcaseDetailsTabs 
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            suitcase={suitcase}
+            nextSettlementDate={nextSettlementDate}
+            handleUpdateNextSettlementDate={handleUpdateNextSettlementDate}
+            promoterInfo={promoterInfo}
+            loadingPromoterInfo={loadingPromoterInfo}
+            suitcaseItems={suitcaseItems}
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            handleSearch={handleSearch}
+            searchResults={searchResults}
+            isSearching={isSearching}
+            isAdding={isAdding}
+            handleAddItem={handleAddItem}
+            handleToggleSold={handleToggleSold}
+            handleUpdateSaleInfo={handleUpdateSaleInfo}
+            calculateTotalValue={calculateTotalValue}
+            acertosHistorico={acertosHistorico}
+            isLoadingAcertos={isLoadingAcertos}
+            handleViewReceipt={handleViewReceipt}
+            handlePrint={handlePrint}
+            isPrintingPdf={isPrintingPdf}
+            isAdmin={isAdmin}
+            onDeleteClick={handleDeleteClick}
+          />
+          
+          <div className="p-4 border-t flex justify-end gap-2">
+            <Button variant="outline" onClick={handleClose}>
+              Fechar
+            </Button>
+            
+            {isAdmin && (
+              <Button onClick={handleEdit} className="bg-pink-500 hover:bg-pink-600">
+                Editar Maleta
+              </Button>
             )}
           </div>
-        </div>
-        
-        <SuitcaseDetailsTabs 
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          suitcase={suitcase}
-          nextSettlementDate={nextSettlementDate}
-          handleUpdateNextSettlementDate={handleUpdateNextSettlementDate}
-          promoterInfo={promoterInfo}
-          loadingPromoterInfo={loadingPromoterInfo}
-          suitcaseItems={suitcaseItems}
-          searchTerm={searchTerm}
-          setSearchTerm={setSearchTerm}
-          handleSearch={handleSearch}
-          searchResults={searchResults}
-          isSearching={isSearching}
-          isAdding={isAdding}
-          handleAddItem={handleAddItem}
-          handleToggleSold={handleToggleSold}
-          handleUpdateSaleInfo={handleUpdateSaleInfo}
-          calculateTotalValue={calculateTotalValue}
-          acertosHistorico={acertosHistorico}
-          isLoadingAcertos={isLoadingAcertos}
-          handleViewReceipt={handleViewReceipt}
-          handlePrint={handlePrint}
-          isPrintingPdf={isPrintingPdf}
-        />
-        
-        <div className="p-4 border-t flex justify-end gap-2">
-          <Button variant="outline" onClick={handleClose}>
-            Fechar
-          </Button>
-          
-          {isAdmin && (
-            <Button onClick={handleEdit} className="bg-pink-500 hover:bg-pink-600">
-              Editar Maleta
-            </Button>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Maleta {suitcase.code}</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta maleta? Esta ação é irreversível e excluirá todo o 
+              histórico de acertos. As peças que ainda estiverem na maleta serão devolvidas automaticamente ao estoque.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              disabled={isDeleting}
+              className="bg-red-500 hover:bg-red-600 text-white"
+            >
+              {isDeleting ? (
+                <>
+                  <div className="h-4 w-4 border-2 border-t-transparent border-white rounded-full animate-spin mr-2"></div>
+                  Excluindo...
+                </>
+              ) : (
+                "Sim, excluir maleta"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 
