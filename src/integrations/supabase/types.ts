@@ -223,6 +223,7 @@ export type Database = {
       }
       inventory: {
         Row: {
+          archived: boolean | null
           barcode: string | null
           category_id: string
           created_at: string
@@ -250,6 +251,7 @@ export type Database = {
           width: number | null
         }
         Insert: {
+          archived?: boolean | null
           barcode?: string | null
           category_id: string
           created_at?: string
@@ -277,6 +279,7 @@ export type Database = {
           width?: number | null
         }
         Update: {
+          archived?: boolean | null
           barcode?: string | null
           category_id?: string
           created_at?: string

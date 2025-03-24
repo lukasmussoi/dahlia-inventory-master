@@ -1,3 +1,4 @@
+
 import {
   Table,
   TableBody,
@@ -190,7 +191,7 @@ export function InventoryTable({
                   onClick={() => onDelete(item.id)}
                   className="h-8 w-8 text-red-600 hover:text-red-800 hover:bg-red-100"
                 >
-                  <Trash className="h-4 w-4" />
+                  <Trash2 className="h-4 w-4" />
                 </Button>
               )}
             </div>

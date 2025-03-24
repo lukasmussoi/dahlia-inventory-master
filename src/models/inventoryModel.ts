@@ -65,6 +65,7 @@ export interface InventoryItem {
   plating_type_name?: string;
   photos?: InventoryPhoto[];
   inventory_photos?: InventoryPhoto[];
+  archived?: boolean;
 }
 
 export interface InventoryFilters {
@@ -94,8 +95,8 @@ export class InventoryModel {
 
     // Por padrão, não mostrar itens arquivados a menos que especificado
     if (!filters?.showArchived) {
-      query = query.is('archived', null).or('archived.eq.false');
-    } else if (filters.status === 'archived') {
+      query = query.is('archived', false).or('archived.is.null');
+    } else if (filters?.status === 'archived') {
       query = query.eq('archived', true);
     }
     
@@ -105,7 +106,7 @@ export class InventoryModel {
         query = query.or(`name.ilike.%${filters.search}%,sku.ilike.%${filters.search}%,barcode.ilike.%${filters.search}%`);
       }
       
-      if (filters.category_id) {
+      if (filters.category_id && filters.category_id !== 'all') {
         query = query.eq('category_id', filters.category_id);
       }
       
