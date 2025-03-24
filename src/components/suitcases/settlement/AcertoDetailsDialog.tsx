@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
 import { getProductPhotoUrl } from "@/utils/photoUtils";
+import { openPdfInNewTab } from "@/utils/pdfUtils";
 
 interface AcertoDetailsDialogProps {
   open: boolean;
@@ -32,6 +33,7 @@ export function AcertoDetailsDialog({
   acertoId
 }: AcertoDetailsDialogProps) {
   const [currentAcerto, setCurrentAcerto] = useState<Acerto | null>(null);
+  const [isPrinting, setIsPrinting] = useState(false);
 
   const formatDate = (dateString: string) => {
     return format(new Date(dateString), "dd/MM/yyyy", { locale: ptBR });
@@ -66,6 +68,24 @@ export function AcertoDetailsDialog({
       setCurrentAcerto(acerto);
     }
   }, [acerto]);
+
+  // Função para visualizar PDF do acerto
+  const viewReceiptPdf = async () => {
+    if (!acertoId) return;
+    
+    try {
+      setIsPrinting(true);
+      toast.info("Gerando recibo em PDF...");
+      
+      const pdfUrl = await AcertoMaletaController.generateReceiptPDF(acertoId);
+      openPdfInNewTab(pdfUrl);
+    } catch (error) {
+      console.error("Erro ao gerar PDF do acerto:", error);
+      toast.error("Erro ao gerar PDF do recibo. Tente novamente.");
+    } finally {
+      setIsPrinting(false);
+    }
+  };
 
   if (!acertoId) return null;
 
@@ -181,19 +201,22 @@ export function AcertoDetailsDialog({
                     <p className="text-sm text-muted-foreground italic">Nenhum item registrado neste acerto.</p>
                   )}
                   
-                  {acerto.receipt_url && (
-                    <div className="mt-4">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => window.open(acerto.receipt_url, '_blank')}
-                        className="w-full sm:w-auto"
-                      >
+                  <div className="mt-4">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={viewReceiptPdf}
+                      className="w-full sm:w-auto flex items-center gap-2"
+                      disabled={isPrinting}
+                    >
+                      {isPrinting ? (
+                        <div className="h-4 w-4 border-2 border-t-transparent border-pink-500 rounded-full animate-spin mr-2"></div>
+                      ) : (
                         <Printer className="h-4 w-4 mr-2" />
-                        Visualizar Comprovante
-                      </Button>
-                    </div>
-                  )}
+                      )}
+                      Visualizar Comprovante
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             </div>
