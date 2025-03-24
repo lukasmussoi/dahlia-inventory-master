@@ -32,3 +32,21 @@ export interface EtiquetaPrintOptions {
   mostrarCodigos?: boolean;
   incluirBordas?: boolean;
 }
+
+/**
+ * Interface para margens do documento
+ */
+export interface Margins {
+  superior: number;
+  inferior: number;
+  esquerda: number;
+  direita: number;
+}
+
+/**
+ * Interface para espaçamentos entre elementos
+ */
+export interface Spacing {
+  horizontal: number;
+  vertical: number;
+}
