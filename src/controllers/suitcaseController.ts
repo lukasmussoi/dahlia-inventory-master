@@ -4,6 +4,7 @@ import { acertoMaletaController } from "@/controllers/acertoMaletaController";
 import { promoterController } from "@/controllers/promoterController";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { AuthController } from "@/controllers/authController";
 
 export const suitcaseController = {
   async getAllSuitcases(filters?: any) {
@@ -419,6 +420,41 @@ export const suitcaseController = {
     } catch (error) {
       console.error("Erro ao buscar promotora responsável:", error);
       return null;
+    }
+  },
+
+  async returnItemToInventory(itemId: string): Promise<void> {
+    try {
+      // Verificar se o usuário tem permissão para esta ação
+      const userProfile = await AuthController.getUserProfileWithRoles();
+      const isAdminOrPromoter = userProfile?.roles?.some(role => 
+        role === 'admin' || role === 'promoter'
+      );
+      
+      if (!isAdminOrPromoter) {
+        throw new Error("Você não tem permissão para devolver itens ao estoque.");
+      }
+
+      // Buscar informações do item
+      const item = await SuitcaseModel.getSuitcaseItemById(itemId);
+      if (!item) {
+        throw new Error("Item não encontrado.");
+      }
+      
+      // Só processar se o item estiver em posse
+      if (item.status !== 'in_possession') {
+        throw new Error(`Este item não está disponível para devolução (status: ${item.status}).`);
+      }
+
+      await SuitcaseModel.returnItemToInventory(itemId);
+      
+      // Registramos no console a operação realizada
+      console.log(`Item ${itemId} devolvido ao estoque pelo usuário ${userProfile?.profile?.full_name || 'Desconhecido'}.`);
+      
+      return;
+    } catch (error: any) {
+      console.error("Erro ao devolver item ao estoque:", error);
+      throw error;
     }
   }
 };
