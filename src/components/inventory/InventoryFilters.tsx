@@ -29,6 +29,7 @@ export function InventoryFilters({ categories, onFilter }: InventoryFiltersProps
     maxQuantity: undefined,
     searchTerm: '',
     category: undefined,
+    showArchived: false
   });
 
   // Atualizar filtros e notificar componente pai
@@ -50,6 +51,7 @@ export function InventoryFilters({ categories, onFilter }: InventoryFiltersProps
       maxQuantity: undefined,
       searchTerm: '',
       category: undefined,
+      showArchived: false
     };
     setFilters(clearedFilters);
     onFilter(clearedFilters);
@@ -134,9 +136,19 @@ export function InventoryFilters({ categories, onFilter }: InventoryFiltersProps
           <Label>Status</Label>
           <Select
             value={filters.status || ''}
-            onValueChange={(value) => 
-              updateFilters({ status: value === 'all' ? undefined : value })
-            }
+            onValueChange={(value) => {
+              if (value === 'archived') {
+                updateFilters({ 
+                  status: value, 
+                  showArchived: true 
+                });
+              } else {
+                updateFilters({ 
+                  status: value === 'all' ? undefined : value,
+                  showArchived: false 
+                });
+              }
+            }}
           >
             <SelectTrigger>
               <SelectValue placeholder="Todos os status" />

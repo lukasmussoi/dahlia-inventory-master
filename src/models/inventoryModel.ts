@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 // Interfaces para tipagem
@@ -94,10 +95,11 @@ export class InventoryModel {
       `);
 
     // Por padrão, não mostrar itens arquivados a menos que especificado
-    if (!filters?.showArchived) {
-      query = query.is('archived', false).or('archived.is.null');
-    } else if (filters?.status === 'archived') {
+    if (filters?.status === 'archived') {
       query = query.eq('archived', true);
+    } else if (filters?.showArchived !== true) {
+      // Se não estiver explicitamente pedindo para mostrar arquivados, filtra eles
+      query = query.is('archived', false).or('archived.is.null');
     }
     
     // Aplicar filtros se fornecidos

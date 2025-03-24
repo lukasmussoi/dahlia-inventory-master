@@ -1,3 +1,4 @@
+
 import {
   Table,
   TableBody,
@@ -147,7 +148,7 @@ export function InventoryTable({
               : 'Disponível'}
           </span>
         </TableCell>
-        {(onEdit || onDelete) && (
+        {(onEdit || onDelete || onArchive || onRestore) && (
           <TableCell className="text-right">
             <div className="flex justify-end space-x-2">
               {onEdit && !showArchivedControls && (
@@ -213,7 +214,7 @@ export function InventoryTable({
             <TableHead className="text-right">Custo</TableHead>
             <TableHead className="text-right">Preço</TableHead>
             <TableHead>Status</TableHead>
-            {(onEdit || onDelete) && <TableHead className="text-right">Ações</TableHead>}
+            {(onEdit || onDelete || onArchive || onRestore) && <TableHead className="text-right">Ações</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
