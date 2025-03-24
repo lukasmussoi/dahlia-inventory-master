@@ -48,7 +48,7 @@ export function useEtiquetaCreator(initialData?: any, autoAdjustDimensions = fal
   // Inicializar as etiquetas se houver dados iniciais
   const initialLabels = initialData?.campos ? [
     {
-      id: 1,
+      id: 0, // Mudado para 0 para garantir compatibilidade com o hook de gerenciamento
       name: initialData.nome || "Etiqueta",
       x: 10,
       y: 10,

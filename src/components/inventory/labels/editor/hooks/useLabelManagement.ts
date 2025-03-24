@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { LabelType } from "../types";
 
@@ -7,36 +7,76 @@ import { LabelType } from "../types";
  * Hook para gerenciamento de etiquetas
  */
 export function useLabelManagement(
-  initialData?: any,
+  initialLabels?: LabelType[],
   pageSize?: { width: number; height: number },
   snapToGrid?: boolean,
   gridSize?: number
 ) {
   // Estado das etiquetas
   const [labelSize, setLabelSize] = useState({ 
-    width: initialData?.largura || 80, 
-    height: initialData?.altura || 40 
+    width: initialLabels?.[0]?.width || 80, 
+    height: initialLabels?.[0]?.height || 40 
   });
-  const [nextLabelId, setNextLabelId] = useState(1);
-  const [selectedLabelId, setSelectedLabelId] = useState<number | null>(0);
-  const [labels, setLabels] = useState<LabelType[]>([{ 
-    id: 0, 
-    name: "Etiqueta 1",
-    x: 20, 
-    y: 20, 
-    width: initialData?.largura || 80,
-    height: initialData?.altura || 40,
-    elements: initialData?.campos?.map((campo: any, index: number) => ({
-      id: `elemento-${campo.tipo}-${index}`,
-      type: campo.tipo,
-      x: campo.x,
-      y: campo.y,
-      width: campo.largura,
-      height: campo.altura,
-      fontSize: campo.tamanhoFonte,
-      align: campo.alinhamento || "left"
-    })) || []
-  }]);
+  const [nextLabelId, setNextLabelId] = useState(1); // Começar com 1 pois o initialLabels pode ter id:0
+  const [selectedLabelId, setSelectedLabelId] = useState<number | null>(
+    initialLabels && initialLabels.length > 0 ? initialLabels[0].id : null
+  );
+  
+  // Inicialização de labels com log detalhado
+  const [labels, setLabels] = useState<LabelType[]>(() => {
+    if (initialLabels && initialLabels.length > 0) {
+      console.log("Inicializando labels com dados:", initialLabels);
+      
+      // Verificar se todos os elementos têm as propriedades necessárias
+      const labelsValidados = initialLabels.map(label => {
+        // Garantir que elements seja um array
+        const elements = Array.isArray(label.elements) ? [...label.elements] : [];
+        
+        // Verificar cada elemento
+        elements.forEach(element => {
+          console.log(`Validando elemento ${element.id} tipo ${element.type}:`, {
+            x: element.x, 
+            y: element.y, 
+            width: element.width, 
+            height: element.height,
+            fontSize: element.fontSize,
+            align: element.align
+          });
+        });
+        
+        return {
+          ...label,
+          elements: elements
+        };
+      });
+      
+      return labelsValidados;
+    }
+    
+    // Retornar uma etiqueta padrão se não houver dados iniciais
+    return [{ 
+      id: 0, 
+      name: "Etiqueta 1",
+      x: 20, 
+      y: 20, 
+      width: 80,
+      height: 40,
+      elements: []
+    }];
+  });
+
+  // Efeito para atualizar o labelSize quando as labels mudam
+  useEffect(() => {
+    if (labels.length > 0 && selectedLabelId !== null) {
+      const selectedLabel = labels.find(l => l.id === selectedLabelId);
+      if (selectedLabel) {
+        setLabelSize({
+          width: selectedLabel.width,
+          height: selectedLabel.height
+        });
+      }
+    }
+  }, [labels, selectedLabelId]);
 
   /**
    * Adiciona uma nova etiqueta
