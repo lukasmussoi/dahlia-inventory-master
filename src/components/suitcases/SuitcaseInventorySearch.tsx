@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Search, PlusCircle, AlertCircle } from "lucide-react";
+import { Search, PlusCircle, AlertCircle, Archive } from "lucide-react";
 
 interface SuitcaseInventorySearchProps {
   suitcaseId: string;
@@ -32,17 +32,20 @@ export function SuitcaseInventorySearch({ suitcaseId, onItemAdded }: SuitcaseInv
       setIsSearching(true);
       setError(null);
       const results = await SuitcaseController.searchInventoryItems(searchTerm);
-      setSearchResults(results);
       
-      // Inicializar as quantidades para cada item
-      const initialQuantities: { [key: string]: number } = {};
-      results.forEach(item => {
-        initialQuantities[item.id] = 1;
-      });
-      setQuantity(initialQuantities);
-      
+      // Verificar se há resultados
       if (results.length === 0) {
-        setError("Nenhum item encontrado");
+        setError("Nenhum item encontrado ou todos os itens correspondentes estão arquivados");
+        setSearchResults([]);
+      } else {
+        setSearchResults(results);
+        
+        // Inicializar as quantidades para cada item
+        const initialQuantities: { [key: string]: number } = {};
+        results.forEach(item => {
+          initialQuantities[item.id] = 1;
+        });
+        setQuantity(initialQuantities);
       }
     } catch (error: any) {
       console.error("Erro ao buscar itens:", error);
@@ -197,6 +200,13 @@ export function SuitcaseInventorySearch({ suitcaseId, onItemAdded }: SuitcaseInv
           </Table>
         </div>
       )}
+      
+      <div className="text-sm text-muted-foreground">
+        <p className="flex items-center">
+          <Archive className="inline-block h-4 w-4 mr-1 text-gray-500" />
+          <span>Itens arquivados não são exibidos nos resultados de busca.</span>
+        </p>
+      </div>
     </div>
   );
 }

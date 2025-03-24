@@ -136,7 +136,7 @@ export function SuitcaseDetailsDialog({
       setSearchResults(results);
       
       if (results.length === 0) {
-        toast.info("Nenhum item encontrado");
+        toast.info("Nenhum item encontrado ou todos os itens correspondentes estão arquivados");
       }
     } catch (error: any) {
       console.error("Erro ao buscar itens:", error);

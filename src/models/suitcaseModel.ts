@@ -739,7 +739,8 @@ export class SuitcaseModel {
       .select(`
         *,
         photos:inventory_photos(*)
-      `);
+      `)
+      .eq('archived', false);
     
     // Verificar se é um UUID ou um termo de busca
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

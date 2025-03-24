@@ -146,6 +146,18 @@ export const suitcaseController = {
         throw new Error("Maleta não encontrada");
       }
 
+      const { data: inventoryItem, error: inventoryError } = await supabase
+        .from('inventory')
+        .select('archived, name')
+        .eq('id', inventoryId)
+        .single();
+        
+      if (inventoryError) throw inventoryError;
+      
+      if (inventoryItem && inventoryItem.archived) {
+        throw new Error(`O item "${inventoryItem.name}" está arquivado e não pode ser adicionado à maleta.`);
+      }
+
       const availability = await SuitcaseModel.checkItemAvailability(inventoryId);
       
       if (!availability.available) {
