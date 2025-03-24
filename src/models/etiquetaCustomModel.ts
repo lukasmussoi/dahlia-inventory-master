@@ -218,7 +218,9 @@ export class EtiquetaCustomModel {
         formato_pagina: modeloDb.formato_pagina,
         orientacao: modeloDb.orientacao,
         campos_count: modeloDb.campos ? (modeloDb.campos as any).length : 'N/A',
-        posicao: `(${modeloDb.x}, ${modeloDb.y})`
+        posicao: modeloDb.x !== undefined && modeloDb.y !== undefined 
+          ? `(${modeloDb.x}, ${modeloDb.y})` 
+          : 'posição não definida'
       });
       
       // Remover o id do objeto modeloDb para evitar erro na atualização
