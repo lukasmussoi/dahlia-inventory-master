@@ -18,7 +18,7 @@ export class SuitcasePdfController {
   ): Promise<string> {
     try {
       // Buscar detalhes da maleta
-      const { data: suitcase } = await SuitcaseModel.getSuitcaseById(suitcaseId);
+      const suitcase = await SuitcaseModel.getSuitcaseById(suitcaseId);
       
       if (!suitcase) {
         throw new Error("Maleta não encontrada");
