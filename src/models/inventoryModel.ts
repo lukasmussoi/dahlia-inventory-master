@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 // Interfaces para tipagem
@@ -98,13 +97,13 @@ export class InventoryModel {
       `);
     
     // Aplicar filtro de arquivados
-    if (filters?.status === 'archived') {
+    if (filters?.status === 'archived' || filters?.showArchived === true) {
       console.log("Filtrando apenas itens arquivados");
       query = query.eq('archived', true);
     } else {
       // Por padrão, não mostrar itens arquivados
       console.log("Filtrando para excluir itens arquivados");
-      query = query.or('archived.is.null,archived.eq.false');
+      query = query.eq('archived', false);
     }
     
     // Aplicar filtros se fornecidos
@@ -657,3 +656,4 @@ export class InventoryModel {
     }
   }
 }
+

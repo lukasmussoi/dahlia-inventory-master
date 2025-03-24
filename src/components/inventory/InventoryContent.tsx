@@ -27,7 +27,10 @@ export function InventoryContent({ isAdmin }: InventoryContentProps) {
   // Buscar dados do inventário e categorias
   const { data: items = [], isLoading: isLoadingItems, refetch: refetchItems } = useQuery({
     queryKey: ['inventory-items', filters],
-    queryFn: () => InventoryModel.getAllItems(filters),
+    queryFn: () => {
+      console.log("Buscando itens com filtros:", filters);
+      return InventoryModel.getAllItems(filters);
+    },
   });
 
   const { data: categories = [], refetch: refetchCategories } = useQuery({

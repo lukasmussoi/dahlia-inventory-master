@@ -29,14 +29,8 @@ const Inventory = () => {
         }
         
         // Verificar estrutura da tabela inventory para diagnóstico
-        const { data: columnInfo, error: columnError } = await supabase
-          .rpc('debug_check_table_columns', { table_name: 'inventory' });
-          
-        if (!columnError && columnInfo) {
-          console.log("Estrutura da tabela inventory:", columnInfo);
-        } else if (columnError) {
-          console.error("Erro ao verificar estrutura da tabela:", columnError);
-        }
+        // Removendo a chamada que causava o erro, pois já fizemos a verificação via SQL
+        console.log("Verificando autenticação...");
         
         setIsLoading(false);
       } catch (error) {

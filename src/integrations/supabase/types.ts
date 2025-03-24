@@ -833,6 +833,12 @@ export type Database = {
         }
         Returns: number
       }
+      debug_check_table_columns: {
+        Args: {
+          table_name: string
+        }
+        Returns: Json
+      }
       has_role:
         | {
             Args: {
