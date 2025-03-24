@@ -16,22 +16,14 @@ import type { GeneratePdfLabelOptions } from "./types";
  */
 export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promise<string> {
   try {
-    const { item, copies, multiplyByStock, selectedModeloId } = options;
+    const { items, copies, multiplyByStock, selectedModeloId } = options;
     
-    if (!item) {
-      throw new Error("Item não fornecido para gerar etiqueta");
+    if (!items || items.length === 0) {
+      throw new Error("Nenhum item fornecido para gerar etiquetas");
     }
     
-    // Calcular número total de cópias
-    const totalCopies = multiplyByStock ? copies * (item.quantity || 1) : copies;
-    console.log("Gerando etiquetas:", { 
-      item: item.name, 
-      copies, 
-      totalCopies, 
-      multiplyByStock, 
-      selectedModeloId 
-    });
-
+    console.log(`Gerando etiquetas para ${items.length} itens, ${copies} cópias por item, multiplicar por estoque: ${multiplyByStock}`);
+    
     // Validar se um modelo personalizado foi fornecido
     if (!selectedModeloId) {
       throw new Error("Nenhum modelo de etiqueta selecionado. Por favor, selecione um modelo personalizado.");
@@ -59,9 +51,9 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
       console.log("Iniciando geração de PDF com modelo personalizado");
       return await generatePrintablePDF(
         modeloCustom,
-        [item], // Passamos o item como um array
+        items, // Aqui passamos o array completo de itens
         {
-          copias: totalCopies
+          copias: copies
         }
       );
     } catch (error) {

@@ -17,7 +17,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
-import { generatePPLACommands, sendToPrinter } from "@/utils/printerUtils";
 import {
   Dialog,
   DialogContent,
@@ -35,7 +34,7 @@ export function InventoryLabels() {
   const [isPrinting, setIsPrinting] = useState(false);
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const [selectedItemForHistory, setSelectedItemForHistory] = useState<string | null>(null);
-  const [selectedItemForPrint, setSelectedItemForPrint] = useState<any>(null);
+  const [selectedItemsForPrint, setSelectedItemsForPrint] = useState<any[]>([]);
 
   const { data: items, isLoading: isLoadingItems } = useQuery({
     queryKey: ['inventory-items'],
@@ -53,7 +52,21 @@ export function InventoryLabels() {
   });
 
   const handlePrintLabels = async () => {
-    setSelectedItemForPrint(items?.find(item => item.id === selectedItems[0]));
+    // Modificado: Agora passamos todos os itens selecionados para impressão
+    if (selectedItems.length === 0) {
+      toast.error("Selecione pelo menos um item para impressão");
+      return;
+    }
+    
+    // Obter os dados completos dos itens selecionados
+    const itemsToprint = items?.filter(item => selectedItems.includes(item.id)) || [];
+    
+    if (itemsTorint.length === 0) {
+      toast.error("Não foi possível encontrar os itens selecionados");
+      return;
+    }
+    
+    setSelectedItemsForPrint(itemsToImp);
   };
 
   const handleGoToLabelCreator = () => {
@@ -265,7 +278,7 @@ export function InventoryLabels() {
                             variant="outline"
                             size="sm"
                             onClick={() => {
-                              setSelectedItemForPrint(item);
+                              setSelectedItemsForPrint([item]);
                             }}
                             disabled={isPrinting}
                           >
@@ -325,9 +338,9 @@ export function InventoryLabels() {
       </Dialog>
 
       <PrintLabelDialog
-        isOpen={!!selectedItemForPrint}
-        onClose={() => setSelectedItemForPrint(null)}
-        item={selectedItemForPrint}
+        isOpen={selectedItemsForPrint.length > 0}
+        onClose={() => setSelectedItemsForPrint([])}
+        items={selectedItemsForPrint}
       />
     </div>
   );

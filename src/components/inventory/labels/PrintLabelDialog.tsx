@@ -14,13 +14,13 @@ import { ModeloManager } from "./print/ModeloManager";
 interface PrintLabelDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  item: any; // Tipo do item a ser impresso
+  items: any[]; // Modificado: Agora recebemos um array de itens
 }
 
 export function PrintLabelDialog({
   isOpen,
   onClose,
-  item
+  items
 }: PrintLabelDialogProps) {
   // Estados para configuração de impressão
   const [copies, setCopies] = useState("1");
@@ -118,7 +118,7 @@ export function PrintLabelDialog({
 
   // Validação do formulário
   const validateInput = (): boolean => {
-    if (!item) {
+    if (!items || items.length === 0) {
       toast.error("Nenhum item selecionado para impressão");
       return false;
     }
@@ -147,25 +147,28 @@ export function PrintLabelDialog({
     if (!validateInput()) return;
     try {
       setIsProcessing(true);
-      console.log("Iniciando impressão com modelo:", selectedModeloId);
+      console.log("Iniciando impressão de múltiplas etiquetas com modelo:", selectedModeloId);
+      console.log("Itens para imprimir:", items);
       
       if (!selectedModeloId) {
         throw new Error("Nenhum modelo de etiqueta selecionado");
       }
 
       const pdfUrl = await generatePdfLabel({
-        item,
+        items, // Passamos o array completo de itens
         copies: parseInt(copies),
         multiplyByStock,
         selectedModeloId
       });
 
-      // Registrar impressão no histórico
-      await LabelModel.registerLabelPrint(item.id, parseInt(copies));
+      // Registrar impressão no histórico para cada item
+      for (const item of items) {
+        await LabelModel.registerLabelPrint(item.id, parseInt(copies));
+      }
 
       // Abrir PDF em nova aba
       window.open(pdfUrl, '_blank');
-      toast.success("Etiquetas geradas com sucesso!");
+      toast.success(`${items.length} etiquetas geradas com sucesso!`);
       onClose();
     } catch (error) {
       console.error("Erro ao gerar PDF:", error);
@@ -239,7 +242,7 @@ export function PrintLabelDialog({
         <DialogHeader>
           <DialogTitle>Imprimir Etiquetas</DialogTitle>
           <DialogDescription>
-            Configure as opções de impressão para gerar etiquetas para o item selecionado.
+            Configure as opções de impressão para gerar etiquetas para os {items.length} itens selecionados.
           </DialogDescription>
         </DialogHeader>
         

@@ -4,7 +4,7 @@
  */
 
 export interface GeneratePdfLabelOptions {
-  item: any;
+  items: any[]; // Modificado: Agora é um array de itens
   copies: number;
   multiplyByStock: boolean;
   selectedModeloId?: string;
