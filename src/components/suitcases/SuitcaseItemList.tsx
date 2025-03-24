@@ -1,6 +1,8 @@
+
 import { useState, useEffect } from "react";
 import { SuitcaseItem, SuitcaseItemStatus, SuitcaseStatus } from "@/types/suitcase";
 import { SuitcaseController } from "@/controllers/suitcaseController";
+import { SuitcaseModel } from "@/models/suitcaseModel";
 import {
   Table,
   TableBody,

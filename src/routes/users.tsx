@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { UserRoleModel, UserWithRoles, UserRole, CreateUserData } from "@/models/userRoleModel";
+import { UserRoleModel, UserRole, UserWithRoles, CreateUserData } from "@/models/userRoleModel";
 import {
   Table,
   TableBody,
@@ -60,7 +60,7 @@ const Users = () => {
 
   const { data: users, isLoading } = useQuery({
     queryKey: ['users'],
-    queryFn: UserRoleModel.getAllUsersWithRoles,
+    queryFn: () => UserRoleModel.getAllUsersWithRoles(),
   });
 
   const updateStatusMutation = useMutation({
@@ -188,7 +188,7 @@ const Users = () => {
 
   const filteredUsers = selectedStatus === "all"
     ? users
-    : users?.filter(user => user.status === selectedStatus);
+    : users?.filter((user: UserWithRoles) => user.status === selectedStatus);
 
   if (isLoading) {
     return (
@@ -484,3 +484,4 @@ const Users = () => {
 };
 
 export default Users;
+

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import {
   Card,
@@ -33,7 +32,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { suitcaseController } from "@/controllers/suitcaseController";
+import { SuitcaseController, suitcaseController } from "@/controllers/suitcaseController";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -55,7 +54,6 @@ export function SuitcaseGrid({ suitcases, isAdmin, onRefresh, onOpenAcertoDialog
 
   const queryClient = useQueryClient();
 
-  // Corrigindo a mutação para usar a sintaxe correta
   const deleteSuitcaseMutation = useMutation({
     mutationFn: (id: string) => suitcaseController.deleteSuitcase(id),
     onSuccess: () => {
@@ -115,7 +113,6 @@ export function SuitcaseGrid({ suitcases, isAdmin, onRefresh, onOpenAcertoDialog
   };
 
   const handleEdit = (suitcase: Suitcase) => {
-    // Implemente a lógica para editar a maleta aqui
     toast.info(`Editar maleta ${suitcase.code}`);
   };
 
@@ -220,7 +217,6 @@ export function SuitcaseGrid({ suitcases, isAdmin, onRefresh, onOpenAcertoDialog
         />
       )}
 
-      {/* Pass only suitcaseId to SuitcaseDetailsDialog */}
       {suitcases.map((suitcase) => (
         <SuitcaseDetailsDialog
           key={suitcase.id}

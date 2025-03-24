@@ -699,7 +699,7 @@ export class SuitcaseModel {
     return `ML${nextNumber.toString().padStart(3, '0')}`;
   }
 
-  // Adicionar métodos que estavam faltando
+  // Remover item da maleta
   static async removeItemFromSuitcase(itemId: string): Promise<void> {
     if (!itemId) throw new Error("ID do item é necessário");
     
@@ -709,6 +709,75 @@ export class SuitcaseModel {
       .eq('id', itemId);
     
     if (error) throw error;
+  }
+
+  // Atualizar quantidade de um item na maleta
+  static async updateSuitcaseItemQuantity(itemId: string, quantity: number): Promise<void> {
+    if (!itemId) throw new Error("ID do item é necessário");
+    if (quantity <= 0) throw new Error("Quantidade deve ser maior que zero");
+    
+    const { error } = await supabase
+      .from('suitcase_items')
+      .update({ quantity })
+      .eq('id', itemId);
+    
+    if (error) throw error;
+  }
+
+  // Retornar item da maleta para o estoque
+  static async returnItemToInventory(itemId: string): Promise<boolean> {
+    if (!itemId) throw new Error("ID do item é necessário");
+    
+    // Buscar informações do item na maleta
+    const { data: suitcaseItem, error: itemError } = await supabase
+      .from('suitcase_items')
+      .select(`
+        id,
+        quantity,
+        inventory_id,
+        status
+      `)
+      .eq('id', itemId)
+      .maybeSingle();
+    
+    if (itemError) throw itemError;
+    if (!suitcaseItem) throw new Error("Item não encontrado");
+    
+    // Buscar quantidade atual no estoque
+    const { data: inventoryItem, error: inventoryError } = await supabase
+      .from('inventory')
+      .select('quantity')
+      .eq('id', suitcaseItem.inventory_id)
+      .maybeSingle();
+    
+    if (inventoryError) throw inventoryError;
+    if (!inventoryItem) throw new Error("Item de inventário não encontrado");
+    
+    // Iniciar transação para garantir consistência dos dados
+    try {
+      // 1. Atualizar o status do item na maleta para "returned"
+      const { error: updateStatusError } = await supabase
+        .from('suitcase_items')
+        .update({ status: 'returned' })
+        .eq('id', itemId);
+      
+      if (updateStatusError) throw updateStatusError;
+      
+      // 2. Atualizar a quantidade no estoque
+      const newQuantity = inventoryItem.quantity + suitcaseItem.quantity;
+      
+      const { error: updateQuantityError } = await supabase
+        .from('inventory')
+        .update({ quantity: newQuantity })
+        .eq('id', suitcaseItem.inventory_id);
+      
+      if (updateQuantityError) throw updateQuantityError;
+      
+      return true;
+    } catch (error) {
+      console.error("Erro na transação de retorno de item ao estoque:", error);
+      throw error;
+    }
   }
 
   static async getAllSellers(): Promise<any[]> {
@@ -771,19 +840,23 @@ export class SuitcaseModel {
     });
   }
 
-  // Obter informações de em qual maleta o item está
+  // Obter informações sobre em qual maleta um item do inventário está
   static async getItemSuitcaseInfo(inventoryId: string): Promise<InventoryItemSuitcaseInfo | null> {
-    if (!inventoryId) throw new Error("ID do item é necessário");
+    if (!inventoryId) return null;
     
     const { data, error } = await supabase
       .from('suitcase_items')
       .select(`
+        id,
         suitcase_id,
+        status,
         suitcases:suitcase_id (
           id,
           code,
+          status,
           resellers:seller_id (
-            name
+            name,
+            phone
           )
         )
       `)
@@ -791,108 +864,19 @@ export class SuitcaseModel {
       .eq('status', 'in_possession')
       .maybeSingle();
     
-    if (error) throw error;
+    if (error) {
+      console.error("Erro ao buscar informações da maleta do item:", error);
+      return null;
+    }
     
     if (!data) return null;
     
     return {
       suitcase_id: data.suitcase_id,
       suitcase_code: data.suitcases?.code || '',
-      seller_name: data.suitcases?.resellers?.name || ''
+      suitcase_status: data.suitcases?.status || 'unknown',
+      seller_name: data.suitcases?.resellers?.name || '',
+      seller_phone: data.suitcases?.resellers?.phone || ''
     };
-  }
-
-  // Atualizar quantidade de um item da maleta
-  static async updateSuitcaseItemQuantity(itemId: string, quantity: number): Promise<SuitcaseItem> {
-    if (!itemId) throw new Error("ID da peça é necessário");
-    if (quantity < 1) throw new Error("A quantidade deve ser maior que zero");
-    
-    // Primeiro, verificar se o item existe e seu status atual
-    const item = await this.getSuitcaseItemById(itemId);
-    if (!item) throw new Error("Item não encontrado");
-    
-    // Verificar se o item está em posse (só podemos alterar qtd se estiver em posse)
-    if (item.status !== 'in_possession') {
-      throw new Error(`Não é possível alterar a quantidade de um item ${item.status === 'sold' ? 'vendido' : item.status === 'returned' ? 'devolvido' : 'perdido'}`);
-    }
-    
-    // Atualizar a quantidade
-    const { data, error } = await supabase
-      .from('suitcase_items')
-      .update({ quantity })
-      .eq('id', itemId)
-      .select()
-      .maybeSingle();
-    
-    if (error) throw error;
-    if (!data) throw new Error("Erro ao atualizar quantidade do item: nenhum dado retornado");
-    
-    const added_at = data.created_at || new Date().toISOString();
-    
-    return {
-      id: data.id,
-      suitcase_id: data.suitcase_id,
-      inventory_id: data.inventory_id,
-      status: data.status as SuitcaseItemStatus,
-      added_at: added_at,
-      created_at: data.created_at,
-      updated_at: data.updated_at,
-      quantity: data.quantity,
-      sales: []
-    };
-  }
-
-  // Retornar um item para o estoque
-  static async returnItemToInventory(itemId: string): Promise<void> {
-    if (!itemId) throw new Error("ID do item é necessário");
-    
-    try {
-      // Buscar informações do item
-      const item = await this.getSuitcaseItemById(itemId);
-      if (!item) throw new Error("Item não encontrado");
-      
-      // Só processar se o item estiver em posse
-      if (item.status !== 'in_possession') {
-        console.log(`Item ${itemId} não está em posse (status: ${item.status}), pulando retorno ao estoque`);
-        return;
-      }
-      
-      // Atualizar o status para devolvido
-      const { error: updateError } = await supabase
-        .from('suitcase_items')
-        .update({ status: 'returned' })
-        .eq('id', itemId);
-      
-      if (updateError) throw updateError;
-      
-      // Incrementar a quantidade no estoque - sem usar a função RPC
-      const quantidade = item.quantity || 1;
-      
-      // Buscar quantidade atual no estoque
-      const { data: inventoryData, error: getError } = await supabase
-        .from('inventory')
-        .select('quantity')
-        .eq('id', item.inventory_id)
-        .maybeSingle();
-      
-      if (getError) throw getError;
-      
-      if (inventoryData) {
-        const newQuantity = (inventoryData.quantity || 0) + quantidade;
-        
-        // Atualizar quantidade
-        const { error: updateInventoryError } = await supabase
-          .from('inventory')
-          .update({ quantity: newQuantity })
-          .eq('id', item.inventory_id);
-        
-        if (updateInventoryError) throw updateInventoryError;
-      }
-      
-      console.log(`Item ${itemId} devolvido ao estoque com sucesso`);
-    } catch (error) {
-      console.error("Erro ao retornar item ao estoque:", error);
-      throw error;
-    }
   }
 }

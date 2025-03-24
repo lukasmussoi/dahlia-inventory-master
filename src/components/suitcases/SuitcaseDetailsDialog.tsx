@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -13,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Edit, Plus, X } from "lucide-react";
 import { Suitcase } from "@/types/suitcase";
-import { suitcaseController } from "@/controllers/suitcaseController";
+import { SuitcaseController, suitcaseController } from "@/controllers/suitcaseController";
 import { toast } from "sonner";
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -41,7 +40,6 @@ export function SuitcaseDetailsDialog({ suitcaseId }: SuitcaseDetailsDialogProps
 
   const queryClient = useQueryClient();
 
-  // Buscar detalhes da maleta
   const { data: suitcase, isLoading } = useQuery({
     queryKey: ['suitcase', suitcaseId],
     queryFn: () => suitcaseController.getSuitcaseById(suitcaseId || ''),
@@ -57,7 +55,6 @@ export function SuitcaseDetailsDialog({ suitcaseId }: SuitcaseDetailsDialogProps
     }
   }, [suitcase]);
 
-  // Mutação para atualizar os dados da maleta - corrigida para usar a sintaxe correta
   const updateSuitcaseMutation = useMutation({
     mutationFn: (data: any) => suitcaseController.updateSuitcase(suitcaseId || '', data),
     onSuccess: () => {
@@ -71,13 +68,11 @@ export function SuitcaseDetailsDialog({ suitcaseId }: SuitcaseDetailsDialogProps
     },
   });
 
-  // Buscar perfil e permissões do usuário
   const { data: userProfile } = useQuery({
     queryKey: ['user-profile'],
     queryFn: () => AuthController.getUserProfileWithRoles(),
   });
 
-  // Função para lidar com a atualização da maleta
   const handleUpdate = async () => {
     if (!suitcaseId) return;
 
@@ -91,30 +86,23 @@ export function SuitcaseDetailsDialog({ suitcaseId }: SuitcaseDetailsDialogProps
     updateSuitcaseMutation.mutate(dataToUpdate);
   };
 
-  // Função para formatar a data
   const formatDate = (date: Date | undefined) => {
     return date ? format(date, 'dd/MM/yyyy', { locale: ptBR }) : 'Nenhuma data definida';
   };
 
-  // Função para abrir a busca de itens
   const handleOpenSearch = () => {
     setShowItemSearch(true);
   };
 
-  // Função para fechar a busca de itens
   const handleCloseSearch = () => {
     setShowItemSearch(false);
   };
 
-  // Função para lidar com a adição de um item
   const handleItemAdded = () => {
-    // Invalida a query de itens da maleta para atualizar a lista
     queryClient.invalidateQueries({ queryKey: ['suitcase', suitcaseId] });
   };
 
-  // Função para lidar com a alteração dos itens
   const handleItemsChange = () => {
-    // Invalida a query de itens da maleta para atualizar a lista
     queryClient.invalidateQueries({ queryKey: ['suitcase', suitcaseId] });
   };
 
@@ -156,7 +144,6 @@ export function SuitcaseDetailsDialog({ suitcaseId }: SuitcaseDetailsDialogProps
         </DialogHeader>
 
         <div className="grid gap-4 py-4">
-          {/* Código da Maleta */}
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="code" className="text-right">
               Código
@@ -170,7 +157,6 @@ export function SuitcaseDetailsDialog({ suitcaseId }: SuitcaseDetailsDialogProps
             />
           </div>
 
-          {/* Cidade */}
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="city" className="text-right">
               Cidade
@@ -184,7 +170,6 @@ export function SuitcaseDetailsDialog({ suitcaseId }: SuitcaseDetailsDialogProps
             />
           </div>
 
-          {/* Bairro */}
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="neighborhood" className="text-right">
               Bairro
@@ -198,7 +183,6 @@ export function SuitcaseDetailsDialog({ suitcaseId }: SuitcaseDetailsDialogProps
             />
           </div>
 
-          {/* Próximo Acerto */}
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="nextSettlementDate" className="text-right">
               Próximo Acerto
@@ -229,7 +213,6 @@ export function SuitcaseDetailsDialog({ suitcaseId }: SuitcaseDetailsDialogProps
             </Popover>
           </div>
 
-          {/* Lista de itens */}
           <div className="py-4 border-t">
             <h3 className="text-lg font-semibold mb-2">Itens na maleta</h3>
             
@@ -264,7 +247,6 @@ export function SuitcaseDetailsDialog({ suitcaseId }: SuitcaseDetailsDialogProps
           </div>
         </div>
 
-        {/* Ações */}
         <div className="flex justify-end">
           {isEditable ? (
             <div className="flex gap-2">

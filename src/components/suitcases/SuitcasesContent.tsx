@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { suitcaseController } from "@/controllers/suitcaseController";
+import { SuitcaseController, suitcaseController } from "@/controllers/suitcaseController";
 import { SuitcaseGrid } from "@/components/suitcases/SuitcaseGrid";
 import { SuitcaseFilters } from "@/components/suitcases/SuitcaseFilters";
 import { SuitcaseSummary } from "@/components/suitcases/SuitcaseSummary";

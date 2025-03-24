@@ -103,7 +103,12 @@ export class SuitcaseController {
   static async addItemToSuitcase(suitcaseId: string, inventoryId: string, quantity: number = 1) {
     try {
       console.log("Controller: Adicionando item à maleta:", suitcaseId, inventoryId, quantity);
-      await SuitcaseModel.addItemToSuitcase(suitcaseId, inventoryId, quantity);
+      const result = await SuitcaseModel.addItemToSuitcase({
+        suitcase_id: suitcaseId, 
+        inventory_id: inventoryId, 
+        quantity
+      });
+      return result;
     } catch (error) {
       console.error("Controller: Erro ao adicionar item à maleta:", error);
       throw error;
@@ -137,7 +142,7 @@ export class SuitcaseController {
   static async updateSuitcaseItemStatus(suitcaseItemId: string, status: string) {
     try {
       console.log("Controller: Atualizando status do item da maleta:", suitcaseItemId, status);
-      await SuitcaseModel.updateSuitcaseItemStatus(suitcaseItemId, status);
+      await SuitcaseModel.updateSuitcaseItemStatus(suitcaseItemId, status as any);
     } catch (error) {
       console.error("Controller: Erro ao atualizar status do item da maleta:", error);
       throw error;
@@ -162,4 +167,17 @@ export class SuitcaseController {
       throw new Error(error.message || "Erro ao retornar item para o estoque.");
     }
   }
+  
+  // Obter informações sobre em qual maleta um item do inventário está
+  static async getItemSuitcaseInfo(inventoryId: string) {
+    try {
+      return await SuitcaseModel.getItemSuitcaseInfo(inventoryId);
+    } catch (error) {
+      console.error("Controller: Erro ao buscar informação da maleta do item:", error);
+      return null;
+    }
+  }
 }
+
+// Exportar um alias para compatibilidade com código existente
+export const suitcaseController = SuitcaseController;
