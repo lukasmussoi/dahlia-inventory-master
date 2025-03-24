@@ -89,6 +89,10 @@ export function mapDatabaseToModel(item: EtiquetaCustomDB): ModeloEtiqueta {
   const tamanhoGrade = 5; // Valor padrão para o frontend, já que não existe na tabela
   console.log(`Usando tamanho de grade padrão: ${tamanhoGrade}`);
   
+  // Extrair posições da etiqueta (podem estar em metadata ou diretamente no objeto)
+  const x = Number(item.x) || Number(item.margem_esquerda) || 10;
+  const y = Number(item.y) || Number(item.margem_superior) || 10;
+  
   // Construir o modelo usando valores do banco com fallbacks para valores padrão
   const modeloMapeado: ModeloEtiqueta = {
     id: item.id,
@@ -107,7 +111,9 @@ export function mapDatabaseToModel(item: EtiquetaCustomDB): ModeloEtiqueta {
     larguraPagina: Number(item.largura_pagina) || 210,
     alturaPagina: Number(item.altura_pagina) || 297,
     tamanhoGrade: tamanhoGrade, // Valor padrão
-    campos: campos
+    campos: campos,
+    x: x, // Adicionado posição X
+    y: y  // Adicionado posição Y
   };
   
   console.log("Modelo mapeado do banco para o frontend:", {
@@ -116,6 +122,7 @@ export function mapDatabaseToModel(item: EtiquetaCustomDB): ModeloEtiqueta {
     formatoPagina: modeloMapeado.formatoPagina,
     orientacao: modeloMapeado.orientacao,
     tamanhoGrade: modeloMapeado.tamanhoGrade,
+    posicao: `(${modeloMapeado.x}, ${modeloMapeado.y})`,
     campos: modeloMapeado.campos.length
   });
   
@@ -130,7 +137,8 @@ export function mapModelToDatabase(modelo: ModeloEtiqueta): Partial<EtiquetaCust
     nome: modelo.nome,
     formatoPagina: modelo.formatoPagina,
     orientacao: modelo.orientacao,
-    tamanhoGrade: modelo.tamanhoGrade
+    tamanhoGrade: modelo.tamanhoGrade,
+    posicao: modelo.x !== undefined && modelo.y !== undefined ? `(${modelo.x}, ${modelo.y})` : 'não definida'
   });
   
   // Convertendo 'Personalizado' para 'Custom' para o banco
@@ -153,7 +161,9 @@ export function mapModelToDatabase(modelo: ModeloEtiqueta): Partial<EtiquetaCust
     margem_direita: Number(modelo.margemDireita) || 10,
     espacamento_horizontal: Number(modelo.espacamentoHorizontal) || 0,
     espacamento_vertical: Number(modelo.espacamentoVertical) || 0,
-    // Removendo o campo tamanho_grade que não existe na tabela
+    // Armazenar as posições da etiqueta no modelo, adicionado como metadados
+    x: modelo.x,
+    y: modelo.y
   };
   
   // Adicionar dimensões da página sempre, mas especialmente se for formato personalizado
@@ -194,6 +204,7 @@ export function mapModelToDatabase(modelo: ModeloEtiqueta): Partial<EtiquetaCust
     descricao: dbModel.descricao,
     formato_pagina: dbModel.formato_pagina,
     orientacao: dbModel.orientacao,
+    posicao: `(${dbModel.x}, ${dbModel.y})`,
     campCount: Array.isArray(dbModel.campos) ? dbModel.campos.length : 'N/A'
   });
   

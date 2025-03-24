@@ -1,5 +1,5 @@
 
-import type { Json } from "@/integrations/supabase/types";
+// Tipos para as etiquetas customizadas
 
 export interface CampoEtiqueta {
   tipo: 'nome' | 'codigo' | 'preco';
@@ -8,8 +8,8 @@ export interface CampoEtiqueta {
   largura: number;
   altura: number;
   tamanhoFonte: number;
-  valor?: string;
   alinhamento?: 'left' | 'center' | 'right';
+  valor?: string;
 }
 
 export interface ModeloEtiqueta {
@@ -30,9 +30,8 @@ export interface ModeloEtiqueta {
   alturaPagina?: number;
   tamanhoGrade?: number;
   campos: CampoEtiqueta[];
-  usuario_id?: string;
-  criado_em?: string;
-  atualizado_em?: string;
+  x?: number; // Posição X da etiqueta na página
+  y?: number; // Posição Y da etiqueta na página
 }
 
 export interface EtiquetaCustomDB {
@@ -51,9 +50,10 @@ export interface EtiquetaCustomDB {
   espacamento_vertical: number;
   largura_pagina?: number;
   altura_pagina?: number;
-  tamanho_grade?: number;
-  campos: Json;
+  campos: any; // Será do tipo Json no banco
   criado_por: string;
   criado_em: string;
   atualizado_em: string;
+  x?: number; // Campo para armazenar a posição X na página
+  y?: number; // Campo para armazenar a posição Y na página
 }
