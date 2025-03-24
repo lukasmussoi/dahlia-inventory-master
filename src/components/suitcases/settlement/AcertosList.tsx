@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -13,6 +14,7 @@ import { AcertoMaletaController } from "@/controllers/acertoMaletaController";
 import { Acerto } from "@/types/suitcase";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { openPdfInNewTab } from "@/utils/pdfUtils";
 
 interface AcertosListProps {
   onViewAcerto: (acerto: Acerto) => void;
@@ -26,6 +28,7 @@ export function AcertosList({ onViewAcerto, onRefresh, isAdmin = false }: Acerto
     status: "todos",
   });
   const [isDeleting, setIsDeleting] = useState<{ [key: string]: boolean }>({});
+  const [isPrinting, setIsPrinting] = useState<{ [key: string]: boolean }>({});
 
   // Carregar lista de acertos
   const { 
@@ -71,10 +74,16 @@ export function AcertosList({ onViewAcerto, onRefresh, isAdmin = false }: Acerto
   // Visualizar PDF do acerto
   const viewReceiptPdf = async (acertoId: string) => {
     try {
+      setIsPrinting(prev => ({ ...prev, [acertoId]: true }));
+      toast.info("Gerando recibo em PDF...");
+      
       const pdfUrl = await AcertoMaletaController.generateReceiptPDF(acertoId);
-      window.open(pdfUrl, '_blank');
+      openPdfInNewTab(pdfUrl);
     } catch (error) {
       console.error("Erro ao gerar PDF do acerto:", error);
+      toast.error("Erro ao gerar PDF do recibo. Tente novamente.");
+    } finally {
+      setIsPrinting(prev => ({ ...prev, [acertoId]: false }));
     }
   };
 
@@ -173,6 +182,7 @@ export function AcertosList({ onViewAcerto, onRefresh, isAdmin = false }: Acerto
                 {filteredAcertos.map((acerto) => {
                   const status = formatStatus(acerto.status);
                   const isDeletingThisAcerto = isDeleting[acerto.id] || false;
+                  const isPrintingThisAcerto = isPrinting[acerto.id] || false;
                   
                   return (
                     <TableRow key={acerto.id}>
@@ -208,8 +218,13 @@ export function AcertosList({ onViewAcerto, onRefresh, isAdmin = false }: Acerto
                             size="icon"
                             onClick={() => viewReceiptPdf(acerto.id)}
                             title="Imprimir recibo"
+                            disabled={isPrintingThisAcerto}
                           >
-                            <Printer className="h-4 w-4" />
+                            {isPrintingThisAcerto ? (
+                              <div className="h-4 w-4 border-2 border-t-transparent border-pink-500 rounded-full animate-spin"></div>
+                            ) : (
+                              <Printer className="h-4 w-4" />
+                            )}
                           </Button>
                           
                           {isAdmin && (
