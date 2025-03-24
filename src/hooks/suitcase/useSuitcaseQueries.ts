@@ -46,7 +46,7 @@ export function useSuitcaseQueries(suitcaseId: string | null, open: boolean) {
     isLoading: isLoadingAcertos
   } = useQuery({
     queryKey: ["acertos-historico", suitcaseId],
-    queryFn: () => SuitcaseController.createPendingSettlement(suitcaseId || "", new Date()),
+    queryFn: () => SuitcaseController.getHistoricoAcertos(suitcaseId || ""),
     enabled: open && !!suitcaseId,
   });
 
