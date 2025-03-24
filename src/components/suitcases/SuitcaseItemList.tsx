@@ -1,8 +1,6 @@
-
 import { useState, useEffect } from "react";
 import { SuitcaseItem, SuitcaseItemStatus, SuitcaseStatus } from "@/types/suitcase";
 import { SuitcaseController } from "@/controllers/suitcaseController";
-import { SuitcaseModel } from "@/models/suitcaseModel";
 import {
   Table,
   TableBody,
@@ -27,45 +25,27 @@ import {
   ShoppingBag, 
   Edit,
   Save,
-  X,
-  RotateCcw
+  X
 } from "lucide-react";
-import { 
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { UserRole } from "@/models/userRoleModel";
 
 interface SuitcaseItemListProps {
   suitcaseId: string;
   onItemsChanged?: () => void;
   readOnly?: boolean;
   suitcaseStatus?: SuitcaseStatus;
-  userRoles?: string[];
 }
 
 export function SuitcaseItemList({ 
   suitcaseId, 
   onItemsChanged,
   readOnly = false,
-  suitcaseStatus = 'in_use',
-  userRoles = []
+  suitcaseStatus = 'in_use'
 }: SuitcaseItemListProps) {
   const [items, setItems] = useState<SuitcaseItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<{ [key: string]: boolean }>({});
   const [editingQuantity, setEditingQuantity] = useState<string | null>(null);
   const [newQuantity, setNewQuantity] = useState<number>(1);
-  const [itemToReturn, setItemToReturn] = useState<SuitcaseItem | null>(null);
-  const [confirmReturnOpen, setConfirmReturnOpen] = useState(false);
-
-  const isAdminOrPromoter = userRoles.includes('admin') || userRoles.includes('promoter');
 
   const fetchItems = async () => {
     try {
@@ -136,7 +116,7 @@ export function SuitcaseItemList({
     try {
       setUpdating(prev => ({ ...prev, [itemId]: true }));
       
-      await SuitcaseModel.updateSuitcaseItemQuantity(itemId, newQuantity);
+      await SuitcaseController.updateSuitcaseItemQuantity(itemId, newQuantity);
       
       await fetchItems();
       
@@ -149,41 +129,6 @@ export function SuitcaseItemList({
       toast.error(error.message || "Erro ao atualizar quantidade do item");
     } finally {
       setUpdating(prev => ({ ...prev, [itemId]: false }));
-    }
-  };
-
-  const handleReturnToInventory = (item: SuitcaseItem) => {
-    setItemToReturn(item);
-    setConfirmReturnOpen(true);
-  };
-
-  const confirmReturnToInventory = async () => {
-    if (!itemToReturn) return;
-    
-    try {
-      setUpdating(prev => ({ ...prev, [itemToReturn.id]: true }));
-      
-      const userRolesEnum = userRoles.map(role => {
-        if (role === 'admin') return UserRole.ADMIN;
-        if (role === 'promoter') return UserRole.PROMOTER;
-        if (role === 'reseller') return UserRole.RESELLER;
-        return UserRole.USER;
-      });
-      
-      await SuitcaseController.returnItemToInventory(itemToReturn.id, userRolesEnum);
-      
-      await fetchItems();
-      
-      if (onItemsChanged) onItemsChanged();
-      
-      toast.success("Item devolvido ao estoque com sucesso");
-    } catch (error: any) {
-      console.error("Erro ao devolver item ao estoque:", error);
-      toast.error(error.message || "Erro ao devolver item ao estoque");
-    } finally {
-      setUpdating(prev => ({ ...prev, [itemToReturn.id]: false }));
-      setItemToReturn(null);
-      setConfirmReturnOpen(false);
     }
   };
 
@@ -242,7 +187,7 @@ export function SuitcaseItemList({
             <TableHead className="text-right">Preço</TableHead>
             <TableHead className="w-[80px]">Qtd</TableHead>
             <TableHead className="w-[120px]">Status</TableHead>
-            {!readOnly && <TableHead className="w-[150px]">Ações</TableHead>}
+            {!readOnly && <TableHead className="w-[120px]">Ações</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -328,31 +273,15 @@ export function SuitcaseItemList({
                 
                 {!readOnly && (
                   <TableCell>
-                    <div className="flex space-x-1">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => handleRemoveItem(item.id)}
-                        disabled={isUpdating}
-                        className="h-8 w-8"
-                        title="Remover item"
-                      >
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </Button>
-                      
-                      {isAdminOrPromoter && item.status === 'in_possession' && (
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => handleReturnToInventory(item)}
-                          disabled={isUpdating}
-                          className="h-8 w-8"
-                          title="Devolver ao estoque"
-                        >
-                          <RotateCcw className="h-4 w-4 text-blue-500" />
-                        </Button>
-                      )}
-                    </div>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => handleRemoveItem(item.id)}
+                      disabled={isUpdating}
+                      className="h-8 w-8"
+                    >
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </Button>
                   </TableCell>
                 )}
               </TableRow>
@@ -360,23 +289,6 @@ export function SuitcaseItemList({
           })}
         </TableBody>
       </Table>
-      
-      {/* Diálogo de confirmação para devolução ao estoque */}
-      <AlertDialog open={confirmReturnOpen} onOpenChange={setConfirmReturnOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Devolver item ao estoque?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação irá devolver {itemToReturn?.quantity || 1} unidade(s) do item "{itemToReturn?.product?.name}" ao estoque. 
-              O item será removido da maleta.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmReturnToInventory}>Confirmar</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
