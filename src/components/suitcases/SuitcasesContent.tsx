@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { SuitcaseController } from "@/controllers/suitcaseController";
@@ -197,6 +196,7 @@ export function SuitcasesContent({ isAdmin, userProfile }: SuitcasesContentProps
               onRefresh={() => {
                 // Atualizar os dados quando a lista de acertos for atualizada
                 setActiveTab("settlements");
+                refreshData(); // Adicionado refresh para garantir que dados são atualizados
               }}
               isAdmin={isAdmin}
             />

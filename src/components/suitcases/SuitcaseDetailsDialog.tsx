@@ -1,15 +1,14 @@
 
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Briefcase } from "lucide-react";
-import { toast } from "sonner";
-import { Suitcase, SuitcaseItem, Acerto } from "@/types/suitcase";
-import { SuitcaseController } from "@/controllers/suitcaseController";
-import { AcertoMaletaController } from "@/controllers/acertoMaletaController";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { openPdfInNewTab } from "@/utils/pdfUtils";
 import { SuitcaseDetailsTabs } from "./details/SuitcaseDetailsTabs";
+import { SuitcaseController } from "@/controllers/suitcaseController";
+import { LoadingIndicator } from "@/components/shared/LoadingIndicator";
+import { format, addDays } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { toast } from "sonner";
+import { Acerto, SuitcaseItem } from "@/types/suitcase";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -18,265 +17,213 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle,
+  AlertDialogTitle
 } from "@/components/ui/alert-dialog";
 
 interface SuitcaseDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  suitcase: Suitcase | null;
-  onOpenAcertoDialog?: (suitcase: Suitcase) => void;
+  suitcaseId: string | null;
   onRefresh?: () => void;
   isAdmin?: boolean;
-  onEdit?: (suitcase: Suitcase) => void;
 }
 
 export function SuitcaseDetailsDialog({
   open,
   onOpenChange,
-  suitcase,
-  onOpenAcertoDialog,
+  suitcaseId,
   onRefresh,
-  isAdmin = false,
-  onEdit
+  isAdmin = false
 }: SuitcaseDetailsDialogProps) {
-  const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState("itens");
+  const [activeTab, setActiveTab] = useState("informacoes");
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isAdding, setIsAdding] = useState<{ [key: string]: boolean }>({});
-  const [nextSettlementDate, setNextSettlementDate] = useState<Date | undefined>(
-    suitcase?.next_settlement_date ? new Date(suitcase.next_settlement_date) : undefined
-  );
   const [isPrintingPdf, setIsPrintingPdf] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [nextSettlementDate, setNextSettlementDate] = useState<Date | undefined>(undefined);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Buscar detalhes da maleta
+  const {
+    data: suitcase,
+    isLoading: isLoadingSuitcase,
+    refetch: refetchSuitcase
+  } = useQuery({
+    queryKey: ["suitcase", suitcaseId],
+    queryFn: () => SuitcaseController.getSuitcaseById(suitcaseId || ""),
+    enabled: open && !!suitcaseId,
+  });
+
+  // Buscar promotora da revendedora
+  const {
+    data: promoterInfo,
+    isLoading: loadingPromoterInfo
+  } = useQuery({
+    queryKey: ["promoter-for-reseller", suitcase?.seller_id],
+    queryFn: () => SuitcaseController.getPromoterForReseller(suitcase?.seller_id || ""),
+    enabled: open && !!suitcase?.seller_id,
+  });
+
+  // Buscar itens da maleta
+  const {
+    data: suitcaseItems = [],
+    isLoading: isLoadingSuitcaseItems,
+    refetch: refetchSuitcaseItems
+  } = useQuery({
+    queryKey: ["suitcase-items", suitcaseId],
+    queryFn: () => SuitcaseController.getSuitcaseItems(suitcaseId || ""),
+    enabled: open && !!suitcaseId,
+  });
+
+  // Buscar histórico de acertos
+  const {
+    data: acertosHistorico = [],
+    isLoading: isLoadingAcertos
+  } = useQuery({
+    queryKey: ["acertos-historico", suitcaseId],
+    queryFn: () => SuitcaseController.createPendingSettlement(suitcaseId || "", true),
+    enabled: open && !!suitcaseId,
+  });
+
+  // Atualizar a data do próximo acerto na primeira carga
   useEffect(() => {
-    if (suitcase) {
-      setSearchTerm("");
-      setSearchResults([]);
-      setNextSettlementDate(
-        suitcase.next_settlement_date ? new Date(suitcase.next_settlement_date) : undefined
-      );
+    if (suitcase?.next_settlement_date) {
+      setNextSettlementDate(new Date(suitcase.next_settlement_date));
+    } else if (suitcase && !suitcase.next_settlement_date) {
+      // Se não houver data definida, sugerir data para 30 dias no futuro
+      setNextSettlementDate(addDays(new Date(), 30));
     }
   }, [suitcase]);
 
-  const { data: suitcaseItems = [], refetch: refetchItems } = useQuery({
-    queryKey: ['suitcase-items', suitcase?.id],
-    queryFn: async () => {
-      if (!suitcase) return [];
-      const items = await SuitcaseController.getSuitcaseItems(suitcase.id);
-      return items.filter(item => item.status === 'in_possession');
-    },
-    enabled: !!suitcase && open,
-  });
-
-  const { data: acertosHistorico = [], isLoading: isLoadingAcertos } = useQuery({
-    queryKey: ['suitcase-acertos', suitcase?.id],
-    queryFn: async () => {
-      if (!suitcase) return [];
-      try {
-        const acertos = await AcertoMaletaController.getAcertosBySuitcase(suitcase.id);
-        return acertos as unknown as Acerto[];
-      } catch (error) {
-        console.error("Erro ao buscar histórico de acertos:", error);
-        return [];
-      }
-    },
-    enabled: !!suitcase && open && activeTab === "historico",
-  });
-
-  const { data: promoterInfo, isLoading: loadingPromoterInfo } = useQuery({
-    queryKey: ['promoter-for-reseller', suitcase?.seller_id],
-    queryFn: () => suitcase?.seller_id 
-      ? SuitcaseController.getPromoterForReseller(suitcase.seller_id) 
-      : Promise.resolve(null),
-    enabled: !!suitcase?.seller_id && open,
-  });
-
+  // Funções de busca de inventário
   const handleSearch = async (e?: React.KeyboardEvent) => {
-    if (e && e.key !== 'Enter') return;
-    if (!suitcase) return;
-    
-    if (searchTerm.trim() === "") {
-      setSearchResults([]);
-      return;
-    }
+    if (e && e.key !== "Enter") return;
+    if (!searchTerm.trim()) return;
 
+    setIsSearching(true);
     try {
-      setIsSearching(true);
       const results = await SuitcaseController.searchInventoryItems(searchTerm);
       setSearchResults(results);
-      
-      if (results.length === 0) {
-        toast.info("Nenhum item encontrado ou todos os itens correspondentes estão arquivados");
-      }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Erro ao buscar itens:", error);
-      toast.error(error.message || "Erro ao buscar itens");
+      toast.error("Erro ao buscar itens no inventário");
     } finally {
       setIsSearching(false);
     }
   };
 
+  // Função para adicionar item à maleta
   const handleAddItem = async (inventoryId: string) => {
-    if (!suitcase) return;
+    if (!suitcaseId) return;
     
+    setIsAdding(prev => ({ ...prev, [inventoryId]: true }));
     try {
-      setIsAdding(prev => ({ ...prev, [inventoryId]: true }));
-      
-      await SuitcaseController.addItemToSuitcase(suitcase.id, inventoryId);
-      
-      setSearchResults(prevResults => prevResults.filter(item => item.id !== inventoryId));
-      
-      refetchItems();
-      
+      await SuitcaseController.addItemToSuitcase(suitcaseId, inventoryId);
+      refetchSuitcaseItems();
       toast.success("Item adicionado à maleta com sucesso");
+      
+      // Limpar resultados da busca
+      setSearchResults([]);
+      setSearchTerm("");
     } catch (error: any) {
-      console.error("Erro ao adicionar item à maleta:", error);
+      console.error("Erro ao adicionar item:", error);
       toast.error(error.message || "Erro ao adicionar item à maleta");
     } finally {
       setIsAdding(prev => ({ ...prev, [inventoryId]: false }));
     }
   };
 
+  // Função para alternar status de vendido
   const handleToggleSold = async (item: SuitcaseItem, sold: boolean) => {
     try {
-      await SuitcaseController.updateSuitcaseItemStatus(
-        item.id, 
-        sold ? 'sold' : 'in_possession'
-      );
-      
-      refetchItems();
-      
-      toast.success(`Item ${sold ? 'marcado como vendido' : 'marcado como disponível'}`);
-    } catch (error: any) {
+      const newStatus = sold ? "sold" : "in_possession";
+      await SuitcaseController.updateSuitcaseItemStatus(item.id, newStatus);
+      refetchSuitcaseItems();
+    } catch (error) {
       console.error("Erro ao atualizar status do item:", error);
-      toast.error(error.message || "Erro ao atualizar status do item");
+      toast.error("Erro ao atualizar status do item");
     }
   };
 
+  // Função para atualizar informações de venda
   const handleUpdateSaleInfo = async (itemId: string, field: string, value: string) => {
     try {
       await SuitcaseController.updateSaleInfo(itemId, field, value);
-      refetchItems();
-    } catch (error: any) {
+      refetchSuitcaseItems();
+    } catch (error) {
       console.error("Erro ao atualizar informações de venda:", error);
-      toast.error(error.message || "Erro ao atualizar informações de venda");
+      toast.error("Erro ao atualizar informações de venda");
     }
   };
 
-  const handleUpdateNextSettlementDate = async (date?: Date) => {
-    if (!suitcase) return;
-    
-    try {
-      setNextSettlementDate(date);
-      
-      await SuitcaseController.updateSuitcase(suitcase.id, {
-        next_settlement_date: date ? date.toISOString() : null,
-      });
-      
-      if (date) {
-        await SuitcaseController.createPendingSettlement(suitcase.id, date);
-        toast.success(`Data do próximo acerto definida para ${date.toLocaleDateString('pt-BR')} e acerto pendente criado`);
-      } else {
-        toast.info("Data do próximo acerto removida");
-      }
-      
-      queryClient.invalidateQueries({ queryKey: ['suitcase', suitcase.id] });
-      queryClient.invalidateQueries({ queryKey: ['acertos'] });
-    } catch (error: any) {
-      console.error("Erro ao atualizar data do próximo acerto:", error);
-      toast.error(error.message || "Erro ao atualizar data do próximo acerto");
-    }
-  };
-
-  const calculateTotalValue = (): number => {
+  // Calcular valor total da maleta
+  const calculateTotalValue = () => {
     return suitcaseItems.reduce((total, item) => {
-      const price = item.product?.price || 0;
-      const quantity = item.quantity || 1;
-      return total + (price * quantity);
+      return total + (item.price || 0);
     }, 0);
   };
 
-  const getSellerName = (): string => {
-    return suitcase?.seller?.name || "Revendedora não informada";
+  // Função para visualizar recibo
+  const handleViewReceipt = (acertoId: string) => {
+    console.log("Visualizar recibo:", acertoId);
+    // Implementação pendente
   };
 
-  const handleClose = () => {
-    onOpenChange(false);
-    if (onRefresh) {
-      setTimeout(() => {
-        onRefresh();
-      }, 100);
-    }
-  };
-
+  // Função para imprimir PDF
   const handlePrint = async () => {
-    if (!suitcase) return;
+    if (!suitcaseId) return;
     
+    setIsPrintingPdf(true);
     try {
-      setIsPrintingPdf(true);
-      toast.info("Gerando PDF da maleta...");
-      
-      const pdfUrl = await SuitcaseController.generateSuitcasePDF(
-        suitcase.id, 
-        suitcaseItems, 
-        promoterInfo
-      );
-      
-      openPdfInNewTab(pdfUrl);
-      
-      toast.success("PDF da maleta gerado com sucesso");
+      const pdfUrl = await SuitcaseController.generateSuitcasePDF(suitcaseId);
+      // Abrir o PDF em uma nova aba
+      window.open(pdfUrl, '_blank');
     } catch (error) {
-      console.error("Erro ao gerar PDF da maleta:", error);
-      toast.error("Erro ao gerar PDF da maleta. Tente novamente.");
+      console.error("Erro ao gerar PDF:", error);
+      toast.error("Erro ao gerar PDF da maleta");
     } finally {
       setIsPrintingPdf(false);
     }
   };
 
-  const handleViewReceipt = async (acertoId: string) => {
+  // Atualizar a data do próximo acerto
+  const handleUpdateNextSettlementDate = async (date?: Date) => {
+    if (!suitcaseId) return;
+    
     try {
-      const pdfUrl = await AcertoMaletaController.generateReceiptPDF(acertoId);
-      openPdfInNewTab(pdfUrl);
+      const formattedDate = date ? format(date, "yyyy-MM-dd") : null;
+      await SuitcaseController.updateSuitcase(suitcaseId, {
+        next_settlement_date: formattedDate
+      });
+      
+      setNextSettlementDate(date);
+      refetchSuitcase();
+      toast.success("Data do próximo acerto atualizada com sucesso");
     } catch (error) {
-      console.error("Erro ao gerar PDF do acerto:", error);
-      toast.error("Erro ao gerar PDF do recibo. Tente novamente.");
+      console.error("Erro ao atualizar data de acerto:", error);
+      toast.error("Erro ao atualizar data do próximo acerto");
     }
   };
 
-  const handleEdit = () => {
-    if (!suitcase || !onEdit) return;
+  // Função para excluir a maleta
+  const handleDeleteSuitcase = async () => {
+    if (!suitcaseId) return;
     
-    onOpenChange(false);
-    setTimeout(() => {
-      onEdit(suitcase);
-    }, 100);
-  };
-
-  const handleDeleteClick = () => {
-    setIsDeleteDialogOpen(true);
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (!suitcase) return;
-    
+    setIsDeleting(true);
     try {
-      setIsDeleting(true);
-      await SuitcaseController.deleteSuitcaseWithCascade(suitcase.id);
+      // Chamar a função de exclusão da maleta
+      await SuitcaseController.deleteSuitcaseWithCascade(suitcaseId);
       
-      toast.success("Maleta excluída com sucesso");
-      setIsDeleteDialogOpen(false);
+      // Fechar o diálogo de confirmação e o modal de detalhes
+      setShowDeleteDialog(false);
       onOpenChange(false);
       
-      if (onRefresh) {
-        setTimeout(() => {
-          onRefresh();
-        }, 100);
-      }
+      // Atualizar a lista de maletas
+      if (onRefresh) onRefresh();
+      
+      toast.success("Maleta excluída com sucesso");
     } catch (error: any) {
       console.error("Erro ao excluir maleta:", error);
       toast.error(error.message || "Erro ao excluir maleta");
@@ -285,40 +232,34 @@ export function SuitcaseDetailsDialog({
     }
   };
 
-  if (!suitcase) return null;
+  if (isLoadingSuitcase || !suitcase) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+          <div className="flex justify-center items-center p-8">
+            <LoadingIndicator />
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-auto p-0">
-          <div className="p-6 pb-2">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <Briefcase className="h-5 w-5 text-pink-500" />
-                <h2 className="text-xl font-semibold">Detalhes da Maleta {suitcase.code}</h2>
-              </div>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-8 w-8" 
-                onClick={() => onOpenChange(false)}
-              >
-                &times;
-              </Button>
-            </div>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
-              <p>Revendedora: <span className="font-medium text-foreground">{getSellerName()}</span></p>
-              
-              {promoterInfo && (
-                <div className="flex items-center gap-1">
-                  <User className="h-3.5 w-3.5" />
-                  <p>Promotora: <span className="font-medium text-foreground">{promoterInfo.name}</span></p>
-                </div>
-              )}
-            </div>
-          </div>
-          
-          <SuitcaseDetailsTabs 
+      <Dialog 
+        open={open} 
+        onOpenChange={(newOpen) => {
+          // Resetar o estado ao fechar o diálogo
+          if (!newOpen) {
+            setActiveTab("informacoes");
+            setSearchTerm("");
+            setSearchResults([]);
+          }
+          onOpenChange(newOpen);
+        }}
+      >
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+          <SuitcaseDetailsTabs
             activeTab={activeTab}
             setActiveTab={setActiveTab}
             suitcase={suitcase}
@@ -343,69 +284,38 @@ export function SuitcaseDetailsDialog({
             handlePrint={handlePrint}
             isPrintingPdf={isPrintingPdf}
             isAdmin={isAdmin}
-            onDeleteClick={handleDeleteClick}
+            onDeleteClick={() => setShowDeleteDialog(true)}
           />
-          
-          <div className="p-4 border-t flex justify-end gap-2">
-            <Button variant="outline" onClick={handleClose}>
-              Fechar
-            </Button>
-            
-            {isAdmin && (
-              <Button onClick={handleEdit} className="bg-pink-500 hover:bg-pink-600">
-                Editar Maleta
-              </Button>
-            )}
-          </div>
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+      {/* Diálogo de confirmação de exclusão */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir Maleta {suitcase.code}</AlertDialogTitle>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir esta maleta? Esta ação é irreversível e excluirá todo o 
-              histórico de acertos. As peças que ainda estiverem na maleta serão devolvidas automaticamente ao estoque.
+              Tem certeza que deseja excluir esta maleta? Esta ação é irreversível e excluirá todo o histórico de acertos. 
+              As peças que ainda estiverem na maleta serão devolvidas automaticamente ao estoque.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleDeleteConfirm}
+              onClick={(e) => {
+                e.preventDefault();
+                handleDeleteSuitcase();
+              }}
               disabled={isDeleting}
               className="bg-red-500 hover:bg-red-600 text-white"
             >
               {isDeleting ? (
-                <>
-                  <div className="h-4 w-4 border-2 border-t-transparent border-white rounded-full animate-spin mr-2"></div>
-                  Excluindo...
-                </>
-              ) : (
-                "Sim, excluir maleta"
-              )}
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+              ) : "Excluir"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </>
-  );
-}
-
-function User(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg 
-      xmlns="http://www.w3.org/2000/svg" 
-      viewBox="0 0 24 24" 
-      fill="none" 
-      stroke="currentColor" 
-      strokeWidth="2" 
-      strokeLinecap="round" 
-      strokeLinejoin="round"
-      {...props}
-    >
-      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
-      <circle cx="12" cy="7" r="4" />
-    </svg>
   );
 }
