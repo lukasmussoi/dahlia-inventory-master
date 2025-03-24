@@ -1,3 +1,15 @@
+/**
+ * Utilitários de formatação
+ * @file Funções para formatação de valores, datas e outros dados
+ */
+
+// Formatar preço para exibição no formato brasileiro
+export const formatPrice = (price: number): string => {
+  return new Intl.NumberFormat('pt-BR', { 
+    style: 'currency', 
+    currency: 'BRL' 
+  }).format(price);
+};
 
 // Função para formatar CPF (XXX.XXX.XXX-XX)
 export function formatCPF(cpf: string): string {
