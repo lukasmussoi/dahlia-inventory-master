@@ -639,7 +639,8 @@ export class SuitcaseModel {
       // Garantir que o status é um dos valores válidos
       const validStatuses = ['in_use', 'returned', 'lost', 'in_audit', 'in_replenishment'];
       if (validStatuses.includes(filters.status)) {
-        query = query.eq('status', filters.status);
+        // Corrigindo o erro de tipagem - fazendo casting para SuitcaseStatus
+        query = query.eq('status', filters.status as SuitcaseStatus);
       }
     }
     
