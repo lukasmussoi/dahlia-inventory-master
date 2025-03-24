@@ -14,17 +14,31 @@ import type { GeneratePdfLabelOptions, PdfGenerationResult, ReceiptPdfOptions, A
 export function openPdfInNewTab(dataUrl: string): void {
   try {
     console.log("Iniciando abertura do PDF em nova aba");
+    
     // Verificar se a URL é válida
-    if (!dataUrl || !dataUrl.startsWith('data:application/pdf;base64,')) {
-      console.error("URL de dados inválida:", dataUrl?.substring(0, 50) + "...");
+    if (!dataUrl) {
+      console.error("URL de dados vazia ou nula");
       throw new Error("URL de dados do PDF inválida");
     }
 
+    let base64Data: string;
+    
+    // Verificar o formato da URL e extrair dados base64
+    if (dataUrl.startsWith('data:application/pdf;base64,')) {
+      base64Data = dataUrl.split(',')[1];
+    } else if (/^[A-Za-z0-9+/=]+$/.test(dataUrl)) {
+      // Assume que já é uma string base64 sem o prefixo
+      base64Data = dataUrl;
+    } else {
+      console.error("Formato de dados inválido:", dataUrl?.substring(0, 50) + "...");
+      throw new Error("Formato de dados do PDF inválido");
+    }
+
     // Converter base64 para Blob
-    const base64Data = dataUrl.split(',')[1];
     const byteCharacters = atob(base64Data);
     const byteArrays = [];
     
+    // Processar em pequenos pedaços para evitar problemas de memória
     for (let offset = 0; offset < byteCharacters.length; offset += 512) {
       const slice = byteCharacters.slice(offset, offset + 512);
       const byteNumbers = new Array(slice.length);

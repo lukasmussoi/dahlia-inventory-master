@@ -260,7 +260,7 @@ export function SuitcaseDetailsDialog({
         promoterInfo
       );
       
-      // Abrir o PDF em uma nova aba
+      // Abrir o PDF em uma nova aba usando a função aprimorada
       openPdfInNewTab(pdfUrl);
       
       toast.success("PDF da maleta gerado com sucesso");

@@ -490,7 +490,10 @@ export class SuitcaseController {
       doc.line(110, yPos + 15, 110 + 70, yPos + 15);
       doc.text(promoterInfo?.name || "", 110 + 20, yPos + 20);
       
-      return doc.output('datauristring');
+      const pdfOutput = doc.output('datauristring');
+      console.log("PDF gerado com sucesso, tamanho:", pdfOutput.length);
+      
+      return pdfOutput;
     } catch (error) {
       console.error("Erro ao gerar PDF da maleta:", error);
       throw new Error("Não foi possível gerar o PDF da maleta");
