@@ -214,10 +214,10 @@ export function SuitcasesContent({ isAdmin, userProfile }: SuitcasesContentProps
       
       {/* Modal para realizar acerto da maleta */}
       <AcertoMaletaDialog
-        open={showAcertoDialog}
-        onOpenChange={setShowAcertoDialog}
-        suitcase={selectedSuitcase}
-        onSuccess={() => {
+        isOpen={showAcertoDialog}
+        onClose={() => setShowAcertoDialog(false)}
+        maleta={selectedSuitcase}
+        onAcertoComplete={() => {
           refreshData();
           // Mudar para a aba de acertos após concluir um acerto
           setActiveTab("settlements");

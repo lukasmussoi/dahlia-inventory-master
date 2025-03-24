@@ -5,7 +5,7 @@
  */
 
 import { generatePdfLabel } from "./pdf/labelGenerator";
-import type { 
+import { 
   GeneratePdfLabelOptions, 
   PdfGenerationResult, 
   downloadPdfFromDataUrl,

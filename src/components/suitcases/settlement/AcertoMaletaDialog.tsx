@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -7,11 +8,10 @@ import { SuitcaseController } from "@/controllers/suitcaseController";
 import { Acerto, Suitcase, SuitcaseItem } from "@/types/suitcase";
 import { toast } from "sonner";
 import { Calendar } from "@/components/ui/calendar";
-import { SuitcaseInventoryScanner } from "@/components/suitcases/SuitcaseInventoryScanner";
 import { AcertoMaletaController } from "@/controllers/acertoMaletaController";
 import { Printer, CheckCircle, XCircle, PackageCheck } from "lucide-react";
 import { PopoverContent, Popover, PopoverTrigger } from "@/components/ui/popover";
-import { openPdfInNewTab } from "@/utils/pdfUtils"; // Importar a nova função
+import { openPdfInNewTab } from "@/utils/pdfUtils"; 
 import { Input } from "@/components/ui/input";
 
 interface AcertoMaletaDialogProps {
@@ -111,15 +111,15 @@ export function AcertoMaletaDialog({
       const settlementData = {
         suitcase_id: maleta.id,
         seller_id: maleta.seller_id,
-        settlement_date: selectedDate.toISOString(),
-        next_settlement_date: nextSettlementDate ? nextSettlementDate.toISOString() : undefined,
+        settlement_date: selectedDate,
+        next_settlement_date: nextSettlementDate,
         items_present: scannedItems.map((item) => item.id),
         items_sold: unscannedItems.map(item => ({
           suitcase_item_id: item.id,
           inventory_id: item.inventory_id,
           price: item.product?.price || 0,
-          customer_name: customerNames[item.id],
-          payment_method: paymentMethods[item.id],
+          customer_name: customerNames[item.id] || '',
+          payment_method: paymentMethods[item.id] || '',
         })),
       };
 
@@ -140,7 +140,7 @@ export function AcertoMaletaDialog({
     }
   };
 
-  // Função para visualizar o recibo como PDF - modificada para usar nossa nova função
+  // Função para visualizar o recibo como PDF
   const handleViewReceipt = async () => {
     if (!acerto) {
       toast.error("Nenhum acerto para gerar recibo");
@@ -152,7 +152,7 @@ export function AcertoMaletaDialog({
       const pdfUrl = await AcertoMaletaController.generateReceiptPDF(acerto.id);
       console.log("PDF gerado com sucesso, URL:", pdfUrl.substring(0, 100) + "...");
       
-      // Usar a nova função para abrir o PDF em uma nova aba
+      // Usar a função para abrir o PDF em uma nova aba
       openPdfInNewTab(pdfUrl);
       
       toast.success("Recibo gerado com sucesso");
@@ -239,13 +239,33 @@ export function AcertoMaletaDialog({
             </div>
 
             <h3 className="text-lg font-semibold mb-2">Escanear Itens</h3>
-            <SuitcaseInventoryScanner
-              suitcaseId={maleta?.id || ""}
-              onItemScan={handleItemScan}
-              existingItems={scannedItems}
-              onRemoveItem={handleRemoveItem}
-              onMarkAsSold={handleMarkAsSold}
-            />
+            <div className="space-y-4 border rounded-md p-4">
+              <div className="text-center p-6 bg-gray-50 rounded-md">
+                <PackageCheck className="h-10 w-10 mx-auto text-gray-400 mb-2" />
+                <p className="text-gray-500">Para adicionar itens à maleta, use a opção "Adicionar Itens" na tela de detalhes da maleta.</p>
+                <p className="text-gray-400 text-sm mt-2">Todos os itens associados à maleta serão gerenciados pelo acerto.</p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {scannedItems.map((item) => (
+                  <div key={item.id} className="flex items-center justify-between border rounded-md p-2">
+                    <div>
+                      <p className="font-medium">{item.product?.name}</p>
+                      <p className="text-sm text-gray-500">Código: {item.product?.sku}</p>
+                      <p className="text-sm text-gray-500">Preço: {AcertoMaletaController.formatCurrency(item.product?.price || 0)}</p>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Button size="sm" variant="ghost" onClick={() => handleMarkAsSold(item)}>
+                        <CheckCircle className="h-4 w-4 mr-1" /> Vendido
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => handleRemoveItem(item.id)}>
+                        <XCircle className="h-4 w-4 mr-1" /> Remover
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
 
             {unscannedItems.length > 0 && (
               <div className="mt-4">
