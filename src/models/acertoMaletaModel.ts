@@ -365,4 +365,23 @@ export class AcertoMaletaModel {
       lowDemand: sortedItems.filter((item: any) => item.count === 1)
     };
   }
+
+  // Excluir um acerto
+  static async deleteAcerto(id: string): Promise<void> {
+    // Primeiro, excluir os itens vendidos associados ao acerto
+    const { error: itemsError } = await supabase
+      .from('acerto_itens_vendidos')
+      .delete()
+      .eq('acerto_id', id);
+    
+    if (itemsError) throw itemsError;
+    
+    // Em seguida, excluir o acerto em si
+    const { error: acertoError } = await supabase
+      .from('acertos_maleta')
+      .delete()
+      .eq('id', id);
+    
+    if (acertoError) throw acertoError;
+  }
 }

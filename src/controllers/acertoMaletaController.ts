@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import jsPDF from "jspdf";
 import { SuitcaseController } from "./suitcaseController";
 import { getProductPhotoUrl } from "@/utils/photoUtils";
+import { AcertoMaletaModel } from "@/models/acertoMaletaModel";
 
 export const acertoMaletaController = {
   async getAllAcertos(filters?: any) {
@@ -313,6 +314,54 @@ export const acertoMaletaController = {
     } catch (error) {
       console.error("Erro ao criar acerto:", error);
       throw error;
+    }
+  },
+  
+  // Excluir um acerto
+  async deleteAcerto(acertoId: string): Promise<boolean> {
+    try {
+      // Verificar se o usuário é administrador
+      const { data: isAdmin } = await supabase.rpc('is_admin');
+      
+      if (!isAdmin) {
+        toast.error("Apenas administradores podem excluir acertos");
+        return false;
+      }
+      
+      // Buscar o acerto para obter informações antes de excluir
+      const acerto = await this.getAcertoById(acertoId);
+      
+      if (!acerto) {
+        toast.error("Acerto não encontrado");
+        return false;
+      }
+      
+      // Se o acerto estiver concluído, reverter o status dos itens para in_possession
+      if (acerto.status === 'concluido' && acerto.items_vendidos && acerto.items_vendidos.length > 0) {
+        // Extrair IDs dos itens vendidos
+        const suitcaseItemIds = acerto.items_vendidos.map(item => item.suitcase_item_id);
+        
+        // Atualizar status dos itens de volta para in_possession
+        if (suitcaseItemIds.length > 0) {
+          const { error: updateError } = await supabase
+            .from('suitcase_items')
+            .update({ status: 'in_possession' })
+            .in('id', suitcaseItemIds);
+          
+          if (updateError) {
+            console.error("Erro ao atualizar status dos itens:", updateError);
+            throw new Error("Erro ao restaurar status dos itens da maleta");
+          }
+        }
+      }
+      
+      // Excluir o acerto usando o modelo
+      await AcertoMaletaModel.deleteAcerto(acertoId);
+      
+      return true;
+    } catch (error: any) {
+      console.error("Erro ao excluir acerto:", error);
+      throw new Error(error.message || "Erro ao excluir acerto");
     }
   },
   

@@ -1,9 +1,8 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowUpDown, FileText, Printer, Eye, BookOpen } from "lucide-react";
+import { ArrowUpDown, FileText, Printer, Eye, BookOpen, Trash2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -12,17 +11,21 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AcertoMaletaController } from "@/controllers/acertoMaletaController";
 import { Acerto } from "@/types/suitcase";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 
 interface AcertosListProps {
   onViewAcerto: (acerto: Acerto) => void;
   onRefresh: () => void;
+  isAdmin?: boolean;
 }
 
-export function AcertosList({ onViewAcerto, onRefresh }: AcertosListProps) {
+export function AcertosList({ onViewAcerto, onRefresh, isAdmin = false }: AcertosListProps) {
   const [filters, setFilters] = useState({
     search: "",
     status: "todos",
   });
+  const [isDeleting, setIsDeleting] = useState<{ [key: string]: boolean }>({});
 
   // Carregar lista de acertos
   const { 
@@ -72,6 +75,26 @@ export function AcertosList({ onViewAcerto, onRefresh }: AcertosListProps) {
       window.open(pdfUrl, '_blank');
     } catch (error) {
       console.error("Erro ao gerar PDF do acerto:", error);
+    }
+  };
+
+  // Excluir acerto
+  const handleDeleteAcerto = async (acertoId: string) => {
+    try {
+      setIsDeleting(prev => ({ ...prev, [acertoId]: true }));
+      
+      const success = await AcertoMaletaController.deleteAcerto(acertoId);
+      
+      if (success) {
+        toast.success("Acerto excluído com sucesso");
+        refetch();
+        onRefresh();
+      }
+    } catch (error: any) {
+      console.error("Erro ao excluir acerto:", error);
+      toast.error(error.message || "Erro ao excluir acerto");
+    } finally {
+      setIsDeleting(prev => ({ ...prev, [acertoId]: false }));
     }
   };
 
@@ -149,6 +172,8 @@ export function AcertosList({ onViewAcerto, onRefresh }: AcertosListProps) {
               <TableBody>
                 {filteredAcertos.map((acerto) => {
                   const status = formatStatus(acerto.status);
+                  const isDeletingThisAcerto = isDeleting[acerto.id] || false;
+                  
                   return (
                     <TableRow key={acerto.id}>
                       <TableCell className="font-medium">
@@ -169,7 +194,7 @@ export function AcertosList({ onViewAcerto, onRefresh }: AcertosListProps) {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
+                        <div className="flex justify-end gap-1">
                           <Button
                             variant="ghost"
                             size="icon"
@@ -186,6 +211,51 @@ export function AcertosList({ onViewAcerto, onRefresh }: AcertosListProps) {
                           >
                             <Printer className="h-4 w-4" />
                           </Button>
+                          
+                          {isAdmin && (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                  title="Excluir acerto"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Tem certeza que deseja excluir este acerto? Esta ação não pode ser desfeita.
+                                    {acerto.status === 'concluido' && (
+                                      <p className="mt-2 text-amber-600 font-medium">
+                                        Os itens marcados como vendidos serão restaurados para a maleta.
+                                      </p>
+                                    )}
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      handleDeleteAcerto(acerto.id);
+                                    }}
+                                    disabled={isDeletingThisAcerto}
+                                    className="bg-red-500 hover:bg-red-600 text-white"
+                                  >
+                                    {isDeletingThisAcerto ? (
+                                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                    ) : (
+                                      "Excluir"
+                                    )}
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

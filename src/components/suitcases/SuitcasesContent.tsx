@@ -196,6 +196,7 @@ export function SuitcasesContent({ isAdmin, userProfile }: SuitcasesContentProps
                 // Atualizar os dados quando a lista de acertos for atualizada
                 setActiveTab("settlements");
               }}
+              isAdmin={isAdmin}
             />
           </TabsContent>
         </Tabs>
