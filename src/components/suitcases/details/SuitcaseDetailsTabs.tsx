@@ -12,7 +12,7 @@ interface SuitcaseDetailsTabsProps {
   setActiveTab: (tab: string) => void;
   suitcase: Suitcase;
   nextSettlementDate: Date | undefined;
-  handleUpdateNextSettlementDate: (date?: Date) => Promise<void>;
+  handleUpdateNextSettlementDate: (date?: Date | null) => Promise<void>;
   promoterInfo: any | null;
   loadingPromoterInfo: boolean;
   suitcaseItems: SuitcaseItem[];

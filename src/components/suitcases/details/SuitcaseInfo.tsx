@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,7 @@ import { Suitcase } from "@/types/suitcase";
 interface SuitcaseInfoProps {
   suitcase: Suitcase;
   nextSettlementDate: Date | undefined;
-  onUpdateNextSettlementDate: (date?: Date) => Promise<void>;
+  onUpdateNextSettlementDate: (date?: Date | null) => Promise<void>;
   promoterInfo: any | null;
   loadingPromoterInfo: boolean;
 }
@@ -76,7 +77,7 @@ export function SuitcaseInfo({
                   <Button
                     variant="ghost"
                     className="w-full justify-center text-sm"
-                    onClick={() => onUpdateNextSettlementDate(undefined)}
+                    onClick={() => onUpdateNextSettlementDate(null)}
                   >
                     Limpar
                   </Button>
