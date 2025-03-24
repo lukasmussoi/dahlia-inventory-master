@@ -20,6 +20,7 @@ import { SuitcaseSettlementFormData } from "@/types/suitcase";
 import { getProductPhotoUrl } from "@/utils/photoUtils";
 import { useQueryClient } from "@tanstack/react-query";
 import { SuitcaseModel } from "@/models/suitcaseModel";
+import { openPdfInNewTab } from "@/utils/pdfUtils";
 
 interface AcertoMaletaDialogProps {
   open: boolean;
@@ -223,7 +224,10 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
 
   const handlePrintReceipt = () => {
     if (pdfUrl) {
-      window.open(pdfUrl, '_blank');
+      console.log("Abrindo PDF em nova aba:", pdfUrl.substring(0, 50) + "...");
+      openPdfInNewTab(pdfUrl);
+    } else {
+      toast.error("URL do PDF não disponível");
     }
   };
 
@@ -297,7 +301,7 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
                 ) : pdfUrl ? (
                   <div className="flex justify-center">
                     <Button 
-                      className="w-full md:w-auto" 
+                      className="w-full md:w-auto bg-blue-600 hover:bg-blue-700" 
                       onClick={handlePrintReceipt}
                     >
                       <Printer className="h-4 w-4 mr-2" />
