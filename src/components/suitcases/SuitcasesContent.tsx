@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { suitcaseController } from "@/controllers/suitcaseController";
+import { SuitcaseController } from "@/controllers/suitcaseController";
 import { SuitcaseGrid } from "@/components/suitcases/SuitcaseGrid";
 import { SuitcaseFilters } from "@/components/suitcases/SuitcaseFilters";
 import { SuitcaseSummary } from "@/components/suitcases/SuitcaseSummary";
@@ -30,7 +30,7 @@ export function SuitcasesContent({ isAdmin, userProfile }: SuitcasesContentProps
   const [activeTab, setActiveTab] = useState("suitcases");
   const [filters, setFilters] = useState({
     search: "",
-    status: "todos",
+    status: "in_use", // Alterado o valor padrão para "in_use" (em uso)
     city: "",
     neighborhood: ""
   });
@@ -52,9 +52,10 @@ export function SuitcasesContent({ isAdmin, userProfile }: SuitcasesContentProps
     queryKey: ['suitcases', isSearching, filters],
     queryFn: () => {
       if (isSearching) {
-        return suitcaseController.searchSuitcases(filters);
+        return SuitcaseController.searchSuitcases(filters);
       } else {
-        return suitcaseController.getAllSuitcases();
+        // Alterando para incluir o filtro de status "in_use" por padrão
+        return SuitcaseController.getAllSuitcases({ status: "in_use" });
       }
     },
   });
@@ -86,7 +87,7 @@ export function SuitcasesContent({ isAdmin, userProfile }: SuitcasesContentProps
   const handleClearFilters = () => {
     setFilters({
       search: "",
-      status: "todos",
+      status: "in_use", // Alterado para limpar para "in_use" em vez de "todos"
       city: "",
       neighborhood: ""
     });

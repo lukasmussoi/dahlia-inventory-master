@@ -28,12 +28,12 @@ export function SuitcaseFilters({
   onClear
 }: SuitcaseFiltersProps) {
   const [searchTerm, setSearchTerm] = useState(filters.search || '');
-  const [status, setStatus] = useState(filters.status || 'todos');
+  const [status, setStatus] = useState(filters.status || 'in_use'); // Alterado o valor padrão para "in_use"
 
   // Atualizar valores quando os filtros mudam
   useEffect(() => {
     setSearchTerm(filters.search || '');
-    setStatus(filters.status || 'todos');
+    setStatus(filters.status || 'in_use'); // Alterado o valor padrão para "in_use"
   }, [filters]);
 
   // Aplicar filtros
