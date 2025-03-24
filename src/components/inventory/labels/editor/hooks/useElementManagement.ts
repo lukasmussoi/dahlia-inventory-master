@@ -26,9 +26,9 @@ export function useElementManagement(
       id: "codigo", 
       name: "Código de Barras", 
       defaultWidth: 60, 
-      defaultHeight: 15, 
+      defaultHeight: 20, // Aumentado para comportar melhor o código de barras
       defaultFontSize: 8,
-      defaultAlign: "left"
+      defaultAlign: "center" // Alinhamento centralizado para o código de barras
     }, 
     { 
       id: "preco", 

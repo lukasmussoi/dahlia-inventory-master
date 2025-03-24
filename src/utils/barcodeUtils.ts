@@ -16,8 +16,8 @@ export async function generateBarcode(text: string): Promise<string> {
       format: "CODE128",
       width: 1, // Largura mais fina das barras
       height: 20, // Altura menor para caber na etiqueta de 8mm
-      displayValue: true,
-      fontSize: 6, // Fonte menor para o valor do código
+      displayValue: false, // Alterado para false para não mostrar o valor numérico
+      fontSize: 6, // Fonte menor para o valor do código (não será exibido)
       margin: 0, // Sem margem
       textAlign: "center",
       background: "#ffffff",
