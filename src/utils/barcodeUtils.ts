@@ -16,12 +16,12 @@ export async function generateBarcode(text: string): Promise<string> {
       format: "CODE128",
       width: 1, // Largura mais fina das barras
       height: 20, // Altura menor para caber na etiqueta de 8mm
-      displayValue: false, // Alterado para false para não mostrar o valor numérico
-      fontSize: 6, // Fonte menor para o valor do código (não será exibido)
+      displayValue: false, // Não mostrar o valor numérico
+      fontSize: 0, // Tamanho de fonte zero para garantir que não seja exibido
       margin: 0, // Sem margem
-      textAlign: "center",
+      textMargin: 0, // Sem margem para texto
       background: "#ffffff",
-      textMargin: 1 // Margem mínima entre o texto e o código
+      lineColor: "#000000"
     });
 
     // Converter o canvas para uma URL de dados PNG

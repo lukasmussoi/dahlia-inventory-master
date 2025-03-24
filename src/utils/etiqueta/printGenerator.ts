@@ -136,10 +136,6 @@ export const generatePrintablePDF = async (
         const x = margensValidas.esquerda + currentColumn * (etiquetaLargura + espacamentosValidos.horizontal);
         const y = margensValidas.superior + currentRow * (etiquetaAltura + espacamentosValidos.vertical);
         
-        // Desenhar borda da etiqueta (opcional, pode ser comentado para produção)
-        // pdf.setDrawColor(200, 200, 200);
-        // pdf.rect(x, y, etiquetaLargura, etiquetaAltura);
-        
         // Renderizar os campos da etiqueta
         if (campos && Array.isArray(campos)) {
           campos.forEach(campo => {
@@ -149,9 +145,6 @@ export const generatePrintablePDF = async (
             const elementX = x + campo.x;
             const elementY = y + campo.y;
             
-            // Configurar fonte
-            pdf.setFontSize(campo.tamanhoFonte);
-            
             // Verificar se é um código de barras
             if (isBarcode(campo.tipo)) {
               // Gerar código de barras
@@ -160,6 +153,9 @@ export const generatePrintablePDF = async (
             } else {
               // Obter texto do elemento
               const text = getElementRealText(campo.tipo, item);
+              
+              // Configurar fonte
+              pdf.setFontSize(campo.tamanhoFonte);
               
               // Ajustar alinhamento
               let alignmentX = elementX;
@@ -207,4 +203,3 @@ export const generatePrintablePDF = async (
     throw error;
   }
 };
-
