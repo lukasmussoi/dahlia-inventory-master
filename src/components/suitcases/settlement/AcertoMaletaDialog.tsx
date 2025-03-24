@@ -118,42 +118,36 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
     }
   };
 
-  // Função para devolver itens verificados ao estoque
   const returnVerifiedItemsToInventory = async () => {
-    // Para cada item verificado (presente), devolver ao estoque
     for (const itemId of scannedItemsIds) {
       try {
         await SuitcaseModel.returnItemToInventory(itemId);
       } catch (error) {
         console.error(`Erro ao devolver item ${itemId} ao estoque:`, error);
-        // Continuar com os próximos itens mesmo se houver erro
       }
     }
   };
 
-  // Função para marcar itens não verificados como vendidos
   const markUnverifiedItemsAsSold = async () => {
-    // Encontrar itens não verificados (não presentes nos scannedItemsIds)
     const unverifiedItemIds = suitcaseItems
       .filter(item => !scannedItemsIds.includes(item.id))
       .map(item => item.id);
     
-    // Para cada item não verificado, marcar como vendido
     for (const itemId of unverifiedItemIds) {
       try {
         await SuitcaseController.updateSuitcaseItemStatus(itemId, 'sold');
       } catch (error) {
         console.error(`Erro ao marcar item ${itemId} como vendido:`, error);
-        // Continuar com os próximos itens mesmo se houver erro
       }
     }
   };
 
-  // Função para gerar o PDF do recibo
   const generateReceiptPDF = async (acertoId: string) => {
     try {
       setGeneratingPdf(true);
+      console.log("Gerando PDF para acerto ID:", acertoId);
       const pdfDataUrl = await AcertoMaletaController.generateReceiptPDF(acertoId);
+      console.log("PDF gerado com sucesso");
       setPdfUrl(pdfDataUrl);
       return pdfDataUrl;
     } catch (error) {
@@ -180,26 +174,29 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
         items_sold: [] // Array vazio para items_sold, serão detectados pelo backend
       };
       
-      // 1. Criar o acerto no banco de dados
+      console.log("Iniciando acerto com dados:", formData);
+      
       const result = await AcertoMaletaController.createAcerto(formData);
+      console.log("Acerto criado com sucesso:", result);
       setCreatedAcertoId(result.id);
       
-      // 2. Devolver itens verificados ao estoque
+      console.log("Devolvendo itens verificados ao estoque...");
       await returnVerifiedItemsToInventory();
       
-      // 3. Marcar itens não verificados como vendidos
+      console.log("Marcando itens não verificados como vendidos...");
       await markUnverifiedItemsAsSold();
       
-      // 4. Gerar o PDF do recibo
-      await generateReceiptPDF(result.id);
+      console.log("Gerando PDF do recibo...");
+      const pdfUrl = await generateReceiptPDF(result.id);
       
-      toast.success("Acerto da maleta realizado com sucesso!");
+      if (pdfUrl) {
+        toast.success("Acerto da maleta realizado com sucesso! PDF gerado.");
+      } else {
+        toast.warning("Acerto da maleta realizado, mas houve erro ao gerar PDF.");
+      }
       
       queryClient.invalidateQueries({ queryKey: ['suitcases'] });
       queryClient.invalidateQueries({ queryKey: ['acertos'] });
-      
-      // Não fechar o diálogo imediatamente para mostrar o PDF gerado
-      // onOpenChange(false);
       
       if (onSuccess) {
         onSuccess();

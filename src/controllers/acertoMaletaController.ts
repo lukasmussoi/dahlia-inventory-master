@@ -458,6 +458,14 @@ export const acertoMaletaController = {
         doc.text(`Promotora: ${promotora.name || ''}`, pageWidth - margin, y, { align: 'right' });
       }
       y += lineHeight;
+
+      const suitcaseCity = acerto.suitcase?.city || '';
+      const suitcaseNeighborhood = acerto.suitcase?.neighborhood || '';
+      
+      if (suitcaseCity || suitcaseNeighborhood) {
+        doc.text(`Cidade: ${suitcaseCity}${suitcaseNeighborhood ? `, ${suitcaseNeighborhood}` : ''}`, margin, y);
+        y += lineHeight;
+      }
       
       if (acerto.next_settlement_date) {
         doc.text(`Próximo Acerto: ${format(new Date(acerto.next_settlement_date), 'dd/MM/yyyy')}`, margin, y);
@@ -509,8 +517,8 @@ export const acertoMaletaController = {
         doc.setFont('helvetica', 'bold');
         
         // Definir colunas da tabela
-        const col1Width = contentWidth * 0.1; // SKU
-        const col2Width = contentWidth * 0.5; // Produto
+        const col1Width = contentWidth * 0.15; // SKU
+        const col2Width = contentWidth * 0.45; // Produto
         const col3Width = contentWidth * 0.2; // Cliente
         const col4Width = contentWidth * 0.2; // Preço
         
@@ -529,7 +537,7 @@ export const acertoMaletaController = {
         doc.setFont('helvetica', 'normal');
         
         // Calcular quantos itens cabem por página
-        const itemsPerPage = Math.floor((doc.internal.pageSize.getHeight() - y - margin) / lineHeight);
+        const itemsPerPage = Math.floor((pageHeight - y - margin) / (lineHeight * 3)); // Espaço para imagem
         let itemsOnCurrentPage = 0;
         
         for (let i = 0; i < acerto.items_vendidos.length; i++) {
@@ -559,21 +567,76 @@ export const acertoMaletaController = {
             doc.setFont('helvetica', 'normal');
           }
           
-          // Imprimir item
-          doc.text(item.product?.sku || "-", margin, y);
-          doc.text(item.product?.name || "Produto não encontrado", margin + col1Width, y);
-          doc.text(item.customer_name || "-", margin + col1Width + col2Width, y);
-          doc.text(formatCurrency(item.price), pageWidth - margin, y, { align: 'right' });
+          // Altura inicial do item
+          const startY = y;
           
-          y += lineHeight;
+          // Obter URL da imagem, se disponível
+          let photoUrl = undefined;
+          if (item.product && item.product.photo_url) {
+            if (typeof item.product.photo_url === 'string') {
+              photoUrl = item.product.photo_url;
+            } else if (Array.isArray(item.product.photo_url) && item.product.photo_url.length > 0) {
+              // Se for array de objetos com photo_url
+              photoUrl = getProductPhotoUrl(item.product.photo_url);
+            }
+          }
+          
+          // Se tem foto, adicionar imagem
+          const imageHeight = lineHeight * 2;
+          const imageWidth = col1Width * 0.8;
+          const imageX = margin;
+          const imageY = y;
+          
+          // Adicionar imagem se disponível
+          let hasImage = false;
+          if (photoUrl) {
+            try {
+              // Como o jsPDF não suporta carregar imagens assíncronas facilmente,
+              // vamos apenas indicar que há uma imagem (na implementação real, seria necessário 
+              // carregar a imagem antes de adicioná-la ao PDF)
+              doc.setFillColor(240, 240, 240);
+              doc.rect(imageX, imageY, imageWidth, imageHeight, 'F');
+              doc.setFontSize(6);
+              doc.text("Foto do", imageX + imageWidth/2, imageY + imageHeight/2 - 2, { align: 'center' });
+              doc.text("produto", imageX + imageWidth/2, imageY + imageHeight/2 + 2, { align: 'center' });
+              hasImage = true;
+            } catch (error) {
+              console.error("Erro ao adicionar imagem:", error);
+            }
+          }
+          
+          // Ajustar Y para texto ao lado da imagem
+          const textY = hasImage ? y + 5 : y;
+          
+          // Informações do item
+          doc.setFontSize(smallFontSize);
+          doc.text(item.product?.sku || "-", hasImage ? margin + imageWidth + 2 : margin, textY);
+          doc.text(item.product?.name || "Produto não encontrado", margin + col1Width, textY);
+          doc.text(item.customer_name || "-", margin + col1Width + col2Width, textY);
+          doc.text(formatCurrency(item.price), pageWidth - margin, textY, { align: 'right' });
+          
+          // Avançar Y para o próximo item
+          y += hasImage ? imageHeight + 2 : lineHeight * 1.5;
           itemsOnCurrentPage++;
+          
+          // Linha separadora entre itens
+          if (i < acerto.items_vendidos.length - 1) {
+            doc.setDrawColor(240, 240, 240);
+            doc.line(margin, y - 1, pageWidth - margin, y - 1);
+          }
         }
+      } else {
+        // Se não houver itens vendidos
+        doc.setFontSize(normalFontSize);
+        doc.setFont('helvetica', 'italic');
+        doc.text("Nenhum item vendido neste acerto.", margin, y);
+        y += lineHeight * 2;
       }
       
       // Adicionar espaço para assinaturas
       y += lineHeight * 3;
       
-      if (y + lineHeight * 6 > doc.internal.pageSize.getHeight()) {
+      if (y + lineHeight * 6 > pageHeight) {
         doc.addPage();
         y = margin;
       }
@@ -606,6 +669,12 @@ export const acertoMaletaController = {
       doc.line(margin, y, pageWidth - margin, y);
       y += lineHeight;
       doc.line(margin, y, pageWidth - margin, y);
+      
+      // Rodapé
+      y = pageHeight - margin;
+      doc.setFontSize(smallFontSize);
+      doc.setFont('helvetica', 'normal');
+      doc.text("Dalia Manager - Recibo de Acerto de Maleta", pageWidth / 2, y, { align: 'center' });
       
       // Gerar o PDF como Data URL
       const pdfDataUri = doc.output('datauristring');

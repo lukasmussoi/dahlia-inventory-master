@@ -15,3 +15,10 @@ export interface PdfGenerationResult {
   pageCount: number;
   labelCount: number;
 }
+
+export interface ReceiptPdfOptions {
+  acertoId: string;
+  title: string;
+  subtitle?: string;
+  includeImages?: boolean;
+}
