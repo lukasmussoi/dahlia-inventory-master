@@ -161,7 +161,7 @@ export function SuitcaseDetailsDialog({
   // Calcular valor total da maleta
   const calculateTotalValue = () => {
     return suitcaseItems.reduce((total, item) => {
-      return total + (item.price || 0);
+      return total + (item.product?.price || 0);
     }, 0);
   };
 

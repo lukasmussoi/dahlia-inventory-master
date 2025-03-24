@@ -12,7 +12,7 @@ import { SuitcaseController } from "@/controllers/suitcaseController";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Archive, ArrowCounterClockwise, Calculator, Check, EllipsisVertical, Eye, Pencil, Printer, Truck } from "lucide-react";
+import { Archive, RotateCcw, Calculator, Check, EllipsisVertical, Eye, Pencil, Printer, Truck } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 interface SuitcaseGridProps {
@@ -190,7 +190,7 @@ export function SuitcaseGrid({ suitcases, isAdmin = false, onRefresh, onOpenAcer
                               <>
                                 {suitcase.status === 'in_use' && (
                                   <DropdownMenuItem onClick={() => handleUpdateStatus(suitcase, 'returned')}>
-                                    <ArrowCounterClockwise className="mr-2 h-4 w-4" />
+                                    <RotateCcw className="mr-2 h-4 w-4" />
                                     Marcar como Devolvida
                                   </DropdownMenuItem>
                                 )}
@@ -284,7 +284,7 @@ export function SuitcaseGrid({ suitcases, isAdmin = false, onRefresh, onOpenAcer
       <SuitcasePrintDialog
         open={showPrintDialog}
         onOpenChange={setShowPrintDialog}
-        suitcaseId={selectedSuitcase?.id || null}
+        suitcase={selectedSuitcase}
       />
 
       {/* Dialog de Edição */}
