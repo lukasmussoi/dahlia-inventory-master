@@ -65,6 +65,28 @@ export const InventoryController = {
     }
   },
   
+  // Arquivar um item do inventário
+  async archiveItem(id: string) {
+    try {
+      await InventoryModel.archiveItem(id);
+      return true;
+    } catch (error) {
+      console.error("Erro ao arquivar item do inventário:", error);
+      throw error;
+    }
+  },
+  
+  // Restaurar um item arquivado
+  async restoreItem(id: string) {
+    try {
+      await InventoryModel.restoreItem(id);
+      return true;
+    } catch (error) {
+      console.error("Erro ao restaurar item do inventário:", error);
+      throw error;
+    }
+  },
+  
   // Buscar itens com filtros
   async getFilteredItems(filters: any) {
     try {

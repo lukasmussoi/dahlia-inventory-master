@@ -72,11 +72,12 @@ export interface InventoryFilters {
   category_id?: string;
   min_price?: number;
   max_price?: number;
-  status?: 'in_stock' | 'out_of_stock' | 'low_stock' | string;
+  status?: 'in_stock' | 'out_of_stock' | 'low_stock' | 'archived' | string;
   minQuantity?: number;
   maxQuantity?: number;
   searchTerm?: string;
   category?: string;
+  showArchived?: boolean;
 }
 
 export class InventoryModel {
@@ -91,6 +92,13 @@ export class InventoryModel {
         inventory_photos:inventory_photos(id, photo_url, is_primary)
       `);
 
+    // Por padrão, não mostrar itens arquivados a menos que especificado
+    if (!filters?.showArchived) {
+      query = query.is('archived', null).or('archived.eq.false');
+    } else if (filters.status === 'archived') {
+      query = query.eq('archived', true);
+    }
+    
     // Aplicar filtros se fornecidos
     if (filters) {
       if (filters.search) {
@@ -254,6 +262,36 @@ export class InventoryModel {
       .eq('id', id);
     
     if (error) throw error;
+  }
+
+  // Arquivar item (marcar como arquivado)
+  static async archiveItem(id: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('inventory')
+        .update({ archived: true })
+        .eq('id', id);
+      
+      if (error) throw error;
+    } catch (error) {
+      console.error("Erro ao arquivar item:", error);
+      throw error;
+    }
+  }
+
+  // Restaurar item arquivado
+  static async restoreItem(id: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('inventory')
+        .update({ archived: false })
+        .eq('id', id);
+      
+      if (error) throw error;
+    } catch (error) {
+      console.error("Erro ao restaurar item:", error);
+      throw error;
+    }
   }
 
   // Atualizar fotos de um item - modificado para aceitar Files

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,6 +53,14 @@ export function InventoryFilters({ categories, onFilter }: InventoryFiltersProps
     setFilters(clearedFilters);
     onFilter(clearedFilters);
   };
+
+  const statusOptions = [
+    { value: "all", label: "Todos" },
+    { value: "in_stock", label: "Em estoque" },
+    { value: "out_of_stock", label: "Sem estoque" },
+    { value: "low_stock", label: "Estoque baixo" },
+    { value: "archived", label: "Arquivados" }
+  ];
 
   return (
     <div className="space-y-4 p-4 bg-white rounded-lg shadow">
@@ -134,9 +141,11 @@ export function InventoryFilters({ categories, onFilter }: InventoryFiltersProps
               <SelectValue placeholder="Todos os status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos os status</SelectItem>
-              <SelectItem value="available">Disponível</SelectItem>
-              <SelectItem value="out_of_stock">Em falta</SelectItem>
+              {statusOptions.map(option => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>

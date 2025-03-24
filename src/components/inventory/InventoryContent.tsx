@@ -1,8 +1,9 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { InventoryItem, InventoryModel, InventoryFilters, InventoryCategory } from "@/models/inventoryModel";
 import { Button } from "@/components/ui/button";
-import { Plus, FolderPlus } from "lucide-react";
+import { Plus, FolderPlus, Archive, RotateCcw } from "lucide-react";
 import { InventoryTable } from "./InventoryTable";
 import { JewelryForm } from "./JewelryForm";
 import { CategoryForm } from "./CategoryForm";
@@ -110,6 +111,52 @@ export function InventoryContent({ isAdmin }: InventoryContentProps) {
     }
   };
 
+  // Função para arquivar um item
+  const handleArchiveItem = async (id: string) => {
+    try {
+      const suitcaseInfo = await InventoryModel.checkItemInSuitcase(id);
+      
+      if (suitcaseInfo) {
+        // Verifica se a maleta está em uso (não foi devolvida)
+        const isActiveCase = suitcaseInfo.status === 'in_use' || 
+                            suitcaseInfo.status === 'in_replenishment';
+        
+        if (isActiveCase) {
+          toast.error("Este item está vinculado a uma maleta ativa e não pode ser arquivado. Devolva a maleta primeiro.");
+          return;
+        }
+      }
+
+      if (window.confirm("Tem certeza que deseja arquivar este item? Ele não aparecerá na listagem normal.")) {
+        try {
+          await InventoryModel.archiveItem(id);
+          toast.success("Item arquivado com sucesso!");
+          refetchItems();
+        } catch (error) {
+          console.error('Erro ao arquivar item:', error);
+          toast.error("Erro ao arquivar item");
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao verificar item:', error);
+      toast.error("Erro ao verificar disponibilidade do item");
+    }
+  };
+
+  // Função para restaurar um item arquivado
+  const handleRestoreItem = async (id: string) => {
+    try {
+      if (window.confirm("Tem certeza que deseja restaurar este item?")) {
+        await InventoryModel.restoreItem(id);
+        toast.success("Item restaurado com sucesso!");
+        refetchItems();
+      }
+    } catch (error) {
+      console.error('Erro ao restaurar item:', error);
+      toast.error("Erro ao restaurar item");
+    }
+  };
+
   // Função para deletar uma categoria
   const handleDeleteCategory = async (id: string) => {
     try {
@@ -172,6 +219,9 @@ export function InventoryContent({ isAdmin }: InventoryContentProps) {
           isLoading={isLoadingItems}
           onEdit={isAdmin ? handleEditItem : undefined}
           onDelete={isAdmin ? handleDeleteItem : undefined}
+          onArchive={isAdmin ? handleArchiveItem : undefined}
+          onRestore={isAdmin ? handleRestoreItem : undefined}
+          showArchivedControls={filters.status === 'archived'}
         />
       </div>
 

@@ -1,4 +1,3 @@
-
 import {
   Table,
   TableBody,
@@ -8,7 +7,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2, AlertTriangle, Image as ImageIcon, Briefcase } from "lucide-react";
+import { Edit, Trash2, AlertTriangle, Image as ImageIcon, Briefcase, Pencil, Archive, RotateCcw } from "lucide-react";
 import { InventoryItem } from "@/models/inventoryModel";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useQuery } from "@tanstack/react-query";
@@ -21,9 +20,20 @@ interface InventoryTableProps {
   isLoading: boolean;
   onEdit?: (item: InventoryItem) => void;
   onDelete?: (id: string) => void;
+  onArchive?: (id: string) => void;
+  onRestore?: (id: string) => void;
+  showArchivedControls?: boolean;
 }
 
-export function InventoryTable({ items, isLoading, onEdit, onDelete }: InventoryTableProps) {
+export function InventoryTable({ 
+  items, 
+  isLoading, 
+  onEdit, 
+  onDelete,
+  onArchive,
+  onRestore,
+  showArchivedControls = false
+}: InventoryTableProps) {
   if (isLoading) {
     return (
       <div className="w-full h-64 flex items-center justify-center">
@@ -56,10 +66,9 @@ export function InventoryTable({ items, isLoading, onEdit, onDelete }: Inventory
     const { data: suitcaseInfo } = useQuery({
       queryKey: ['item-suitcase', item.id],
       queryFn: () => SuitcaseController.getItemSuitcaseInfo(item.id),
-      enabled: item.quantity === 1, // Só executar para itens com quantidade 1 para otimizar
+      enabled: item.quantity === 1,
     });
 
-    // Fixed: Changed isPrimary to is_primary
     const primaryPhoto = photos?.find(photo => photo.is_primary) || photos?.[0];
 
     return (
@@ -68,7 +77,6 @@ export function InventoryTable({ items, isLoading, onEdit, onDelete }: Inventory
           <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
             {primaryPhoto ? (
               <img 
-                // Fixed: Changed url to photo_url
                 src={primaryPhoto.photo_url} 
                 alt={item.name}
                 className="w-full h-full object-cover"
@@ -141,25 +149,48 @@ export function InventoryTable({ items, isLoading, onEdit, onDelete }: Inventory
         </TableCell>
         {(onEdit || onDelete) && (
           <TableCell className="text-right">
-            <div className="flex justify-end gap-2">
-              {onEdit && (
+            <div className="flex justify-end space-x-2">
+              {onEdit && !showArchivedControls && (
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => onEdit(item)}
-                  className="hover:bg-gray-100"
+                  className="h-8 w-8"
                 >
-                  <Edit className="h-4 w-4" />
+                  <Pencil className="h-4 w-4" />
                 </Button>
               )}
+              
+              {onArchive && !showArchivedControls && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onArchive(item.id)}
+                  className="h-8 w-8 text-amber-600 hover:text-amber-800 hover:bg-amber-100"
+                >
+                  <Archive className="h-4 w-4" />
+                </Button>
+              )}
+              
+              {onRestore && showArchivedControls && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onRestore(item.id)}
+                  className="h-8 w-8 text-green-600 hover:text-green-800 hover:bg-green-100"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                </Button>
+              )}
+              
               {onDelete && (
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => onDelete(item.id)}
-                  className="hover:bg-red-100 hover:text-red-600"
+                  className="h-8 w-8 text-red-600 hover:text-red-800 hover:bg-red-100"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash className="h-4 w-4" />
                 </Button>
               )}
             </div>
