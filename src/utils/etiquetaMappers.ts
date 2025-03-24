@@ -40,6 +40,9 @@ export function mapDatabaseToModel(item: EtiquetaCustomDB): ModeloEtiqueta {
           alinhamento: campo.alinhamento || 'left'
         }));
       }
+      
+      // Log detalhado para debug dos campos
+      console.log("Campos carregados do banco:", campos);
     } catch (error) {
       console.error('Erro ao converter campos da etiqueta:', error);
       // Configurar valores padrão para os campos
@@ -177,6 +180,7 @@ export function mapModelToDatabase(modelo: ModeloEtiqueta): Partial<EtiquetaCust
     }));
     
     dbModel.campos = camposFormatados as Json;
+    console.log("Campos formatados para o banco:", camposFormatados);
   } else {
     // Campos padrão se não houver nenhum
     dbModel.campos = [

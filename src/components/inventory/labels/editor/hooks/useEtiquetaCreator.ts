@@ -153,7 +153,7 @@ export function useEtiquetaCreator(initialData?: any, autoAdjustDimensions = fal
     });
   };
   
-  // Salvar o modelo
+  // Salvar o modelo - corrigido para evitar a duplicação
   const handleSave = async (onSave: (data: any) => void) => {
     if (!modelName.trim()) {
       toast.error("O nome do modelo é obrigatório");
@@ -229,6 +229,8 @@ export function useEtiquetaCreator(initialData?: any, autoAdjustDimensions = fal
         
         if (result) {
           toast.success("Modelo atualizado com sucesso!");
+          // Chama onSave após atualizar com sucesso - não passa o modelData para evitar dupla atualização
+          onSave({id: initialData.id});
         } else {
           console.error("Falha na atualização do modelo");
           toast.error("Erro ao atualizar modelo");
@@ -241,16 +243,13 @@ export function useEtiquetaCreator(initialData?: any, autoAdjustDimensions = fal
         
         if (result) {
           toast.success("Modelo criado com sucesso!");
+          // Chama onSave após criar com sucesso - não passa o modelData para evitar dupla criação
+          onSave({id: result});
         } else {
           console.error("Falha na criação do modelo");
           toast.error("Erro ao criar modelo");
           return;
         }
-      }
-      
-      if (result) {
-        console.log("Chamando callback onSave");
-        onSave(modelData);
       }
     } catch (error) {
       console.error("Erro ao salvar modelo:", error);

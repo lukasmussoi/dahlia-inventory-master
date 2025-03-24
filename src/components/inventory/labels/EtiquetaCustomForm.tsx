@@ -38,8 +38,16 @@ export function EtiquetaCustomForm({ modelo, onClose, onSuccess }: EtiquetaCusto
   
   const [useNewEditor, setUseNewEditor] = useState(true);
 
+  // Função modificada para evitar a dupla submissão
   const handleSave = (data: any) => {
     console.log("EtiquetaCustomForm: Dados recebidos do editor:", data);
+    
+    // Se recebemos apenas um ID, significa que o salvamento já foi realizado pelo editor
+    if (data && data.id && Object.keys(data).length === 1) {
+      console.log("EtiquetaCustomForm: Salvamento já realizado pelo editor, apenas chamando callback de sucesso");
+      onSuccess();
+      return;
+    }
     
     try {
       // Adaptar os dados do editor visual para o formato esperado pelo formulário
