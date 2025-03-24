@@ -68,3 +68,4 @@ export const formatBarcodeValue = (code: string): string => {
   // Remover caracteres especiais que podem interferir no código de barras
   return code.replace(/[^\w\d]/g, '').substring(0, 20);
 };
+
