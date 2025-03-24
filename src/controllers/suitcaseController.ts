@@ -1,5 +1,6 @@
+
 import { SuitcaseModel } from "@/models/suitcaseModel";
-import { Acerto } from "@/types/suitcase";
+import { Acerto, SuitcaseItemStatus } from "@/types/suitcase";
 import { jsPDF } from "jspdf";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -62,11 +63,12 @@ export class SuitcaseController {
     }
   }
 
-  static async addItemToSuitcase(suitcaseId: string, inventoryId: string) {
+  static async addItemToSuitcase(suitcaseId: string, inventoryId: string, quantity: number = 1) {
     try {
       return await SuitcaseModel.addItemToSuitcase({
         suitcase_id: suitcaseId,
         inventory_id: inventoryId,
+        quantity: quantity
       });
     } catch (error) {
       console.error("Erro ao adicionar item à maleta:", error);
@@ -75,8 +77,8 @@ export class SuitcaseController {
   }
 
   static async updateSuitcaseItemStatus(
-    itemId: string,
-    status: string,
+    itemId: string, 
+    status: SuitcaseItemStatus,
     saleInfo?: any
   ) {
     try {
@@ -114,11 +116,22 @@ export class SuitcaseController {
     }
   }
 
+  // Adicionando a função que está faltando
   static async removeSuitcaseItem(itemId: string) {
     try {
       await SuitcaseModel.removeSuitcaseItem(itemId);
     } catch (error) {
       console.error("Erro ao remover item da maleta:", error);
+      throw error;
+    }
+  }
+
+  // Implementando a função getSuitcaseSummary que está faltando
+  static async getSuitcaseSummary() {
+    try {
+      return await SuitcaseModel.getSuitcaseSummary();
+    } catch (error) {
+      console.error("Erro ao buscar resumo das maletas:", error);
       throw error;
     }
   }

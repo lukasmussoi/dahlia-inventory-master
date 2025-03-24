@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { SuitcaseItem, SuitcaseItemStatus, SuitcaseStatus } from "@/types/suitcase";
 import { SuitcaseController } from "@/controllers/suitcaseController";
@@ -88,7 +89,7 @@ export function SuitcaseItemList({
     try {
       setUpdating(prev => ({ ...prev, [itemId]: true }));
       
-      await SuitcaseController.removeItemFromSuitcase(itemId);
+      await SuitcaseController.removeSuitcaseItem(itemId);
       
       await fetchItems();
       
