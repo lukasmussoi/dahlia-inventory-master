@@ -1,12 +1,10 @@
-
 import { SuitcaseModel } from "@/models/suitcaseModel";
-import { Acerto, SuitcaseItemStatus } from "@/types/suitcase";
+import { Acerto, SuitcaseItemStatus, Suitcase, SuitcaseItem } from "@/types/suitcase";
 import { jsPDF } from "jspdf";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { getProductPhotoUrl } from "@/utils/photoUtils";
 import { openPdfInNewTab } from "@/utils/pdfUtils";
-import { Suitcase, SuitcaseItem } from "@/types/suitcase";
 
 export class SuitcaseController {
   static async getSuitcases(filters?: any) {
@@ -116,7 +114,6 @@ export class SuitcaseController {
     }
   }
 
-  // Adicionando a função que está faltando
   static async removeSuitcaseItem(itemId: string) {
     try {
       await SuitcaseModel.removeSuitcaseItem(itemId);
@@ -126,7 +123,6 @@ export class SuitcaseController {
     }
   }
 
-  // Implementando a função getSuitcaseSummary que está faltando
   static async getSuitcaseSummary() {
     try {
       return await SuitcaseModel.getSuitcaseSummary();
@@ -195,23 +191,18 @@ export class SuitcaseController {
 
   static async getPromoterForReseller(resellerId: string): Promise<any | null> {
     try {
-      // Simulação de busca da promotora (substitua pela lógica real)
-      // Aqui, você buscaria no banco de dados ou em outra fonte de dados
-      // a promotora responsável pela revendedora com o ID `resellerId`.
-
-      // Exemplo:
       const promotoras = [
         {
           id: "1",
           name: "Maria Silva",
           phone: "(11) 99999-9999",
-          reseller_id: "79a3269f-9e6f-4b97-b990-30984dd9f1ca", // ID da revendedora
+          reseller_id: "79a3269f-9e6f-4b97-b990-30984dd9f1ca",
         },
         {
           id: "2",
           name: "João Santos",
           phone: "(21) 88888-8888",
-          reseller_id: "2", // ID de outra revendedora
+          reseller_id: "2",
         },
       ];
 
@@ -219,7 +210,7 @@ export class SuitcaseController {
         (p) => p.reseller_id === resellerId
       );
 
-      return promotora || null; // Retorna a promotora ou null se não encontrada
+      return promotora || null;
     } catch (error) {
       console.error("Erro ao buscar promotora da revendedora:", error);
       return null;
@@ -228,33 +219,23 @@ export class SuitcaseController {
 
   static async updateSaleInfo(itemId: string, field: string, value: string) {
     try {
-      // Buscar as vendas existentes para este item
       const sales = await SuitcaseModel.getSuitcaseItemSales(itemId);
 
-      // Se não houver vendas, criar uma nova venda
       if (!sales || sales.length === 0) {
-        // Criar um objeto de venda inicial
         const newSale = {
           customer_name: "",
           payment_method: "",
         };
 
-        // Definir o campo e valor corretos
         newSale[field] = value;
 
-        // Atualizar o item com as informações de venda
         await SuitcaseModel.updateSuitcaseItemStatus(itemId, "sold", newSale);
       } else {
-        // Se já houver vendas, atualizar a primeira venda (ou a mais recente)
         const saleId = sales[0].id;
 
-        // Criar um objeto com apenas o campo a ser atualizado
         const update = {};
         update[field] = value;
 
-        // Atualizar a venda existente
-        // (Aqui você precisará de um método para atualizar uma venda existente)
-        // Exemplo: await SalesModel.updateSale(saleId, update);
         console.warn(
           "Função de atualizar venda existente não implementada. Apenas a primeira venda está sendo atualizada."
         );
@@ -267,21 +248,13 @@ export class SuitcaseController {
 
   static async createPendingSettlement(suitcaseId: string, settlementDate: Date) {
     try {
-      // Simulação de criação de acerto pendente (substitua pela lógica real)
-      // Aqui, você criaria um registro de acerto pendente no banco de dados
-      // associado à maleta com o ID `suitcaseId` e com a data `settlementDate`.
-
-      // Exemplo:
       const acertoPendente = {
         suitcase_id: suitcaseId,
         settlement_date: settlementDate.toISOString(),
-        status: "pendente", // Ou outro status inicial
-        total_sales: 0, // Valor inicial das vendas
-        commission_amount: 0, // Valor inicial da comissão
+        status: "pendente",
+        total_sales: 0,
+        commission_amount: 0,
       };
-
-      // Aqui você chamaria a função do seu modelo para criar o acerto pendente
-      // await AcertoModel.createAcerto(acertoPendente);
 
       console.log("Acerto pendente criado:", acertoPendente);
     } catch (error) {
@@ -290,38 +263,27 @@ export class SuitcaseController {
     }
   }
 
-  /**
-   * Gera um PDF com os detalhes da maleta
-   * @param suitcaseId ID da maleta
-   * @param items Itens da maleta
-   * @param promoterInfo Informações da promotora
-   * @returns URL do PDF gerado
-   */
   static async generateSuitcasePDF(
     suitcaseId: string,
     items: SuitcaseItem[],
     promoterInfo: any
   ): Promise<string> {
     try {
-      // Buscar informações atualizadas da maleta
       const suitcase = await this.getSuitcaseById(suitcaseId);
       
       if (!suitcase) {
         throw new Error("Maleta não encontrada");
       }
       
-      // Criar o documento PDF
       const doc = new jsPDF({
         orientation: "portrait",
         unit: "mm",
         format: "a4"
       });
       
-      // Definir as posições iniciais
       const margin = 20;
       let yPos = margin;
       
-      // Título e data de impressão
       doc.setFontSize(18);
       doc.setFont("helvetica", "bold");
       doc.text(`Maleta: ${suitcase.code}`, margin, yPos);
@@ -333,7 +295,6 @@ export class SuitcaseController {
       
       yPos += 15;
       
-      // Informações da revendedora
       doc.setFontSize(12);
       doc.setFont("helvetica", "bold");
       doc.text("Revendedora", margin, yPos);
@@ -342,7 +303,6 @@ export class SuitcaseController {
       doc.setFont("helvetica", "normal");
       doc.text(suitcase.seller?.name || "—", margin, yPos + 7);
       
-      // Informações da promotora
       doc.setFontSize(12);
       doc.setFont("helvetica", "bold");
       doc.text("Promotora", 110, yPos);
@@ -353,7 +313,6 @@ export class SuitcaseController {
       
       yPos += 15;
       
-      // Telefone da revendedora
       doc.setFontSize(10);
       doc.setFont("helvetica", "bold");
       doc.text("Telefone da Revendedora", margin, yPos);
@@ -361,7 +320,6 @@ export class SuitcaseController {
       doc.setFont("helvetica", "normal");
       doc.text(suitcase.seller?.phone || "—", margin, yPos + 7);
       
-      // Telefone da promotora
       doc.setFontSize(10);
       doc.setFont("helvetica", "bold");
       doc.text("Telefone da Promotora", 110, yPos);
@@ -371,7 +329,6 @@ export class SuitcaseController {
       
       yPos += 15;
       
-      // Localização
       doc.setFontSize(10);
       doc.setFont("helvetica", "bold");
       doc.text("Localização", margin, yPos);
@@ -379,7 +336,6 @@ export class SuitcaseController {
       doc.setFont("helvetica", "normal");
       doc.text(`${suitcase.city || "—"}, ${suitcase.neighborhood || "—"}`, margin, yPos + 7);
       
-      // Status
       doc.setFontSize(10);
       doc.setFont("helvetica", "bold");
       doc.text("Status", 110, yPos);
@@ -399,7 +355,6 @@ export class SuitcaseController {
       
       yPos += 15;
       
-      // Data de criação
       doc.setFontSize(10);
       doc.setFont("helvetica", "bold");
       doc.text("Data de criação", margin, yPos);
@@ -413,7 +368,6 @@ export class SuitcaseController {
         yPos + 7
       );
       
-      // Próximo acerto
       doc.setFontSize(10);
       doc.setFont("helvetica", "bold");
       doc.text("Próximo acerto", 110, yPos);
@@ -429,11 +383,9 @@ export class SuitcaseController {
       
       yPos += 20;
       
-      // Linha separadora
       doc.setDrawColor(220, 220, 220);
       doc.line(margin, yPos - 5, 190, yPos - 5);
       
-      // Itens da Maleta
       doc.setFontSize(14);
       doc.setFont("helvetica", "bold");
       doc.text("Itens da Maleta", margin, yPos);
@@ -446,50 +398,40 @@ export class SuitcaseController {
         doc.text("Nenhum item encontrado na maleta", margin, yPos);
         yPos += 10;
       } else {
-        // Processar cada item
         for (const item of items) {
           const itemStartY = yPos;
           
-          // Verificar se precisa de nova página
           if (yPos > 250) {
             doc.addPage();
             yPos = margin;
           }
           
-          // Borda do item
           doc.setDrawColor(220, 220, 220);
           doc.setFillColor(250, 250, 250);
           doc.roundedRect(margin, yPos, 170, 25, 2, 2, 'FD');
           
-          // Imagem do produto, se disponível
           if (item.product?.photo_url) {
             try {
               const imgUrl = getProductPhotoUrl(item.product.photo_url);
               if (imgUrl) {
-                // Carregar a imagem como Base64
                 const img = await this.loadImageAsBase64(imgUrl);
                 if (img) {
-                  // Adicionar imagem ao PDF
                   doc.addImage(img, 'JPEG', margin + 2, yPos + 2, 20, 20);
                 }
               }
             } catch (error) {
               console.error("Erro ao carregar imagem:", error);
-              // Continuar sem a imagem
             }
           }
           
-          // Nome do produto
           doc.setFontSize(11);
           doc.setFont("helvetica", "bold");
           doc.text(item.product?.name || "Item sem nome", margin + 25, yPos + 5);
           
-          // Código
           doc.setFontSize(9);
           doc.setFont("helvetica", "normal");
           doc.text(`Código: ${item.product?.sku || "—"}`, margin + 25, yPos + 10);
           
-          // Preço
           doc.setFontSize(10);
           doc.setFont("helvetica", "bold");
           doc.text(
@@ -498,7 +440,6 @@ export class SuitcaseController {
             yPos + 15
           );
           
-          // Status
           doc.setFontSize(9);
           doc.setFont("helvetica", "normal");
           doc.text(
@@ -516,17 +457,14 @@ export class SuitcaseController {
         }
       }
       
-      // Linha separadora
       doc.setDrawColor(220, 220, 220);
       doc.line(margin, yPos - 5, 190, yPos - 5);
       
-      // Resumo
       yPos += 5;
       doc.setFontSize(11);
       doc.setFont("helvetica", "bold");
       doc.text(`Total de peças: ${items.length}`, margin, yPos);
       
-      // Valor total
       const totalValue = items.reduce((total, item) => {
         return total + (item.product?.price || 0);
       }, 0);
@@ -539,36 +477,26 @@ export class SuitcaseController {
       doc.setFont("helvetica", "bold");
       doc.text(this.formatPrice(totalValue), 130, yPos + 7);
       
-      // Área para assinaturas
       yPos += 30;
       
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
       
-      // Assinatura da revendedora
       doc.text("Assinatura Revendedora:", margin, yPos);
       doc.line(margin, yPos + 15, margin + 70, yPos + 15);
       doc.text(suitcase.seller?.name || "", margin + 20, yPos + 20);
       
-      // Assinatura da promotora
       doc.text("Assinatura Promotora:", 110, yPos);
       doc.line(110, yPos + 15, 110 + 70, yPos + 15);
       doc.text(promoterInfo?.name || "", 110 + 20, yPos + 20);
       
-      // Retornar o PDF como URL
-      const pdfBase64 = doc.output('datauristring');
-      return pdfBase64;
+      return doc.output('datauristring');
     } catch (error) {
       console.error("Erro ao gerar PDF da maleta:", error);
       throw new Error("Não foi possível gerar o PDF da maleta");
     }
   }
   
-  /**
-   * Carrega uma imagem como Base64
-   * @param url URL da imagem
-   * @returns Promise com a imagem em Base64 ou null em caso de erro
-   */
   private static async loadImageAsBase64(url: string): Promise<string | null> {
     try {
       return new Promise((resolve, reject) => {
@@ -606,11 +534,6 @@ export class SuitcaseController {
     }
   }
   
-  /**
-   * Formata um valor para moeda brasileira
-   * @param price Valor a ser formatado
-   * @returns String formatada
-   */
   private static formatPrice(price: number): string {
     return new Intl.NumberFormat('pt-BR', { 
       style: 'currency', 
