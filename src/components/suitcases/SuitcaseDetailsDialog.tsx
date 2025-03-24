@@ -177,7 +177,12 @@ export function SuitcaseDetailsDialog({
     
     setIsPrintingPdf(true);
     try {
-      const pdfUrl = await SuitcaseController.generateSuitcasePDF(suitcaseId);
+      // Passando os três parâmetros necessários
+      const pdfUrl = await SuitcaseController.generateSuitcasePDF(
+        suitcaseId,
+        suitcaseItems,
+        promoterInfo
+      );
       // Abrir o PDF em uma nova aba
       window.open(pdfUrl, '_blank');
     } catch (error) {
@@ -189,16 +194,17 @@ export function SuitcaseDetailsDialog({
   };
 
   // Atualizar a data do próximo acerto
-  const handleUpdateNextSettlementDate = async (date?: Date) => {
+  const handleUpdateNextSettlementDate = async (date?: Date | null) => {
     if (!suitcaseId) return;
     
     try {
+      // Usando null quando a data não for fornecida
       const formattedDate = date ? format(date, "yyyy-MM-dd") : null;
       await SuitcaseController.updateSuitcase(suitcaseId, {
         next_settlement_date: formattedDate
       });
       
-      setNextSettlementDate(date);
+      setNextSettlementDate(date || undefined);
       refetchSuitcase();
       toast.success("Data do próximo acerto atualizada com sucesso");
     } catch (error) {

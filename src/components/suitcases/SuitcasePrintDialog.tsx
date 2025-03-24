@@ -1,11 +1,12 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { SuitcaseController } from "@/controllers/suitcaseController";
 import { Suitcase } from "@/types/suitcase";
 import { toast } from "sonner";
 import { Printer, FileText } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
 interface SuitcasePrintDialogProps {
   open: boolean;
@@ -16,12 +17,30 @@ interface SuitcasePrintDialogProps {
 export function SuitcasePrintDialog({ open, onOpenChange, suitcase }: SuitcasePrintDialogProps) {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
+  // Buscar itens da maleta
+  const { data: suitcaseItems = [] } = useQuery({
+    queryKey: ["suitcase-items", suitcase?.id],
+    queryFn: () => SuitcaseController.getSuitcaseItems(suitcase?.id || ""),
+    enabled: !!suitcase?.id && open,
+  });
+
+  // Buscar promotora da revendedora
+  const { data: promoterInfo } = useQuery({
+    queryKey: ["promoter-for-reseller", suitcase?.seller_id],
+    queryFn: () => SuitcaseController.getPromoterForReseller(suitcase?.seller_id || ""),
+    enabled: !!suitcase?.seller_id && open,
+  });
+
   const handlePrintPDF = async () => {
     if (!suitcase) return;
     
     setIsGeneratingPdf(true);
     try {
-      const pdfUrl = await SuitcaseController.generateSuitcasePDF(suitcase.id);
+      const pdfUrl = await SuitcaseController.generateSuitcasePDF(
+        suitcase.id,
+        suitcaseItems,
+        promoterInfo
+      );
       window.open(pdfUrl, '_blank');
     } catch (error) {
       console.error("Erro ao gerar PDF:", error);
