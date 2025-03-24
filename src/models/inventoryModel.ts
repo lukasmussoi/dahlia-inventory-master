@@ -94,12 +94,12 @@ export class InventoryModel {
         inventory_photos:inventory_photos(id, photo_url, is_primary)
       `);
 
-    // Por padrão, não mostrar itens arquivados a menos que especificado
+    // Aplicar filtro de arquivados
     if (filters?.status === 'archived') {
       query = query.eq('archived', true);
     } else if (filters?.showArchived !== true) {
-      // Se não estiver explicitamente pedindo para mostrar arquivados, filtra eles
-      query = query.is('archived', false).or('archived.is.null');
+      // Se não estiver explicitamente pedindo para mostrar arquivados, filtrar apenas os não-arquivados
+      query = query.eq('archived', false).or('archived.is.null');
     }
     
     // Aplicar filtros se fornecidos
@@ -125,7 +125,7 @@ export class InventoryModel {
       } else if (filters.status === 'out_of_stock') {
         query = query.eq('quantity', 0);
       } else if (filters.status === 'low_stock') {
-        query = query.lt('quantity', 5);
+        query = query.lt('quantity', 5).gt('quantity', 0);
       }
     }
 
