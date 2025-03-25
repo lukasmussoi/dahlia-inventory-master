@@ -18,6 +18,7 @@ export function useSuitcaseDeletion() {
       
       if (!canDelete) {
         toast.error(message || "Não é possível excluir esta maleta");
+        setIsDeleting(false);
         return false;
       }
       

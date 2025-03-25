@@ -1,4 +1,3 @@
-
 /**
  * Modelo de Acertos de Maleta
  * @file Este arquivo contém as operações de banco de dados para os acertos de maleta
@@ -130,37 +129,54 @@ export class AcertoMaletaModel {
   }
   
   /**
-   * Exclui todos os acertos de uma maleta
+   * Exclui todos os acertos de uma maleta e seus itens vendidos
    * @param suitcaseId ID da maleta
    */
   static async deleteAllAcertosBySuitcaseId(suitcaseId: string): Promise<void> {
     try {
-      console.log(`Buscando acertos da maleta ${suitcaseId} para exclusão`);
-      
       // 1. Buscar todos os acertos da maleta
       const { data: acertos, error: fetchError } = await supabase
         .from('acertos_maleta')
         .select('id')
         .eq('suitcase_id', suitcaseId);
       
-      if (fetchError) {
-        console.error(`Erro ao buscar acertos da maleta ${suitcaseId}:`, fetchError);
-        throw fetchError;
-      }
+      if (fetchError) throw fetchError;
+      
+      console.log(`Encontrados ${acertos?.length || 0} acertos para a maleta ${suitcaseId}`);
       
       if (!acertos || acertos.length === 0) {
-        console.log(`Nenhum acerto encontrado para a maleta ${suitcaseId}`);
+        console.log(`Nenhum acerto para excluir na maleta ${suitcaseId}`);
         return;
       }
       
-      console.log(`Encontrados ${acertos.length} acertos para exclusão`);
-      
-      // 2. Excluir cada acerto
+      // 2. Para cada acerto, excluir os itens vendidos relacionados
       for (const acerto of acertos) {
-        await this.deleteAcerto(acerto.id);
+        // Excluir os itens vendidos do acerto
+        const { error: itemsDeleteError } = await supabase
+          .from('acerto_itens_vendidos')
+          .delete()
+          .eq('acerto_id', acerto.id);
+        
+        if (itemsDeleteError) {
+          console.error(`Erro ao excluir itens vendidos do acerto ${acerto.id}:`, itemsDeleteError);
+          throw itemsDeleteError;
+        }
+        
+        console.log(`Itens vendidos do acerto ${acerto.id} excluídos com sucesso`);
       }
       
-      console.log(`Todos os acertos da maleta ${suitcaseId} foram excluídos com sucesso`);
+      // 3. Excluir os acertos propriamente ditos
+      const { error: acertosDeleteError } = await supabase
+        .from('acertos_maleta')
+        .delete()
+        .eq('suitcase_id', suitcaseId);
+      
+      if (acertosDeleteError) {
+        console.error(`Erro ao excluir acertos da maleta ${suitcaseId}:`, acertosDeleteError);
+        throw acertosDeleteError;
+      }
+      
+      console.log(`Acertos da maleta ${suitcaseId} excluídos com sucesso`);
     } catch (error) {
       console.error(`Erro ao excluir acertos da maleta ${suitcaseId}:`, error);
       throw error;
