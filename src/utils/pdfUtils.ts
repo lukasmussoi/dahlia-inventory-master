@@ -1,75 +1,67 @@
 
 /**
- * Utilitários para geração de PDFs
- * @file Este arquivo reexporta as funções de geração de PDFs de outros módulos
+ * Utilitários para manipulação de PDFs
+ * @file Fornece funções para lidar com arquivos PDF
+ * @relacionamento Utilizado por controladores que geram PDFs
  */
 
-import { generatePdfLabel } from "./pdf/labelGenerator";
-import type { GeneratePdfLabelOptions, PdfGenerationResult, ReceiptPdfOptions, AcertoReceiptData } from "./pdf/types";
+import { toast } from "sonner";
 
 /**
- * Abre um arquivo PDF em uma nova aba do navegador a partir de uma URL de dados
- * @param dataUrl URL de dados do PDF (formato base64)
+ * Abre um PDF em uma nova aba do navegador
+ * @param pdfDataUri URL ou Data URI do PDF a ser aberto
  */
-export function openPdfInNewTab(dataUrl: string): void {
+export const openPdfInNewTab = (pdfUrl: string): void => {
   try {
     console.log("Iniciando abertura do PDF em nova aba");
     
-    // Verificar se a URL é válida
-    if (!dataUrl) {
-      console.error("URL de dados vazia ou nula");
-      throw new Error("URL de dados do PDF inválida");
+    // Verifica se é uma URL de objeto blob
+    if (pdfUrl.startsWith('blob:')) {
+      window.open(pdfUrl, '_blank');
+      return;
     }
-
-    let base64Data: string;
     
-    // Verificar o formato da URL e extrair dados base64
-    if (dataUrl.startsWith('data:application/pdf;base64,')) {
-      base64Data = dataUrl.split(',')[1];
-    } else if (/^[A-Za-z0-9+/=]+$/.test(dataUrl)) {
-      // Assume que já é uma string base64 sem o prefixo
-      base64Data = dataUrl;
-    } else {
-      console.error("Formato de dados inválido:", dataUrl?.substring(0, 50) + "...");
-      throw new Error("Formato de dados do PDF inválido");
+    // Verifica se é uma data URI
+    if (pdfUrl.startsWith('data:application/pdf;base64,')) {
+      window.open(pdfUrl, '_blank');
+      return;
     }
-
-    // Converter base64 para Blob
-    const byteCharacters = atob(base64Data);
-    const byteArrays = [];
     
-    // Processar em pequenos pedaços para evitar problemas de memória
-    for (let offset = 0; offset < byteCharacters.length; offset += 512) {
-      const slice = byteCharacters.slice(offset, offset + 512);
-      const byteNumbers = new Array(slice.length);
-      
-      for (let i = 0; i < slice.length; i++) {
-        byteNumbers[i] = slice.charCodeAt(i);
+    // Verifica se é um formato customizado (que precisa ser normalizado)
+    if (pdfUrl.startsWith('data:application/pdf;filename=')) {
+      // Extrai e formata corretamente a base64
+      const base64Start = pdfUrl.indexOf('base64,');
+      if (base64Start !== -1) {
+        const formattedDataUri = 'data:application/pdf;base64,' + pdfUrl.substring(base64Start + 7);
+        window.open(formattedDataUri, '_blank');
+        return;
       }
-      
-      const byteArray = new Uint8Array(byteNumbers);
-      byteArrays.push(byteArray);
     }
     
-    const blob = new Blob(byteArrays, { type: 'application/pdf' });
-    const blobUrl = URL.createObjectURL(blob);
+    // Se chegou aqui, o formato não é reconhecido
+    console.error("Formato de dados inválido:", pdfUrl.substring(0, 100) + "...");
+    throw new Error("Formato de dados do PDF inválido");
     
-    console.log("Blob URL criada com sucesso:", blobUrl);
-    
-    // Abrir em nova aba
-    window.open(blobUrl, '_blank');
-    
-    // Limpar a URL do objeto após um tempo
-    setTimeout(() => {
-      URL.revokeObjectURL(blobUrl);
-      console.log("Blob URL revogada");
-    }, 60000); // Revogar após 1 minuto
-    
-    console.log("PDF aberto com sucesso em nova aba");
   } catch (error) {
     console.error("Erro ao abrir PDF em nova aba:", error);
-    alert("Erro ao abrir o PDF. Por favor, tente novamente.");
+    toast.error("Erro ao abrir o PDF. Por favor, tente novamente.");
   }
-}
+};
 
-export { generatePdfLabel, type GeneratePdfLabelOptions, type PdfGenerationResult, type ReceiptPdfOptions, type AcertoReceiptData };
+/**
+ * Gera etiquetas em PDF para os itens do inventário
+ * @param options Opções para geração de etiquetas
+ * @returns URL do PDF gerado
+ */
+export const generatePdfLabel = async (options: any): Promise<string> => {
+  try {
+    // Importa o utilitário específico para etiquetas
+    const { generatePdfLabel: generateLabel } = await import("./pdf/labelGenerator");
+    
+    // Delega a geração para o módulo especializado
+    return await generateLabel(options);
+  } catch (error) {
+    console.error("Erro ao gerar etiquetas:", error);
+    throw error;
+  }
+};

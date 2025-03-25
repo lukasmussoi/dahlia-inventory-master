@@ -1,4 +1,3 @@
-
 /**
  * Hook para Gerenciar o Diálogo de Abastecimento
  * @file Este hook centraliza a lógica do diálogo de abastecimento de maletas
@@ -305,6 +304,10 @@ export function useSupplyDialog(
           allItems,
           suitcase
         );
+        
+        if (!pdfUrl) {
+          throw new Error("Não foi possível gerar o PDF de abastecimento");
+        }
         
         // Abrir PDF em nova aba
         openPdfInNewTab(pdfUrl);

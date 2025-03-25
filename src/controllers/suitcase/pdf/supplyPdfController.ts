@@ -8,7 +8,6 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { openPdfInNewTab } from "@/utils/pdfUtils";
 import { getProductPhotoUrl } from "@/utils/photoUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCurrency } from "@/lib/utils";
@@ -172,9 +171,9 @@ export class SupplyPdfController {
       doc.setFont("helvetica", "normal");
       doc.text("Assinatura da revendedora confirmando o recebimento das peças acima", pageWidth / 2, signatureY + 5, { align: "center" });
 
-      // Converter para Base64
-      const pdfBase64 = doc.output('datauristring');
-      return pdfBase64;
+      // Retornar o PDF como URL
+      const pdfBlob = doc.output('blob');
+      return URL.createObjectURL(pdfBlob);
     } catch (error) {
       console.error("Erro ao gerar PDF de abastecimento:", error);
       throw error;
