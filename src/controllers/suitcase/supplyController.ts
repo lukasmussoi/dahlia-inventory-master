@@ -238,7 +238,8 @@ export class SuitcaseSupplyController {
                   
                   // Adicionar verificações extras de segurança
                   if (firstText && typeof firstText === 'object' && 'x' in firstText) {
-                    (firstText as any).x += imgWidth + 4;
+                    // Use optional chaining and nullish coalescing to safely modify x
+                    (firstText as any).x = ((firstText as any).x ?? 0) + imgWidth + 4;
                   }
                 }
               } catch (error) {
