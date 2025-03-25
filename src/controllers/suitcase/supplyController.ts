@@ -232,21 +232,18 @@ export class SuitcaseSupplyController {
                   imgHeight
                 );
 
-                // Adicionar verificações extras de segurança para texto
+                // Verificações de segurança para texto
                 if (data.cell.text && Array.isArray(data.cell.text) && data.cell.text.length > 0) {
-                  // Obter o primeiro elemento de texto com verificação de null
                   const firstText = data.cell.text[0];
                   
-                  // Verificação rigorosa para garantir que firstText não é null e tem a propriedade x
-                  if (firstText !== null && 
-                      typeof firstText === 'object' && 
-                      firstText !== undefined && 
-                      'x' in firstText) {
+                  // Verificação de tipo e conteúdo mais rigorosa
+                  if (firstText && typeof firstText === 'object') {
+                    const textObject = firstText as { x?: number };
                     
-                    // Verificar se x é um número antes de usar
-                    if (typeof firstText.x === 'number') {
-                      // Agora podemos alterar x com segurança
-                      firstText.x = firstText.x + imgWidth + 4;
+                    // Verificar se x existe e é um número
+                    if (typeof textObject.x === 'number') {
+                      // Modificar x com segurança
+                      textObject.x = textObject.x + imgWidth + 4;
                     }
                   }
                 }
