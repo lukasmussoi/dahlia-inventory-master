@@ -1,6 +1,18 @@
 
 # CHANGELOG
 
+## [1.0.5] - 2025-03-26
+
+### Melhorado
+- Refatorado o controlador de acertos de maleta (acertoMaletaController) para melhorar a organização e manutenibilidade
+- Dividido em módulos menores com responsabilidades específicas:
+  - AcertoListController: listagem e busca de acertos
+  - AcertoDetailsController: detalhes de acertos
+  - AcertoOperationsController: criação, atualização e exclusão
+  - AcertoReportController: geração de PDFs e relatórios
+  - AcertoAnalyticsController: análises e estatísticas
+  - AcertoFormattingUtils: funções de formatação
+
 ## [1.0.4] - 2025-03-25
 
 ### Corrigido
