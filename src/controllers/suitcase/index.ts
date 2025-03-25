@@ -8,7 +8,7 @@ import { SuitcaseController as BaseSuitcaseController } from "./suitcaseControll
 import { SuitcaseItemController } from "./suitcaseItemController";
 import { InventorySearchController } from "./inventorySearchController";
 import { SellerController } from "./sellerController";
-import { PDFController } from "./pdfController";
+import { SuitcasePdfController } from "./pdfController";
 import { DeleteSuitcaseController } from "./deleteSuitcaseController";
 import { SettlementController } from "./settlementController";
 
@@ -26,8 +26,8 @@ export const CombinedSuitcaseController = {
   // Métodos do SellerController
   ...SellerController,
   
-  // Métodos do PDFController
-  ...PDFController,
+  // Métodos do PDFController (agora corrigido para SuitcasePdfController)
+  ...SuitcasePdfController,
   
   // Métodos do DeleteSuitcaseController
   ...DeleteSuitcaseController,
