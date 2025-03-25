@@ -1,6 +1,26 @@
 
 # CHANGELOG DATABASE
 
+## [2025-03-27] - Refatoração do modelo de itens de maleta
+**Desenvolvedor:** Equipe Dalia Manager
+
+### Alterações
+- Não foram necessárias alterações no esquema do banco de dados.
+- A refatoração foi implementada apenas na camada de aplicação, melhorando a organização dos modelos.
+
+### Detalhes da Refatoração
+1. Separação do modelo de itens em arquivos menores e mais específicos
+2. Melhor tratamento de erros e logs de depuração
+3. Manutenção da compatibilidade com o código existente através de interfaces consistentes
+
+### Justificativa
+Esta refatoração melhora a manutenibilidade do código, tornando-o mais modular e facilitando futuras alterações. A organização em arquivos menores e mais focados facilita a compreensão e reduz a complexidade.
+
+### Impacto
+- Melhora na organização e estrutura do código
+- Sem impacto nas funcionalidades existentes
+- Sem alterações no esquema do banco de dados
+
 ## [2025-03-25] - Correção no processo de acerto de maletas
 **Desenvolvedor:** Equipe Dalia Manager
 

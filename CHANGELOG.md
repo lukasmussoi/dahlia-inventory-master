@@ -1,6 +1,19 @@
 
 # CHANGELOG
 
+## [1.0.6] - 2025-03-27
+
+### Melhorado
+- Refatorado o modelo de itens de maleta (SuitcaseItemModel) para melhorar a organização e manutenibilidade
+- Dividido em módulos menores com responsabilidades específicas:
+  - BaseItemModel: funções utilitárias e de transformação de dados
+  - ItemQueryModel: consultas e busca de itens
+  - ItemOperationsModel: operações de adição, remoção e atualização
+  - ItemSalesModel: gerenciamento de vendas de itens
+- Corrigido bug crítico onde itens permaneciam na maleta após finalização do acerto
+- Melhorada a verificação de disponibilidade de itens para evitar conflitos
+- Implementada melhor gestão de erros e logs de depuração
+
 ## [1.0.5] - 2025-03-26
 
 ### Melhorado

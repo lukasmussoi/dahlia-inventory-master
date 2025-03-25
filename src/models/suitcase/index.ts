@@ -4,7 +4,7 @@
  * @file Este arquivo exporta todos os modelos relacionados às maletas
  */
 import { SuitcaseModel as OriginalSuitcaseModel } from "./suitcaseModel";
-import { SuitcaseItemModel } from "./suitcaseItemModel";
+import { SuitcaseItemModel } from "./item"; // Atualizado para usar o novo caminho
 import { SellerModel } from "./sellerModel";
 import { InventorySearchModel } from "./inventorySearchModel";
 import { BaseSuitcaseModel } from "./baseModel";

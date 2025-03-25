@@ -3,7 +3,7 @@
  * Controlador de Itens de Maleta
  * @file Este arquivo controla as operações relacionadas aos itens de maletas
  */
-import { SuitcaseItemModel } from "@/models/suitcase/suitcaseItemModel";
+import { SuitcaseItemModel } from "@/models/suitcase/item";
 import { SuitcaseItemStatus } from "@/types/suitcase";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -84,45 +84,7 @@ export const SuitcaseItemController = {
   
   async updateSaleInfo(itemId: string, field: string, value: string) {
     try {
-      // Atualizar informações de venda
-      const { data, error } = await supabase
-        .from('suitcase_item_sales')
-        .select('id')
-        .eq('suitcase_item_id', itemId)
-        .single();
-      
-      if (error && error.code !== 'PGRST116') {
-        console.error("Erro ao buscar informações de venda:", error);
-        throw error;
-      }
-      
-      if (data) {
-        // Já existe um registro, atualizar
-        const { error: updateError } = await supabase
-          .from('suitcase_item_sales')
-          .update({ [field]: value })
-          .eq('id', data.id);
-        
-        if (updateError) {
-          console.error("Erro ao atualizar informações de venda:", updateError);
-          throw updateError;
-        }
-      } else {
-        // Criar novo registro
-        const { error: insertError } = await supabase
-          .from('suitcase_item_sales')
-          .insert({
-            suitcase_item_id: itemId,
-            [field]: value
-          });
-        
-        if (insertError) {
-          console.error("Erro ao inserir informações de venda:", insertError);
-          throw insertError;
-        }
-      }
-      
-      return { success: true };
+      return await SuitcaseItemModel.updateSaleInfo(itemId, field, value);
     } catch (error) {
       console.error("Erro ao atualizar informações de venda:", error);
       throw error;
