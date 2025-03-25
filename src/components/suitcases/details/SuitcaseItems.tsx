@@ -1,4 +1,3 @@
-
 /**
  * Componente de Itens da Maleta
  * @file Este componente exibe e gerencia os itens presentes em uma maleta
@@ -117,7 +116,7 @@ export function SuitcaseItems({
         />
         
         <SummarySection 
-          suitcaseItems={suitcaseItems} 
+          groupedItems={groupedItems}
           calculateTotalValue={calculateTotalValue} 
         />
       </div>
@@ -230,26 +229,29 @@ function GroupedItemsList({
 }
 
 function SummarySection({ 
-  suitcaseItems, 
+  groupedItems, 
   calculateTotalValue 
 }: { 
-  suitcaseItems: SuitcaseItem[],
+  groupedItems: GroupedSuitcaseItem[],
   calculateTotalValue: () => number
 }) {
-  // Contar apenas itens em posse (não vendidos ou devolvidos)
-  const activeItems = suitcaseItems.filter(item => item.status === 'in_possession');
+  // Contar total de peças nos itens agrupados
+  const totalItems = groupedItems.reduce((sum, group) => sum + group.total_quantity, 0);
+  
+  // Calcular valor total com base no valor retornado pela função calculateTotalValue
+  const totalValue = calculateTotalValue();
 
   return (
     <div className="mt-6 bg-gray-50 p-4 rounded-md">
       <h3 className="text-lg font-medium mb-2">Resumo da Maleta</h3>
       <div className="flex justify-between items-center">
         <div>
-          <p className="text-sm">Total de peças: {activeItems.length} itens</p>
+          <p className="text-sm">Total de peças: {totalItems} itens</p>
         </div>
         <div className="text-right">
           <p className="text-sm text-muted-foreground">Valor total da maleta:</p>
           <p className="text-xl font-bold text-pink-600">
-            {formatPrice(calculateTotalValue())}
+            {formatPrice(totalValue)}
           </p>
         </div>
       </div>

@@ -84,7 +84,14 @@ export function useSuitcaseItems() {
 
   // Calcular valor total dos itens
   const calculateTotalValue = (items: SuitcaseItem[]): number => {
-    return items.reduce((total, item) => {
+    // Verificar se há itens e filtrar apenas itens que estão em posse (não vendidos, devolvidos, etc.)
+    const activeItems = items.filter(item => item.status === 'in_possession');
+    
+    if (activeItems.length === 0) {
+      return 0; // Se não houver itens ativos, o valor total é zero
+    }
+    
+    return activeItems.reduce((total, item) => {
       if (item.product && item.product.price) {
         return total + item.product.price * (item.quantity || 1);
       }

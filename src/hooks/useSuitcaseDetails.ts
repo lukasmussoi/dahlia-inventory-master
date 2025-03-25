@@ -1,4 +1,3 @@
-
 /**
  * Hook para Detalhes de Maleta
  * @file Agrupa funcionalidades para gerenciar detalhes e operações em maletas
@@ -105,6 +104,12 @@ export function useSuitcaseDetails(
     }
   };
 
+  const calculateTotalValueWrapper = () => {
+    // Filtra itens que estão em posse (não vendidos, devolvidos, etc.) antes de calcular
+    const activeItems = suitcaseItems.filter(item => item.status === 'in_possession');
+    return calculateTotalValue(activeItems);
+  };
+
   return {
     activeTab,
     setActiveTab,
@@ -131,7 +136,7 @@ export function useSuitcaseDetails(
     handleToggleSold: handleToggleSoldWrapper,
     handleUpdateSaleInfo: handleUpdateSaleInfoWrapper,
     handleReturnToInventory: handleReturnToInventoryWrapper,
-    calculateTotalValue: () => calculateTotalValue(suitcaseItems),
+    calculateTotalValue: calculateTotalValueWrapper,
     handleViewReceipt,
     handlePrint: handlePrintWrapper,
     handleUpdateNextSettlementDate: handleUpdateNextSettlementDateWrapper,
