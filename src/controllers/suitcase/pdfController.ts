@@ -11,6 +11,53 @@ import { ptBR } from "date-fns/locale";
 import { getProductPhotoUrl } from "@/utils/photoUtils";
 
 export const SuitcasePdfController = {
+  // Função auxiliar para carregar imagens como Base64
+  loadImageAsBase64: async function(url: string): Promise<string | null> {
+    try {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = "Anonymous";
+        img.onload = () => {
+          try {
+            const canvas = document.createElement("canvas");
+            canvas.width = img.width;
+            canvas.height = img.height;
+            
+            const ctx = canvas.getContext("2d");
+            if (!ctx) {
+              reject(new Error("Não foi possível criar o contexto 2D"));
+              return;
+            }
+            
+            ctx.drawImage(img, 0, 0);
+            const dataURL = canvas.toDataURL("image/jpeg");
+            resolve(dataURL);
+          } catch (error) {
+            console.error("Erro ao processar imagem:", error);
+            reject(error);
+          }
+        };
+        img.onerror = () => {
+          console.error("Erro ao carregar imagem:", url);
+          resolve(null);
+        };
+        img.src = url;
+      });
+    } catch (error) {
+      console.error("Erro ao carregar imagem como Base64:", error);
+      return null;
+    }
+  },
+  
+  // Função auxiliar para formatar preços
+  formatPrice: function(price: number): string {
+    return new Intl.NumberFormat('pt-BR', { 
+      style: 'currency', 
+      currency: 'BRL' 
+    }).format(price);
+  },
+  
+  // Função principal para gerar o PDF da maleta
   async generateSuitcasePDF(
     suitcaseId: string,
     items: SuitcaseItem[],
@@ -247,49 +294,5 @@ export const SuitcasePdfController = {
       console.error("Erro ao gerar PDF da maleta:", error);
       throw new Error("Não foi possível gerar o PDF da maleta");
     }
-  },
-  
-  private static async loadImageAsBase64(url: string): Promise<string | null> {
-    try {
-      return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.crossOrigin = "Anonymous";
-        img.onload = () => {
-          try {
-            const canvas = document.createElement("canvas");
-            canvas.width = img.width;
-            canvas.height = img.height;
-            
-            const ctx = canvas.getContext("2d");
-            if (!ctx) {
-              reject(new Error("Não foi possível criar o contexto 2D"));
-              return;
-            }
-            
-            ctx.drawImage(img, 0, 0);
-            const dataURL = canvas.toDataURL("image/jpeg");
-            resolve(dataURL);
-          } catch (error) {
-            console.error("Erro ao processar imagem:", error);
-            reject(error);
-          }
-        };
-        img.onerror = () => {
-          console.error("Erro ao carregar imagem:", url);
-          resolve(null);
-        };
-        img.src = url;
-      });
-    } catch (error) {
-      console.error("Erro ao carregar imagem como Base64:", error);
-      return null;
-    }
-  },
-  
-  private static formatPrice(price: number): string {
-    return new Intl.NumberFormat('pt-BR', { 
-      style: 'currency', 
-      currency: 'BRL' 
-    }).format(price);
   }
 };
