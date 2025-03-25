@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,7 +7,7 @@ import { Plus } from "lucide-react";
 import { SuitcaseGrid } from "./SuitcaseGrid";
 import { SuitcaseFormDialog } from "./SuitcaseFormDialog";
 import { SuitcaseController } from "@/controllers/suitcaseController";
-import { AcertoMaletaDialog } from "./AcertoMaletaDialog";
+import { AcertoMaletaDialog } from "./settlement/AcertoMaletaDialog";
 import { SuitcaseSummary } from "./SuitcaseSummary";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -109,9 +110,11 @@ export function SuitcasesContent({ isAdmin, userProfile }: SuitcasesContentProps
   const { isLoading, refetch } = useQuery({
     queryKey: ['suitcases', filters],
     queryFn: () => SuitcaseController.searchSuitcases(filters),
-    onSuccess: (data) => {
-      setSuitcases(data);
-      setFilteredSuitcases(data);
+    onSettled: (data) => {
+      if (data) {
+        setSuitcases(data);
+        setFilteredSuitcases(data);
+      }
     }
   });
 
