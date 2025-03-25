@@ -118,7 +118,10 @@ export function SuitcasesContent({ isAdmin = false, userProfile, summary }: Suit
 
         <SuitcaseSummary summary={summary} />
 
-        <SuitcaseFiltersComponent filters={filters} onFiltersChange={handleApplyFilters} />
+        <SuitcaseFiltersComponent 
+          filters={filters} 
+          onFiltersChange={handleApplyFilters} 
+        />
 
         {isLoading ? (
           <div className="flex justify-center p-12">

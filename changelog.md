@@ -1,6 +1,13 @@
 
 # Registro de Alterações
 
+## 2025-03-27
+- Correção de interface do componente SuitcaseFilters:
+  - Substituídos props `onSearch` e `onClear` por `onFiltersChange` para consistência
+  - Corrigida incompatibilidade de tipos entre componentes
+  - Melhorada a inicialização e manipulação de filtros
+  - Desenvolvedor: Equipe Dalia Manager
+
 ## 2025-03-26
 - Correção de erros de tipo e exportação:
   - Adicionada exportação `getPromoterForReseller` no controlador combinado de maletas

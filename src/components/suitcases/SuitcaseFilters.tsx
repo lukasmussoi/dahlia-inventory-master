@@ -10,35 +10,30 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Search, X } from "lucide-react";
+import { SuitcaseFilters as SuitcaseFiltersType } from "@/types/suitcase";
 
+// Atualizar a interface para usar onFiltersChange
 interface SuitcaseFiltersProps {
-  filters: {
-    search: string;
-    status: string;
-    city?: string;
-    neighborhood?: string;
-  };
-  onSearch: (filters: any) => void;
-  onClear: () => void;
+  filters: SuitcaseFiltersType;
+  onFiltersChange: (filters: SuitcaseFiltersType) => void;
 }
 
 export function SuitcaseFilters({ 
   filters,
-  onSearch,
-  onClear
+  onFiltersChange
 }: SuitcaseFiltersProps) {
   const [searchTerm, setSearchTerm] = useState(filters.search || '');
-  const [status, setStatus] = useState(filters.status || 'in_use');
+  const [status, setStatus] = useState(filters.status || 'todos');
 
   // Atualizar valores quando os filtros mudam
   useEffect(() => {
     setSearchTerm(filters.search || '');
-    setStatus(filters.status || 'in_use');
+    setStatus(filters.status || 'todos');
   }, [filters]);
 
   // Aplicar filtros
   const handleApplyFilters = () => {
-    onSearch({
+    onFiltersChange({
       ...filters,
       search: searchTerm,
       status: status
@@ -48,8 +43,11 @@ export function SuitcaseFilters({
   // Limpar filtros
   const handleClearFilters = () => {
     setSearchTerm('');
-    setStatus('in_use');
-    onClear();
+    setStatus('todos');
+    onFiltersChange({
+      search: '',
+      status: 'todos'
+    });
   };
 
   // Pesquisar ao pressionar Enter
@@ -79,7 +77,7 @@ export function SuitcaseFilters({
           onValueChange={(value) => {
             setStatus(value);
             // Aplicar filtro imediatamente ao mudar o status
-            onSearch({
+            onFiltersChange({
               ...filters,
               search: searchTerm,
               status: value
