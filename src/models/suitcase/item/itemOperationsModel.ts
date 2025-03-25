@@ -341,7 +341,7 @@ export class ItemOperationsModel {
         throw updateItemError;
       }
       
-      // CORREÇÃO: Verificar se há dependências em acerto_itens_vendidos antes de remover
+      // Verificar se há dependências em acerto_itens_vendidos antes de remover
       const { data: dependencies } = await supabase
         .from('acerto_itens_vendidos')
         .select('id')

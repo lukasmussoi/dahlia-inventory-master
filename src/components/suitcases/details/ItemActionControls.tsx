@@ -40,7 +40,11 @@ export function ItemActionControls({
     }
   };
 
-  const handleReturnItems = async () => {
+  const handleReturnItems = async (e: React.MouseEvent) => {
+    // Impedir que o evento de clique se propague e feche o popover
+    e.preventDefault();
+    e.stopPropagation();
+    
     if (returnQuantity < 1 || returnQuantity > groupedItem.total_quantity) {
       toast.error("Quantidade inválida para devolução");
       return;
@@ -56,9 +60,17 @@ export function ItemActionControls({
       
       await onReturnToInventory(itemIdsToProcess, returnQuantity, isDamaged);
       
+      // Fechar o popover apenas após o processamento bem-sucedido
       setOpen(false);
       setIsDamaged(false);
       setReturnQuantity(1);
+      
+      // Exibir mensagem de sucesso
+      toast.success(
+        isDamaged 
+          ? `${returnQuantity} unidade(s) de ${groupedItem.product_name} marcada(s) como danificada(s)`
+          : `${returnQuantity} unidade(s) de ${groupedItem.product_name} devolvida(s) ao estoque`
+      );
     } catch (error) {
       console.error("Erro ao processar devolução:", error);
       toast.error("Ocorreu um erro ao processar a devolução");
@@ -75,7 +87,7 @@ export function ItemActionControls({
           <span className="sr-only">Ações para este item</span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-72" align="end">
+      <PopoverContent className="w-72" align="end" onClick={e => e.stopPropagation()}>
         <div className="space-y-4">
           <h4 className="font-medium">Ações para {groupedItem.product_name}</h4>
           
@@ -126,6 +138,7 @@ export function ItemActionControls({
               max={groupedItem.total_quantity}
               value={returnQuantity}
               onChange={(e) => handleQuantityChange(e.target.value)}
+              onClick={e => e.stopPropagation()}
             />
             <p className="text-xs text-muted-foreground">
               Máximo disponível: {groupedItem.total_quantity}

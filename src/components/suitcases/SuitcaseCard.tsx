@@ -1,184 +1,189 @@
 
+/**
+ * Componente de Card de Maleta
+ * @file Exibe os dados de uma maleta em formato de card com ações
+ * @relacionamento Utilizado na listagem de maletas e interage com dialogs de detalhes e abastecimento
+ */
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { formatDistanceToNow } from "date-fns";
+import { format, isPast, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Suitcase } from "@/types/suitcase";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { 
+  Card, 
+  CardContent, 
+  CardFooter, 
+  CardHeader, 
+  CardTitle 
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
-  CalendarDays, 
-  MapPin, 
-  MoreVertical, 
   Package, 
-  UserCircle, 
-  CheckCircle,
-  RefreshCcw
+  Store, 
+  CalendarClock, 
+  MapPin, 
+  User, 
+  ArrowRightLeft
 } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
+import { DotsVertical } from "lucide-react";
+import { Suitcase } from "@/types/suitcase";
 import { SuitcaseDetailsDialog } from "./SuitcaseDetailsDialog";
-import { Button } from "@/components/ui/button";
+import { SuitcaseSupplyDialog } from "./supply/SuitcaseSupplyDialog";
+import { SuitcaseSettlementDialog } from "./settlement/SuitcaseSettlementDialog";
+import { formatStatus } from "@/utils/formatUtils";
 
 interface SuitcaseCardProps {
   suitcase: Suitcase;
-  isAdmin?: boolean;
   onRefresh?: () => void;
-  onOpenAcertoDialog?: (suitcase: Suitcase) => void;
-  onOpenSupplyDialog?: (suitcase: Suitcase) => void;
+  isAdmin?: boolean;
 }
 
 export function SuitcaseCard({ 
   suitcase, 
-  isAdmin = false,
   onRefresh,
-  onOpenAcertoDialog,
-  onOpenSupplyDialog 
+  isAdmin = false
 }: SuitcaseCardProps) {
-  const [showSuitcaseDetails, setShowSuitcaseDetails] = useState(false);
-  const navigate = useNavigate();
+  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [showSupplyDialog, setShowSupplyDialog] = useState(false);
+  const [showSettlementDialog, setShowSettlementDialog] = useState(false);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
+  const hasLateSettlement = suitcase.next_settlement_date && 
+    isPast(parseISO(suitcase.next_settlement_date));
+
+  const getBadgeVariant = () => {
+    switch (suitcase.status) {
       case 'in_use':
-        return "bg-green-100 text-green-800 hover:bg-green-200";
+        return 'default';
       case 'returned':
-        return "bg-gray-100 text-gray-800 hover:bg-gray-200";
+        return 'secondary';
       case 'in_replenishment':
-        return "bg-yellow-100 text-yellow-800 hover:bg-yellow-200";
+        return 'outline';
       case 'lost':
-        return "bg-red-100 text-red-800 hover:bg-red-200";
+        return 'destructive';
       case 'in_audit':
-        return "bg-blue-100 text-blue-800 hover:bg-blue-200";
+        return 'warning';
       default:
-        return "bg-gray-100 text-gray-800 hover:bg-gray-200";
+        return 'outline';
     }
   };
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'in_use':
-        return "Em uso";
-      case 'returned':
-        return "Devolvida";
-      case 'in_replenishment':
-        return "Aguardando reposição";
-      case 'lost':
-        return "Perdida";
-      case 'in_audit':
-        return "Em auditoria";
-      default:
-        return "Não definido";
-    }
+  const formatLocation = () => {
+    const parts = [];
+    if (suitcase.neighborhood) parts.push(suitcase.neighborhood);
+    if (suitcase.city) parts.push(suitcase.city);
+    return parts.join(', ') || 'Localização não especificada';
   };
 
-  const timeAgo = suitcase.created_at 
-    ? formatDistanceToNow(new Date(suitcase.created_at), { addSuffix: true, locale: ptBR })
-    : "Data desconhecida";
-
-  const handleAcerto = () => {
-    if (onOpenAcertoDialog) {
-      onOpenAcertoDialog(suitcase);
-    }
+  const formatNextSettlementDate = () => {
+    if (!suitcase.next_settlement_date) return 'Sem data definida';
+    
+    const date = parseISO(suitcase.next_settlement_date);
+    return format(date, "dd/MM/yyyy", { locale: ptBR });
   };
 
-  const handleSupply = () => {
-    if (onOpenSupplyDialog) {
-      onOpenSupplyDialog(suitcase);
-    }
+  const getItemsCount = () => {
+    const count = suitcase.items_count || 0;
+    return `${count} ${count === 1 ? 'item' : 'itens'}`;
   };
 
   return (
     <>
-      <Card className="overflow-hidden hover:shadow-md transition-shadow">
-        <CardContent className="p-0">
-          <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white p-4">
-            <div className="flex justify-between items-start">
-              <div>
-                <h3 className="text-xl font-bold">{suitcase.code || `#${suitcase.id.substring(0, 8)}`}</h3>
-                <p className="text-sm opacity-90">{timeAgo}</p>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Badge className={`${getStatusColor(suitcase.status)} cursor-default`}>
-                  {getStatusText(suitcase.status)}
-                </Badge>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="h-8 w-8 p-0 text-white">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => setShowSuitcaseDetails(true)}>
-                      <Package className="mr-2 h-4 w-4" />
-                      Ver detalhes
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleSupply}>
-                      <RefreshCcw className="mr-2 h-4 w-4" />
-                      Abastecer
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleAcerto}>
-                      <CheckCircle className="mr-2 h-4 w-4" />
-                      Fazer acerto
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
+      <Card className={hasLateSettlement ? "border-red-300" : ""}>
+        <CardHeader className="pb-2">
+          <div className="flex justify-between items-start">
+            <CardTitle className="text-lg">{suitcase.code}</CardTitle>
+            <Badge variant={getBadgeVariant()}>{formatStatus(suitcase.status)}</Badge>
           </div>
-
-          <div className="p-4 space-y-3">
-            <div className="flex items-center text-sm text-gray-600">
-              <UserCircle className="h-4 w-4 mr-2" />
-              <span className="truncate max-w-[200px]">
-                {suitcase.seller?.name || "Revendedora não especificada"}
-              </span>
-            </div>
-
-            {(suitcase.city || suitcase.neighborhood) && (
-              <div className="flex items-center text-sm text-gray-600">
-                <MapPin className="h-4 w-4 mr-2" />
-                <span className="truncate max-w-[200px]">
-                  {suitcase.city ? suitcase.city : ""}{suitcase.neighborhood ? `, ${suitcase.neighborhood}` : ""}
-                </span>
-              </div>
-            )}
-
-            {suitcase.next_settlement_date && (
-              <div className="flex items-center text-sm text-gray-600">
-                <CalendarDays className="h-4 w-4 mr-2" />
-                <span>
-                  Próximo acerto: {new Date(suitcase.next_settlement_date).toLocaleDateString('pt-BR')}
-                </span>
-              </div>
-            )}
-
-            <div className="flex items-center text-sm text-gray-600">
-              <Package className="h-4 w-4 mr-2" />
-              <span>
-                {suitcase.items_count || 0} itens na maleta
-              </span>
-            </div>
+        </CardHeader>
+        
+        <CardContent className="pb-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <User className="h-4 w-4 text-gray-500" />
+            <span className="text-sm font-medium">{suitcase.seller?.name || 'Sem vendedor'}</span>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <MapPin className="h-4 w-4 text-gray-500" />
+            <span className="text-sm">{formatLocation()}</span>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <CalendarClock className={`h-4 w-4 ${hasLateSettlement ? 'text-red-500' : 'text-gray-500'}`} />
+            <span className={`text-sm ${hasLateSettlement ? 'text-red-500 font-medium' : ''}`}>
+              Próximo acerto: {formatNextSettlementDate()}
+            </span>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Package className="h-4 w-4 text-gray-500" />
+            <span className="text-sm">{getItemsCount()}</span>
           </div>
         </CardContent>
-
-        <CardFooter className="p-4 pt-0 flex justify-between">
-          <Button variant="outline" size="sm" onClick={() => setShowSuitcaseDetails(true)}>
-            Ver detalhes
-          </Button>
-          <Button variant="secondary" size="sm" onClick={handleSupply}>
-            <RefreshCcw className="h-4 w-4 mr-2" />
+        
+        <CardFooter className="pt-2 flex justify-between border-t">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="text-blue-600"
+            onClick={() => setShowSupplyDialog(true)}
+          >
+            <Store className="h-4 w-4 mr-1" />
             Abastecer
           </Button>
+          
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="text-purple-600"
+            onClick={() => setShowSettlementDialog(true)}
+          >
+            <ArrowRightLeft className="h-4 w-4 mr-1" />
+            Acerto
+          </Button>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <DotsVertical className="h-4 w-4" />
+                <span className="sr-only">Mais ações</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setShowDetailsDialog(true)}>
+                Ver detalhes
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </CardFooter>
       </Card>
 
       {/* Diálogo de detalhes */}
       <SuitcaseDetailsDialog
-        open={showSuitcaseDetails}
-        onOpenChange={setShowSuitcaseDetails}
+        open={showDetailsDialog}
+        onOpenChange={setShowDetailsDialog}
         suitcaseId={suitcase.id}
+        onRefresh={onRefresh}
+        isAdmin={isAdmin}
+      />
+
+      {/* Diálogo de abastecimento */}
+      <SuitcaseSupplyDialog
+        open={showSupplyDialog}
+        onOpenChange={setShowSupplyDialog}
+        suitcase={suitcase}
+        onRefresh={onRefresh}
+      />
+
+      {/* Diálogo de acerto */}
+      <SuitcaseSettlementDialog
+        open={showSettlementDialog}
+        onOpenChange={setShowSettlementDialog}
+        suitcase={suitcase}
         onRefresh={onRefresh}
       />
     </>

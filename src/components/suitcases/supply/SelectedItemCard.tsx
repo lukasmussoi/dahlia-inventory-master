@@ -1,13 +1,15 @@
 
 /**
- * Componente de Item Selecionado para Abastecimento
- * @file Este componente renderiza um item selecionado para abastecimento com controles de quantidade
+ * Componente de Card de Item Selecionado
+ * @file Exibe um item selecionado para abastecimento de maleta, com controles de quantidade
  * @relacionamento Utilizado pelo componente SuitcaseSupplyDialog
  */
+import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Minus, Plus, X } from "lucide-react";
-import { ItemImage } from "./ItemImage";
+import { Badge } from "@/components/ui/badge";
+import { MinusCircle, PlusCircle, X } from "lucide-react";
+import Image from "next/image";
 
 interface SelectedItemCardProps {
   item: {
@@ -16,6 +18,7 @@ interface SelectedItemCardProps {
     sku: string;
     price: number;
     quantity: number;
+    max_quantity?: number;
     photo_url?: string | { photo_url: string }[];
     from_suitcase?: boolean;
   };
@@ -26,69 +29,112 @@ interface SelectedItemCardProps {
 }
 
 export function SelectedItemCard({ 
-  item, 
-  onRemove, 
-  onIncrease, 
+  item,
+  onRemove,
+  onIncrease,
   onDecrease,
   formatMoney
 }: SelectedItemCardProps) {
+  // Extrair a URL da foto do item
+  const getPhotoUrl = () => {
+    if (!item.photo_url) return null;
+    
+    if (typeof item.photo_url === 'string') {
+      return item.photo_url;
+    }
+    
+    if (Array.isArray(item.photo_url)) {
+      return item.photo_url[0]?.photo_url || null;
+    }
+    
+    return (item.photo_url as { photo_url: string }).photo_url || null;
+  };
+
+  const photoUrl = getPhotoUrl();
   const totalPrice = item.price * item.quantity;
-  
+  const isFromSuitcase = item.from_suitcase || false;
+
+  // Função para lidar com cliques nos botões que não devem propagar o evento
+  const handleButtonClick = (callback: Function) => (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    callback();
+  };
+
   return (
-    <Card className="shadow-sm">
+    <Card className="overflow-hidden">
       <CardContent className="p-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3 flex-1 min-w-0">
-            <ItemImage 
-              photoUrl={item.photo_url} 
-              alt={item.name}
-              className="h-10 w-10"
-            />
-            <div className="flex-1 min-w-0">
-              <h4 className="text-sm font-medium truncate">{item.name}</h4>
-              <p className="text-xs text-gray-500">{item.sku}</p>
-              <p className="text-xs text-gray-600">
-                {formatMoney(item.price)} x {item.quantity} = {formatMoney(totalPrice)}
-              </p>
-              {item.from_suitcase && (
-                <span className="text-xs font-medium text-blue-600">
+        <div className="flex items-center gap-3">
+          {/* Miniatura do produto */}
+          <div className="flex-shrink-0 h-14 w-14 relative rounded bg-gray-50 overflow-hidden border">
+            {photoUrl ? (
+              <Image
+                src={photoUrl}
+                alt={item.name}
+                fill
+                className="object-contain"
+              />
+            ) : (
+              <div className="h-full w-full flex items-center justify-center bg-gray-100 text-gray-400">
+                Sem imagem
+              </div>
+            )}
+          </div>
+          
+          {/* Informações do produto */}
+          <div className="flex-1 min-w-0">
+            <h4 className="font-medium text-sm truncate">{item.name}</h4>
+            <p className="text-xs text-gray-500">{item.sku}</p>
+            
+            <div className="flex items-center justify-between mt-1">
+              <div className="text-sm font-semibold text-primary">
+                {formatMoney(item.price)}
+              </div>
+              
+              {isFromSuitcase && (
+                <Badge variant="outline" className="text-xs">
                   Já na maleta
-                </span>
+                </Badge>
               )}
             </div>
           </div>
           
-          <div className="flex items-center shrink-0 ml-2">
+          {/* Controles de quantidade */}
+          <div className="flex items-center gap-1">
             <Button
-              size="icon"
-              variant="outline"
-              onClick={() => onDecrease(item.id)}
-              disabled={item.quantity <= 1}
-              className="h-8 w-8"
-              aria-label="Diminuir quantidade"
-            >
-              <Minus className="h-3 w-3" />
-            </Button>
-            <span className="w-8 text-center text-sm">{item.quantity}</span>
-            <Button
-              size="icon"
-              variant="outline"
-              onClick={() => onIncrease(item.id)}
-              className="h-8 w-8"
-              aria-label="Aumentar quantidade"
-            >
-              <Plus className="h-3 w-3" />
-            </Button>
-            <Button
-              size="icon"
               variant="ghost"
-              onClick={() => onRemove(item.id)}
-              className="h-8 w-8 ml-2"
-              aria-label="Remover item"
+              size="icon"
+              className="h-6 w-6"
+              onClick={handleButtonClick(() => onDecrease(item.id))}
+              disabled={item.quantity <= 1}
             >
-              <X className="h-4 w-4" />
+              <MinusCircle className="h-4 w-4" />
+            </Button>
+            
+            <span className="mx-1 w-6 text-center">
+              {item.quantity}
+            </span>
+            
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={handleButtonClick(() => onIncrease(item.id))}
+              disabled={!isFromSuitcase && item.max_quantity !== undefined && item.quantity >= item.max_quantity}
+            >
+              <PlusCircle className="h-4 w-4" />
             </Button>
           </div>
+          
+          {/* Botão remover */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 text-gray-400 hover:text-red-500"
+            onClick={handleButtonClick(() => onRemove(item.id))}
+          >
+            <X className="h-4 w-4" />
+          </Button>
         </div>
       </CardContent>
     </Card>

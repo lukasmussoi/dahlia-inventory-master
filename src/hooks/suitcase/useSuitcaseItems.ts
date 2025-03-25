@@ -1,81 +1,95 @@
 
 /**
  * Hook para Gerenciamento de Itens de Maleta
- * @file Fornece funções para manipular itens das maletas, incluindo devoluções e itens danificados
- * @relacionamento Utilizado por useSuitcaseDetails para gerenciar operações de itens
+ * @file Agrupa funções para operações relacionadas a itens de maletas
+ * @relacionamento Utilizado pelo hook useSuitcaseDetails
  */
 import { useState } from "react";
-import { SuitcaseItem } from "@/types/suitcase";
+import { SuitcaseItem, SuitcaseItemStatus } from "@/types/suitcase";
 import { CombinedSuitcaseController } from "@/controllers/suitcase";
 import { toast } from "sonner";
 
 export function useSuitcaseItems() {
-  const [processingItems, setProcessingItems] = useState<{ [key: string]: boolean }>({});
+  const [processingItems, setProcessingItems] = useState<Record<string, boolean>>({});
 
-  // Função para alternar status de vendido
-  const handleToggleSold = async (item: SuitcaseItem, sold: boolean) => {
+  // Marcar item como vendido ou não vendido
+  const handleToggleSold = async (item: SuitcaseItem, sold: boolean): Promise<boolean> => {
+    if (!item || !item.id) return false;
+
+    setProcessingItems(prev => ({ ...prev, [item.id]: true }));
     try {
-      setProcessingItems(prev => ({ ...prev, [item.id]: true }));
-      const newStatus = sold ? "sold" : "in_possession";
+      const newStatus: SuitcaseItemStatus = sold ? 'sold' : 'in_possession';
       await CombinedSuitcaseController.updateSuitcaseItemStatus(item.id, newStatus);
+      toast.success(sold ? "Item marcado como vendido" : "Item marcado como disponível");
       return true;
-    } catch (error) {
-      console.error("Erro ao atualizar status do item:", error);
-      toast.error("Erro ao atualizar status do item");
+    } catch (error: any) {
+      console.error("Erro ao alterar status do item:", error);
+      toast.error(error.message || "Erro ao atualizar item");
       return false;
     } finally {
       setProcessingItems(prev => ({ ...prev, [item.id]: false }));
     }
   };
 
-  // Função para atualizar informações de venda
-  const handleUpdateSaleInfo = async (itemId: string, field: string, value: string) => {
+  // Atualizar informações de venda (cliente, método de pagamento)
+  const handleUpdateSaleInfo = async (itemId: string, field: string, value: string): Promise<boolean> => {
+    if (!itemId) return false;
+
+    setProcessingItems(prev => ({ ...prev, [itemId]: true }));
     try {
-      setProcessingItems(prev => ({ ...prev, [itemId]: true }));
       await CombinedSuitcaseController.updateSaleInfo(itemId, field, value);
+      toast.success("Informação atualizada com sucesso");
       return true;
-    } catch (error) {
-      console.error("Erro ao atualizar informações de venda:", error);
-      toast.error("Erro ao atualizar informações de venda");
+    } catch (error: any) {
+      console.error("Erro ao atualizar informação de venda:", error);
+      toast.error(error.message || "Não foi possível atualizar a informação");
       return false;
     } finally {
       setProcessingItems(prev => ({ ...prev, [itemId]: false }));
     }
   };
 
-  // Função para retornar itens ao estoque (normal ou danificado)
-  const handleReturnToInventory = async (itemIds: string[], quantity: number, isDamaged: boolean) => {
+  // Devolver itens ao estoque (normal ou danificado)
+  const handleReturnToInventory = async (itemIds: string[], quantity: number, isDamaged: boolean): Promise<boolean> => {
+    if (!itemIds.length) return false;
+
+    // Marcar todos os itens como em processamento
+    const processingMap: Record<string, boolean> = {};
+    itemIds.forEach(id => processingMap[id] = true);
+    setProcessingItems(prev => ({ ...prev, ...processingMap }));
+
     try {
-      // Marque todos os itens como em processamento
-      const processingState: { [key: string]: boolean } = {};
-      itemIds.forEach(id => { processingState[id] = true; });
-      setProcessingItems(prev => ({ ...prev, ...processingState }));
-      
-      // Processar o retorno dos itens
+      // Processar os itens em lote
       await CombinedSuitcaseController.returnItemsToInventory(itemIds, isDamaged);
       
-      const action = isDamaged ? "marcados como danificados" : "devolvidos ao estoque";
-      toast.success(`${quantity} itens ${action} com sucesso`);
+      // Exibir mensagem de sucesso adaptada ao contexto
+      if (isDamaged) {
+        toast.success(`${quantity} item(s) marcado(s) como danificado(s)`);
+      } else {
+        toast.success(`${quantity} item(s) devolvido(s) ao estoque`);
+      }
+      
       return true;
-    } catch (error) {
-      console.error(`Erro ao processar itens (danificado: ${isDamaged}):`, error);
-      toast.error(`Erro ao processar itens. Por favor, tente novamente.`);
+    } catch (error: any) {
+      console.error("Erro ao devolver itens ao estoque:", error);
+      toast.error(error.message || "Erro ao processar devolução ao estoque");
       return false;
     } finally {
-      // Desmarque todos os itens
-      const processingState: { [key: string]: boolean } = {};
-      itemIds.forEach(id => { processingState[id] = false; });
-      setProcessingItems(prev => ({ ...prev, ...processingState }));
+      // Desmarcar todos os itens como em processamento
+      const completedMap: Record<string, boolean> = {};
+      itemIds.forEach(id => completedMap[id] = false);
+      setProcessingItems(prev => ({ ...prev, ...completedMap }));
     }
   };
 
-  // Calcular valor total da maleta
-  const calculateTotalValue = (suitcaseItems: SuitcaseItem[]) => {
-    return suitcaseItems
-      .filter(item => item.status === 'in_possession')
-      .reduce((total, item) => {
-        return total + (item.product?.price || 0) * (item.quantity || 1);
-      }, 0);
+  // Calcular valor total dos itens
+  const calculateTotalValue = (items: SuitcaseItem[]): number => {
+    return items.reduce((total, item) => {
+      if (item.product && item.product.price) {
+        return total + item.product.price * (item.quantity || 1);
+      }
+      return total;
+    }, 0);
   };
 
   return {

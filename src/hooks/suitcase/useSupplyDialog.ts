@@ -170,6 +170,7 @@ export function useSupplyDialog(
   const handleRemoveItem = (itemId: string) => {
     const itemToRemove = selectedItems.find(item => item.id === itemId);
     
+    // Remover item da lista de selecionados
     setSelectedItems(selectedItems.filter((item) => item.id !== itemId));
 
     // Adicionar de volta aos resultados da busca apenas se não for um item já existente na maleta
@@ -265,10 +266,18 @@ export function useSupplyDialog(
       // Abastecer a maleta com novos itens
       let addedItems = [];
       if (itemsToSupply.length > 0) {
-        addedItems = await CombinedSuitcaseController.supplySuitcase(
-          suitcaseId,
-          itemsToSupply
-        );
+        try {
+          addedItems = await CombinedSuitcaseController.supplySuitcase(
+            suitcaseId,
+            itemsToSupply
+          );
+          console.log("Itens adicionados com sucesso:", addedItems);
+        } catch (error) {
+          console.error("Erro ao adicionar itens à maleta:", error);
+          toast.error("Não foi possível adicionar os itens à maleta");
+          setIsSupplying(false);
+          return;
+        }
       }
       
       // Gerar PDF após abastecimento com todos os itens (novos e existentes)
@@ -290,14 +299,19 @@ export function useSupplyDialog(
         }))
       ];
       
-      const pdfUrl = await CombinedSuitcaseController.generateSupplyPDF(
-        suitcaseId,
-        allItems,
-        suitcase
-      );
-      
-      // Abrir PDF em nova aba
-      openPdfInNewTab(pdfUrl);
+      try {
+        const pdfUrl = await CombinedSuitcaseController.generateSupplyPDF(
+          suitcaseId,
+          allItems,
+          suitcase
+        );
+        
+        // Abrir PDF em nova aba
+        openPdfInNewTab(pdfUrl);
+      } catch (pdfError) {
+        console.error("Erro ao gerar PDF de abastecimento:", pdfError);
+        toast.error("Abastecimento realizado, mas não foi possível gerar o PDF");
+      }
       
       // Mensagem de sucesso
       if (addedItems.length > 0) {

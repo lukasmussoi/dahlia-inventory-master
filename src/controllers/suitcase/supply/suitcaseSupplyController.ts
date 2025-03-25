@@ -81,6 +81,7 @@ export class SuitcaseSupplyController {
             });
           } catch (error) {
             console.error(`Erro ao adicionar unidade ${i+1} do item ${item.inventory_id} à maleta:`, error);
+            throw error; // Propagar erro para interromper a operação
           }
         }
       }
