@@ -37,7 +37,7 @@ export class AcertoOperationsController {
         .from('suitcase_items')
         .select(`
           *,
-          product:inventory(id, name, sku, price)
+          product:inventory(id, name, sku, price, unit_cost)
         `)
         .eq('suitcase_id', data.suitcase_id)
         .eq('status', 'in_possession');
@@ -128,67 +128,27 @@ export class AcertoOperationsController {
         acertoId = newAcerto.id;
       }
       
-      // Processar todos os itens (presentes/verificados para devolução ao estoque, e não presentes/vendidos)
-      console.log(`Processando ${itemsPresentIds.length} itens presentes e ${soldItems.length} itens vendidos`);
+      // Extrair os IDs dos itens vendidos
+      const soldItemIds = soldItems.map(item => item.id);
       
-      // Processar itens presentes (devolver ao estoque e remover da maleta)
-      for (const itemId of itemsPresentIds) {
-        try {
-          await SuitcaseItemModel.returnItemToInventory(itemId);
-        } catch (error) {
-          console.error(`Erro ao processar item presente ${itemId}:`, error);
-        }
-      }
+      // Processar todos os itens através do modelo de acerto
+      console.log(`Processando ${itemsPresentIds.length} itens presentes e ${soldItemIds.length} itens vendidos`);
       
-      // Processar itens vendidos (registrar venda e remover da maleta)
-      for (const item of soldItems) {
-        try {
-          // Verificar se o item já tem informações de venda registradas
-          const { data: saleInfo, error: saleError } = await supabase
-            .from('suitcase_item_sales')
-            .select('*')
-            .eq('suitcase_item_id', item.id);
-          
-          if (saleError) {
-            console.error(`Erro ao buscar informações de venda para o item ${item.id}:`, saleError);
-          }
-          
-          // Atualizar status para vendido
-          await SuitcaseItemModel.updateSuitcaseItemStatus(item.id, 'sold');
-          
-          // Obter informações de cliente e método de pagamento, se disponíveis
-          const customerName = saleInfo && saleInfo.length > 0 ? saleInfo[0].customer_name : null;
-          const paymentMethod = saleInfo && saleInfo.length > 0 ? saleInfo[0].payment_method : null;
-          
-          // Registrar o item vendido no acerto
-          const { error: acertoItemError } = await supabase
-            .from('acerto_itens_vendidos')
-            .insert({
-              acerto_id: acertoId,
-              suitcase_item_id: item.id,
-              inventory_id: item.inventory_id,
-              price: item.product?.price || 0,
-              sale_date: new Date().toISOString(),
-              customer_name: customerName,
-              payment_method: paymentMethod
-            });
-          
-          if (acertoItemError) {
-            console.error(`Erro ao registrar item vendido ${item.id} no acerto:`, acertoItemError);
-          }
-          
-          // CORREÇÃO: Remover explicitamente o item da maleta
-          const { error: deleteError } = await supabase
-            .from('suitcase_items')
-            .delete()
-            .eq('id', item.id);
-          
-          if (deleteError) {
-            console.error(`Erro ao remover item vendido ${item.id} da maleta:`, deleteError);
-          }
-        } catch (error) {
-          console.error(`Erro ao processar item vendido ${item.id}:`, error);
-        }
+      await AcertoMaletaModel.processAcertoItems(
+        acertoId,
+        data.suitcase_id,
+        itemsPresentIds,
+        soldItemIds
+      );
+      
+      // Atualizar a próxima data de acerto na maleta, se fornecida
+      if (data.next_settlement_date) {
+        await supabase
+          .from('suitcases')
+          .update({ 
+            next_settlement_date: new Date(data.next_settlement_date).toISOString() 
+          })
+          .eq('id', data.suitcase_id);
       }
       
       // Verificação final: garantir que nenhum item permaneça na maleta
@@ -200,7 +160,7 @@ export class AcertoOperationsController {
       if (checkError) {
         console.error(`Erro ao verificar itens restantes na maleta ${data.suitcase_id}:`, checkError);
       } else if (remainingItems && remainingItems.length > 0) {
-        console.warn(`Encontrados ${remainingItems.length} itens ainda na maleta após o acerto. Removendo...`);
+        console.warn(`Encontrados ${remainingItems.length} itens ainda na maleta após o acerto. Remoção final...`);
         
         // Remover todos os itens restantes da maleta
         const { error: removeError } = await supabase
@@ -210,19 +170,10 @@ export class AcertoOperationsController {
         
         if (removeError) {
           console.error(`Erro ao remover itens restantes da maleta:`, removeError);
+          toast.error("Erro ao remover alguns itens da maleta. Por favor, verifique o estado da maleta.");
         } else {
           console.log(`${remainingItems.length} itens restantes removidos com sucesso da maleta ${data.suitcase_id}`);
         }
-      }
-      
-      // Atualizar a próxima data de acerto na maleta, se fornecida
-      if (data.next_settlement_date) {
-        await supabase
-          .from('suitcases')
-          .update({ 
-            next_settlement_date: new Date(data.next_settlement_date).toISOString() 
-          })
-          .eq('id', data.suitcase_id);
       }
       
       // Buscar e retornar o acerto completo com todas as informações atualizadas

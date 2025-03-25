@@ -99,6 +99,7 @@ export class AcertoMaletaModel {
           }
           
           // CORREÇÃO: Remover explicitamente o item da maleta após registrar como vendido
+          console.log(`Removendo item vendido ${itemId} da maleta...`);
           const { error: deleteError } = await supabase
             .from('suitcase_items')
             .delete()
@@ -106,6 +107,31 @@ export class AcertoMaletaModel {
           
           if (deleteError) {
             console.error(`Erro ao remover item vendido ${itemId} da maleta:`, deleteError);
+            console.error(`Detalhes do erro:`, JSON.stringify(deleteError));
+            
+            // Verificar se o erro é devido a uma constraint de chave estrangeira
+            if (deleteError.message?.includes('foreign key constraint')) {
+              console.log(`Detectada constraint de chave estrangeira. Tentando abordagem alternativa...`);
+              
+              // Primeiro verificar se o item já foi registrado como vendido
+              await supabase
+                .from('suitcase_items')
+                .update({ status: 'sold' })
+                .eq('id', itemId);
+                
+              // Depois verificar se há registros na tabela acerto_itens_vendidos que dependem deste item
+              const { data: dependencies } = await supabase
+                .from('acerto_itens_vendidos')
+                .select('id')
+                .eq('suitcase_item_id', itemId);
+                
+              if (dependencies && dependencies.length > 0) {
+                console.log(`Item ${itemId} tem ${dependencies.length} dependências em acerto_itens_vendidos`);
+                // Se houver, podemos atualizar a referência ou criar uma solução alternativa
+                // Por exemplo, podemos marcar o item como 'deleted' em vez de removê-lo
+              }
+            }
+            
             throw deleteError;
           }
           
@@ -119,7 +145,7 @@ export class AcertoMaletaModel {
       // 3. Verificação adicional: buscar todos os itens desta maleta para garantir que todos foram processados
       const { data: remainingItems, error: checkError } = await supabase
         .from('suitcase_items')
-        .select('id')
+        .select('id, status')
         .eq('suitcase_id', suitcaseId);
       
       if (checkError) {
@@ -127,18 +153,64 @@ export class AcertoMaletaModel {
       } else if (remainingItems && remainingItems.length > 0) {
         console.warn(`Foram encontrados ${remainingItems.length} itens ainda na maleta após o processamento. Removendo-os...`);
         
-        const remainingIds = remainingItems.map(item => item.id);
+        // Classificar itens restantes por status
+        const soldItems = remainingItems.filter(item => item.status === 'sold').map(item => item.id);
+        const otherItems = remainingItems.filter(item => item.status !== 'sold').map(item => item.id);
         
-        // Remover definitivamente todos os itens restantes
-        const { error: removeError } = await supabase
-          .from('suitcase_items')
-          .delete()
-          .in('id', remainingIds);
+        // Processar itens vendidos que ainda restam
+        if (soldItems.length > 0) {
+          console.log(`Removendo ${soldItems.length} itens vendidos que ainda estão na maleta...`);
+          
+          // Para cada item vendido restante, registrar na tabela de itens vendidos em acertos se ainda não foi registrado
+          for (const itemId of soldItems) {
+            // Verificar se o item já está registrado
+            const { data: existingRecord } = await supabase
+              .from('acerto_itens_vendidos')
+              .select('id')
+              .eq('suitcase_item_id', itemId)
+              .eq('acerto_id', acertoId);
+            
+            if (!existingRecord || existingRecord.length === 0) {
+              // Se não estiver registrado, buscar informações do item e registrar
+              const item = await SuitcaseItemModel.getSuitcaseItemById(itemId);
+              if (item) {
+                await supabase
+                  .from('acerto_itens_vendidos')
+                  .insert({
+                    acerto_id: acertoId,
+                    suitcase_item_id: itemId,
+                    inventory_id: item.inventory_id,
+                    price: item.product?.price || 0,
+                    unit_cost: item.product?.unit_cost || 0
+                  });
+              }
+            }
+          }
+          
+          // Depois, remover todos os itens vendidos
+          const { error: removeError } = await supabase
+            .from('suitcase_items')
+            .delete()
+            .in('id', soldItems);
+          
+          if (removeError) {
+            console.error(`Erro ao remover itens vendidos restantes da maleta:`, removeError);
+          } else {
+            console.log(`${soldItems.length} itens vendidos restantes removidos da maleta com sucesso`);
+          }
+        }
         
-        if (removeError) {
-          console.error(`Erro ao remover itens restantes da maleta:`, removeError);
-        } else {
-          console.log(`${remainingIds.length} itens restantes removidos da maleta com sucesso`);
+        // Processar outros itens que ainda restam (devolver ao estoque)
+        if (otherItems.length > 0) {
+          console.log(`Devolvendo ${otherItems.length} outros itens restantes ao estoque...`);
+          
+          for (const itemId of otherItems) {
+            try {
+              await SuitcaseItemModel.returnItemToInventory(itemId);
+            } catch (error) {
+              console.error(`Erro ao devolver item ${itemId} ao estoque:`, error);
+            }
+          }
         }
       } else {
         console.log(`Nenhum item restante na maleta ${suitcaseId}. Processamento concluído com sucesso.`);

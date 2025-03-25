@@ -1,4 +1,3 @@
-
 /**
  * Modelo de Operações de Itens de Maleta
  * @file Funções para adicionar, atualizar e remover itens de maleta
@@ -310,18 +309,35 @@ export class ItemOperationsModel {
         throw updateItemError;
       }
       
-      // CORREÇÃO: Remover completamente o item da maleta após atualizações
-      const { error: deleteError } = await supabase
-        .from('suitcase_items')
-        .delete()
-        .eq('id', itemId);
+      // CORREÇÃO: Verificar se há dependências em acerto_itens_vendidos antes de remover
+      const { data: dependencies } = await supabase
+        .from('acerto_itens_vendidos')
+        .select('id')
+        .eq('suitcase_item_id', itemId);
       
-      if (deleteError) {
-        console.error(`Erro ao remover item ${itemId} da maleta:`, deleteError);
-        throw deleteError;
+      if (dependencies && dependencies.length > 0) {
+        console.log(`O item ${itemId} tem ${dependencies.length} dependências em acerto_itens_vendidos. Não será removido diretamente.`);
+        // Neste caso, atualizamos para 'returned' acima, mas não removemos diretamente
+      } else {
+        // Remover completamente o item da maleta após atualizações
+        const { error: deleteError } = await supabase
+          .from('suitcase_items')
+          .delete()
+          .eq('id', itemId);
+        
+        if (deleteError) {
+          console.error(`Erro ao remover item ${itemId} da maleta:`, deleteError);
+          
+          // Se houver erro de constraint, verificamos se é possível identificar a causa
+          if (deleteError.message?.includes('foreign key constraint')) {
+            console.warn(`Erro de restrição de chave estrangeira ao excluir o item ${itemId}. Mantendo o item com status 'returned'.`);
+          } else {
+            throw deleteError;
+          }
+        } else {
+          console.log(`Item ${itemId} devolvido ao estoque com sucesso e removido da maleta`);
+        }
       }
-      
-      console.log(`Item ${itemId} devolvido ao estoque com sucesso e removido da maleta`);
     } catch (error) {
       console.error("Erro ao retornar item ao estoque:", error);
       throw error;

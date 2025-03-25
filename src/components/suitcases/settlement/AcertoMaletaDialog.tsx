@@ -195,6 +195,7 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
       };
       
       console.log("Iniciando acerto com dados:", formData);
+      console.log(`Itens vendidos: ${itemsSoldIds.length}, Itens verificados: ${itemsPresentIds.length}`);
       
       const { data: pendingAcerto, error: createError } = await supabase
         .from('acertos_maleta')
@@ -298,27 +299,73 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
       
       const { data: remainingItems, error: checkError } = await supabase
         .from('suitcase_items')
-        .select('id')
+        .select('id, status')
         .eq('suitcase_id', suitcase.id);
       
       if (checkError) {
         console.error(`Erro ao verificar itens restantes na maleta ${suitcase.id}:`, checkError);
       } else if (remainingItems && remainingItems.length > 0) {
-        console.warn(`Atenção: Encontrados ${remainingItems.length} itens ainda na maleta após o acerto. Tentando remoção final...`);
+        console.warn(`VERIFICAÇÃO FINAL: Encontrados ${remainingItems.length} itens ainda na maleta após o acerto. Removendo definitivamente...`);
         
-        const { error: removeError } = await supabase
-          .from('suitcase_items')
-          .delete()
-          .eq('suitcase_id', suitcase.id);
+        const soldRemaining = remainingItems.filter(item => item.status === 'sold');
+        const otherRemaining = remainingItems.filter(item => item.status !== 'sold');
         
-        if (removeError) {
-          console.error(`Erro na remoção final de itens da maleta:`, removeError);
-          toast.warning("Alguns itens podem não ter sido completamente removidos da maleta");
-        } else {
-          console.log(`Remoção final bem-sucedida: ${remainingItems.length} itens removidos da maleta ${suitcase.id}`);
+        if (soldRemaining.length > 0) {
+          console.log(`${soldRemaining.length} itens vendidos ainda na maleta. Registrando e removendo...`);
+          
+          for (const item of soldRemaining) {
+            const suitcaseItem = await SuitcaseItemModel.getSuitcaseItemById(item.id);
+            if (suitcaseItem) {
+              const { data: alreadyRegistered } = await supabase
+                .from('acerto_itens_vendidos')
+                .select('id')
+                .eq('suitcase_item_id', item.id)
+                .eq('acerto_id', acertoId);
+              
+              if (!alreadyRegistered || alreadyRegistered.length === 0) {
+                await supabase
+                  .from('acerto_itens_vendidos')
+                  .insert({
+                    acerto_id: acertoId,
+                    suitcase_item_id: item.id,
+                    inventory_id: suitcaseItem.inventory_id,
+                    price: suitcaseItem.product?.price || 0,
+                    unit_cost: suitcaseItem.product?.unit_cost || 0
+                  });
+              }
+            }
+          }
+        }
+        
+        if (otherRemaining.length > 0) {
+          console.log(`${otherRemaining.length} outros itens ainda na maleta. Devolvendo ao estoque...`);
+          
+          for (const item of otherRemaining) {
+            try {
+              await SuitcaseItemModel.returnItemToInventory(item.id);
+            } catch (error) {
+              console.error(`Erro ao devolver item ${item.id} ao estoque:`, error);
+            }
+          }
+        }
+        
+        try {
+          const { error: forceDeleteError } = await supabase
+            .from('suitcase_items')
+            .delete()
+            .eq('suitcase_id', suitcase.id);
+          
+          if (forceDeleteError) {
+            console.error(`Erro na remoção final de itens da maleta:`, forceDeleteError);
+            toast.warning("Alguns itens podem não ter sido completamente removidos da maleta");
+          } else {
+            console.log(`Remoção final bem-sucedida: ${remainingItems.length} itens removidos da maleta ${suitcase.id}`);
+          }
+        } catch (finalError) {
+          console.error("Erro na tentativa final de limpar a maleta:", finalError);
         }
       } else {
-        console.log(`Verificação final: Maleta ${suitcase.id} está vazia após o acerto. Sucesso total!`);
+        console.log(`VERIFICAÇÃO FINAL APROVADA: Maleta ${suitcase.id} está vazia após o acerto. Sucesso total!`);
       }
       
     } catch (error: any) {
@@ -760,7 +807,7 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
                   
                   <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200 text-sm text-yellow-800 mt-2">
                     <p className="flex items-start">
-                      <span className="mr-2">⚠️</span>
+                      <span className="mr-2">���️</span>
                       <span>
                         Os itens não verificados serão marcados como <strong>vendidos</strong>. 
                         Certifique-se de verificar todos os itens presentes na maleta antes de finalizar o acerto.
