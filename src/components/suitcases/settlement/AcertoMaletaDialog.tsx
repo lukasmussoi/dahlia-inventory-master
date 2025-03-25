@@ -170,13 +170,17 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
         scannedItemsIds.includes(item.id)
       );
       
+      const itemsSold = suitcaseItems.filter(item => 
+        !scannedItemsIds.includes(item.id)
+      );
+      
       const formData: SuitcaseSettlementFormData = {
         suitcase_id: suitcase.id,
         seller_id: suitcase.seller_id,
         settlement_date: settlementDate,
         next_settlement_date: nextSettlementDate,
         items_present: itemsPresent,
-        items_sold: [] // Array vazio para items_sold, serão detectados pelo backend
+        items_sold: itemsSold
       };
       
       console.log("Iniciando acerto com dados:", formData);
@@ -184,12 +188,6 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
       const result = await AcertoMaletaController.createAcerto(formData);
       console.log("Acerto criado com sucesso:", result);
       setCreatedAcertoId(result.id);
-      
-      console.log("Devolvendo itens verificados ao estoque...");
-      await returnVerifiedItemsToInventory();
-      
-      console.log("Marcando itens não verificados como vendidos...");
-      await markUnverifiedItemsAsSold();
       
       console.log("Gerando PDF do recibo...");
       const pdfUrl = await generateReceiptPDF(result.id);

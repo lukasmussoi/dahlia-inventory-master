@@ -87,6 +87,19 @@ export const SettlementController = {
     try {
       console.log("Finalizando acerto:", acertoId);
       
+      // Garantir que temos as datas em formato de string ISO antes de prosseguir
+      const settlementDate = formData.settlement_date instanceof Date 
+        ? formData.settlement_date.toISOString() 
+        : typeof formData.settlement_date === 'string'
+          ? formData.settlement_date
+          : new Date().toISOString();
+      
+      const nextSettlementDate = formData.next_settlement_date instanceof Date 
+        ? formData.next_settlement_date.toISOString() 
+        : typeof formData.next_settlement_date === 'string'
+          ? formData.next_settlement_date
+          : null;
+      
       // 1. Processar os itens (presentes, vendidos)
       await AcertoMaletaModel.processAcertoItems(
         acertoId,
@@ -113,7 +126,7 @@ export const SettlementController = {
           status: 'concluido',
           total_sales: totalSales,
           commission_amount: commissionAmount,
-          next_settlement_date: formData.next_settlement_date ? new Date(formData.next_settlement_date).toISOString() : null
+          next_settlement_date: nextSettlementDate
         })
         .eq('id', acertoId)
         .select()
@@ -125,9 +138,9 @@ export const SettlementController = {
       }
       
       // 5. Atualizar data do próximo acerto na maleta
-      if (formData.next_settlement_date) {
+      if (nextSettlementDate) {
         await SuitcaseModel.updateSuitcase(suitcaseId, {
-          next_settlement_date: new Date(formData.next_settlement_date).toISOString()
+          next_settlement_date: nextSettlementDate
         });
       }
       
