@@ -1,4 +1,3 @@
-
 /**
  * Hook personalizado para gerenciar o formulário de itens do inventário
  * Lida com a lógica de criação e edição de itens, incluindo validação e envio
@@ -8,7 +7,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { InventoryItem, InventoryModel } from "@/models/inventoryModel";
+import { InventoryItem, InventoryModel } from "@/models/inventory";
 
 // Schema de validação do formulário
 const formSchema = z.object({

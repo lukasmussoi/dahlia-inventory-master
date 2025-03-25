@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -20,7 +19,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { InventoryCategory, InventoryModel } from "@/models/inventoryModel";
+import { InventoryCategory, InventoryModel } from "@/models/inventory";
 
 // Schema de validação do formulário
 const formSchema = z.object({

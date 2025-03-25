@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { InventoryItem, InventoryModel, InventoryFilters, InventoryCategory } from "@/models/inventoryModel";
+import { InventoryItem, InventoryCategory, InventoryFilters, InventoryModel } from "@/models/inventory";
 import { Button } from "@/components/ui/button";
 import { Plus, FolderPlus, Archive, RotateCcw } from "lucide-react";
 import { InventoryTable } from "./InventoryTable";

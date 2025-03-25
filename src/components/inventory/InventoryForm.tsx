@@ -10,7 +10,7 @@ import {
 import { Form } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { InventoryItem, InventoryCategory, Supplier, InventoryModel } from "@/models/inventoryModel";
+import { InventoryItem, InventoryCategory, Supplier, InventoryModel } from "@/models/inventory";
 import { MainFields } from "./form/MainFields";
 import { DimensionsFields } from "./form/DimensionsFields";
 import { PhotoFields } from "./form/PhotoFields";

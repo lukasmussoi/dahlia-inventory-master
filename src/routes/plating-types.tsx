@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -20,7 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { PlatingType, InventoryModel } from "@/models/inventoryModel";
+import { PlatingType, InventoryModel } from "@/models/inventory";
 import { PlatingTypeForm } from "@/components/plating/PlatingTypeForm";
 import { Edit, Trash2 } from "lucide-react";
 

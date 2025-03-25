@@ -1,4 +1,5 @@
-import { InventoryModel } from "@/models/inventoryModel";
+
+import { InventoryModel } from "@/models/inventory";
 import { SuitcaseController } from "./suitcaseController";
 
 export const InventoryController = {

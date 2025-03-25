@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { InventoryFilters as Filters, InventoryCategory } from "@/models/inventoryModel";
+import { InventoryFilters as Filters, InventoryCategory } from "@/models/inventory";
 
 interface InventoryFiltersProps {
   categories: InventoryCategory[];
