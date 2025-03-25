@@ -232,11 +232,13 @@ export class SuitcaseSupplyController {
                   imgHeight
                 );
 
-                // Ajustar o texto para não sobrepor a imagem
+                // Ajustar o texto para não sobrepor a imagem com null-safe checks
                 if (data.cell.text && Array.isArray(data.cell.text) && data.cell.text.length > 0) {
                   const firstText = data.cell.text[0];
-                  if (typeof firstText === 'object' && firstText !== null && 'x' in firstText) {
-                    firstText.x += imgWidth + 4;
+                  
+                  // Adicionar verificações extras de segurança
+                  if (firstText && typeof firstText === 'object' && 'x' in firstText) {
+                    (firstText as any).x += imgWidth + 4;
                   }
                 }
               } catch (error) {
