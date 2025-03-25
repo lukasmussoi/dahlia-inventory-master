@@ -1,6 +1,27 @@
 
 # CHANGELOG DATABASE
 
+## [2025-03-28] - Correção definitiva do processo de acerto de maletas
+**Desenvolvedor:** Equipe Dalia Manager
+
+### Alterações
+- Não foram necessárias alterações no esquema do banco de dados.
+- A correção foi implementada apenas na camada de aplicação, melhorando a lógica de processamento e remoção dos itens.
+
+### Detalhes da Correção
+1. Implementada uma abordagem com múltiplas verificações para garantir que todos os itens sejam removidos da maleta após o acerto.
+2. Corrigida a função `returnItemToInventory` para explicitamente remover o item da maleta após devolvê-lo ao estoque.
+3. Adicionada verificação final após o processamento dos itens para garantir que nenhum item permaneça na maleta.
+
+### Justificativa
+Esta correção resolve definitivamente o problema crítico onde itens permaneciam na maleta após o acerto ser finalizado, causando inconsistência de dados e confusão para os usuários.
+
+### Impacto
+- Melhora significativa na integridade dos dados
+- Solução definitiva para o problema de itens que permaneciam na maleta
+- Melhor experiência do usuário com resultados consistentes após o acerto
+- Sem alterações no esquema do banco de dados
+
 ## [2025-03-27] - Refatoração do modelo de itens de maleta
 **Desenvolvedor:** Equipe Dalia Manager
 

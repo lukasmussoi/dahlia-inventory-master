@@ -58,59 +58,92 @@ export class AcertoMaletaModel {
       // 1. Processar itens presentes (retornar ao estoque)
       for (const itemId of itemsPresent) {
         console.log(`Retornando item ${itemId} ao estoque`);
-        await SuitcaseItemModel.returnItemToInventory(itemId);
+        try {
+          // Chamar função melhorada para garantir que o item seja devolvido ao estoque E removido da maleta
+          await SuitcaseItemModel.returnItemToInventory(itemId);
+        } catch (error) {
+          console.error(`Erro ao retornar item ${itemId} ao estoque:`, error);
+          // Continuar processando outros itens mesmo se ocorrer um erro
+        }
       }
       
       // 2. Processar itens vendidos (registrar vendas)
       for (const itemId of itemsSold) {
         console.log(`Registrando venda do item ${itemId}`);
         
-        // Buscar informações do item
-        const item = await SuitcaseItemModel.getSuitcaseItemById(itemId);
-        if (!item) {
-          console.warn(`Item ${itemId} não encontrado, pulando...`);
-          continue;
-        }
-        
-        // Atualizar status do item para vendido
-        await SuitcaseItemModel.updateSuitcaseItemStatus(itemId, 'sold');
-        
-        // Registrar na tabela de itens vendidos em acertos
-        const { error } = await supabase
-          .from('acerto_itens_vendidos')
-          .insert({
-            acerto_id: acertoId,
-            suitcase_item_id: itemId,
-            inventory_id: item.inventory_id,
-            price: item.product?.price || 0,
-            unit_cost: item.product?.unit_cost || 0
-          });
-        
-        if (error) {
-          console.error(`Erro ao registrar venda do item ${itemId}:`, error);
-          throw error;
+        try {
+          // Buscar informações do item
+          const item = await SuitcaseItemModel.getSuitcaseItemById(itemId);
+          if (!item) {
+            console.warn(`Item ${itemId} não encontrado, pulando...`);
+            continue;
+          }
+          
+          // Atualizar status do item para vendido
+          await SuitcaseItemModel.updateSuitcaseItemStatus(itemId, 'sold');
+          
+          // Registrar na tabela de itens vendidos em acertos
+          const { error } = await supabase
+            .from('acerto_itens_vendidos')
+            .insert({
+              acerto_id: acertoId,
+              suitcase_item_id: itemId,
+              inventory_id: item.inventory_id,
+              price: item.product?.price || 0,
+              unit_cost: item.product?.unit_cost || 0
+            });
+          
+          if (error) {
+            console.error(`Erro ao registrar venda do item ${itemId}:`, error);
+            throw error;
+          }
+          
+          // CORREÇÃO: Remover explicitamente o item da maleta após registrar como vendido
+          const { error: deleteError } = await supabase
+            .from('suitcase_items')
+            .delete()
+            .eq('id', itemId);
+          
+          if (deleteError) {
+            console.error(`Erro ao remover item vendido ${itemId} da maleta:`, deleteError);
+            throw deleteError;
+          }
+          
+          console.log(`Item vendido ${itemId} registrado e removido da maleta com sucesso`);
+        } catch (error) {
+          console.error(`Erro ao processar item vendido ${itemId}:`, error);
+          // Continuar processando outros itens mesmo se ocorrer um erro
         }
       }
       
-      // 3. CORREÇÃO: Remover todos os itens da maleta após o processamento
-      // Isto garante que nenhum item permaneça na maleta após o acerto
-      console.log(`Removendo todos os itens processados da maleta ${suitcaseId}`);
-      const allProcessedItems = [...itemsPresent, ...itemsSold];
+      // 3. Verificação adicional: buscar todos os itens desta maleta para garantir que todos foram processados
+      const { data: remainingItems, error: checkError } = await supabase
+        .from('suitcase_items')
+        .select('id')
+        .eq('suitcase_id', suitcaseId);
       
-      if (allProcessedItems.length > 0) {
-        // Em vez de apenas atualizar o status, remover completamente os itens da tabela suitcase_items
-        const { error: removalError } = await supabase
+      if (checkError) {
+        console.error(`Erro ao verificar itens restantes na maleta ${suitcaseId}:`, checkError);
+      } else if (remainingItems && remainingItems.length > 0) {
+        console.warn(`Foram encontrados ${remainingItems.length} itens ainda na maleta após o processamento. Removendo-os...`);
+        
+        const remainingIds = remainingItems.map(item => item.id);
+        
+        // Remover definitivamente todos os itens restantes
+        const { error: removeError } = await supabase
           .from('suitcase_items')
           .delete()
-          .in('id', allProcessedItems);
+          .in('id', remainingIds);
         
-        if (removalError) {
-          console.error(`Erro ao remover itens da maleta:`, removalError);
-          throw removalError;
+        if (removeError) {
+          console.error(`Erro ao remover itens restantes da maleta:`, removeError);
+        } else {
+          console.log(`${remainingIds.length} itens restantes removidos da maleta com sucesso`);
         }
+      } else {
+        console.log(`Nenhum item restante na maleta ${suitcaseId}. Processamento concluído com sucesso.`);
       }
       
-      console.log(`Processamento e remoção de itens concluído para o acerto ${acertoId}`);
     } catch (error) {
       console.error("Erro ao processar itens do acerto:", error);
       throw error;

@@ -1,4 +1,3 @@
-
 /**
  * Controlador de Operações de Acerto
  * @file Este arquivo contém operações para criar, atualizar e excluir acertos.
@@ -33,6 +32,7 @@ export class AcertoOperationsController {
         throw new Error("Erro ao buscar maleta para acerto");
       }
       
+      // Buscar TODOS os itens da maleta que estão atualmente em posse
       const { data: suitcaseItems, error: itemsError } = await supabase
         .from('suitcase_items')
         .select(`
@@ -40,15 +40,30 @@ export class AcertoOperationsController {
           product:inventory(id, name, sku, price)
         `)
         .eq('suitcase_id', data.suitcase_id)
-        .eq('status', 'in_possession')
-        .not('id', 'in', `(${data.items_present.join(',')})`);
+        .eq('status', 'in_possession');
       
-      if (itemsError && data.items_present.length > 0) {
+      if (itemsError) {
         console.error("Erro ao buscar itens da maleta:", itemsError);
         throw new Error("Erro ao buscar itens da maleta para acerto");
       }
       
-      const soldItems = suitcaseItems || [];
+      // Verificar se temos itens para processar
+      if (!suitcaseItems || suitcaseItems.length === 0) {
+        console.warn(`Nenhum item encontrado na maleta ${data.suitcase_id} para acerto`);
+        toast.warning("Não foram encontrados itens na maleta para acerto");
+      }
+      
+      // Processar os itens presentes e itens vendidos com base nos IDs fornecidos
+      const itemsPresentIds = data.items_present.map(item => 
+        typeof item === 'string' ? item : item.id
+      );
+      
+      // Identificar itens vendidos como aqueles que estão na maleta mas não estão na lista de presentes
+      let soldItems = [];
+      if (suitcaseItems && suitcaseItems.length > 0) {
+        soldItems = suitcaseItems.filter(item => !itemsPresentIds.includes(item.id));
+      }
+      
       const totalSales = soldItems.reduce((sum, item) => {
         return sum + (item.product?.price || 0);
       }, 0);
@@ -56,6 +71,7 @@ export class AcertoOperationsController {
       const commissionRate = suitcase.seller?.commission_rate || 0.3;
       const commissionAmount = totalSales * commissionRate;
       
+      // Verificar se já existe um acerto pendente para esta maleta
       const { data: existingAcerto, error: existingError } = await supabase
         .from('acertos_maleta')
         .select('id')
@@ -68,6 +84,7 @@ export class AcertoOperationsController {
       
       let acertoId: string;
       
+      // Atualizar acerto existente ou criar um novo
       if (existingAcerto && existingAcerto.length > 0) {
         const { data: updatedAcerto, error: updateError } = await supabase
           .from('acertos_maleta')
@@ -111,8 +128,22 @@ export class AcertoOperationsController {
         acertoId = newAcerto.id;
       }
       
-      if (soldItems.length > 0) {
-        await Promise.all(soldItems.map(async (item) => {
+      // Processar todos os itens (presentes/verificados para devolução ao estoque, e não presentes/vendidos)
+      console.log(`Processando ${itemsPresentIds.length} itens presentes e ${soldItems.length} itens vendidos`);
+      
+      // Processar itens presentes (devolver ao estoque e remover da maleta)
+      for (const itemId of itemsPresentIds) {
+        try {
+          await SuitcaseItemModel.returnItemToInventory(itemId);
+        } catch (error) {
+          console.error(`Erro ao processar item presente ${itemId}:`, error);
+        }
+      }
+      
+      // Processar itens vendidos (registrar venda e remover da maleta)
+      for (const item of soldItems) {
+        try {
+          // Verificar se o item já tem informações de venda registradas
           const { data: saleInfo, error: saleError } = await supabase
             .from('suitcase_item_sales')
             .select('*')
@@ -122,18 +153,14 @@ export class AcertoOperationsController {
             console.error(`Erro ao buscar informações de venda para o item ${item.id}:`, saleError);
           }
           
-          const { error: updateError } = await supabase
-            .from('suitcase_items')
-            .update({ status: 'sold' })
-            .eq('id', item.id);
+          // Atualizar status para vendido
+          await SuitcaseItemModel.updateSuitcaseItemStatus(item.id, 'sold');
           
-          if (updateError) {
-            console.error(`Erro ao atualizar status do item ${item.id}:`, updateError);
-          }
-          
+          // Obter informações de cliente e método de pagamento, se disponíveis
           const customerName = saleInfo && saleInfo.length > 0 ? saleInfo[0].customer_name : null;
           const paymentMethod = saleInfo && saleInfo.length > 0 ? saleInfo[0].payment_method : null;
           
+          // Registrar o item vendido no acerto
           const { error: acertoItemError } = await supabase
             .from('acerto_itens_vendidos')
             .insert({
@@ -149,36 +176,46 @@ export class AcertoOperationsController {
           if (acertoItemError) {
             console.error(`Erro ao registrar item vendido ${item.id} no acerto:`, acertoItemError);
           }
-        }));
-      }
-
-      // Processar os itens presentes (devolver ao estoque)
-      if (data.items_present && data.items_present.length > 0) {
-        for (const itemId of data.items_present) {
-          const id = typeof itemId === 'string' ? itemId : itemId.id;
-          console.log(`Retornando item ${id} ao estoque`);
-          await SuitcaseItemModel.returnItemToInventory(id);
+          
+          // CORREÇÃO: Remover explicitamente o item da maleta
+          const { error: deleteError } = await supabase
+            .from('suitcase_items')
+            .delete()
+            .eq('id', item.id);
+          
+          if (deleteError) {
+            console.error(`Erro ao remover item vendido ${item.id} da maleta:`, deleteError);
+          }
+        } catch (error) {
+          console.error(`Erro ao processar item vendido ${item.id}:`, error);
         }
       }
       
-      // Remover todos os itens processados da maleta
-      const allProcessedItems = [
-        ...data.items_present.map(item => typeof item === 'string' ? item : item.id),
-        ...soldItems.map(item => item.id)
-      ];
+      // Verificação final: garantir que nenhum item permaneça na maleta
+      const { data: remainingItems, error: checkError } = await supabase
+        .from('suitcase_items')
+        .select('id')
+        .eq('suitcase_id', data.suitcase_id);
       
-      if (allProcessedItems.length > 0) {
-        const { error: removalError } = await supabase
+      if (checkError) {
+        console.error(`Erro ao verificar itens restantes na maleta ${data.suitcase_id}:`, checkError);
+      } else if (remainingItems && remainingItems.length > 0) {
+        console.warn(`Encontrados ${remainingItems.length} itens ainda na maleta após o acerto. Removendo...`);
+        
+        // Remover todos os itens restantes da maleta
+        const { error: removeError } = await supabase
           .from('suitcase_items')
           .delete()
-          .in('id', allProcessedItems);
+          .eq('suitcase_id', data.suitcase_id);
         
-        if (removalError) {
-          console.error(`Erro ao remover itens da maleta:`, removalError);
-          throw removalError;
+        if (removeError) {
+          console.error(`Erro ao remover itens restantes da maleta:`, removeError);
+        } else {
+          console.log(`${remainingItems.length} itens restantes removidos com sucesso da maleta ${data.suitcase_id}`);
         }
       }
       
+      // Atualizar a próxima data de acerto na maleta, se fornecida
       if (data.next_settlement_date) {
         await supabase
           .from('suitcases')
@@ -188,6 +225,7 @@ export class AcertoOperationsController {
           .eq('id', data.suitcase_id);
       }
       
+      // Buscar e retornar o acerto completo com todas as informações atualizadas
       return await AcertoDetailsController.getAcertoById(acertoId);
     } catch (error) {
       console.error("Erro ao criar acerto:", error);

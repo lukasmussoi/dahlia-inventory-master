@@ -23,6 +23,7 @@ import { SuitcaseModel } from "@/models/suitcaseModel";
 import { openPdfInNewTab } from "@/utils/pdfUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { SuitcaseItemModel } from "@/models/suitcase/suitcaseItemModel";
+import { AcertoMaletaModel } from "@/models/acertoMaletaModel";
 
 interface AcertoMaletaDialogProps {
   open: boolean;
@@ -220,11 +221,34 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
       
       const acertoId = pendingAcerto.id;
       
-      for (const itemId of itemsPresentIds) {
-        await SuitcaseItemModel.returnItemToInventory(itemId);
-      }
+      await AcertoMaletaModel.processAcertoItems(
+        acertoId,
+        suitcase.id,
+        itemsPresentIds,
+        itemsSoldIds
+      );
       
-      const totalSales = await processItemsSold(itemsSoldIds, acertoId);
+      let totalSales = 0;
+      
+      if (itemsSoldIds.length > 0) {
+        const { data: soldItems, error } = await supabase
+          .from('inventory')
+          .select('price')
+          .in('id', itemsSoldIds.map(id => {
+            const item = suitcaseItems.find(i => i.id === id);
+            return item ? item.inventory_id : null;
+          }).filter(Boolean));
+        
+        if (error) {
+          console.error("Erro ao buscar detalhes dos itens vendidos:", error);
+          toast.warning("Erro ao calcular valor total das vendas, usando valor aproximado");
+          totalSales = suitcaseItems
+            .filter(item => itemsSoldIds.includes(item.id))
+            .reduce((sum, item) => sum + (item.product?.price || 0), 0);
+        } else if (soldItems) {
+          totalSales = soldItems.reduce((sum, item) => sum + (item.price || 0), 0);
+        }
+      }
       
       const commissionRate = suitcase.seller?.commission_rate || 0.3;
       const commissionAmount = totalSales * commissionRate;
@@ -266,9 +290,35 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
       
       queryClient.invalidateQueries({ queryKey: ['suitcases'] });
       queryClient.invalidateQueries({ queryKey: ['acertos'] });
+      queryClient.invalidateQueries({ queryKey: ['suitcase-items'] });
       
       if (onSuccess) {
         onSuccess();
+      }
+      
+      const { data: remainingItems, error: checkError } = await supabase
+        .from('suitcase_items')
+        .select('id')
+        .eq('suitcase_id', suitcase.id);
+      
+      if (checkError) {
+        console.error(`Erro ao verificar itens restantes na maleta ${suitcase.id}:`, checkError);
+      } else if (remainingItems && remainingItems.length > 0) {
+        console.warn(`Atenção: Encontrados ${remainingItems.length} itens ainda na maleta após o acerto. Tentando remoção final...`);
+        
+        const { error: removeError } = await supabase
+          .from('suitcase_items')
+          .delete()
+          .eq('suitcase_id', suitcase.id);
+        
+        if (removeError) {
+          console.error(`Erro na remoção final de itens da maleta:`, removeError);
+          toast.warning("Alguns itens podem não ter sido completamente removidos da maleta");
+        } else {
+          console.log(`Remoção final bem-sucedida: ${remainingItems.length} itens removidos da maleta ${suitcase.id}`);
+        }
+      } else {
+        console.log(`Verificação final: Maleta ${suitcase.id} está vazia após o acerto. Sucesso total!`);
       }
       
     } catch (error: any) {

@@ -251,6 +251,7 @@ export class ItemOperationsModel {
   /**
    * Retornar um item para o estoque
    * @param itemId ID do item
+   * @returns Promise que resolve quando o item for devolvido ao estoque
    */
   static async returnItemToInventory(itemId: string): Promise<void> {
     if (!itemId) throw new Error("ID do item é necessário");
@@ -258,21 +259,13 @@ export class ItemOperationsModel {
     try {
       // Buscar informações do item
       const item = await ItemQueryModel.getSuitcaseItemById(itemId);
-      if (!item) throw new Error("Item não encontrado");
-      
-      // Só processar se o item estiver em posse
-      if (item.status !== 'in_possession') {
-        console.log(`Item ${itemId} não está em posse (status: ${item.status}), pulando retorno ao estoque`);
+      if (!item) {
+        console.warn(`Item ${itemId} não encontrado, pulando retorno ao estoque`);
         return;
       }
       
-      // Atualizar o status para devolvido
-      const { error: updateError } = await supabase
-        .from('suitcase_items')
-        .update({ status: 'returned' })
-        .eq('id', itemId);
-      
-      if (updateError) throw updateError;
+      // Registrar que o item estava na maleta e será devolvido ao estoque
+      console.log(`Iniciando processamento para retornar item ${itemId} ao estoque. Status atual: ${item.status}`);
       
       // Incrementar a quantidade no estoque
       const quantidade = item.quantity || 1;
@@ -284,21 +277,51 @@ export class ItemOperationsModel {
         .eq('id', item.inventory_id)
         .maybeSingle();
       
-      if (getError) throw getError;
+      if (getError) {
+        console.error(`Erro ao buscar quantidade no estoque para o item ${item.inventory_id}:`, getError);
+        throw getError;
+      }
       
       if (inventoryData) {
         const newQuantity = (inventoryData.quantity || 0) + quantidade;
         
-        // Atualizar quantidade
+        // Atualizar quantidade no estoque
         const { error: updateInventoryError } = await supabase
           .from('inventory')
           .update({ quantity: newQuantity })
           .eq('id', item.inventory_id);
         
-        if (updateInventoryError) throw updateInventoryError;
+        if (updateInventoryError) {
+          console.error(`Erro ao atualizar estoque para o item ${item.inventory_id}:`, updateInventoryError);
+          throw updateInventoryError;
+        }
+        
+        console.log(`Estoque atualizado para o item ${item.inventory_id}: ${inventoryData.quantity} -> ${newQuantity}`);
       }
       
-      console.log(`Item ${itemId} devolvido ao estoque com sucesso`);
+      // Atualizar o status do item para "returned" (devolvido)
+      const { error: updateItemError } = await supabase
+        .from('suitcase_items')
+        .update({ status: 'returned' })
+        .eq('id', itemId);
+      
+      if (updateItemError) {
+        console.error(`Erro ao atualizar status do item ${itemId} para 'returned':`, updateItemError);
+        throw updateItemError;
+      }
+      
+      // CORREÇÃO: Remover completamente o item da maleta após atualizações
+      const { error: deleteError } = await supabase
+        .from('suitcase_items')
+        .delete()
+        .eq('id', itemId);
+      
+      if (deleteError) {
+        console.error(`Erro ao remover item ${itemId} da maleta:`, deleteError);
+        throw deleteError;
+      }
+      
+      console.log(`Item ${itemId} devolvido ao estoque com sucesso e removido da maleta`);
     } catch (error) {
       console.error("Erro ao retornar item ao estoque:", error);
       throw error;
