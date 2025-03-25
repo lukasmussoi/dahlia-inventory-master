@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { DashboardController } from "@/controllers/dashboardController";
@@ -26,11 +25,6 @@ export function DashboardContent() {
   const inventoryStats = metrics?.totalInventory 
     ? { totalItems: metrics.totalInventory.totalItems || 0, totalValue: metrics.totalInventory.totalValue || 0 }
     : { totalItems: 0, totalValue: 0 };
-
-  // Garantir que activeSuitcasesCount seja sempre um número
-  const activeSuitcasesCount = typeof metrics?.activeSuitcasesCount === 'number' 
-    ? metrics.activeSuitcasesCount 
-    : (Array.isArray(metrics?.activeSuitcasesCount) ? metrics.activeSuitcasesCount.length : 0);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -86,7 +80,7 @@ export function DashboardContent() {
                 <ShoppingBag className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{activeSuitcasesCount}</div>
+                <div className="text-2xl font-bold">{metrics?.activeSuitcasesCount || 0}</div>
                 <p className="text-xs text-muted-foreground">
                   {metrics?.suitcasesGrowth > 0 ? "+" : ""}
                   {metrics?.suitcasesGrowth || 0}% em relação ao período anterior

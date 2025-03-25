@@ -1,11 +1,3 @@
-
-/**
- * Componente de Diálogo de Acerto de Maleta
- * @file Este componente gerencia a interface para realizar acertos de maletas
- * @depends models/suitcase/SuitcaseItemModel - Para carregamento e manipulação dos itens de maleta
- * @depends controllers/acertoMaletaController - Para operações relacionadas ao acerto
- * @depends controllers/SuitcaseController - Para acesso às informações da maleta
- */
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -14,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { SuitcaseItem, Suitcase } from "@/types/suitcase";
-import { CombinedSuitcaseController } from "@/controllers/suitcase";
+import { SuitcaseController } from "@/controllers/suitcaseController";
 import { AcertoMaletaController } from "@/controllers/acertoMaletaController";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { SuitcaseSettlementFormData } from "@/types/suitcase";
 import { getProductPhotoUrl } from "@/utils/photoUtils";
 import { useQueryClient } from "@tanstack/react-query";
+import { SuitcaseModel } from "@/models/suitcaseModel";
 import { openPdfInNewTab } from "@/utils/pdfUtils";
 
 interface AcertoMaletaDialogProps {
@@ -64,21 +57,14 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
     }
   }, [open, suitcase]);
 
-  /**
-   * Carrega todos os itens da maleta, independente do status
-   * Importante: Removemos o filtro por status para exibir todos os itens no acerto
-   */
   const loadSuitcaseItems = async () => {
     if (!suitcase) return;
     
     try {
       setLoading(true);
-      console.log(`Carregando itens da maleta ${suitcase.id}`);
-      const items = await CombinedSuitcaseController.getSuitcaseItems(suitcase.id);
-      console.log(`Itens carregados: ${items.length}`, items);
-      
-      // Removido o filtro por status para mostrar todos os itens da maleta no acerto
-      setSuitcaseItems(items);
+      const items = await SuitcaseController.getSuitcaseItems(suitcase.id);
+      const activeItems = items.filter(item => item.status === 'in_possession');
+      setSuitcaseItems(activeItems);
     } catch (error) {
       console.error("Erro ao carregar itens da maleta:", error);
       toast.error("Erro ao carregar itens da maleta");
@@ -134,14 +120,11 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
   };
 
   const returnVerifiedItemsToInventory = async () => {
-    // Convertemos o array de strings para array de objetos SuitcaseItem
-    const itemsToReturn = suitcaseItems.filter(item => scannedItemsIds.includes(item.id));
-    
-    for (const item of itemsToReturn) {
+    for (const itemId of scannedItemsIds) {
       try {
-        await CombinedSuitcaseController.returnItemToInventory(item.id);
+        await SuitcaseModel.returnItemToInventory(itemId);
       } catch (error) {
-        console.error(`Erro ao devolver item ${item.id} ao estoque:`, error);
+        console.error(`Erro ao devolver item ${itemId} ao estoque:`, error);
       }
     }
   };
@@ -153,7 +136,7 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
     
     for (const itemId of unverifiedItemIds) {
       try {
-        await CombinedSuitcaseController.updateSuitcaseItemStatus(itemId, 'sold');
+        await SuitcaseController.updateSuitcaseItemStatus(itemId, 'sold');
       } catch (error) {
         console.error(`Erro ao marcar item ${itemId} como vendido:`, error);
       }
@@ -183,7 +166,6 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
     try {
       setIsSubmitting(true);
       
-      // Convertemos o array de strings para array de objetos SuitcaseItem
       const itemsPresent = suitcaseItems.filter(item => 
         scannedItemsIds.includes(item.id)
       );
@@ -454,10 +436,6 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
                           <tbody className="bg-white divide-y divide-gray-200">
                             {suitcaseItems.map((item) => {
                               const isChecked = scannedItemsIds.includes(item.id);
-                              const statusText = item.status === 'in_possession' ? 'Na Maleta' : 
-                                                item.status === 'sold' ? 'Vendido' : 
-                                                item.status === 'returned' ? 'Devolvido' : 'Perdido';
-                              
                               return (
                                 <tr 
                                   key={item.id}
@@ -485,9 +463,6 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
                                       <div className="ml-4">
                                         <div className="text-sm font-medium text-gray-900">
                                           {item.product?.name || "Produto sem nome"}
-                                        </div>
-                                        <div className="text-xs text-gray-500">
-                                          Status atual: {statusText}
                                         </div>
                                       </div>
                                     </div>
@@ -591,26 +566,44 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
                     
                     <div className="space-y-3">
                       <div className="flex justify-between">
-                        <span className="text-slate-600">Total de Itens:</span>
+                        <span className="text-slate-600">Total de itens na maleta:</span>
                         <span className="font-medium">{totalItems}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-slate-600">Itens Verificados:</span>
+                        <span className="text-slate-600">Itens verificados (presentes):</span>
                         <span className="font-medium">{scannedItems}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-slate-600">Itens Vendidos:</span>
-                        <span className="font-medium">{missingSoldItems}</span>
+                        <span className="text-slate-600">Itens vendidos (não verificados):</span>
+                        <span className="font-medium text-pink-600">{missingSoldItems}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-slate-600">Valor Total em Vendas:</span>
-                        <span className="font-medium">{AcertoMaletaController.formatCurrency(totalSaleValue)}</span>
+                        <span className="text-slate-600">Peças vendidas:</span>
+                        <span className="font-medium text-pink-600">{solvedPieces}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-slate-600">Comissão da Revendedora ({(commissionRate * 100).toFixed(0)}%):</span>
-                        <span className="font-medium">{AcertoMaletaController.formatCurrency(commissionAmount)}</span>
+                        <span className="text-slate-600">Valor total das vendas:</span>
+                        <span className="font-semibold">
+                          {AcertoMaletaController.formatCurrency(totalSaleValue)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between border-t pt-2 mt-2">
+                        <span className="text-slate-600">Comissão da revendedora ({(commissionRate * 100).toFixed(0)}%):</span>
+                        <span className="font-semibold text-green-600">
+                          {AcertoMaletaController.formatCurrency(commissionAmount)}
+                        </span>
                       </div>
                     </div>
+                  </div>
+                  
+                  <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200 text-sm text-yellow-800 mt-2">
+                    <p className="flex items-start">
+                      <span className="mr-2">⚠️</span>
+                      <span>
+                        Os itens não verificados serão marcados como <strong>vendidos</strong>. 
+                        Certifique-se de verificar todos os itens presentes na maleta antes de finalizar o acerto.
+                      </span>
+                    </p>
                   </div>
                 </CardContent>
                 <CardFooter className="flex justify-between">
@@ -622,16 +615,19 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
                   </Button>
                   <Button 
                     onClick={handleFinishSettlement}
-                    disabled={isSubmitting || totalItems === 0}
-                    className="bg-pink-600 hover:bg-pink-700"
+                    disabled={loading || isSubmitting || (nextSettlementDate === undefined)}
+                    className="bg-pink-500 hover:bg-pink-600"
                   >
                     {isSubmitting ? (
                       <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
+                        <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2" />
                         Processando...
                       </>
                     ) : (
-                      "Finalizar Acerto"
+                      <>
+                        <FileText className="h-4 w-4 mr-2" />
+                        Finalizar Acerto
+                      </>
                     )}
                   </Button>
                 </CardFooter>
