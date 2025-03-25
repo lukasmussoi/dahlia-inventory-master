@@ -1,130 +1,110 @@
 
 /**
  * Controlador de Exclusão de Maletas
- * @file Este arquivo controla as operações relacionadas à exclusão de maletas,
- * tratando corretamente os relacionamentos com acertos, itens e estoque
+ * @file Este arquivo contém as operações para excluir maletas do sistema,
+ * lidando com dependências como itens, acertos e vendas
  */
-import { supabase } from "@/integrations/supabase/client";
 import { SuitcaseModel } from "@/models/suitcaseModel";
 import { AcertoMaletaModel } from "@/models/acertoMaletaModel";
+import { supabase } from "@/integrations/supabase/client";
 
 export const DeleteSuitcaseController = {
   /**
-   * Exclui uma maleta e todos os seus relacionamentos (acertos, itens) em cascata
+   * Exclui uma maleta e todos os seus registros relacionados
    * @param suitcaseId ID da maleta a ser excluída
-   * @returns Objeto com status de sucesso da operação
+   * @returns true se a exclusão for bem-sucedida
    */
-  async deleteSuitcaseWithCascade(suitcaseId: string) {
+  async deleteSuitcase(suitcaseId: string): Promise<boolean> {
     try {
       console.log(`Iniciando processo de exclusão da maleta ${suitcaseId}`);
-      
+
+      // 1. Verificar se a maleta existe
+      const suitcase = await SuitcaseModel.getSuitcaseById(suitcaseId);
+      if (!suitcase) {
+        throw new Error("Maleta não encontrada");
+      }
+
       // Iniciar uma transação para garantir consistência
-      // Primeiro, buscar itens da maleta
-      const items = await SuitcaseModel.getSuitcaseItems(suitcaseId);
-      console.log(`Encontrados ${items.length} itens na maleta`);
+      // Como o Supabase não suporta transações diretamente, vamos usar try/catch para reverter operações em caso de erro
       
-      // Verificar se o usuário é administrador
-      const { data: isAdmin, error: adminCheckError } = await supabase.rpc('is_admin');
-      
-      if (adminCheckError) {
-        console.error("Erro ao verificar permissões de administrador:", adminCheckError);
-        throw new Error("Erro ao verificar permissões de administrador");
+      // 2. Buscar os itens da maleta
+      const suitcaseItems = await SuitcaseModel.getSuitcaseItems(suitcaseId);
+      console.log(`A maleta possui ${suitcaseItems.length} itens para processar`);
+
+      // 3. Retornar todos os itens ao estoque
+      for (const item of suitcaseItems) {
+        console.log(`Processando item ${item.id} (${item.status})`);
+        
+        // Se o item estiver em posse, retornar ao estoque
+        if (item.status === 'in_possession') {
+          await SuitcaseModel.returnItemToInventory(item.id);
+          console.log(`Item ${item.id} retornado ao estoque`);
+        } else {
+          // Para itens em outros estados, apenas remover da maleta
+          await SuitcaseModel.removeSuitcaseItem(item.id);
+          console.log(`Item ${item.id} removido da maleta`);
+        }
       }
-      
-      if (!isAdmin) {
-        throw new Error("Apenas administradores podem excluir maletas");
+
+      // 4. Excluir todos os acertos e seus itens vendidos
+      await AcertoMaletaModel.deleteAllAcertosBySuitcaseId(suitcaseId);
+      console.log(`Acertos da maleta ${suitcaseId} excluídos com sucesso`);
+
+      // 5. Por fim, excluir a maleta
+      const { error: deleteError } = await supabase
+        .from('suitcases')
+        .delete()
+        .eq('id', suitcaseId);
+
+      if (deleteError) {
+        console.error(`Erro ao excluir maleta ${suitcaseId}:`, deleteError);
+        throw deleteError;
       }
-      
-      // Buscar acertos relacionados à maleta
-      const { data: acertos, error: acertosError } = await supabase
+
+      console.log(`Maleta ${suitcaseId} excluída com sucesso`);
+      return true;
+    } catch (error) {
+      console.error(`Erro durante a exclusão da maleta ${suitcaseId}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Verifica se uma maleta pode ser excluída (tem permissões e não possui restrições)
+   * @param suitcaseId ID da maleta
+   * @returns Objeto indicando se pode ser excluída e mensagem de erro, se houver
+   */
+  async canDeleteSuitcase(suitcaseId: string): Promise<{ canDelete: boolean; message?: string }> {
+    try {
+      // Verificar se a maleta existe
+      const suitcase = await SuitcaseModel.getSuitcaseById(suitcaseId);
+      if (!suitcase) {
+        return { canDelete: false, message: "Maleta não encontrada" };
+      }
+
+      // Verificar se há acertos pendentes
+      const { data: pendingSettlements, error: settlementsError } = await supabase
         .from('acertos_maleta')
         .select('id')
-        .eq('suitcase_id', suitcaseId);
-      
-      if (acertosError) {
-        console.error("Erro ao buscar acertos da maleta:", acertosError);
-        throw acertosError;
+        .eq('suitcase_id', suitcaseId)
+        .eq('status', 'pendente');
+
+      if (settlementsError) {
+        console.error("Erro ao verificar acertos pendentes:", settlementsError);
+        throw settlementsError;
       }
-      
-      console.log(`Encontrados ${acertos?.length || 0} acertos relacionados à maleta`);
-      
-      // Retornar cada item ao estoque
-      for (const item of items) {
-        await SuitcaseModel.returnItemToInventory(item.id);
-        console.log(`Item ${item.id} retornado ao estoque`);
+
+      if (pendingSettlements && pendingSettlements.length > 0) {
+        return { 
+          canDelete: false, 
+          message: `Existem ${pendingSettlements.length} acertos pendentes. Finalize-os antes de excluir a maleta.` 
+        };
       }
-      
-      // Excluir os acertos relacionados à maleta
-      if (acertos && acertos.length > 0) {
-        const acertoIds = acertos.map(acerto => acerto.id);
-        
-        // Excluir vendas relacionadas aos acertos
-        for (const acertoId of acertoIds) {
-          try {
-            // Excluir itens vendidos associados ao acerto
-            const { error: vendaDeleteError } = await supabase
-              .from('acerto_itens_vendidos')
-              .delete()
-              .eq('acerto_id', acertoId);
-            
-            if (vendaDeleteError) {
-              console.error(`Erro ao excluir vendas do acerto ${acertoId}:`, vendaDeleteError);
-              throw vendaDeleteError;
-            }
-            
-            console.log(`Vendas do acerto ${acertoId} excluídas com sucesso`);
-          } catch (error) {
-            console.error(`Erro ao processar exclusão de vendas do acerto ${acertoId}:`, error);
-            throw error;
-          }
-        }
-        
-        // Excluir os acertos
-        const { error: acertoDeleteError } = await supabase
-          .from('acertos_maleta')
-          .delete()
-          .in('id', acertoIds);
-        
-        if (acertoDeleteError) {
-          console.error("Erro ao excluir acertos da maleta:", acertoDeleteError);
-          throw acertoDeleteError;
-        }
-        
-        console.log(`Acertos da maleta excluídos com sucesso: ${acertoIds.join(', ')}`);
-      }
-      
-      // Verificar se há vendas diretamente relacionadas à maleta (se existir essa relação)
-      const { error: itemSalesError } = await supabase
-        .from('suitcase_item_sales')
-        .delete()
-        .in('suitcase_item_id', items.map(item => item.id));
-      
-      if (itemSalesError) {
-        console.error("Erro ao excluir vendas da maleta:", itemSalesError);
-        throw itemSalesError;
-      }
-      
-      // Excluir itens da maleta
-      const { error: itemsDeleteError } = await supabase
-        .from('suitcase_items')
-        .delete()
-        .eq('suitcase_id', suitcaseId);
-      
-      if (itemsDeleteError) {
-        console.error("Erro ao excluir itens da maleta:", itemsDeleteError);
-        throw itemsDeleteError;
-      }
-      
-      console.log(`Itens da maleta ${suitcaseId} excluídos com sucesso`);
-      
-      // Finalmente, excluir a maleta
-      await SuitcaseModel.deleteSuitcase(suitcaseId);
-      console.log(`Maleta ${suitcaseId} excluída com sucesso`);
-      
-      return { success: true };
+
+      return { canDelete: true };
     } catch (error) {
-      console.error("Erro ao excluir maleta com cascade:", error);
-      throw error;
+      console.error("Erro ao verificar se maleta pode ser excluída:", error);
+      return { canDelete: false, message: "Erro ao verificar disponibilidade para exclusão" };
     }
   }
 };

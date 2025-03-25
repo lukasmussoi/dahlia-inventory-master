@@ -5,6 +5,7 @@
  */
 import { SuitcaseModel } from "@/models/suitcaseModel";
 import { SuitcaseItemStatus } from "@/types/suitcase";
+import { supabase } from "@/integrations/supabase/client";
 
 export const SuitcaseItemController = {
   async getSuitcaseItemById(itemId: string) {
@@ -84,7 +85,7 @@ export const SuitcaseItemController = {
   async updateSaleInfo(itemId: string, field: string, value: string) {
     try {
       // Atualizar informações de venda
-      const { data, error } = await SuitcaseModel.supabase
+      const { data, error } = await supabase
         .from('suitcase_item_sales')
         .select('id')
         .eq('suitcase_item_id', itemId)
@@ -97,7 +98,7 @@ export const SuitcaseItemController = {
       
       if (data) {
         // Já existe um registro, atualizar
-        const { error: updateError } = await SuitcaseModel.supabase
+        const { error: updateError } = await supabase
           .from('suitcase_item_sales')
           .update({ [field]: value })
           .eq('id', data.id);
@@ -108,7 +109,7 @@ export const SuitcaseItemController = {
         }
       } else {
         // Criar novo registro
-        const { error: insertError } = await SuitcaseModel.supabase
+        const { error: insertError } = await supabase
           .from('suitcase_item_sales')
           .insert({
             suitcase_item_id: itemId,

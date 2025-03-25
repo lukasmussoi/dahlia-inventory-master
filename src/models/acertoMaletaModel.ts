@@ -1,8 +1,7 @@
 
 /**
  * Modelo de Acertos de Maleta
- * @file Este arquivo contém as funções para gerenciar acertos de maletas,
- * incluindo a criação, exclusão e manipulação dos itens durante acertos
+ * @file Este arquivo contém as operações de banco de dados para os acertos de maleta
  */
 import { supabase } from "@/integrations/supabase/client";
 import { Acerto, SuitcaseItem } from "@/types/suitcase";
@@ -11,186 +10,71 @@ import { SuitcaseModel } from "./suitcaseModel";
 export class AcertoMaletaModel {
   /**
    * Cria um novo acerto de maleta
-   * @param data Dados do acerto a ser criado
+   * @param acertoData Dados do acerto
    * @returns Acerto criado
    */
-  static async createAcerto(data: any): Promise<Acerto> {
-    try {
-      // Iniciar transação
-      console.log("Iniciando criação de acerto para maleta:", data.suitcase_id);
-      
-      // 1. Inserir o acerto na tabela
-      const { data: acerto, error } = await supabase
-        .from('acertos_maleta')
-        .insert(data)
-        .select()
-        .single();
-      
-      if (error) {
-        console.error("Erro ao criar acerto:", error);
-        throw error;
-      }
-      
-      return acerto;
-    } catch (error) {
-      console.error("Erro no modelo ao criar acerto:", error);
+  static async createAcerto(acertoData: Partial<Acerto>): Promise<Acerto> {
+    const { data, error } = await supabase
+      .from('acertos_maleta')
+      .insert(acertoData)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error("Erro ao criar acerto:", error);
       throw error;
     }
+    
+    return data;
   }
-  
+
   /**
-   * Processa os itens da maleta durante um acerto
+   * Processa os itens de um acerto (presentes e vendidos)
    * @param acertoId ID do acerto
    * @param suitcaseId ID da maleta
-   * @param itemsPresent Array de IDs dos itens marcados como presentes no acerto
-   * @param itemsSold Array de IDs e informações dos itens vendidos
+   * @param itemsPresent Itens presentes na maleta
+   * @param itemsSold Itens vendidos
    */
   static async processAcertoItems(
     acertoId: string,
-    suitcaseId: string, 
-    itemsPresent: string[], 
-    itemsSold: Array<{
-      suitcase_item_id: string;
-      inventory_id: string;
-      price: number;
-      customer_name?: string;
-      payment_method?: string;
-    }>
+    suitcaseId: string,
+    itemsPresent: SuitcaseItem[],
+    itemsSold: SuitcaseItem[]
   ): Promise<void> {
     try {
-      console.log(`Processando itens para acerto ${acertoId} da maleta ${suitcaseId}`);
-      console.log(`Itens presentes: ${itemsPresent.length}, Itens vendidos: ${itemsSold.length}`);
+      console.log(`Processando ${itemsPresent.length} itens presentes e ${itemsSold.length} itens vendidos`);
       
-      // Buscar todos os itens da maleta
-      const { data: allItems, error: itemsError } = await supabase
-        .from('suitcase_items')
-        .select('*')
-        .eq('suitcase_id', suitcaseId)
-        .eq('status', 'in_possession');
-      
-      if (itemsError) {
-        console.error("Erro ao buscar itens da maleta:", itemsError);
-        throw itemsError;
+      // 1. Processar itens presentes (retornar ao estoque)
+      for (const item of itemsPresent) {
+        console.log(`Retornando item ${item.id} ao estoque`);
+        await SuitcaseModel.returnItemToInventory(item.id);
       }
       
-      const allItemIds = allItems?.map(item => item.id) || [];
-      console.log(`Total de itens na maleta: ${allItemIds.length}`);
-      
-      // 1. Processar itens presentes (devolver ao estoque)
-      for (const itemId of itemsPresent) {
-        try {
-          console.log(`Devolvendo item ${itemId} ao estoque`);
-          await SuitcaseModel.returnItemToInventory(itemId);
-        } catch (error) {
-          console.error(`Erro ao devolver item ${itemId} ao estoque:`, error);
-          throw error;
-        }
-      }
-      
-      // 2. Processar itens vendidos
-      for (const soldItem of itemsSold) {
-        try {
-          console.log(`Registrando venda do item ${soldItem.suitcase_item_id}`);
-          
-          // Marcar item como vendido
-          const { error: updateError } = await supabase
-            .from('suitcase_items')
-            .update({ status: 'sold' })
-            .eq('id', soldItem.suitcase_item_id);
-          
-          if (updateError) {
-            console.error(`Erro ao atualizar status do item ${soldItem.suitcase_item_id}:`, updateError);
-            throw updateError;
-          }
-          
-          // Registrar a venda no acerto
-          const { error: insertError } = await supabase
-            .from('acerto_itens_vendidos')
-            .insert({
-              acerto_id: acertoId,
-              suitcase_item_id: soldItem.suitcase_item_id,
-              inventory_id: soldItem.inventory_id,
-              price: soldItem.price,
-              customer_name: soldItem.customer_name,
-              payment_method: soldItem.payment_method,
-              sale_date: new Date().toISOString()
-            });
-          
-          if (insertError) {
-            console.error(`Erro ao registrar venda do item ${soldItem.suitcase_item_id}:`, insertError);
-            throw insertError;
-          }
-        } catch (error) {
-          console.error(`Erro ao processar item vendido ${soldItem.suitcase_item_id}:`, error);
-          throw error;
-        }
-      }
-      
-      // 3. Verificar itens não processados (nem vendidos nem presentes)
-      const processedItemIds = [...itemsPresent, ...itemsSold.map(item => item.suitcase_item_id)];
-      const unprocessedItemIds = allItemIds.filter(id => !processedItemIds.includes(id));
-      
-      if (unprocessedItemIds.length > 0) {
-        console.log(`${unprocessedItemIds.length} itens não foram processados. Considerando como vendidos.`);
+      // 2. Processar itens vendidos (registrar vendas)
+      for (const item of itemsSold) {
+        console.log(`Registrando venda do item ${item.id}`);
         
-        for (const itemId of unprocessedItemIds) {
-          try {
-            // Buscar informações do item
-            const { data: itemData, error: itemError } = await supabase
-              .from('suitcase_items')
-              .select(`
-                *,
-                product:inventory_id (id, price)
-              `)
-              .eq('id', itemId)
-              .single();
-            
-            if (itemError) {
-              console.error(`Erro ao buscar informações do item ${itemId}:`, itemError);
-              throw itemError;
-            }
-            
-            if (!itemData) {
-              console.error(`Item ${itemId} não encontrado.`);
-              continue;
-            }
-            
-            // Marcar item como vendido
-            const { error: updateError } = await supabase
-              .from('suitcase_items')
-              .update({ status: 'sold' })
-              .eq('id', itemId);
-            
-            if (updateError) {
-              console.error(`Erro ao atualizar status do item ${itemId}:`, updateError);
-              throw updateError;
-            }
-            
-            // Registrar a venda no acerto
-            const { error: insertError } = await supabase
-              .from('acerto_itens_vendidos')
-              .insert({
-                acerto_id: acertoId,
-                suitcase_item_id: itemId,
-                inventory_id: itemData.inventory_id,
-                price: itemData.product?.price || 0,
-                customer_name: 'Não informado',
-                payment_method: 'Não informado',
-                sale_date: new Date().toISOString()
-              });
-            
-            if (insertError) {
-              console.error(`Erro ao registrar venda automática do item ${itemId}:`, insertError);
-              throw insertError;
-            }
-          } catch (error) {
-            console.error(`Erro ao processar item não verificado ${itemId}:`, error);
-            throw error;
-          }
+        // Atualizar status do item para vendido
+        await SuitcaseModel.updateSuitcaseItemStatus(item.id, 'sold');
+        
+        // Registrar na tabela de itens vendidos em acertos
+        const { error } = await supabase
+          .from('acerto_itens_vendidos')
+          .insert({
+            acerto_id: acertoId,
+            suitcase_item_id: item.id,
+            inventory_id: item.inventory_id,
+            price: item.product?.price || 0,
+            unit_cost: item.product?.unit_cost || 0
+          });
+        
+        if (error) {
+          console.error(`Erro ao registrar venda do item ${item.id}:`, error);
+          throw error;
         }
       }
       
-      console.log(`Processamento de itens do acerto ${acertoId} concluído com sucesso.`);
+      console.log(`Processamento de itens concluído para o acerto ${acertoId}`);
     } catch (error) {
       console.error("Erro ao processar itens do acerto:", error);
       throw error;
@@ -198,38 +82,36 @@ export class AcertoMaletaModel {
   }
   
   /**
-   * Exclui um acerto de maleta
+   * Exclui um acerto e todos os seus itens vendidos
    * @param acertoId ID do acerto a ser excluído
-   * @returns Status de sucesso da operação
    */
-  static async deleteAcerto(acertoId: string): Promise<boolean> {
+  static async deleteAcerto(acertoId: string): Promise<void> {
     try {
-      console.log(`Iniciando exclusão do acerto ${acertoId}`);
+      console.log(`Excluindo acerto ${acertoId} e seus itens vendidos`);
       
-      // 1. Excluir itens vendidos associados ao acerto
-      const { error: itemsDeleteError } = await supabase
+      // 1. Excluir os itens vendidos no acerto
+      const { error: deleteItemsError } = await supabase
         .from('acerto_itens_vendidos')
         .delete()
         .eq('acerto_id', acertoId);
       
-      if (itemsDeleteError) {
-        console.error(`Erro ao excluir itens vendidos do acerto ${acertoId}:`, itemsDeleteError);
-        throw itemsDeleteError;
+      if (deleteItemsError) {
+        console.error(`Erro ao excluir itens vendidos do acerto ${acertoId}:`, deleteItemsError);
+        throw deleteItemsError;
       }
       
       // 2. Excluir o acerto
-      const { error: acertoDeleteError } = await supabase
+      const { error: deleteAcertoError } = await supabase
         .from('acertos_maleta')
         .delete()
         .eq('id', acertoId);
       
-      if (acertoDeleteError) {
-        console.error(`Erro ao excluir acerto ${acertoId}:`, acertoDeleteError);
-        throw acertoDeleteError;
+      if (deleteAcertoError) {
+        console.error(`Erro ao excluir acerto ${acertoId}:`, deleteAcertoError);
+        throw deleteAcertoError;
       }
       
       console.log(`Acerto ${acertoId} excluído com sucesso`);
-      return true;
     } catch (error) {
       console.error(`Erro ao excluir acerto ${acertoId}:`, error);
       throw error;
@@ -237,48 +119,39 @@ export class AcertoMaletaModel {
   }
   
   /**
-   * Busca os detalhes de um acerto pelo ID
-   * @param acertoId ID do acerto
-   * @returns Detalhes do acerto
+   * Exclui todos os acertos de uma maleta
+   * @param suitcaseId ID da maleta
    */
-  static async getAcertoById(acertoId: string): Promise<Acerto | null> {
+  static async deleteAllAcertosBySuitcaseId(suitcaseId: string): Promise<void> {
     try {
-      const { data, error } = await supabase
+      console.log(`Buscando acertos da maleta ${suitcaseId} para exclusão`);
+      
+      // 1. Buscar todos os acertos da maleta
+      const { data: acertos, error: fetchError } = await supabase
         .from('acertos_maleta')
-        .select(`
-          *,
-          suitcase:suitcases(*, seller:resellers(*)),
-          seller:resellers(*)
-        `)
-        .eq('id', acertoId)
-        .single();
+        .select('id')
+        .eq('suitcase_id', suitcaseId);
       
-      if (error) {
-        console.error(`Erro ao buscar acerto ${acertoId}:`, error);
-        throw error;
+      if (fetchError) {
+        console.error(`Erro ao buscar acertos da maleta ${suitcaseId}:`, fetchError);
+        throw fetchError;
       }
       
-      if (!data) return null;
-      
-      const { data: itemsVendidos, error: itemsError } = await supabase
-        .from('acerto_itens_vendidos')
-        .select(`
-          *,
-          product:inventory(id, name, sku, price, photo_url:inventory_photos(photo_url))
-        `)
-        .eq('acerto_id', acertoId);
-      
-      if (itemsError) {
-        console.error(`Erro ao buscar itens vendidos do acerto ${acertoId}:`, itemsError);
-        throw itemsError;
+      if (!acertos || acertos.length === 0) {
+        console.log(`Nenhum acerto encontrado para a maleta ${suitcaseId}`);
+        return;
       }
       
-      return {
-        ...data,
-        items_vendidos: itemsVendidos || []
-      };
+      console.log(`Encontrados ${acertos.length} acertos para exclusão`);
+      
+      // 2. Excluir cada acerto
+      for (const acerto of acertos) {
+        await this.deleteAcerto(acerto.id);
+      }
+      
+      console.log(`Todos os acertos da maleta ${suitcaseId} foram excluídos com sucesso`);
     } catch (error) {
-      console.error(`Erro ao buscar acerto ${acertoId}:`, error);
+      console.error(`Erro ao excluir acertos da maleta ${suitcaseId}:`, error);
       throw error;
     }
   }

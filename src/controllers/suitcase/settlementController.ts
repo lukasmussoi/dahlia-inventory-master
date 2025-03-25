@@ -7,6 +7,7 @@
 import { SuitcaseModel } from "@/models/suitcaseModel";
 import { AcertoMaletaModel } from "@/models/acertoMaletaModel";
 import { Acerto, SuitcaseSettlementFormData } from "@/types/suitcase";
+import { supabase } from "@/integrations/supabase/client";
 
 export const SettlementController = {
   /**
@@ -18,8 +19,8 @@ export const SettlementController = {
     try {
       console.log("Buscando histórico de acertos para a maleta:", suitcaseId);
       
-      // Buscar acertos da maleta a partir do modelo
-      const { data: acertos, error } = await SuitcaseModel.supabase
+      // Buscar acertos da maleta diretamente usando o cliente supabase
+      const { data: acertos, error } = await supabase
         .from('acertos_maleta')
         .select(`
           *,
@@ -106,7 +107,7 @@ export const SettlementController = {
       const commissionAmount = totalSales * commissionRate;
       
       // 4. Atualizar acerto com status concluído e valores calculados
-      const { data: updatedAcerto, error } = await SuitcaseModel.supabase
+      const { data: updatedAcerto, error } = await supabase
         .from('acertos_maleta')
         .update({
           status: 'concluido',
