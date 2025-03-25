@@ -232,14 +232,15 @@ export class SuitcaseSupplyController {
                   imgHeight
                 );
 
-                // Ajustar o texto para não sobrepor a imagem com null-safe checks
+                // Adicionar verificações extras de segurança para texto
                 if (data.cell.text && Array.isArray(data.cell.text) && data.cell.text.length > 0) {
                   const firstText = data.cell.text[0];
                   
-                  // Adicionar verificações extras de segurança
+                  // Verificar se firstText é um objeto com propriedade 'x'
                   if (firstText && typeof firstText === 'object' && 'x' in firstText) {
-                    // Use optional chaining and nullish coalescing to safely modify x
-                    (firstText as any).x = ((firstText as any).x ?? 0) + imgWidth + 4;
+                    // Usar optional chaining e type assertion para modificar com segurança
+                    const textX = (firstText as { x?: number }).x ?? 0;
+                    (firstText as { x?: number }).x = textX + imgWidth + 4;
                   }
                 }
               } catch (error) {
