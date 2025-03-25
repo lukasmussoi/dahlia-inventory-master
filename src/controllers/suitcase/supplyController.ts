@@ -236,11 +236,15 @@ export class SuitcaseSupplyController {
                 if (data.cell.text && Array.isArray(data.cell.text) && data.cell.text.length > 0) {
                   const firstText = data.cell.text[0];
                   
-                  // Verificar se firstText é um objeto com propriedade 'x'
-                  if (firstText && typeof firstText === 'object' && 'x' in firstText) {
-                    // Usar optional chaining e type assertion para modificar com segurança
-                    const textX = (firstText as { x?: number }).x ?? 0;
-                    (firstText as { x?: number }).x = textX + imgWidth + 4;
+                  // Verificação mais segura para modificar a coordenada x
+                  if (firstText && typeof firstText === 'object') {
+                    const updatedText = { 
+                      ...firstText, 
+                      x: ((firstText as { x?: number }).x ?? 0) + imgWidth + 4 
+                    };
+                    
+                    // Substituir o primeiro elemento do texto
+                    data.cell.text[0] = updatedText;
                   }
                 }
               } catch (error) {
