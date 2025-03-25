@@ -21,6 +21,8 @@ import { getProductPhotoUrl } from "@/utils/photoUtils";
 import { useQueryClient } from "@tanstack/react-query";
 import { SuitcaseModel } from "@/models/suitcaseModel";
 import { openPdfInNewTab } from "@/utils/pdfUtils";
+import { supabase } from "@/integrations/supabase/client";
+import { SuitcaseItemModel } from "@/models/suitcase/suitcaseItemModel";
 
 interface AcertoMaletaDialogProps {
   open: boolean;
