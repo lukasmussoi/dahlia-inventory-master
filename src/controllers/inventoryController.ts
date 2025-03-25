@@ -1,4 +1,3 @@
-
 import { InventoryModel } from "@/models/inventoryModel";
 import { SuitcaseController } from "./suitcaseController";
 
@@ -51,13 +50,14 @@ export const InventoryController = {
   // Excluir um item do inventário
   async deleteItem(id: string) {
     try {
-      // Verificar se o item tem movimentações
-      const hasMovements = await InventoryModel.checkItemHasMovements(id);
+      // Verificar se o item tem movimentações e está em maletas ativas
+      const { inSuitcase, isActiveCase } = await this.checkItemInSuitcase(id);
       
-      if (hasMovements) {
-        throw new Error("Não é possível excluir o item pois existem movimentações registradas. Considere definir a quantidade como zero em vez de excluir.");
+      if (inSuitcase && isActiveCase) {
+        throw new Error("Não é possível excluir o item pois ele está em uma maleta ativa. Devolva a maleta primeiro.");
       }
       
+      // Executar a exclusão em cascata
       await InventoryModel.deleteItem(id);
       return true;
     } catch (error) {

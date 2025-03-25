@@ -1,3 +1,7 @@
+/**
+ * Modelo de Inventário
+ * @file Este arquivo contém as operações de banco de dados para o inventário
+ */
 import { supabase } from "@/integrations/supabase/client";
 
 // Interfaces para tipagem
@@ -280,19 +284,100 @@ export class InventoryModel {
 
   // Excluir item
   static async deleteItem(id: string): Promise<void> {
-    const { error: photoError } = await supabase
-      .from('inventory_photos')
-      .delete()
-      .eq('inventory_id', id);
-    
-    if (photoError) throw photoError;
-    
-    const { error } = await supabase
-      .from('inventory')
-      .delete()
-      .eq('id', id);
-    
-    if (error) throw error;
+    try {
+      console.log("Iniciando processo de exclusão do item:", id);
+      
+      // 1. Excluir movimentações relacionadas
+      console.log("Excluindo movimentações de estoque relacionadas ao item:", id);
+      const { error: movementsError } = await supabase
+        .from('inventory_movements')
+        .delete()
+        .eq('inventory_id', id);
+      
+      if (movementsError) {
+        console.error("Erro ao excluir movimentações:", movementsError);
+        throw movementsError;
+      }
+      
+      // 2. Excluir fotos relacionadas
+      console.log("Excluindo fotos relacionadas ao item:", id);
+      const { error: photoError } = await supabase
+        .from('inventory_photos')
+        .delete()
+        .eq('inventory_id', id);
+      
+      if (photoError) {
+        console.error("Erro ao excluir fotos:", photoError);
+        throw photoError;
+      }
+      
+      // 3. Verificar se o item tem relação com vendas em acertos
+      const { data: salesData, error: salesCheckError } = await supabase
+        .from('acerto_itens_vendidos')
+        .select('id')
+        .eq('inventory_id', id);
+        
+      if (salesCheckError) {
+        console.error("Erro ao verificar vendas relacionadas:", salesCheckError);
+        throw salesCheckError;
+      }
+      
+      // 4. Se houver vendas relacionadas, excluí-las
+      if (salesData && salesData.length > 0) {
+        console.log(`Excluindo ${salesData.length} registros de vendas relacionados ao item:`, id);
+        const { error: salesDeleteError } = await supabase
+          .from('acerto_itens_vendidos')
+          .delete()
+          .eq('inventory_id', id);
+          
+        if (salesDeleteError) {
+          console.error("Erro ao excluir vendas relacionadas:", salesDeleteError);
+          throw salesDeleteError;
+        }
+      }
+      
+      // 5. Verificar se o item está em alguma maleta
+      const { data: suitcaseItemsData, error: suitcaseItemsCheckError } = await supabase
+        .from('suitcase_items')
+        .select('id')
+        .eq('inventory_id', id);
+        
+      if (suitcaseItemsCheckError) {
+        console.error("Erro ao verificar itens de maleta relacionados:", suitcaseItemsCheckError);
+        throw suitcaseItemsCheckError;
+      }
+      
+      // 6. Se o item estiver em maletas, excluir essas relações
+      if (suitcaseItemsData && suitcaseItemsData.length > 0) {
+        console.log(`Excluindo ${suitcaseItemsData.length} registros de itens de maleta relacionados ao item:`, id);
+        const { error: suitcaseItemsDeleteError } = await supabase
+          .from('suitcase_items')
+          .delete()
+          .eq('inventory_id', id);
+          
+        if (suitcaseItemsDeleteError) {
+          console.error("Erro ao excluir itens de maleta relacionados:", suitcaseItemsDeleteError);
+          throw suitcaseItemsDeleteError;
+        }
+      }
+      
+      // 7. Finalmente, excluir o item do inventário
+      console.log("Excluindo o item do inventário:", id);
+      const { error } = await supabase
+        .from('inventory')
+        .delete()
+        .eq('id', id);
+      
+      if (error) {
+        console.error("Erro ao excluir item do inventário:", error);
+        throw error;
+      }
+      
+      console.log("Item excluído com sucesso:", id);
+    } catch (error) {
+      console.error("Erro durante o processo de exclusão do item:", error);
+      throw error;
+    }
   }
 
   // Arquivar item (marcar como arquivado)
