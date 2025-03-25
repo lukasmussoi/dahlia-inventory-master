@@ -1,62 +1,62 @@
 
 /**
  * Controlador Combinado de Maletas
- * @file Este arquivo exporta todas as funcionalidades relacionadas às maletas
- * para manter uma interface consistente para os componentes que utilizam o controlador
+ * @file Este arquivo exporta um controlador combinado para operações de maletas,
+ * consolidando todas as operações em uma única interface
+ * @depends controllers/suitcase/* - Controladores específicos para cada tipo de operação
  */
 
-// Importar todos os controladores de maletas
 import { SuitcaseController } from "./suitcaseController";
 import { SuitcaseItemController } from "./suitcaseItemController";
-import { DeleteSuitcaseController } from "./deleteSuitcaseController";
-import { SettlementController } from "./settlementController";
-import { InventorySearchController } from "./inventorySearchController";
 import { SellerController } from "./sellerController";
+import { InventorySearchController } from "./inventorySearchController";
+import { SettlementController } from "./settlementController";
 import { PdfController } from "./pdfController";
+import { DeleteSuitcaseController } from "./deleteSuitcaseController";
 
-// Exportar um controlador combinado com todas as funcionalidades
-export const CombinedSuitcaseController = {
-  // SuitcaseController
-  getSuitcases: SuitcaseController.getSuitcases,
-  getSuitcaseById: SuitcaseController.getSuitcaseById,
-  getSuitcaseItems: SuitcaseController.getSuitcaseItems,
-  createSuitcase: SuitcaseController.createSuitcase,
-  updateSuitcase: SuitcaseController.updateSuitcase,
-  deleteSuitcase: SuitcaseController.deleteSuitcase,
-  searchSuitcases: SuitcaseController.searchSuitcases,
-  generateSuitcaseCode: SuitcaseController.generateSuitcaseCode,
-  getSuitcaseSummary: SuitcaseController.getSuitcaseSummary,
-  
-  // SuitcaseItemController
-  getSuitcaseItemById: SuitcaseItemController.getSuitcaseItemById,
-  addItemToSuitcase: SuitcaseItemController.addItemToSuitcase,
-  updateSuitcaseItemStatus: SuitcaseItemController.updateSuitcaseItemStatus,
-  removeSuitcaseItem: SuitcaseItemController.removeSuitcaseItem,
-  updateSuitcaseItemQuantity: SuitcaseItemController.updateSuitcaseItemQuantity,
-  returnItemToInventory: SuitcaseItemController.returnItemToInventory,
-  updateSaleInfo: SuitcaseItemController.updateSaleInfo,
-  
-  // DeleteSuitcaseController
-  deleteSuitcaseWithCascade: DeleteSuitcaseController.deleteSuitcase,
-  canDeleteSuitcase: DeleteSuitcaseController.canDeleteSuitcase,
-  
-  // SettlementController
-  getHistoricoAcertos: SettlementController.getHistoricoAcertos,
-  createPendingSettlement: SettlementController.createPendingSettlement,
-  finalizeSettlement: SettlementController.finalizeSettlement,
-  
-  // InventorySearchController
-  searchInventoryItems: InventorySearchController.searchInventoryItems,
-  getItemSuitcaseInfo: InventorySearchController.getItemSuitcaseInfo,
-  
-  // SellerController
-  getSellerById: SellerController.getSellerById,
-  getAllSellers: SellerController.getAllSellers,
-  getPromoterForReseller: SellerController.getPromoterForReseller,
-  
-  // PdfController
-  generateSuitcasePDF: PdfController.generateSuitcasePDF
-};
+// Classe combinada que agrega todos os métodos dos controladores específicos
+export class CombinedSuitcaseController {
+  // Métodos do controlador de maletas
+  static getSuitcases = SuitcaseController.getSuitcases;
+  static getSuitcaseById = SuitcaseController.getSuitcaseById;
+  static getSuitcaseItems = SuitcaseController.getSuitcaseItems;
+  static createSuitcase = SuitcaseController.createSuitcase;
+  static updateSuitcase = SuitcaseController.updateSuitcase;
+  static deleteSuitcase = SuitcaseController.deleteSuitcase;
+  static searchSuitcases = SuitcaseController.searchSuitcases;
+  static generateSuitcaseCode = SuitcaseController.generateSuitcaseCode;
+  static getSuitcaseSummary = SuitcaseController.getSuitcaseSummary;
 
-// Export default for backwards compatibility
-export default CombinedSuitcaseController;
+  // Métodos do controlador de itens de maleta
+  static getSuitcaseItemById = SuitcaseItemController.getSuitcaseItemById;
+  static addItemToSuitcase = SuitcaseItemController.addItemToSuitcase;
+  static updateSuitcaseItemStatus = SuitcaseItemController.updateSuitcaseItemStatus;
+  static removeSuitcaseItem = SuitcaseItemController.removeSuitcaseItem;
+  static updateSuitcaseItemQuantity = SuitcaseItemController.updateSuitcaseItemQuantity;
+  static returnItemToInventory = SuitcaseItemController.returnItemToInventory;
+  static updateSaleInfo = SuitcaseItemController.updateSaleInfo;
+
+  // Métodos do controlador de vendedores
+  static getAllSellers = SellerController.getAllSellers;
+  static getSellerById = SellerController.getSellerById;
+  static getPromoterForReseller = SellerController.getPromoterForReseller;
+
+  // Métodos do controlador de busca de inventário
+  static searchInventoryItems = InventorySearchController.searchInventoryItems;
+  static getItemSuitcaseInfo = InventorySearchController.getItemSuitcaseInfo;
+
+  // Métodos do controlador de acertos
+  static getHistoricoAcertos = SettlementController.getHistoricoAcertos;
+  static createPendingSettlement = SettlementController.createPendingSettlement;
+  static finalizeSettlement = SettlementController.finalizeSettlement;
+
+  // Métodos do controlador de PDF
+  static generateSuitcasePDF = PdfController.generateSuitcasePDF;
+
+  // Métodos adicionais de exclusão
+  static canDeleteSuitcase = DeleteSuitcaseController.canDeleteSuitcase;
+  static performSuitcaseDeletion = DeleteSuitcaseController.performSuitcaseDeletion;
+}
+
+// Exportar a classe combinada
+export { CombinedSuitcaseController as SuitcaseController };
