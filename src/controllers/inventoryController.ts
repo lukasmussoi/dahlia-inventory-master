@@ -116,7 +116,9 @@ export const InventoryController = {
       const itemsWithSuitcaseInfo = await Promise.all(
         items.map(async (item) => {
           try {
-            const suitcaseInfo = await SuitcaseController.getItemSuitcaseInfo(item.id);
+            // Importar o controlador combinado para usar o método getItemSuitcaseInfo
+            const { CombinedSuitcaseController } = require("@/controllers/suitcase");
+            const suitcaseInfo = await CombinedSuitcaseController.getItemSuitcaseInfo(item.id);
             return {
               ...item,
               suitcase_info: suitcaseInfo

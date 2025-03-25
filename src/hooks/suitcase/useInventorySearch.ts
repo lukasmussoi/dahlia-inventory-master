@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { SuitcaseController } from "@/controllers/suitcaseController";
+import { CombinedSuitcaseController } from "@/controllers/suitcase";
 import { toast } from "sonner";
 
 export function useInventorySearch() {
@@ -16,7 +16,7 @@ export function useInventorySearch() {
 
     setIsSearching(true);
     try {
-      const results = await SuitcaseController.searchInventoryItems(searchTerm);
+      const results = await CombinedSuitcaseController.searchInventoryItems(searchTerm);
       setSearchResults(results);
     } catch (error) {
       console.error("Erro ao buscar itens:", error);
@@ -32,7 +32,7 @@ export function useInventorySearch() {
     
     setIsAdding(prev => ({ ...prev, [inventoryId]: true }));
     try {
-      await SuitcaseController.addItemToSuitcase(suitcaseId, inventoryId);
+      await CombinedSuitcaseController.addItemToSuitcase(suitcaseId, inventoryId);
       toast.success("Item adicionado à maleta com sucesso");
       
       // Limpar resultados da busca

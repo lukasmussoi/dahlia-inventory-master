@@ -166,12 +166,16 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
     try {
       setIsSubmitting(true);
       
+      const itemsPresent = suitcaseItems.filter(item => 
+        scannedItemsIds.includes(item.id)
+      );
+      
       const formData: SuitcaseSettlementFormData = {
         suitcase_id: suitcase.id,
         seller_id: suitcase.seller_id,
         settlement_date: settlementDate,
         next_settlement_date: nextSettlementDate,
-        items_present: scannedItemsIds,
+        items_present: itemsPresent,
         items_sold: [] // Array vazio para items_sold, serão detectados pelo backend
       };
       

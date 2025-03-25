@@ -46,13 +46,16 @@ export const CombinedSuitcaseController = {
   finalizeSettlement: SettlementController.finalizeSettlement,
   
   // InventorySearchController
-  searchInventoryForSuitcase: InventorySearchController.searchInventoryForSuitcase,
+  searchInventoryItems: InventorySearchController.searchInventoryItems,
+  getItemSuitcaseInfo: InventorySearchController.getItemSuitcaseInfo,
   
   // SellerController
-  getSellerInfo: SellerController.getSellerInfo,
+  getSellerById: SellerController.getSellerById,
+  getAllSellers: SellerController.getAllSellers,
+  getPromoterForReseller: SellerController.getPromoterForReseller,
   
   // PdfController
-  generateSuitcasePDF: PdfController.generateSuitcasePDF,
+  generateSuitcasePDF: PdfController.generateSuitcasePDF
 };
 
 // Export default for backwards compatibility

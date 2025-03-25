@@ -1,4 +1,3 @@
-
 import {
   Table,
   TableBody,
@@ -14,7 +13,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useQuery } from "@tanstack/react-query";
 import { InventoryModel } from "@/models/inventoryModel";
 import { Badge } from "@/components/ui/badge";
-import { SuitcaseController } from "@/controllers/suitcaseController";
+import { SuitcaseController, CombinedSuitcaseController } from "@/controllers/suitcase";
 
 interface InventoryTableProps {
   items: InventoryItem[];
@@ -68,7 +67,7 @@ export function InventoryTable({
 
     const { data: suitcaseInfo } = useQuery({
       queryKey: ['item-suitcase', item.id],
-      queryFn: () => SuitcaseController.getItemSuitcaseInfo(item.id),
+      queryFn: () => CombinedSuitcaseController.getItemSuitcaseInfo(item.id),
       enabled: item.quantity === 1,
     });
 

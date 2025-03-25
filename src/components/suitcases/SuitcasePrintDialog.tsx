@@ -1,8 +1,7 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { SuitcaseController } from "@/controllers/suitcaseController";
+import { CombinedSuitcaseController } from "@/controllers/suitcase";
 import { Suitcase } from "@/types/suitcase";
 import { toast } from "sonner";
 import { Printer, FileText } from "lucide-react";
@@ -20,14 +19,14 @@ export function SuitcasePrintDialog({ open, onOpenChange, suitcase }: SuitcasePr
   // Buscar itens da maleta
   const { data: suitcaseItems = [] } = useQuery({
     queryKey: ["suitcase-items", suitcase?.id],
-    queryFn: () => SuitcaseController.getSuitcaseItems(suitcase?.id || ""),
+    queryFn: () => CombinedSuitcaseController.getSuitcaseItems(suitcase?.id || ""),
     enabled: !!suitcase?.id && open,
   });
 
   // Buscar promotora da revendedora
   const { data: promoterInfo } = useQuery({
     queryKey: ["promoter-for-reseller", suitcase?.seller_id],
-    queryFn: () => SuitcaseController.getPromoterForReseller(suitcase?.seller_id || ""),
+    queryFn: () => CombinedSuitcaseController.getPromoterForReseller(suitcase?.seller_id || ""),
     enabled: !!suitcase?.seller_id && open,
   });
 
@@ -36,7 +35,7 @@ export function SuitcasePrintDialog({ open, onOpenChange, suitcase }: SuitcasePr
     
     setIsGeneratingPdf(true);
     try {
-      const pdfUrl = await SuitcaseController.generateSuitcasePDF(
+      const pdfUrl = await CombinedSuitcaseController.generateSuitcasePDF(
         suitcase.id,
         suitcaseItems,
         promoterInfo

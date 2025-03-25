@@ -9,6 +9,9 @@ import { SellerModel } from "./sellerModel";
 import { InventorySearchModel } from "./inventorySearchModel";
 import { BaseSuitcaseModel } from "./baseModel";
 
+// Exportações diretas para acessibilidade de cada modelo individual
+export { SuitcaseModel, SuitcaseItemModel, SellerModel, InventorySearchModel, BaseSuitcaseModel };
+
 // Criando uma classe combinada para manter a compatibilidade com o código existente
 export class CombinedSuitcaseModel {
   // Métodos base

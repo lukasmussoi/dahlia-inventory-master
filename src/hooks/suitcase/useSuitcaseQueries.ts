@@ -1,6 +1,6 @@
 
 import { useQuery } from "@tanstack/react-query";
-import { SuitcaseController } from "@/controllers/suitcaseController";
+import { CombinedSuitcaseController } from "@/controllers/suitcase";
 
 /**
  * Hook para gerenciar as consultas relacionadas a maletas
@@ -15,7 +15,7 @@ export function useSuitcaseQueries(suitcaseId: string | null, open: boolean) {
     refetch: refetchSuitcase
   } = useQuery({
     queryKey: ["suitcase", suitcaseId],
-    queryFn: () => SuitcaseController.getSuitcaseById(suitcaseId || ""),
+    queryFn: () => CombinedSuitcaseController.getSuitcaseById(suitcaseId || ""),
     enabled: open && !!suitcaseId,
   });
 
@@ -25,7 +25,7 @@ export function useSuitcaseQueries(suitcaseId: string | null, open: boolean) {
     isLoading: loadingPromoterInfo
   } = useQuery({
     queryKey: ["promoter-for-reseller", suitcase?.seller_id],
-    queryFn: () => SuitcaseController.getPromoterForReseller(suitcase?.seller_id || ""),
+    queryFn: () => CombinedSuitcaseController.getPromoterForReseller(suitcase?.seller_id || ""),
     enabled: open && !!suitcase?.seller_id,
   });
 
@@ -36,7 +36,7 @@ export function useSuitcaseQueries(suitcaseId: string | null, open: boolean) {
     refetch: refetchSuitcaseItems
   } = useQuery({
     queryKey: ["suitcase-items", suitcaseId],
-    queryFn: () => SuitcaseController.getSuitcaseItems(suitcaseId || ""),
+    queryFn: () => CombinedSuitcaseController.getSuitcaseItems(suitcaseId || ""),
     enabled: open && !!suitcaseId,
   });
 
@@ -46,7 +46,7 @@ export function useSuitcaseQueries(suitcaseId: string | null, open: boolean) {
     isLoading: isLoadingAcertos
   } = useQuery({
     queryKey: ["acertos-historico", suitcaseId],
-    queryFn: () => SuitcaseController.getHistoricoAcertos(suitcaseId || ""),
+    queryFn: () => CombinedSuitcaseController.getHistoricoAcertos(suitcaseId || ""),
     enabled: open && !!suitcaseId,
   });
 

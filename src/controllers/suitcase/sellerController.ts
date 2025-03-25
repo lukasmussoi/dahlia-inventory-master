@@ -1,54 +1,59 @@
 
 /**
- * Controlador de Revendedores e Promotoras
- * @file Este arquivo controla as operações relacionadas aos revendedores e promotoras
+ * Controlador de Revendedores
+ * @file Este arquivo controla as operações relacionadas às revendedoras e suas promotoras
  */
-import { SuitcaseModel } from "@/models/suitcaseModel";
+import { SellerModel } from "@/models/suitcase/sellerModel";
+import { supabase } from "@/integrations/supabase/client";
 
 export const SellerController = {
+  /**
+   * Busca todos os vendedores/revendedores
+   * @returns Lista de vendedores
+   */
   async getAllSellers() {
     try {
-      return await SuitcaseModel.getAllSellers();
+      return await SellerModel.getAllSellers();
     } catch (error) {
-      console.error("Erro ao buscar revendedoras:", error);
+      console.error("Erro ao buscar vendedores:", error);
       throw error;
     }
   },
 
+  /**
+   * Busca um vendedor/revendedor por ID
+   * @param sellerId ID do vendedor
+   * @returns Informações do vendedor
+   */
   async getSellerById(sellerId: string) {
     try {
-      return await SuitcaseModel.getSellerById(sellerId);
+      return await SellerModel.getSellerById(sellerId);
     } catch (error) {
-      console.error("Erro ao buscar revendedora por ID:", error);
+      console.error("Erro ao buscar vendedor por ID:", error);
       throw error;
     }
   },
 
-  async getPromoterForReseller(resellerId: string): Promise<any | null> {
+  /**
+   * Busca a promotora associada a uma revendedora
+   * @param resellerId ID da revendedora
+   * @returns Informações da promotora
+   */
+  async getPromoterForReseller(resellerId: string) {
     try {
-      const promotoras = [
-        {
-          id: "1",
-          name: "Maria Silva",
-          phone: "(11) 99999-9999",
-          reseller_id: "79a3269f-9e6f-4b97-b990-30984dd9f1ca",
-        },
-        {
-          id: "2",
-          name: "João Santos",
-          phone: "(21) 88888-8888",
-          reseller_id: "2",
-        },
-      ];
-
-      const promotora = promotoras.find(
-        (p) => p.reseller_id === resellerId
-      );
-
-      return promotora || null;
+      if (!resellerId) throw new Error("ID da revendedora é necessário");
+      
+      const { data: reseller, error } = await supabase
+        .from('resellers')
+        .select('promoter_id, promoters(*)')
+        .eq('id', resellerId)
+        .maybeSingle();
+      
+      if (error) throw error;
+      return reseller?.promoters || null;
     } catch (error) {
-      console.error("Erro ao buscar promotora da revendedora:", error);
-      return null;
+      console.error("Erro ao buscar promotora para revendedora:", error);
+      throw error;
     }
   }
 };

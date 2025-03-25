@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { SuitcaseController } from "@/controllers/suitcaseController";
+import { CombinedSuitcaseController } from "@/controllers/suitcase";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -31,7 +31,7 @@ export function SuitcaseInventorySearch({ suitcaseId, onItemAdded }: SuitcaseInv
     try {
       setIsSearching(true);
       setError(null);
-      const results = await SuitcaseController.searchInventoryItems(searchTerm);
+      const results = await CombinedSuitcaseController.searchInventoryItems(searchTerm);
       
       // Verificar se há resultados
       if (results.length === 0) {
@@ -62,7 +62,7 @@ export function SuitcaseInventorySearch({ suitcaseId, onItemAdded }: SuitcaseInv
       
       const itemQuantity = quantity[inventoryId] || 1;
       
-      await SuitcaseController.addItemToSuitcase(suitcaseId, inventoryId, itemQuantity);
+      await CombinedSuitcaseController.addItemToSuitcase(suitcaseId, inventoryId, itemQuantity);
       
       // Atualizar lista de resultados para remover o item adicionado
       setSearchResults(prevResults => prevResults.filter(item => item.id !== inventoryId));
