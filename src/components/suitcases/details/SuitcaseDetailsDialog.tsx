@@ -1,17 +1,17 @@
 
-import { useEffect } from "react";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { SuitcaseDetailsTabs } from "./details/SuitcaseDetailsTabs";
-import { LoadingIndicator } from "@/components/shared/LoadingIndicator";
-import { DeleteSuitcaseDialog } from "./details/DeleteSuitcaseDialog";
-import { useSuitcaseDetails } from "@/hooks/useSuitcaseDetails";
-import { addDays } from "date-fns";
-
 /**
  * Diálogo de Detalhes da Maleta
  * @file Exibe e gerencia os detalhes completos de uma maleta
  * @relacionamento Utiliza hooks específicos para gerenciar estados e operações da maleta
  */
+
+import { useEffect } from "react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { SuitcaseDetailsTabs } from "./SuitcaseDetailsTabs";
+import { LoadingIndicator } from "@/components/shared/LoadingIndicator";
+import { DeleteSuitcaseDialog } from "./DeleteSuitcaseDialog";
+import { useSuitcaseDetails } from "@/hooks/useSuitcaseDetails";
+import { addDays } from "date-fns";
 
 interface SuitcaseDetailsDialogProps {
   open: boolean;
