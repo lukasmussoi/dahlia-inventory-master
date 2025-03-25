@@ -142,8 +142,8 @@ export interface Acerto {
 export interface SuitcaseSettlementFormData {
   suitcase_id: string;
   seller_id: string;
-  settlement_date: Date;
-  next_settlement_date?: Date;
-  items_present: string[] | SuitcaseItem[]; // Atualizado para aceitar tanto strings quanto objetos completos
-  items_sold: string[] | SuitcaseItem[]; // Atualizado para aceitar tanto strings quanto objetos completos
+  settlement_date: Date | string;
+  next_settlement_date?: Date | string | null;
+  items_present: string[] | SuitcaseItem[]; // Pode receber tanto IDs quanto objetos completos
+  items_sold: string[] | SuitcaseItem[]; // Pode receber tanto IDs quanto objetos completos
 }

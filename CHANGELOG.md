@@ -1,4 +1,17 @@
+
 # CHANGELOG
+
+## [1.0.4] - 2025-03-25
+
+### Corrigido
+- Corrigido bug crítico onde itens permaneciam na maleta após a finalização do acerto
+- Implementada exclusão completa dos itens da maleta após o acerto (tanto vendidos quanto verificados)
+- Melhorado o processamento de itens para garantir que sejam removidos da tabela suitcase_items
+- Adicionados logs detalhados para facilitar depuração de problemas futuros
+
+### Melhorado
+- Lógica de processamento de acertos para evitar inconsistências de dados
+- Tratamento de erros durante o processamento de itens vendidos
 
 ## [1.0.3] - 2025-03-20
 

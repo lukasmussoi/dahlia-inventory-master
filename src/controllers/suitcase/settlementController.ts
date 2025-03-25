@@ -8,6 +8,7 @@ import { SuitcaseModel } from "@/models/suitcaseModel";
 import { AcertoMaletaModel } from "@/models/acertoMaletaModel";
 import { Acerto, SuitcaseSettlementFormData, SuitcaseItem, AcertoStatus } from "@/types/suitcase";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export const SettlementController = {
   /**
@@ -101,7 +102,7 @@ export const SettlementController = {
           : null;
       
       // Processar os itens (presentes, vendidos)
-      // Extrair apenas os IDs dos itens (correção principal do bug)
+      // Extrair apenas os IDs dos itens
       const itemsPresentIds = formData.items_present.map(item => 
         typeof item === 'string' ? item : item.id
       );
@@ -139,10 +140,9 @@ export const SettlementController = {
         
         if (error) {
           console.error("Erro ao buscar detalhes dos itens vendidos:", error);
-          throw new Error("Erro ao buscar detalhes dos itens vendidos");
-        }
-        
-        if (soldItems) {
+          // Não lançar erro aqui, continuar o processamento
+          toast.error("Erro ao buscar detalhes dos itens vendidos, usando valor total zero");
+        } else if (soldItems) {
           totalSales = soldItems.reduce((sum, item) => {
             return sum + (item.product?.price || 0);
           }, 0);

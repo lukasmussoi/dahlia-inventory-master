@@ -92,7 +92,25 @@ export class AcertoMaletaModel {
         }
       }
       
-      console.log(`Processamento de itens concluído para o acerto ${acertoId}`);
+      // 3. CORREÇÃO: Remover todos os itens da maleta após o processamento
+      // Isto garante que nenhum item permaneça na maleta após o acerto
+      console.log(`Removendo todos os itens processados da maleta ${suitcaseId}`);
+      const allProcessedItems = [...itemsPresent, ...itemsSold];
+      
+      if (allProcessedItems.length > 0) {
+        // Em vez de apenas atualizar o status, remover completamente os itens da tabela suitcase_items
+        const { error: removalError } = await supabase
+          .from('suitcase_items')
+          .delete()
+          .in('id', allProcessedItems);
+        
+        if (removalError) {
+          console.error(`Erro ao remover itens da maleta:`, removalError);
+          throw removalError;
+        }
+      }
+      
+      console.log(`Processamento e remoção de itens concluído para o acerto ${acertoId}`);
     } catch (error) {
       console.error("Erro ao processar itens do acerto:", error);
       throw error;
