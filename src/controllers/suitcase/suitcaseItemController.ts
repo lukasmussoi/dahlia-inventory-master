@@ -83,8 +83,44 @@ export const SuitcaseItemController = {
   
   async updateSaleInfo(itemId: string, field: string, value: string) {
     try {
-      // Implementação temporária
-      console.log(`Atualizando ${field} para ${value} no item ${itemId}`);
+      // Atualizar informações de venda
+      const { data, error } = await SuitcaseModel.supabase
+        .from('suitcase_item_sales')
+        .select('id')
+        .eq('suitcase_item_id', itemId)
+        .single();
+      
+      if (error && error.code !== 'PGRST116') {
+        console.error("Erro ao buscar informações de venda:", error);
+        throw error;
+      }
+      
+      if (data) {
+        // Já existe um registro, atualizar
+        const { error: updateError } = await SuitcaseModel.supabase
+          .from('suitcase_item_sales')
+          .update({ [field]: value })
+          .eq('id', data.id);
+        
+        if (updateError) {
+          console.error("Erro ao atualizar informações de venda:", updateError);
+          throw updateError;
+        }
+      } else {
+        // Criar novo registro
+        const { error: insertError } = await SuitcaseModel.supabase
+          .from('suitcase_item_sales')
+          .insert({
+            suitcase_item_id: itemId,
+            [field]: value
+          });
+        
+        if (insertError) {
+          console.error("Erro ao inserir informações de venda:", insertError);
+          throw insertError;
+        }
+      }
+      
       return { success: true };
     } catch (error) {
       console.error("Erro ao atualizar informações de venda:", error);

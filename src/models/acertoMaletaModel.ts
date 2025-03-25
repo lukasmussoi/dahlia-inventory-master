@@ -1,387 +1,285 @@
+
+/**
+ * Modelo de Acertos de Maleta
+ * @file Este arquivo contém as funções para gerenciar acertos de maletas,
+ * incluindo a criação, exclusão e manipulação dos itens durante acertos
+ */
 import { supabase } from "@/integrations/supabase/client";
-import { Acerto, AcertoItem, AcertoStatus, SuitcaseItem } from "@/types/suitcase";
+import { Acerto, SuitcaseItem } from "@/types/suitcase";
+import { SuitcaseModel } from "./suitcaseModel";
 
 export class AcertoMaletaModel {
-  // Buscar todos os acertos
-  static async getAllAcertos(): Promise<Acerto[]> {
-    const { data, error } = await supabase
-      .from('acertos_maleta')
-      .select(`
-        *,
-        suitcase:suitcases!acertos_maleta_suitcase_id_fkey (
-          id, 
-          code,
-          status
-        ),
-        seller:resellers!acertos_maleta_seller_id_fkey (
-          id, 
-          name,
-          commission_rate
-        )
-      `)
-      .order('created_at', { ascending: false });
-    
-    if (error) throw error;
-    
-    return (data || []).map(item => ({
-      id: item.id,
-      suitcase_id: item.suitcase_id,
-      seller_id: item.seller_id,
-      settlement_date: item.settlement_date,
-      next_settlement_date: item.next_settlement_date,
-      total_sales: item.total_sales,
-      commission_amount: item.commission_amount,
-      receipt_url: item.receipt_url,
-      status: item.status as AcertoStatus,
-      restock_suggestions: item.restock_suggestions,
-      created_at: item.created_at,
-      updated_at: item.updated_at,
-      suitcase: item.suitcase ? {
-        id: item.suitcase.id,
-        code: item.suitcase.code,
-        status: item.suitcase.status,
-        seller_id: '', // Preenchido para satisfazer o tipo
-        created_at: '' // Preenchido para satisfazer o tipo
-      } : undefined,
-      seller: item.seller ? {
-        id: item.seller.id,
-        name: item.seller.name,
-        commission_rate: item.seller.commission_rate
-      } : undefined
-    }));
-  }
-
-  // Buscar acerto pelo ID
-  static async getAcertoById(id: string): Promise<Acerto | null> {
-    const { data, error } = await supabase
-      .from('acertos_maleta')
-      .select(`
-        *,
-        suitcase:suitcases!acertos_maleta_suitcase_id_fkey (
-          id, 
-          code,
-          status,
-          seller:seller_id (
-            id,
-            name,
-            phone
-          )
-        ),
-        seller:resellers!acertos_maleta_seller_id_fkey (
-          id, 
-          name,
-          commission_rate
-        )
-      `)
-      .eq('id', id)
-      .maybeSingle();
-    
-    if (error) throw error;
-    if (!data) return null;
-    
-    return {
-      id: data.id,
-      suitcase_id: data.suitcase_id,
-      seller_id: data.seller_id,
-      settlement_date: data.settlement_date,
-      next_settlement_date: data.next_settlement_date,
-      total_sales: data.total_sales,
-      commission_amount: data.commission_amount,
-      receipt_url: data.receipt_url,
-      status: data.status as AcertoStatus,
-      restock_suggestions: data.restock_suggestions,
-      created_at: data.created_at,
-      updated_at: data.updated_at,
-      suitcase: data.suitcase ? {
-        id: data.suitcase.id,
-        code: data.suitcase.code,
-        status: data.suitcase.status,
-        seller_id: '', // Preenchido para satisfazer o tipo
-        created_at: '', // Preenchido para satisfazer o tipo
-        seller: data.suitcase.seller
-      } : undefined,
-      seller: data.seller ? {
-        id: data.seller.id,
-        name: data.seller.name,
-        commission_rate: data.seller.commission_rate
-      } : undefined
-    };
-  }
-
-  // Buscar itens vendidos de um acerto
-  static async getAcertoItems(acertoId: string): Promise<AcertoItem[]> {
-    const { data, error } = await supabase
-      .from('acerto_itens_vendidos')
-      .select(`
-        *,
-        product:inventory_id (
-          id,
-          name,
-          sku,
-          price,
-          photos:inventory_photos(photo_url)
-        )
-      `)
-      .eq('acerto_id', acertoId);
-    
-    if (error) throw error;
-    
-    // Processar os dados para obter a primeira foto de cada produto
-    return (data || []).map(item => {
-      let photoUrl = undefined;
+  /**
+   * Cria um novo acerto de maleta
+   * @param data Dados do acerto a ser criado
+   * @returns Acerto criado
+   */
+  static async createAcerto(data: any): Promise<Acerto> {
+    try {
+      // Iniciar transação
+      console.log("Iniciando criação de acerto para maleta:", data.suitcase_id);
       
-      if (item.product && 
-          item.product.photos && 
-          Array.isArray(item.product.photos) && 
-          item.product.photos.length > 0 &&
-          item.product.photos[0] && 
-          typeof item.product.photos[0] === 'object' && 
-          'photo_url' in item.product.photos[0]) {
-        photoUrl = item.product.photos[0].photo_url;
+      // 1. Inserir o acerto na tabela
+      const { data: acerto, error } = await supabase
+        .from('acertos_maleta')
+        .insert(data)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error("Erro ao criar acerto:", error);
+        throw error;
+      }
+      
+      return acerto;
+    } catch (error) {
+      console.error("Erro no modelo ao criar acerto:", error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Processa os itens da maleta durante um acerto
+   * @param acertoId ID do acerto
+   * @param suitcaseId ID da maleta
+   * @param itemsPresent Array de IDs dos itens marcados como presentes no acerto
+   * @param itemsSold Array de IDs e informações dos itens vendidos
+   */
+  static async processAcertoItems(
+    acertoId: string,
+    suitcaseId: string, 
+    itemsPresent: string[], 
+    itemsSold: Array<{
+      suitcase_item_id: string;
+      inventory_id: string;
+      price: number;
+      customer_name?: string;
+      payment_method?: string;
+    }>
+  ): Promise<void> {
+    try {
+      console.log(`Processando itens para acerto ${acertoId} da maleta ${suitcaseId}`);
+      console.log(`Itens presentes: ${itemsPresent.length}, Itens vendidos: ${itemsSold.length}`);
+      
+      // Buscar todos os itens da maleta
+      const { data: allItems, error: itemsError } = await supabase
+        .from('suitcase_items')
+        .select('*')
+        .eq('suitcase_id', suitcaseId)
+        .eq('status', 'in_possession');
+      
+      if (itemsError) {
+        console.error("Erro ao buscar itens da maleta:", itemsError);
+        throw itemsError;
+      }
+      
+      const allItemIds = allItems?.map(item => item.id) || [];
+      console.log(`Total de itens na maleta: ${allItemIds.length}`);
+      
+      // 1. Processar itens presentes (devolver ao estoque)
+      for (const itemId of itemsPresent) {
+        try {
+          console.log(`Devolvendo item ${itemId} ao estoque`);
+          await SuitcaseModel.returnItemToInventory(itemId);
+        } catch (error) {
+          console.error(`Erro ao devolver item ${itemId} ao estoque:`, error);
+          throw error;
+        }
+      }
+      
+      // 2. Processar itens vendidos
+      for (const soldItem of itemsSold) {
+        try {
+          console.log(`Registrando venda do item ${soldItem.suitcase_item_id}`);
+          
+          // Marcar item como vendido
+          const { error: updateError } = await supabase
+            .from('suitcase_items')
+            .update({ status: 'sold' })
+            .eq('id', soldItem.suitcase_item_id);
+          
+          if (updateError) {
+            console.error(`Erro ao atualizar status do item ${soldItem.suitcase_item_id}:`, updateError);
+            throw updateError;
+          }
+          
+          // Registrar a venda no acerto
+          const { error: insertError } = await supabase
+            .from('acerto_itens_vendidos')
+            .insert({
+              acerto_id: acertoId,
+              suitcase_item_id: soldItem.suitcase_item_id,
+              inventory_id: soldItem.inventory_id,
+              price: soldItem.price,
+              customer_name: soldItem.customer_name,
+              payment_method: soldItem.payment_method,
+              sale_date: new Date().toISOString()
+            });
+          
+          if (insertError) {
+            console.error(`Erro ao registrar venda do item ${soldItem.suitcase_item_id}:`, insertError);
+            throw insertError;
+          }
+        } catch (error) {
+          console.error(`Erro ao processar item vendido ${soldItem.suitcase_item_id}:`, error);
+          throw error;
+        }
+      }
+      
+      // 3. Verificar itens não processados (nem vendidos nem presentes)
+      const processedItemIds = [...itemsPresent, ...itemsSold.map(item => item.suitcase_item_id)];
+      const unprocessedItemIds = allItemIds.filter(id => !processedItemIds.includes(id));
+      
+      if (unprocessedItemIds.length > 0) {
+        console.log(`${unprocessedItemIds.length} itens não foram processados. Considerando como vendidos.`);
+        
+        for (const itemId of unprocessedItemIds) {
+          try {
+            // Buscar informações do item
+            const { data: itemData, error: itemError } = await supabase
+              .from('suitcase_items')
+              .select(`
+                *,
+                product:inventory_id (id, price)
+              `)
+              .eq('id', itemId)
+              .single();
+            
+            if (itemError) {
+              console.error(`Erro ao buscar informações do item ${itemId}:`, itemError);
+              throw itemError;
+            }
+            
+            if (!itemData) {
+              console.error(`Item ${itemId} não encontrado.`);
+              continue;
+            }
+            
+            // Marcar item como vendido
+            const { error: updateError } = await supabase
+              .from('suitcase_items')
+              .update({ status: 'sold' })
+              .eq('id', itemId);
+            
+            if (updateError) {
+              console.error(`Erro ao atualizar status do item ${itemId}:`, updateError);
+              throw updateError;
+            }
+            
+            // Registrar a venda no acerto
+            const { error: insertError } = await supabase
+              .from('acerto_itens_vendidos')
+              .insert({
+                acerto_id: acertoId,
+                suitcase_item_id: itemId,
+                inventory_id: itemData.inventory_id,
+                price: itemData.product?.price || 0,
+                customer_name: 'Não informado',
+                payment_method: 'Não informado',
+                sale_date: new Date().toISOString()
+              });
+            
+            if (insertError) {
+              console.error(`Erro ao registrar venda automática do item ${itemId}:`, insertError);
+              throw insertError;
+            }
+          } catch (error) {
+            console.error(`Erro ao processar item não verificado ${itemId}:`, error);
+            throw error;
+          }
+        }
+      }
+      
+      console.log(`Processamento de itens do acerto ${acertoId} concluído com sucesso.`);
+    } catch (error) {
+      console.error("Erro ao processar itens do acerto:", error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Exclui um acerto de maleta
+   * @param acertoId ID do acerto a ser excluído
+   * @returns Status de sucesso da operação
+   */
+  static async deleteAcerto(acertoId: string): Promise<boolean> {
+    try {
+      console.log(`Iniciando exclusão do acerto ${acertoId}`);
+      
+      // 1. Excluir itens vendidos associados ao acerto
+      const { error: itemsDeleteError } = await supabase
+        .from('acerto_itens_vendidos')
+        .delete()
+        .eq('acerto_id', acertoId);
+      
+      if (itemsDeleteError) {
+        console.error(`Erro ao excluir itens vendidos do acerto ${acertoId}:`, itemsDeleteError);
+        throw itemsDeleteError;
+      }
+      
+      // 2. Excluir o acerto
+      const { error: acertoDeleteError } = await supabase
+        .from('acertos_maleta')
+        .delete()
+        .eq('id', acertoId);
+      
+      if (acertoDeleteError) {
+        console.error(`Erro ao excluir acerto ${acertoId}:`, acertoDeleteError);
+        throw acertoDeleteError;
+      }
+      
+      console.log(`Acerto ${acertoId} excluído com sucesso`);
+      return true;
+    } catch (error) {
+      console.error(`Erro ao excluir acerto ${acertoId}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Busca os detalhes de um acerto pelo ID
+   * @param acertoId ID do acerto
+   * @returns Detalhes do acerto
+   */
+  static async getAcertoById(acertoId: string): Promise<Acerto | null> {
+    try {
+      const { data, error } = await supabase
+        .from('acertos_maleta')
+        .select(`
+          *,
+          suitcase:suitcases(*, seller:resellers(*)),
+          seller:resellers(*)
+        `)
+        .eq('id', acertoId)
+        .single();
+      
+      if (error) {
+        console.error(`Erro ao buscar acerto ${acertoId}:`, error);
+        throw error;
+      }
+      
+      if (!data) return null;
+      
+      const { data: itemsVendidos, error: itemsError } = await supabase
+        .from('acerto_itens_vendidos')
+        .select(`
+          *,
+          product:inventory(id, name, sku, price, photo_url:inventory_photos(photo_url))
+        `)
+        .eq('acerto_id', acertoId);
+      
+      if (itemsError) {
+        console.error(`Erro ao buscar itens vendidos do acerto ${acertoId}:`, itemsError);
+        throw itemsError;
       }
       
       return {
-        ...item,
-        product: item.product ? {
-          ...item.product,
-          photo_url: photoUrl
-        } : undefined
-      } as AcertoItem;
-    });
-  }
-
-  // Criar um novo acerto
-  static async createAcerto(acertoData: {
-    suitcase_id: string;
-    seller_id: string;
-    settlement_date: string;
-    next_settlement_date?: string;
-    total_sales: number;
-    commission_amount: number;
-    status: AcertoStatus;
-    restock_suggestions?: any;
-  }): Promise<Acerto> {
-    const { data, error } = await supabase
-      .from('acertos_maleta')
-      .insert(acertoData)
-      .select()
-      .maybeSingle();
-    
-    if (error) throw error;
-    if (!data) throw new Error("Erro ao criar acerto: nenhum dado retornado");
-    
-    return {
-      id: data.id,
-      suitcase_id: data.suitcase_id,
-      seller_id: data.seller_id,
-      settlement_date: data.settlement_date,
-      next_settlement_date: data.next_settlement_date,
-      total_sales: data.total_sales,
-      commission_amount: data.commission_amount,
-      receipt_url: data.receipt_url,
-      status: data.status as AcertoStatus,
-      restock_suggestions: data.restock_suggestions,
-      created_at: data.created_at,
-      updated_at: data.updated_at
-    };
-  }
-
-  // Adicionar itens vendidos ao acerto
-  static async addAcertoItems(items: {
-    acerto_id: string;
-    suitcase_item_id: string;
-    inventory_id: string;
-    price: number;
-    sale_date: string;
-    customer_name?: string;
-    payment_method?: string;
-  }[]): Promise<AcertoItem[]> {
-    if (!items.length) return [];
-    
-    const { data, error } = await supabase
-      .from('acerto_itens_vendidos')
-      .insert(items)
-      .select();
-    
-    if (error) throw error;
-    return data as AcertoItem[] || [];
-  }
-
-  // Atualizar um acerto
-  static async updateAcerto(id: string, acertoData: {
-    settlement_date?: string;
-    next_settlement_date?: string;
-    total_sales?: number;
-    commission_amount?: number;
-    receipt_url?: string;
-    status?: AcertoStatus;
-    restock_suggestions?: any;
-  }): Promise<Acerto> {
-    const { data, error } = await supabase
-      .from('acertos_maleta')
-      .update(acertoData)
-      .eq('id', id)
-      .select()
-      .maybeSingle();
-    
-    if (error) throw error;
-    if (!data) throw new Error("Erro ao atualizar acerto: nenhum dado retornado");
-    
-    return {
-      id: data.id,
-      suitcase_id: data.suitcase_id,
-      seller_id: data.seller_id,
-      settlement_date: data.settlement_date,
-      next_settlement_date: data.next_settlement_date,
-      total_sales: data.total_sales,
-      commission_amount: data.commission_amount,
-      receipt_url: data.receipt_url,
-      status: data.status as AcertoStatus,
-      restock_suggestions: data.restock_suggestions,
-      created_at: data.created_at,
-      updated_at: data.updated_at
-    };
-  }
-
-  // Calcular a comissão com base na taxa da revendedora
-  static async calcularComissao(sellerId: string, totalVendas: number): Promise<number> {
-    // Buscar a taxa de comissão da revendedora
-    const { data, error } = await supabase
-      .from('resellers')
-      .select('commission_rate')
-      .eq('id', sellerId)
-      .maybeSingle();
-    
-    if (error) throw error;
-    
-    // Taxa padrão caso não encontre
-    const taxaComissao = data?.commission_rate || 0.3;
-    
-    // Calcular comissão
-    return totalVendas * taxaComissao;
-  }
-
-  // Atualizar status dos itens na maleta para vendidos
-  static async updateSuitcaseItemsToSold(suitcaseItemIds: string[]): Promise<void> {
-    if (!suitcaseItemIds.length) return;
-    
-    const { error } = await supabase
-      .from('suitcase_items')
-      .update({ status: 'sold' })
-      .in('id', suitcaseItemIds);
-    
-    if (error) throw error;
-  }
-
-  // Armazenar URL do recibo gerado para o acerto
-  static async storeReceiptUrl(acertoId: string, receiptUrl: string): Promise<void> {
-    const { error } = await supabase
-      .from('acertos_maleta')
-      .update({ receipt_url: receiptUrl })
-      .eq('id', acertoId);
-    
-    if (error) throw error;
-  }
-
-  // Buscar histórico de vendas da revendedora (últimos 90 dias)
-  static async getSellerSalesHistory(sellerId: string): Promise<any[]> {
-    const ninetyDaysAgo = new Date();
-    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-    
-    // Buscar acertos dos últimos 90 dias
-    const { data: acertos, error: acertosError } = await supabase
-      .from('acertos_maleta')
-      .select('id')
-      .eq('seller_id', sellerId)
-      .gte('settlement_date', ninetyDaysAgo.toISOString());
-    
-    if (acertosError) throw acertosError;
-    if (!acertos || !acertos.length) return [];
-    
-    const acertoIds = acertos.map(a => a.id);
-    
-    // Buscar itens vendidos desses acertos
-    const { data: items, error: itemsError } = await supabase
-      .from('acerto_itens_vendidos')
-      .select(`
-        *,
-        product:inventory_id (
-          id,
-          name,
-          sku,
-          price,
-          category_id,
-          inventory_categories(name)
-        )
-      `)
-      .in('acerto_id', acertoIds);
-    
-    if (itemsError) throw itemsError;
-    
-    return items || [];
-  }
-  
-  // Gerar sugestões de reabastecimento baseadas no histórico
-  static async generateRestockSuggestions(sellerId: string): Promise<any> {
-    const salesHistory = await this.getSellerSalesHistory(sellerId);
-    
-    if (!salesHistory.length) return [];
-    
-    // Agrupar por item e contar quantas vezes foi vendido
-    const itemCounts: Record<string, any> = {};
-    
-    salesHistory.forEach(sale => {
-      const itemId = sale.inventory_id;
-      if (!itemCounts[itemId]) {
-        itemCounts[itemId] = {
-          id: itemId,
-          name: sale.product?.name || 'Produto Desconhecido',
-          sku: sale.product?.sku || '',
-          count: 0,
-          totalRevenue: 0,
-          category: sale.product?.inventory_categories?.name || 'Sem categoria',
-          lastSold: sale.sale_date
-        };
-      }
-      
-      itemCounts[itemId].count += 1;
-      itemCounts[itemId].totalRevenue += parseFloat(sale.price);
-      
-      // Atualizar última data de venda se for mais recente
-      if (new Date(sale.sale_date) > new Date(itemCounts[itemId].lastSold)) {
-        itemCounts[itemId].lastSold = sale.sale_date;
-      }
-    });
-    
-    // Transformar objeto em array e ordenar por contagem (mais vendidos primeiro)
-    const sortedItems = Object.values(itemCounts).sort((a: any, b: any) => {
-      return b.count - a.count;
-    });
-    
-    // Categorizar as sugestões
-    return {
-      highDemand: sortedItems.filter((item: any) => item.count >= 3),
-      mediumDemand: sortedItems.filter((item: any) => item.count === 2),
-      lowDemand: sortedItems.filter((item: any) => item.count === 1)
-    };
-  }
-
-  // Excluir um acerto
-  static async deleteAcerto(id: string): Promise<void> {
-    // Primeiro, excluir os itens vendidos associados ao acerto
-    const { error: itemsError } = await supabase
-      .from('acerto_itens_vendidos')
-      .delete()
-      .eq('acerto_id', id);
-    
-    if (itemsError) throw itemsError;
-    
-    // Em seguida, excluir o acerto em si
-    const { error: acertoError } = await supabase
-      .from('acertos_maleta')
-      .delete()
-      .eq('id', id);
-    
-    if (acertoError) throw acertoError;
+        ...data,
+        items_vendidos: itemsVendidos || []
+      };
+    } catch (error) {
+      console.error(`Erro ao buscar acerto ${acertoId}:`, error);
+      throw error;
+    }
   }
 }
