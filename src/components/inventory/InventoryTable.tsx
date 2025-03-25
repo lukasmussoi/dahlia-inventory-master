@@ -13,7 +13,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useQuery } from "@tanstack/react-query";
 import { InventoryModel } from "@/models/inventoryModel";
 import { Badge } from "@/components/ui/badge";
-import { SuitcaseController, CombinedSuitcaseController } from "@/controllers/suitcase";
+import { CombinedSuitcaseController } from "@/controllers/suitcase";
 
 interface InventoryTableProps {
   items: InventoryItem[];

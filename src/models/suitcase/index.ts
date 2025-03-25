@@ -10,8 +10,7 @@ import { InventorySearchModel } from "./inventorySearchModel";
 import { BaseSuitcaseModel } from "./baseModel";
 
 // Exportações diretas para acessibilidade de cada modelo individual
-export { SuitcaseItemModel, SellerModel, InventorySearchModel, BaseSuitcaseModel };
-export { OriginalSuitcaseModel }; // Exportando com seu nome original
+export { OriginalSuitcaseModel, SuitcaseItemModel, SellerModel, InventorySearchModel, BaseSuitcaseModel };
 
 // Criando uma classe combinada para manter a compatibilidade com o código existente
 export class CombinedSuitcaseModel {
