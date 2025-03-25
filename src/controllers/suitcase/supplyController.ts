@@ -234,19 +234,16 @@ export class SuitcaseSupplyController {
 
                 // Adicionar verificações extras de segurança para texto
                 if (data.cell.text && Array.isArray(data.cell.text) && data.cell.text.length > 0) {
+                  // Obter o primeiro elemento de texto com verificação de null
                   const firstText = data.cell.text[0];
                   
-                  // Verificação mais segura para modificar a coordenada x
-                  if (firstText && typeof firstText === 'object') {
-                    // Tratamento seguro para evitar o erro TS2698
-                    const currentX = 'x' in firstText && typeof firstText.x === 'number' 
-                      ? firstText.x
-                      : 0;
+                  // Somente modificar se firstText for um objeto com propriedade x
+                  if (firstText && typeof firstText === 'object' && 'x' in firstText) {
+                    // Garantir que estamos acessando um número válido para x
+                    const currentX = typeof firstText.x === 'number' ? firstText.x : 0;
                     
-                    // Atualizar a coordenada x de forma segura
-                    if ('x' in firstText) {
-                      firstText.x = currentX + imgWidth + 4;
-                    }
+                    // Modificar a propriedade x com segurança
+                    firstText.x = currentX + imgWidth + 4;
                   }
                 }
               } catch (error) {
