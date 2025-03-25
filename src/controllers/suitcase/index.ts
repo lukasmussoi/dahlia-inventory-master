@@ -56,6 +56,7 @@ export class CombinedSuitcaseController {
   // Métodos adicionais de exclusão
   static canDeleteSuitcase = DeleteSuitcaseController.canDeleteSuitcase;
   static performSuitcaseDeletion = DeleteSuitcaseController.performSuitcaseDeletion;
+  static deleteSuitcaseWithCascade = DeleteSuitcaseController.performSuitcaseDeletion;
 }
 
 // Exportar a classe combinada

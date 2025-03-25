@@ -1,4 +1,10 @@
 
+/**
+ * Hook para Gerenciar a Exclusão de Maletas
+ * @file Este hook controla o fluxo de exclusão de maletas, incluindo verificações e confirmação
+ * @depends controllers/suitcase - Para operações de exclusão de maletas
+ */
+
 import { useState } from "react";
 import { CombinedSuitcaseController } from "@/controllers/suitcase";
 import { toast } from "sonner";
@@ -22,7 +28,7 @@ export function useSuitcaseDeletion() {
       }
       
       // Chamar a função de exclusão da maleta
-      await CombinedSuitcaseController.deleteSuitcaseWithCascade(suitcaseId);
+      await CombinedSuitcaseController.performSuitcaseDeletion(suitcaseId);
       
       // Fechar o diálogo de confirmação
       setShowDeleteDialog(false);
