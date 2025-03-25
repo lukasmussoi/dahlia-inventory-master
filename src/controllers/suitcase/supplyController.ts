@@ -237,13 +237,17 @@ export class SuitcaseSupplyController {
                   // Obter o primeiro elemento de texto com verificação de null
                   const firstText = data.cell.text[0];
                   
-                  // Somente modificar se firstText for um objeto com propriedade x
-                  if (firstText && typeof firstText === 'object' && 'x' in firstText) {
-                    // Garantir que estamos acessando um número válido para x
-                    const currentX = typeof firstText.x === 'number' ? firstText.x : 0;
+                  // Verificação rigorosa para garantir que firstText não é null e tem a propriedade x
+                  if (firstText !== null && 
+                      typeof firstText === 'object' && 
+                      firstText !== undefined && 
+                      'x' in firstText) {
                     
-                    // Modificar a propriedade x com segurança
-                    firstText.x = currentX + imgWidth + 4;
+                    // Verificar se x é um número antes de usar
+                    if (typeof firstText.x === 'number') {
+                      // Agora podemos alterar x com segurança
+                      firstText.x = firstText.x + imgWidth + 4;
+                    }
                   }
                 }
               } catch (error) {
