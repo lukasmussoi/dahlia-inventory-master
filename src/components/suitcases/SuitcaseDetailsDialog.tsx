@@ -46,6 +46,7 @@ export function SuitcaseDetailsDialog({
     handleAddItem,
     handleToggleSold,
     handleUpdateSaleInfo,
+    handleReturnToInventory,
     calculateTotalValue,
     handleViewReceipt,
     handlePrint,
@@ -109,6 +110,7 @@ export function SuitcaseDetailsDialog({
             handleAddItem={handleAddItem}
             handleToggleSold={handleToggleSold}
             handleUpdateSaleInfo={handleUpdateSaleInfo}
+            handleReturnToInventory={handleReturnToInventory}
             calculateTotalValue={calculateTotalValue}
             acertosHistorico={acertosHistorico}
             isLoadingAcertos={isLoadingAcertos}

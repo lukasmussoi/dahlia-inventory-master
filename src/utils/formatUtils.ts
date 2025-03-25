@@ -17,6 +17,24 @@ export const formatMoney = (value: number) => {
 // Para compatibilidade com código existente
 export const formatPrice = formatMoney;
 
+// Formatar status para exibição
+export const formatStatus = (status: string): string => {
+  const statusMap: Record<string, string> = {
+    'in_use': 'Em Uso',
+    'returned': 'Devolvida',
+    'in_replenishment': 'Em Reposição',
+    'lost': 'Perdida',
+    'in_audit': 'Em Auditoria',
+    'sold': 'Vendido',
+    'in_possession': 'Em Posse',
+    'damaged': 'Danificado',
+    'pendente': 'Pendente',
+    'concluido': 'Concluído'
+  };
+  
+  return statusMap[status] || status;
+};
+
 // Formato de CPF/CNPJ
 export const formatCPFOrCNPJ = (value: string): string => {
   if (!value) return '';

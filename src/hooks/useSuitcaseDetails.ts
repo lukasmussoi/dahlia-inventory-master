@@ -23,7 +23,7 @@ export function useSuitcaseDetails(
   // Utilizando hooks específicos
   const { activeTab, setActiveTab } = useTabNavigation();
   const { searchTerm, setSearchTerm, searchResults, isSearching, isAdding, handleSearch, handleAddItem } = useInventorySearch();
-  const { handleToggleSold, handleUpdateSaleInfo, handleReturnToInventory, calculateTotalValue } = useSuitcaseItems();
+  const { processingItems, handleToggleSold, handleUpdateSaleInfo, handleReturnToInventory, calculateTotalValue } = useSuitcaseItems();
   const { isPrintingPdf, handleViewReceipt, handlePrint } = usePrintOperations();
   const { nextSettlementDate, setNextSettlementDate, handleUpdateNextSettlementDate } = useSettlementDates();
   const { showDeleteDialog, setShowDeleteDialog, isDeleting, handleDeleteSuitcase } = useSuitcaseDeletion();
@@ -77,7 +77,7 @@ export function useSuitcaseDetails(
   };
 
   const handleReturnToInventoryWrapper = async (itemIds: string[], quantity: number, isDamaged: boolean) => {
-    const success = await handleReturnToInventory(itemIds, isDamaged);
+    const success = await handleReturnToInventory(itemIds, quantity, isDamaged);
     if (success) {
       refetchSuitcaseItems();
     }
