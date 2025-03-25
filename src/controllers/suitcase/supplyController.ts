@@ -1,4 +1,3 @@
-
 /**
  * Controlador de Abastecimento de Maletas
  * @file Este arquivo controla as operações de abastecimento de maletas
@@ -234,7 +233,7 @@ export class SuitcaseSupplyController {
                 );
 
                 // Ajustar o texto para não sobrepor a imagem
-                if (data.cell.text && data.cell.text.length > 0) {
+                if (data.cell.text && Array.isArray(data.cell.text) && data.cell.text.length > 0 && typeof data.cell.text[0] === 'object') {
                   data.cell.text[0].x += imgWidth + 4;
                 }
               } catch (error) {

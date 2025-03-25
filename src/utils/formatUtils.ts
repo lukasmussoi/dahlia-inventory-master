@@ -65,6 +65,9 @@ export const formatCEP = (value: string): string => {
   return cleanValue;
 };
 
+// Alias para formatCEP (para compatibilidade)
+export const formatZipCode = formatCEP;
+
 // Formato de data
 export const formatDate = (date: Date | string): string => {
   if (!date) return '';
