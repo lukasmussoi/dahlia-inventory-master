@@ -1,3 +1,4 @@
+
 /**
  * Modelo de Operações de Itens de Maleta
  * @file Funções para adicionar, atualizar e remover itens de maleta
@@ -113,8 +114,10 @@ export class ItemOperationsModel {
       const { data, error } = await supabase
         .from('suitcase_items')
         .insert({
-          ...itemData,
-          quantity: quantity
+          suitcase_id: itemData.suitcase_id,
+          inventory_id: itemData.inventory_id,
+          quantity: quantity,
+          status: itemData.status || 'in_possession'
         })
         .select()
         .maybeSingle();

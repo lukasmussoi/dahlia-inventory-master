@@ -6,7 +6,7 @@
  */
 import { useState } from "react";
 import { SuitcaseItem } from "@/types/suitcase";
-import { SuitcaseController } from "@/controllers/suitcaseController";
+import { CombinedSuitcaseController } from "@/controllers/suitcase";
 import { toast } from "sonner";
 
 export function useSuitcaseItems() {
@@ -17,7 +17,7 @@ export function useSuitcaseItems() {
     try {
       setProcessingItems(prev => ({ ...prev, [item.id]: true }));
       const newStatus = sold ? "sold" : "in_possession";
-      await SuitcaseController.updateSuitcaseItemStatus(item.id, newStatus);
+      await CombinedSuitcaseController.updateSuitcaseItemStatus(item.id, newStatus);
       return true;
     } catch (error) {
       console.error("Erro ao atualizar status do item:", error);
@@ -32,7 +32,7 @@ export function useSuitcaseItems() {
   const handleUpdateSaleInfo = async (itemId: string, field: string, value: string) => {
     try {
       setProcessingItems(prev => ({ ...prev, [itemId]: true }));
-      await SuitcaseController.updateSaleInfo(itemId, field, value);
+      await CombinedSuitcaseController.updateSaleInfo(itemId, field, value);
       return true;
     } catch (error) {
       console.error("Erro ao atualizar informações de venda:", error);
@@ -52,7 +52,7 @@ export function useSuitcaseItems() {
       setProcessingItems(prev => ({ ...prev, ...processingState }));
       
       // Processar o retorno dos itens
-      await SuitcaseController.returnItemsToInventory(itemIds, isDamaged);
+      await CombinedSuitcaseController.returnItemsToInventory(itemIds, isDamaged);
       
       const action = isDamaged ? "marcados como danificados" : "devolvidos ao estoque";
       toast.success(`${quantity} itens ${action} com sucesso`);

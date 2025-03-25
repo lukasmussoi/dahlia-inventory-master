@@ -351,6 +351,60 @@ export type Database = {
         }
         Relationships: []
       }
+      inventory_damaged_items: {
+        Row: {
+          created_at: string
+          damage_type: Database["public"]["Enums"]["damage_type"] | null
+          id: string
+          inventory_id: string
+          notes: string | null
+          quantity: number
+          reason: string
+          suitcase_id: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          damage_type?: Database["public"]["Enums"]["damage_type"] | null
+          id?: string
+          inventory_id: string
+          notes?: string | null
+          quantity?: number
+          reason: string
+          suitcase_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          damage_type?: Database["public"]["Enums"]["damage_type"] | null
+          id?: string
+          inventory_id?: string
+          notes?: string | null
+          quantity?: number
+          reason?: string
+          suitcase_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_damaged_items_inventory_id_fkey"
+            columns: ["inventory_id"]
+            isOneToOne: false
+            referencedRelation: "inventory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_damaged_items_suitcase_id_fkey"
+            columns: ["suitcase_id"]
+            isOneToOne: false
+            referencedRelation: "suitcases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_label_history: {
         Row: {
           created_at: string | null
@@ -872,9 +926,20 @@ export type Database = {
     }
     Enums: {
       acerto_status: "pendente" | "concluido"
+      damage_type:
+        | "manufacturing_defect"
+        | "transportation_damage"
+        | "customer_damage"
+        | "unknown"
+        | "other"
       plating_type: "ouro" | "prata" | "rose" | "rhodium" | "sem_banho"
       reseller_status: "Ativa" | "Inativa"
-      suitcase_item_status: "in_possession" | "sold" | "returned" | "lost"
+      suitcase_item_status:
+        | "in_possession"
+        | "sold"
+        | "returned"
+        | "lost"
+        | "damaged"
       suitcase_status:
         | "in_use"
         | "returned"

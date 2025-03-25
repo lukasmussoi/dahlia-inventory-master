@@ -1,5 +1,42 @@
+# CHANGELOG
 
-# Registro de Alterações
+## [2025-03-28] - Implementação do Agrupamento de Itens e Opções de Devolução e Itens Danificados
+**Desenvolvedor:** Equipe Dalia Manager
+
+### Adições
+- Agrupamento visual de itens idênticos na maleta, mostrando uma linha por tipo de produto
+- Adição de opções para marcar itens como "Devolver ao Estoque" ou "Danificado"
+- Criação de tabela para registro de itens danificados no banco de dados
+
+### Alterações
+- Substituição da opção "Vendido" por controles para devolução/marcação de dano
+- Refatoração do controle de itens para trabalhar com lotes de itens idênticos
+- Melhoria na exibição de quantidades de itens na maleta
+- Nova interface para processamento em lote de itens da maleta
+
+### Correções
+- Correção no processamento de itens retornados ao estoque
+- Tratamento adequado para diferentes quantidades de itens idênticos
+
+### Técnico
+- Criação de novo tipo `GroupedSuitcaseItem` para facilitar o agrupamento de itens
+- Adição do status `damaged` à enum `SuitcaseItemStatus`
+- Criação da tabela `inventory_damaged_items` para rastreamento de itens danificados
+
+## [2025-03-27] - Refatoração dos Componentes da Maleta
+**Desenvolvedor:** Equipe Dalia Manager
+
+### Alterações
+- Refatoração do componente SuitcaseItems para melhor legibilidade
+- Criação de componentes menores e mais focados (SearchResults, GroupedItemsList, SummarySection)
+- Melhoria na organização do código para facilitar manutenção futura
+
+## [2025-03-25] - Correção no Processo de Acerto
+**Desenvolvedor:** Equipe Dalia Manager
+
+### Correções
+- Correção definitiva no processamento de acerto de maletas
+- Resolução do problema de itens que permaneciam na maleta após o acerto
 
 ## 2025-03-29
 - Implementação de melhorias no módulo de abastecimento de maletas:

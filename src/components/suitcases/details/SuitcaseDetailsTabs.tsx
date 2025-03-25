@@ -111,7 +111,7 @@ export function SuitcaseDetailsTabs({
         <SuitcaseInfo 
           suitcase={suitcase}
           nextSettlementDate={nextSettlementDate}
-          handleUpdateNextSettlementDate={handleUpdateNextSettlementDate}
+          onUpdateNextSettlementDate={handleUpdateNextSettlementDate}
           promoterInfo={promoterInfo}
           loadingPromoterInfo={loadingPromoterInfo}
         />
@@ -127,8 +127,6 @@ export function SuitcaseDetailsTabs({
           isSearching={isSearching}
           isAdding={isAdding}
           handleAddItem={handleAddItem}
-          handleToggleSold={handleToggleSold}
-          handleUpdateSaleInfo={handleUpdateSaleInfo}
           handleReturnToInventory={handleReturnToInventory}
           calculateTotalValue={calculateTotalValue}
         />

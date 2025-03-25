@@ -1,19 +1,26 @@
 
-import { useState, useEffect } from "react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
+/**
+ * Componente de Informações da Maleta
+ * @file Exibe as informações básicas da maleta como código, status, localização, etc.
+ * @relacionamento Utilizado pelo SuitcaseDetailsTabs como conteúdo da aba de informações
+ */
+import { useState } from "react";
 import { Calendar } from "@/components/ui/calendar";
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarIcon, User } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { Suitcase } from "@/types/suitcase";
+import { formatStatus } from "@/utils/formatUtils";
+import { CalendarIcon, User } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Spinner } from "@/components/ui/spinner";
 
 interface SuitcaseInfoProps {
   suitcase: Suitcase;
-  nextSettlementDate: Date | undefined;
-  onUpdateNextSettlementDate: (date?: Date | null) => Promise<void>;
-  promoterInfo: any | null;
+  nextSettlementDate: Date | null;
+  onUpdateNextSettlementDate: (date: Date | null) => Promise<void>;
+  promoterInfo: any;
   loadingPromoterInfo: boolean;
 }
 
@@ -24,96 +31,148 @@ export function SuitcaseInfo({
   promoterInfo,
   loadingPromoterInfo
 }: SuitcaseInfoProps) {
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  const [updating, setUpdating] = useState(false);
+  
+  const handleDateSelect = async (date: Date | null) => {
+    if (date) {
+      setUpdating(true);
+      await onUpdateNextSettlementDate(date);
+      setUpdating(false);
+      setPopoverOpen(false);
+    }
+  };
+  
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div>
-        <h3 className="text-lg font-medium mb-2">Dados da Maleta</h3>
-        <div className="space-y-2">
-          <div>
-            <span className="text-sm text-gray-500">Código:</span>
-            <p className="font-medium">{suitcase.code}</p>
+    <div className="space-y-6">
+      <div className="grid gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-medium">Detalhes da Maleta</h3>
+            {suitcase.status && (
+              <Badge className={`${
+                suitcase.status === 'in_use' ? 'bg-green-500' : 
+                suitcase.status === 'returned' ? 'bg-blue-500' : 
+                suitcase.status === 'lost' ? 'bg-red-500' : 
+                'bg-yellow-500'
+              }`}>
+                {formatStatus(suitcase.status)}
+              </Badge>
+            )}
           </div>
-          <div>
-            <span className="text-sm text-gray-500">Status:</span>
-            <p className="font-medium">{suitcase.status === 'in_use' ? 'Em Uso' : 
-              suitcase.status === 'returned' ? 'Devolvida' : 
-              suitcase.status === 'in_replenishment' ? 'Em Reposição' : 
-              suitcase.status}</p>
+        </div>
+        
+        <div className="grid gap-2">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <p className="text-sm text-muted-foreground">Código da Maleta</p>
+              <p className="font-medium">{suitcase.code}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm text-muted-foreground">Data de Envio</p>
+              <p className="font-medium">
+                {suitcase.sent_at 
+                  ? format(new Date(suitcase.sent_at), 'PP', { locale: ptBR }) 
+                  : "N/A"}
+              </p>
+            </div>
           </div>
-          <div>
-            <span className="text-sm text-gray-500">Criada em:</span>
-            <p className="font-medium">{new Date(suitcase.created_at).toLocaleDateString('pt-BR')}</p>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <p className="text-sm text-muted-foreground">Cidade</p>
+              <p className="font-medium">{suitcase.city || "Não informada"}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm text-muted-foreground">Bairro</p>
+              <p className="font-medium">{suitcase.neighborhood || "Não informado"}</p>
+            </div>
           </div>
-          <div className="pt-2">
-            <span className="text-sm text-gray-500 block mb-1">Próximo acerto:</span>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant={"outline"}
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !nextSettlementDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {nextSettlementDate ? (
-                    format(nextSettlementDate, "dd/MM/yyyy")
-                  ) : (
-                    <span>Definir data</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={nextSettlementDate}
-                  onSelect={onUpdateNextSettlementDate}
-                  initialFocus
-                  className={cn("p-3 pointer-events-auto")}
-                  disabled={(date) => date < new Date()}
-                  locale={ptBR}
-                />
-                <div className="p-3 border-t border-border">
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-center text-sm"
-                    onClick={() => onUpdateNextSettlementDate(null)}
-                  >
-                    Limpar
+          
+          <div className="space-y-1 mt-2">
+            <p className="text-sm text-muted-foreground flex items-center gap-1">
+              <CalendarIcon className="h-4 w-4" /> Próximo Acerto
+            </p>
+            <div className="flex items-center gap-2">
+              <p className="font-medium">
+                {nextSettlementDate 
+                  ? format(nextSettlementDate, 'PP', { locale: ptBR }) 
+                  : "Não agendado"}
+              </p>
+              <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button size="sm" variant="outline" className="h-8">
+                    {updating ? (
+                      <Spinner className="h-4 w-4 mr-2" />
+                    ) : (
+                      <CalendarIcon className="h-4 w-4 mr-2" />
+                    )}
+                    Alterar
                   </Button>
-                </div>
-              </PopoverContent>
-            </Popover>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={nextSettlementDate || undefined}
+                    onSelect={handleDateSelect}
+                    initialFocus
+                    locale={ptBR}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
         </div>
       </div>
       
-      <div>
-        <h3 className="text-lg font-medium mb-2">Dados da Revendedora</h3>
-        <div className="space-y-2">
-          <div>
-            <span className="text-sm text-gray-500">Nome:</span>
-            <p className="font-medium">{suitcase.seller?.name || "Não informado"}</p>
+      <div className="space-y-3">
+        <h3 className="text-lg font-medium flex items-center gap-1">
+          <User className="h-4 w-4" /> Informações da Revendedora
+        </h3>
+        <div className="grid gap-2">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <p className="text-sm text-muted-foreground">Nome</p>
+              <p className="font-medium">{suitcase.seller?.name || "N/A"}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm text-muted-foreground">Telefone</p>
+              <p className="font-medium">{suitcase.seller?.phone || "N/A"}</p>
+            </div>
           </div>
-          <div>
-            <span className="text-sm text-gray-500">Telefone:</span>
-            <p className="font-medium">{suitcase.seller?.phone || "Não informado"}</p>
-          </div>
-          <div>
-            <span className="text-sm text-gray-500">Localização:</span>
-            <p className="font-medium">{suitcase.city || "Não informado"}, {suitcase.neighborhood || "Não informado"}</p>
-          </div>
-          <div>
-            <span className="text-sm text-gray-500">Promotora responsável:</span>
+          <div className="space-y-1">
+            <p className="text-sm text-muted-foreground">Comissão</p>
             <p className="font-medium">
-              {loadingPromoterInfo ? (
-                <span className="inline-block w-24 h-4 bg-gray-200 animate-pulse rounded"></span>
-              ) : (
-                promoterInfo?.name || "Não atribuída"
-              )}
+              {suitcase.seller?.commission_rate 
+                ? `${(suitcase.seller.commission_rate * 100).toFixed(1)}%` 
+                : "Padrão (30%)"}
             </p>
           </div>
         </div>
+      </div>
+      
+      <div className="space-y-3">
+        <h3 className="text-lg font-medium">Promotora Responsável</h3>
+        {loadingPromoterInfo ? (
+          <div className="flex items-center justify-center p-4">
+            <Spinner className="h-6 w-6" />
+          </div>
+        ) : promoterInfo ? (
+          <div className="grid gap-2">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Nome</p>
+                <p className="font-medium">{promoterInfo.name}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Telefone</p>
+                <p className="font-medium">{promoterInfo.phone || "N/A"}</p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <p className="text-muted-foreground">Informações da promotora não disponíveis</p>
+        )}
       </div>
     </div>
   );

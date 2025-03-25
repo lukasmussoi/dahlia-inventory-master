@@ -1,3 +1,4 @@
+
 /**
  * Controlador de Itens de Maleta
  * @file Este arquivo controla as operações relacionadas aos itens de maletas
@@ -85,7 +86,7 @@ export const SuitcaseItemController = {
     try {
       const results = [];
       for (const itemId of itemIds) {
-        await this.returnItemToInventory(itemId, isDamaged);
+        await SuitcaseItemModel.returnItemToInventory(itemId, isDamaged);
         results.push(itemId);
       }
       return results;
