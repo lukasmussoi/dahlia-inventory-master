@@ -4,7 +4,8 @@
  * @file Este arquivo contém as operações de banco de dados para os acertos de maleta
  */
 import { supabase } from "@/integrations/supabase/client";
-import { Acerto, SuitcaseItem } from "@/types/suitcase";
+import { Acerto, AcertoStatus, SuitcaseItem } from "@/types/suitcase";
+import { Json } from "@/integrations/supabase/types";
 import { SuitcaseModel } from "./suitcaseModel";
 
 export class AcertoMaletaModel {
@@ -13,7 +14,17 @@ export class AcertoMaletaModel {
    * @param acertoData Dados do acerto
    * @returns Acerto criado
    */
-  static async createAcerto(acertoData: Partial<Acerto>): Promise<Acerto> {
+  static async createAcerto(acertoData: {
+    suitcase_id: string;
+    seller_id: string;
+    settlement_date?: string;
+    status?: AcertoStatus;
+    total_sales?: number;
+    commission_amount?: number;
+    next_settlement_date?: string | null;
+    receipt_url?: string | null;
+    restock_suggestions?: Json | null;
+  }): Promise<Acerto> {
     const { data, error } = await supabase
       .from('acertos_maleta')
       .insert(acertoData)

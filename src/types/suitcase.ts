@@ -20,7 +20,7 @@ export interface SuitcaseItem {
   suitcase_id: string;
   inventory_id: string;
   status: SuitcaseItemStatus;
-  added_at: string;
+  added_at?: string;
   quantity?: number;
   created_at?: string;
   updated_at?: string;
@@ -29,6 +29,7 @@ export interface SuitcaseItem {
     sku: string;
     name: string;
     price: number;
+    unit_cost?: number;
     photo_url?: string | PhotoUrl[];
   };
   sales?: SuitcaseItemSale[];
@@ -102,11 +103,13 @@ export interface AcertoItem {
   payment_method?: string;
   created_at?: string;
   updated_at?: string;
+  unit_cost?: number;
   product?: {
     id: string;
     name: string;
     sku: string;
     price: number;
+    unit_cost?: number;
     photo_url?: string | PhotoUrl[]; // Permitir ambos os formatos
   };
 }
@@ -124,6 +127,8 @@ export interface Acerto {
   restock_suggestions?: any;
   created_at: string;
   updated_at?: string;
+  total_cost?: number;
+  net_profit?: number;
   suitcase?: Partial<Suitcase>;
   seller?: {
     id: string;
@@ -139,12 +144,6 @@ export interface SuitcaseSettlementFormData {
   seller_id: string;
   settlement_date: Date;
   next_settlement_date?: Date;
-  items_present: string[]; // IDs dos itens escaneados/confirmados como presentes
-  items_sold: {
-    suitcase_item_id: string;
-    inventory_id: string;
-    price: number;
-    customer_name?: string;
-    payment_method?: string;
-  }[];
+  items_present: SuitcaseItem[]; // IDs dos itens escaneados/confirmados como presentes
+  items_sold: SuitcaseItem[]; // Itens marcados como vendidos
 }

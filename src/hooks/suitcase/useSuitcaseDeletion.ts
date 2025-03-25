@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { SuitcaseController } from "@/controllers/suitcaseController";
+import { DeleteSuitcaseController } from "@/controllers/suitcase/deleteSuitcaseController";
 import { toast } from "sonner";
 
 export function useSuitcaseDeletion() {
@@ -13,8 +13,16 @@ export function useSuitcaseDeletion() {
     
     setIsDeleting(true);
     try {
+      // Verificar se a maleta pode ser excluída
+      const { canDelete, message } = await DeleteSuitcaseController.canDeleteSuitcase(suitcaseId);
+      
+      if (!canDelete) {
+        toast.error(message || "Não é possível excluir esta maleta");
+        return false;
+      }
+      
       // Chamar a função de exclusão da maleta
-      await SuitcaseController.deleteSuitcaseWithCascade(suitcaseId);
+      await DeleteSuitcaseController.deleteSuitcase(suitcaseId);
       
       // Fechar o diálogo de confirmação
       setShowDeleteDialog(false);

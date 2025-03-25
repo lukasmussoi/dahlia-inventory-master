@@ -6,7 +6,7 @@
  */
 import { SuitcaseModel } from "@/models/suitcaseModel";
 import { AcertoMaletaModel } from "@/models/acertoMaletaModel";
-import { Acerto, SuitcaseSettlementFormData } from "@/types/suitcase";
+import { Acerto, SuitcaseSettlementFormData, SuitcaseItem, AcertoStatus } from "@/types/suitcase";
 import { supabase } from "@/integrations/supabase/client";
 
 export const SettlementController = {
@@ -24,8 +24,8 @@ export const SettlementController = {
         .from('acertos_maleta')
         .select(`
           *,
-          suitcase:suitcases(code),
-          seller:resellers(name)
+          suitcase:suitcases(id, code),
+          seller:resellers(id, name)
         `)
         .eq('suitcase_id', suitcaseId)
         .order('settlement_date', { ascending: false });
@@ -33,7 +33,7 @@ export const SettlementController = {
       if (error) throw error;
       
       console.log(`Histórico de acertos buscado para a maleta: ${suitcaseId}`);
-      return acertos || [];
+      return acertos as Acerto[] || [];
     } catch (error) {
       console.error("Erro ao buscar histórico de acertos:", error);
       throw error;
@@ -61,7 +61,7 @@ export const SettlementController = {
         suitcase_id: suitcaseId,
         seller_id: suitcase.seller_id,
         settlement_date: settlementDate.toISOString(),
-        status: "pendente",
+        status: 'pendente' as AcertoStatus,
         total_sales: 0,
         commission_amount: 0
       };
@@ -98,7 +98,7 @@ export const SettlementController = {
       // 2. Calcular valores totais
       let totalSales = 0;
       formData.items_sold.forEach(item => {
-        totalSales += item.price;
+        totalSales += item.product?.price || 0;
       });
       
       // 3. Buscar taxa de comissão do vendedor
