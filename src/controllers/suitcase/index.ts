@@ -35,24 +35,27 @@ export const CombinedSuitcaseController = {
   updateSaleInfo: SuitcaseItemController.updateSaleInfo,
   
   // SettlementController
-  getPromoterForReseller: SettlementController.getPromoterForReseller,
   getHistoricoAcertos: SettlementController.getHistoricoAcertos,
+  createPendingSettlement: SettlementController.createPendingSettlement,
+  finalizeSettlement: SettlementController.finalizeSettlement,
   
   // DeleteSuitcaseController
-  checkCanDeleteSuitcase: DeleteSuitcaseController.checkCanDeleteSuitcase,
+  canDeleteSuitcase: DeleteSuitcaseController.canDeleteSuitcase,
+  deleteSuitcaseWithCascade: DeleteSuitcaseController.deleteSuitcaseWithCascade,
   
   // SellerController
   getSellerById: SellerController.getSellerById,
   getAllSellers: SellerController.getAllSellers,
   
   // InventorySearchController
-  searchInventoryForSuitcase: InventorySearchController.searchInventoryForSuitcase,
+  searchInventoryItems: InventorySearchController.searchInventoryItems,
+  getItemSuitcaseInfo: InventorySearchController.getItemSuitcaseInfo,
   
   // PdfController
   generateSuitcasePDF: PdfController.generateSuitcasePDF,
 
   // SuitcaseSupplyController
-  searchInventoryItems: SuitcaseSupplyController.searchInventoryItems,
+  searchInventoryForSuitcase: SuitcaseSupplyController.searchInventoryItems,
   supplySuitcase: SuitcaseSupplyController.supplySuitcase,
   generateSupplyPDF: SuitcaseSupplyController.generateSupplyPDF,
   countSuitcaseItems: SuitcaseSupplyController.countSuitcaseItems,

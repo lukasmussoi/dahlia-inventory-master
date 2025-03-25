@@ -1,6 +1,14 @@
 
 # Registro de Alterações
 
+## 2023-10-25
+- Correção de bugs em funções de formatação:
+  - Adicionada função `formatPrice` como alias para `formatMoney` para manter compatibilidade
+  - Adicionadas funções de formatação para telefone, CPF/CNPJ e CEP
+  - Corrigidos erros de referência em controladores
+  - Ajustada passagem de props entre componentes
+  - Desenvolvedor: Equipe Dalia Manager
+
 ## 2023-10-16
 - Implementada funcionalidade de abastecimento de maletas via card
   - Adicionado botão "Abastecer" no card de maletas

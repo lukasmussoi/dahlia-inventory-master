@@ -17,9 +17,10 @@ import { CombinedSuitcaseController } from "@/controllers/suitcase";
 interface SuitcasesContentProps {
   isAdmin?: boolean;
   userProfile?: any;
+  summary: any; // Resumo das maletas
 }
 
-export function SuitcasesContent({ isAdmin = false, userProfile }: SuitcasesContentProps) {
+export function SuitcasesContent({ isAdmin = false, userProfile, summary }: SuitcasesContentProps) {
   const [filters, setFilters] = useState<SuitcaseFilters>({});
   const [showNewSuitcaseDialog, setShowNewSuitcaseDialog] = useState(false);
   const [selectedSuitcase, setSelectedSuitcase] = useState<any>(null);
@@ -107,9 +108,9 @@ export function SuitcasesContent({ isAdmin = false, userProfile }: SuitcasesCont
           </div>
         </div>
 
-        <SuitcaseSummary />
+        <SuitcaseSummary summary={summary} />
 
-        <SuitcaseFiltersComponent onApplyFilters={handleApplyFilters} />
+        <SuitcaseFiltersComponent filters={filters} onFiltersChange={handleApplyFilters} />
 
         {isLoading ? (
           <div className="flex justify-center p-12">

@@ -17,8 +17,14 @@ const Suitcases = () => {
     queryFn: () => AuthController.getUserProfileWithRoles(),
   });
 
+  // Buscar resumo das maletas
+  const { data: summary, isLoading: isLoadingSummary } = useQuery({
+    queryKey: ['suitcases-summary'],
+    queryFn: () => CombinedSuitcaseController.getSuitcaseSummary(),
+  });
+
   // Se estiver carregando, mostrar loading
-  if (isLoadingProfile) {
+  if (isLoadingProfile || isLoadingSummary) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-pink-500"></div>
@@ -28,7 +34,11 @@ const Suitcases = () => {
 
   return (
     <div className="min-h-screen w-full bg-pearl pt-20">
-      <SuitcasesContent isAdmin={userProfile?.isAdmin} userProfile={userProfile?.profile} />
+      <SuitcasesContent 
+        isAdmin={userProfile?.isAdmin} 
+        userProfile={userProfile?.profile}
+        summary={summary || {}} 
+      />
     </div>
   );
 };

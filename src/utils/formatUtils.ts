@@ -24,6 +24,16 @@ export function formatMoney(value: number, options?: Intl.NumberFormatOptions): 
 }
 
 /**
+ * Formata um valor numérico para o formato de moeda (R$)
+ * Alias para formatMoney para manter compatibilidade com código existente
+ * @param value Valor a ser formatado
+ * @returns String formatada
+ */
+export function formatPrice(value: number): string {
+  return formatMoney(value);
+}
+
+/**
  * Formata uma data para o formato dd/mm/yyyy
  * @param date Data a ser formatada
  * @returns String formatada
@@ -51,4 +61,64 @@ export function formatNumber(value: number, decimals: number = 0): string {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals
   }).format(value || 0);
+}
+
+/**
+ * Formata um número de telefone para o formato (xx) xxxxx-xxxx
+ * @param phone Número de telefone a ser formatado
+ * @returns String formatada
+ */
+export function formatPhone(phone: string): string {
+  if (!phone) return '';
+  
+  // Remove todos os caracteres não numéricos
+  const numbers = phone.replace(/\D/g, '');
+  
+  // Verifica se é celular (11 dígitos) ou telefone fixo (10 dígitos)
+  if (numbers.length === 11) {
+    return numbers.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+  } else if (numbers.length === 10) {
+    return numbers.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+  }
+  
+  return phone; // Retorna original se não conseguir formatar
+}
+
+/**
+ * Formata um CPF (11 dígitos) ou CNPJ (14 dígitos)
+ * @param value CPF ou CNPJ a ser formatado
+ * @returns String formatada
+ */
+export function formatCPFOrCNPJ(value: string): string {
+  if (!value) return '';
+  
+  // Remove todos os caracteres não numéricos
+  const numbers = value.replace(/\D/g, '');
+  
+  // Verifica se é CPF (11 dígitos) ou CNPJ (14 dígitos)
+  if (numbers.length === 11) {
+    return numbers.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+  } else if (numbers.length === 14) {
+    return numbers.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+  }
+  
+  return value; // Retorna original se não conseguir formatar
+}
+
+/**
+ * Formata um CEP para o formato xxxxx-xxx
+ * @param zipCode CEP a ser formatado
+ * @returns String formatada
+ */
+export function formatZipCode(zipCode: string): string {
+  if (!zipCode) return '';
+  
+  // Remove todos os caracteres não numéricos
+  const numbers = zipCode.replace(/\D/g, '');
+  
+  if (numbers.length === 8) {
+    return numbers.replace(/(\d{5})(\d{3})/, '$1-$2');
+  }
+  
+  return zipCode; // Retorna original se não conseguir formatar
 }
