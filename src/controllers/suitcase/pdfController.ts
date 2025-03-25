@@ -10,8 +10,8 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { getProductPhotoUrl } from "@/utils/photoUtils";
 
-export class SuitcasePdfController {
-  static async generateSuitcasePDF(
+export const SuitcasePdfController = {
+  async generateSuitcasePDF(
     suitcaseId: string,
     items: SuitcaseItem[],
     promoterInfo: any
@@ -247,7 +247,7 @@ export class SuitcasePdfController {
       console.error("Erro ao gerar PDF da maleta:", error);
       throw new Error("Não foi possível gerar o PDF da maleta");
     }
-  }
+  },
   
   private static async loadImageAsBase64(url: string): Promise<string | null> {
     try {
@@ -284,7 +284,7 @@ export class SuitcasePdfController {
       console.error("Erro ao carregar imagem como Base64:", error);
       return null;
     }
-  }
+  },
   
   private static formatPrice(price: number): string {
     return new Intl.NumberFormat('pt-BR', { 
@@ -292,4 +292,4 @@ export class SuitcasePdfController {
       currency: 'BRL' 
     }).format(price);
   }
-}
+};

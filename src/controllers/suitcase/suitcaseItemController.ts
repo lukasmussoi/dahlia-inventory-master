@@ -29,11 +29,15 @@ export const SuitcaseItemController = {
     try {
       // Verificar se o item já está em outra maleta
       const itemInfo = await SuitcaseModel.getItemSuitcaseInfo(inventoryId);
-      if (itemInfo && itemInfo.suitcaseId && itemInfo.suitcaseId !== suitcaseId) {
-        throw new Error(`Este item já está na maleta ${itemInfo.suitcaseCode}`);
+      if (itemInfo && itemInfo.suitcase_id && itemInfo.suitcase_id !== suitcaseId) {
+        throw new Error(`Este item já está na maleta ${itemInfo.suitcase_code}`);
       }
       
-      const result = await SuitcaseModel.addItemToSuitcase(suitcaseId, inventoryId, quantity);
+      const result = await SuitcaseModel.addItemToSuitcase({
+        suitcase_id: suitcaseId,
+        inventory_id: inventoryId,
+        quantity
+      });
       return result;
     } catch (error) {
       console.error("Erro ao adicionar item à maleta:", error);
