@@ -107,5 +107,14 @@ export const DeleteSuitcaseController = {
       console.error("Erro ao verificar se maleta pode ser excluída:", error);
       return { canDelete: false, message: "Erro ao verificar disponibilidade para exclusão" };
     }
+  },
+
+  /**
+   * Executa a exclusão completa da maleta após verificação de permissões
+   * @param suitcaseId ID da maleta a ser excluída
+   * @returns true se a exclusão for bem-sucedida
+   */
+  async performSuitcaseDeletion(suitcaseId: string): Promise<boolean> {
+    return this.deleteSuitcase(suitcaseId);
   }
 };
