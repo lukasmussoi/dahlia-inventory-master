@@ -250,9 +250,10 @@ export class ItemOperationsModel {
   /**
    * Retornar um item para o estoque
    * @param itemId ID do item
+   * @param isDamaged Se o item está danificado ou não
    * @returns Promise que resolve quando o item for devolvido ao estoque
    */
-  static async returnItemToInventory(itemId: string): Promise<void> {
+  static async returnItemToInventory(itemId: string, isDamaged: boolean = false): Promise<void> {
     if (!itemId) throw new Error("ID do item é necessário");
     
     try {
@@ -264,48 +265,76 @@ export class ItemOperationsModel {
       }
       
       // Registrar que o item estava na maleta e será devolvido ao estoque
-      console.log(`Iniciando processamento para retornar item ${itemId} ao estoque. Status atual: ${item.status}`);
+      console.log(`Iniciando processamento para retornar item ${itemId} ao estoque. Status atual: ${item.status}, Danificado: ${isDamaged}`);
       
-      // Incrementar a quantidade no estoque
-      const quantidade = item.quantity || 1;
-      
-      // Buscar quantidade atual no estoque
-      const { data: inventoryData, error: getError } = await supabase
-        .from('inventory')
-        .select('quantity')
-        .eq('id', item.inventory_id)
-        .maybeSingle();
-      
-      if (getError) {
-        console.error(`Erro ao buscar quantidade no estoque para o item ${item.inventory_id}:`, getError);
-        throw getError;
-      }
-      
-      if (inventoryData) {
-        const newQuantity = (inventoryData.quantity || 0) + quantidade;
+      // Se o item não estiver danificado, incrementar a quantidade no estoque
+      if (!isDamaged) {
+        const quantidade = item.quantity || 1;
         
-        // Atualizar quantidade no estoque
-        const { error: updateInventoryError } = await supabase
+        // Buscar quantidade atual no estoque
+        const { data: inventoryData, error: getError } = await supabase
           .from('inventory')
-          .update({ quantity: newQuantity })
-          .eq('id', item.inventory_id);
+          .select('quantity')
+          .eq('id', item.inventory_id)
+          .maybeSingle();
         
-        if (updateInventoryError) {
-          console.error(`Erro ao atualizar estoque para o item ${item.inventory_id}:`, updateInventoryError);
-          throw updateInventoryError;
+        if (getError) {
+          console.error(`Erro ao buscar quantidade no estoque para o item ${item.inventory_id}:`, getError);
+          throw getError;
         }
         
-        console.log(`Estoque atualizado para o item ${item.inventory_id}: ${inventoryData.quantity} -> ${newQuantity}`);
+        if (inventoryData) {
+          const newQuantity = (inventoryData.quantity || 0) + quantidade;
+          
+          // Atualizar quantidade no estoque
+          const { error: updateInventoryError } = await supabase
+            .from('inventory')
+            .update({ quantity: newQuantity })
+            .eq('id', item.inventory_id);
+          
+          if (updateInventoryError) {
+            console.error(`Erro ao atualizar estoque para o item ${item.inventory_id}:`, updateInventoryError);
+            throw updateInventoryError;
+          }
+          
+          console.log(`Estoque atualizado para o item ${item.inventory_id}: ${inventoryData.quantity} -> ${newQuantity}`);
+        }
+      } else {
+        // Se o item estiver danificado, registramos no log, mas não aumentamos a quantidade no estoque
+        console.log(`Item ${itemId} marcado como danificado e não será adicionado ao estoque disponível`);
+        
+        // Registrar item danificado em tabela específica
+        try {
+          const { error: damageError } = await supabase
+            .from('inventory_damaged_items')
+            .insert({
+              inventory_id: item.inventory_id,
+              suitcase_id: item.suitcase_id,
+              reason: 'Devolvido como danificado',
+              quantity: item.quantity || 1,
+              user_id: (await supabase.auth.getUser()).data.user?.id
+            });
+            
+          if (damageError) {
+            console.error(`Erro ao registrar item danificado ${itemId}:`, damageError);
+            // Não interromper o fluxo por erro no registro de dano
+          }
+        } catch (damageInsertError) {
+          console.error(`Erro na inserção de registro de dano para item ${itemId}:`, damageInsertError);
+          // Não interromper o fluxo por erro no registro de dano
+        }
       }
       
-      // Atualizar o status do item para "returned" (devolvido)
+      // Atualizar o status do item para "returned" (devolvido) ou "damaged" (danificado)
+      const newStatus: SuitcaseItemStatus = isDamaged ? 'damaged' : 'returned';
+      
       const { error: updateItemError } = await supabase
         .from('suitcase_items')
-        .update({ status: 'returned' })
+        .update({ status: newStatus })
         .eq('id', itemId);
       
       if (updateItemError) {
-        console.error(`Erro ao atualizar status do item ${itemId} para 'returned':`, updateItemError);
+        console.error(`Erro ao atualizar status do item ${itemId} para '${newStatus}':`, updateItemError);
         throw updateItemError;
       }
       
@@ -317,26 +346,10 @@ export class ItemOperationsModel {
       
       if (dependencies && dependencies.length > 0) {
         console.log(`O item ${itemId} tem ${dependencies.length} dependências em acerto_itens_vendidos. Não será removido diretamente.`);
-        // Neste caso, atualizamos para 'returned' acima, mas não removemos diretamente
+        // Neste caso, atualizamos para o novo status acima, mas não removemos diretamente
       } else {
-        // Remover completamente o item da maleta após atualizações
-        const { error: deleteError } = await supabase
-          .from('suitcase_items')
-          .delete()
-          .eq('id', itemId);
-        
-        if (deleteError) {
-          console.error(`Erro ao remover item ${itemId} da maleta:`, deleteError);
-          
-          // Se houver erro de constraint, verificamos se é possível identificar a causa
-          if (deleteError.message?.includes('foreign key constraint')) {
-            console.warn(`Erro de restrição de chave estrangeira ao excluir o item ${itemId}. Mantendo o item com status 'returned'.`);
-          } else {
-            throw deleteError;
-          }
-        } else {
-          console.log(`Item ${itemId} devolvido ao estoque com sucesso e removido da maleta`);
-        }
+        // Registrar no log o status da operação
+        console.log(`Item ${itemId} devolvido ao estoque como ${isDamaged ? 'danificado' : 'disponível'}`);
       }
     } catch (error) {
       console.error("Erro ao retornar item ao estoque:", error);

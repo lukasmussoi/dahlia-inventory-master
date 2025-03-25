@@ -1,6 +1,5 @@
-
 export type SuitcaseStatus = 'in_use' | 'returned' | 'in_replenishment' | 'lost' | 'in_audit';
-export type SuitcaseItemStatus = 'in_possession' | 'sold' | 'returned' | 'lost';
+export type SuitcaseItemStatus = 'in_possession' | 'sold' | 'returned' | 'lost' | 'damaged';
 export type AcertoStatus = 'pendente' | 'concluido';
 
 export interface SuitcaseItemSale {
@@ -35,7 +34,6 @@ export interface SuitcaseItem {
   sales?: SuitcaseItemSale[];
 }
 
-// Interface para facilitar o tratamento de photo_url
 export interface PhotoUrl {
   photo_url: string;
 }
@@ -58,13 +56,13 @@ export interface Suitcase {
   updated_at?: string;
   next_settlement_date?: string;
   sent_at?: string;
-  items_count?: number;  // Novo campo para contagem de itens
+  items_count?: number;
   seller?: {
     id: string;
     name: string;
     phone?: string;
     commission_rate?: number;
-    address?: any; // Permitir qualquer tipo para address (string, object, number, null)
+    address?: any;
   };
 }
 
@@ -111,7 +109,7 @@ export interface AcertoItem {
     sku: string;
     price: number;
     unit_cost?: number;
-    photo_url?: string | PhotoUrl[]; // Permitir ambos os formatos
+    photo_url?: string | PhotoUrl[];
   };
 }
 
@@ -135,7 +133,7 @@ export interface Acerto {
     id: string;
     name: string;
     commission_rate?: number;
-    address?: any; // Permitir qualquer tipo para address
+    address?: any;
   };
   items_vendidos?: AcertoItem[];
 }
@@ -145,6 +143,16 @@ export interface SuitcaseSettlementFormData {
   seller_id: string;
   settlement_date: Date | string;
   next_settlement_date?: Date | string | null;
-  items_present: string[] | SuitcaseItem[]; // Pode receber tanto IDs quanto objetos completos
-  items_sold: string[] | SuitcaseItem[]; // Pode receber tanto IDs quanto objetos completos
+  items_present: string[] | SuitcaseItem[];
+  items_sold: string[] | SuitcaseItem[];
+}
+
+export interface GroupedSuitcaseItem {
+  product_id: string;
+  product_sku: string;
+  product_name: string;
+  product_price: number;
+  photo_url?: string;
+  total_quantity: number;
+  items: SuitcaseItem[];
 }

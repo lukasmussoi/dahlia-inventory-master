@@ -1,19 +1,24 @@
 
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+/**
+ * Componente de Abas de Detalhes da Maleta
+ * @file Exibe e gerencia as abas informações, itens e histórico da maleta
+ * @relacionamento Utilizado pelo SuitcaseDetailsDialog e coordena os componentes de cada aba
+ */
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SuitcaseInfo } from "./SuitcaseInfo";
 import { SuitcaseItems } from "./SuitcaseItems";
 import { SuitcaseHistory } from "./SuitcaseHistory";
-import { Briefcase, Printer, Trash2 } from "lucide-react";
+import { Suitcase, SuitcaseItem } from "@/types/suitcase";
 import { Button } from "@/components/ui/button";
-import { Suitcase, SuitcaseItem, Acerto } from "@/types/suitcase";
+import { Trash2, Printer } from "lucide-react";
 
 interface SuitcaseDetailsTabsProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   suitcase: Suitcase;
-  nextSettlementDate: Date | undefined;
-  handleUpdateNextSettlementDate: (date?: Date | null) => Promise<void>;
-  promoterInfo: any | null;
+  nextSettlementDate: Date | null;
+  handleUpdateNextSettlementDate: (date: Date | null) => Promise<void>;
+  promoterInfo: any;
   loadingPromoterInfo: boolean;
   suitcaseItems: SuitcaseItem[];
   searchTerm: string;
@@ -25,14 +30,15 @@ interface SuitcaseDetailsTabsProps {
   handleAddItem: (inventoryId: string) => Promise<void>;
   handleToggleSold: (item: SuitcaseItem, sold: boolean) => Promise<void>;
   handleUpdateSaleInfo: (itemId: string, field: string, value: string) => Promise<void>;
+  handleReturnToInventory: (itemIds: string[], quantity: number, isDamaged: boolean) => Promise<void>;
   calculateTotalValue: () => number;
-  acertosHistorico: Acerto[];
+  acertosHistorico: any[];
   isLoadingAcertos: boolean;
-  handleViewReceipt: (acertoId: string) => void;
-  handlePrint: () => void;
+  handleViewReceipt: (id: string) => void;
+  handlePrint: () => Promise<void>;
   isPrintingPdf: boolean;
   isAdmin?: boolean;
-  onDeleteClick?: () => void;
+  onDeleteClick: () => void;
 }
 
 export function SuitcaseDetailsTabs({
@@ -53,6 +59,7 @@ export function SuitcaseDetailsTabs({
   handleAddItem,
   handleToggleSold,
   handleUpdateSaleInfo,
+  handleReturnToInventory,
   calculateTotalValue,
   acertosHistorico,
   isLoadingAcertos,
@@ -64,69 +71,53 @@ export function SuitcaseDetailsTabs({
 }: SuitcaseDetailsTabsProps) {
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-      <div className="border-b">
-        <div className="flex items-center px-6">
-          <TabsList className="h-10 bg-transparent">
-            <TabsTrigger
-              value="informacoes"
-              className="rounded-none border-b-2 border-transparent px-4 py-2 data-[state=active]:border-pink-500 data-[state=active]:bg-transparent"
-            >
-              Informações
-            </TabsTrigger>
-            <TabsTrigger
-              value="itens"
-              className="rounded-none border-b-2 border-transparent px-4 py-2 data-[state=active]:border-pink-500 data-[state=active]:bg-transparent"
-            >
-              Itens
-            </TabsTrigger>
-            <TabsTrigger
-              value="historico"
-              className="rounded-none border-b-2 border-transparent px-4 py-2 data-[state=active]:border-pink-500 data-[state=active]:bg-transparent"
-            >
-              Histórico
-            </TabsTrigger>
-          </TabsList>
-          <div className="ml-auto flex items-center gap-2">
-            {isAdmin && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={onDeleteClick} 
-                className="gap-1 text-red-500 hover:text-red-700 hover:bg-red-50"
-              >
-                <Trash2 className="h-4 w-4" />
-                Excluir
-              </Button>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-bold">{suitcase.code} - {suitcase.seller?.name}</h2>
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handlePrint}
+            disabled={isPrintingPdf}
+          >
+            {isPrintingPdf ? (
+              <div className="h-4 w-4 border-2 border-t-transparent border-primary rounded-full animate-spin mr-1"></div>
+            ) : (
+              <Printer className="h-4 w-4 mr-1" />
             )}
+            Imprimir
+          </Button>
+          
+          {isAdmin && (
             <Button 
-              variant="ghost" 
+              variant="destructive" 
               size="sm" 
-              onClick={handlePrint} 
-              className="gap-1"
-              disabled={isPrintingPdf}
+              onClick={onDeleteClick}
             >
-              {isPrintingPdf ? (
-                <div className="h-4 w-4 border-2 border-t-transparent border-pink-500 rounded-full animate-spin mr-1"></div>
-              ) : (
-                <Printer className="h-4 w-4" />
-              )}
-              Imprimir
+              <Trash2 className="h-4 w-4 mr-1" />
+              Excluir
             </Button>
-          </div>
+          )}
         </div>
       </div>
       
-      <TabsContent value="informacoes" className="p-6">
+      <TabsList className="grid w-full grid-cols-3">
+        <TabsTrigger value="informacoes">Informações</TabsTrigger>
+        <TabsTrigger value="itens">Itens</TabsTrigger>
+        <TabsTrigger value="historico">Histórico</TabsTrigger>
+      </TabsList>
+      
+      <TabsContent value="informacoes">
         <SuitcaseInfo 
-          suitcase={suitcase} 
+          suitcase={suitcase}
           nextSettlementDate={nextSettlementDate}
-          onUpdateNextSettlementDate={handleUpdateNextSettlementDate}
+          handleUpdateNextSettlementDate={handleUpdateNextSettlementDate}
           promoterInfo={promoterInfo}
           loadingPromoterInfo={loadingPromoterInfo}
         />
       </TabsContent>
       
-      <TabsContent value="itens" className="p-6 pt-3">
+      <TabsContent value="itens">
         <SuitcaseItems 
           suitcaseItems={suitcaseItems}
           searchTerm={searchTerm}
@@ -138,11 +129,12 @@ export function SuitcaseDetailsTabs({
           handleAddItem={handleAddItem}
           handleToggleSold={handleToggleSold}
           handleUpdateSaleInfo={handleUpdateSaleInfo}
+          handleReturnToInventory={handleReturnToInventory}
           calculateTotalValue={calculateTotalValue}
         />
       </TabsContent>
       
-      <TabsContent value="historico" className="p-6">
+      <TabsContent value="historico">
         <SuitcaseHistory 
           acertosHistorico={acertosHistorico}
           isLoadingAcertos={isLoadingAcertos}

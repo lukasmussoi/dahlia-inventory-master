@@ -1,4 +1,3 @@
-
 /**
  * Controlador de Itens de Maleta
  * @file Este arquivo controla as operações relacionadas aos itens de maletas
@@ -73,11 +72,25 @@ export const SuitcaseItemController = {
     }
   },
 
-  async returnItemToInventory(itemId: string) {
+  async returnItemToInventory(itemId: string, isDamaged: boolean = false) {
     try {
-      return await SuitcaseItemModel.returnItemToInventory(itemId);
+      return await SuitcaseItemModel.returnItemToInventory(itemId, isDamaged);
     } catch (error) {
       console.error("Erro ao retornar item ao estoque:", error);
+      throw error;
+    }
+  },
+  
+  async returnItemsToInventory(itemIds: string[], isDamaged: boolean = false) {
+    try {
+      const results = [];
+      for (const itemId of itemIds) {
+        await this.returnItemToInventory(itemId, isDamaged);
+        results.push(itemId);
+      }
+      return results;
+    } catch (error) {
+      console.error("Erro ao retornar itens ao estoque:", error);
       throw error;
     }
   },

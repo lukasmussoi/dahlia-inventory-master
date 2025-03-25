@@ -32,6 +32,7 @@ export const CombinedSuitcaseController = {
   removeSuitcaseItem: SuitcaseItemController.removeSuitcaseItem,
   updateSuitcaseItemQuantity: SuitcaseItemController.updateSuitcaseItemQuantity,
   returnItemToInventory: SuitcaseItemController.returnItemToInventory,
+  returnItemsToInventory: SuitcaseItemController.returnItemsToInventory,
   updateSaleInfo: SuitcaseItemController.updateSaleInfo,
   
   // SettlementController

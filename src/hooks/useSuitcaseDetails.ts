@@ -1,4 +1,9 @@
 
+/**
+ * Hook para Detalhes de Maleta
+ * @file Agrupa funcionalidades para gerenciar detalhes e operações em maletas
+ * @relacionamento Utiliza hooks específicos como useInventorySearch, useSuitcaseItems
+ */
 import { useEffect } from "react";
 import { addDays } from "date-fns";
 import { useTabNavigation } from "./suitcase/useTabNavigation";
@@ -18,12 +23,12 @@ export function useSuitcaseDetails(
   // Utilizando hooks específicos
   const { activeTab, setActiveTab } = useTabNavigation();
   const { searchTerm, setSearchTerm, searchResults, isSearching, isAdding, handleSearch, handleAddItem } = useInventorySearch();
-  const { handleToggleSold, handleUpdateSaleInfo, calculateTotalValue } = useSuitcaseItems();
+  const { handleToggleSold, handleUpdateSaleInfo, handleReturnToInventory, calculateTotalValue } = useSuitcaseItems();
   const { isPrintingPdf, handleViewReceipt, handlePrint } = usePrintOperations();
   const { nextSettlementDate, setNextSettlementDate, handleUpdateNextSettlementDate } = useSettlementDates();
   const { showDeleteDialog, setShowDeleteDialog, isDeleting, handleDeleteSuitcase } = useSuitcaseDeletion();
   
-  // Utilizando o novo hook de queries
+  // Utilizando o hook de queries
   const {
     suitcase,
     isLoadingSuitcase,
@@ -66,6 +71,13 @@ export function useSuitcaseDetails(
 
   const handleUpdateSaleInfoWrapper = async (itemId: string, field: string, value: string) => {
     const success = await handleUpdateSaleInfo(itemId, field, value);
+    if (success) {
+      refetchSuitcaseItems();
+    }
+  };
+
+  const handleReturnToInventoryWrapper = async (itemIds: string[], quantity: number, isDamaged: boolean) => {
+    const success = await handleReturnToInventory(itemIds, isDamaged);
     if (success) {
       refetchSuitcaseItems();
     }
@@ -118,6 +130,7 @@ export function useSuitcaseDetails(
     handleAddItem: handleAddItemWrapper,
     handleToggleSold: handleToggleSoldWrapper,
     handleUpdateSaleInfo: handleUpdateSaleInfoWrapper,
+    handleReturnToInventory: handleReturnToInventoryWrapper,
     calculateTotalValue: () => calculateTotalValue(suitcaseItems),
     handleViewReceipt,
     handlePrint: handlePrintWrapper,

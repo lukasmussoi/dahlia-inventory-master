@@ -1,19 +1,18 @@
 
-import { useState } from "react";
+/**
+ * Componente de Itens da Maleta
+ * @file Este componente exibe e gerencia os itens presentes em uma maleta
+ * @relacionamento Utiliza ItemActionControls para gerenciar ações em itens agrupados
+ */
+import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
 import { Package, Search, Plus } from "lucide-react";
-import { SuitcaseItem } from "@/types/suitcase";
+import { SuitcaseItem, GroupedSuitcaseItem } from "@/types/suitcase";
 import { formatPrice } from "@/utils/formatUtils";
 import { getProductPhotoUrl } from "@/utils/photoUtils";
+import { ItemActionControls } from "./ItemActionControls";
+import { toast } from "sonner";
 
 interface SuitcaseItemsProps {
   suitcaseItems: SuitcaseItem[];
@@ -24,8 +23,7 @@ interface SuitcaseItemsProps {
   isSearching: boolean;
   isAdding: { [key: string]: boolean };
   handleAddItem: (inventoryId: string) => Promise<void>;
-  handleToggleSold: (item: SuitcaseItem, sold: boolean) => Promise<void>;
-  handleUpdateSaleInfo: (itemId: string, field: string, value: string) => Promise<void>;
+  handleReturnToInventory: (itemIds: string[], quantity: number, isDamaged: boolean) => Promise<void>;
   calculateTotalValue: () => number;
 }
 
@@ -38,10 +36,40 @@ export function SuitcaseItems({
   isSearching,
   isAdding,
   handleAddItem,
-  handleToggleSold,
-  handleUpdateSaleInfo,
+  handleReturnToInventory,
   calculateTotalValue
 }: SuitcaseItemsProps) {
+  // Agrupar itens idênticos (mesmo produto)
+  const groupedItems = useMemo(() => {
+    const groups: Record<string, GroupedSuitcaseItem> = {};
+    
+    // Filtrar apenas itens que estão em posse (não vendidos, não devolvidos)
+    const activeItems = suitcaseItems.filter(item => item.status === 'in_possession');
+    
+    activeItems.forEach(item => {
+      if (!item.product?.id) return;
+      
+      const productId = item.product.id;
+      
+      if (!groups[productId]) {
+        groups[productId] = {
+          product_id: productId,
+          product_sku: item.product.sku || '',
+          product_name: item.product.name || 'Produto sem nome',
+          product_price: item.product.price || 0,
+          photo_url: item.product.photo_url ? getProductPhotoUrl(item.product.photo_url) : undefined,
+          total_quantity: 0,
+          items: []
+        };
+      }
+      
+      groups[productId].total_quantity += item.quantity || 1;
+      groups[productId].items.push(item);
+    });
+    
+    return Object.values(groups);
+  }, [suitcaseItems]);
+
   return (
     <div className="space-y-4">
       <div>
@@ -49,7 +77,7 @@ export function SuitcaseItems({
           <Package className="h-4 w-4 text-pink-500" />
           Itens na Maleta
           <span className="text-sm font-normal text-muted-foreground ml-2">
-            {suitcaseItems.length} itens
+            {suitcaseItems.filter(item => item.status === 'in_possession').length} itens
           </span>
         </h3>
         
@@ -83,10 +111,9 @@ export function SuitcaseItems({
           handleAddItem={handleAddItem} 
         />
         
-        <ItemsList 
-          suitcaseItems={suitcaseItems} 
-          handleToggleSold={handleToggleSold}
-          handleUpdateSaleInfo={handleUpdateSaleInfo}
+        <GroupedItemsList
+          groupedItems={groupedItems}
+          handleReturnToInventory={handleReturnToInventory}
         />
         
         <SummarySection 
@@ -138,16 +165,14 @@ function SearchResults({
   );
 }
 
-function ItemsList({ 
-  suitcaseItems,
-  handleToggleSold,
-  handleUpdateSaleInfo
+function GroupedItemsList({ 
+  groupedItems,
+  handleReturnToInventory
 }: { 
-  suitcaseItems: SuitcaseItem[],
-  handleToggleSold: (item: SuitcaseItem, sold: boolean) => Promise<void>,
-  handleUpdateSaleInfo: (itemId: string, field: string, value: string) => Promise<void>
+  groupedItems: GroupedSuitcaseItem[],
+  handleReturnToInventory: (itemIds: string[], quantity: number, isDamaged: boolean) => Promise<void>
 }) {
-  if (suitcaseItems.length === 0) {
+  if (groupedItems.length === 0) {
     return (
       <div className="text-center py-8 border rounded-md">
         <Package className="h-12 w-12 mx-auto text-gray-300" />
@@ -159,88 +184,47 @@ function ItemsList({
   
   return (
     <div className="space-y-4">
-      {suitcaseItems.map((item) => {
-        const isSold = item.status === 'sold';
-        const price = item.product?.price || 0;
-        const image = item.product?.photo_url;
-        
-        return (
-          <div key={item.id} className="border rounded-md p-3">
-            <div className="flex">
-              <div className="w-16 h-16 bg-gray-100 rounded-md mr-3 flex-shrink-0">
-                {image ? (
-                  <img src={getProductPhotoUrl(image)} alt={item.product?.name} className="w-full h-full object-cover rounded-md" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-400">
-                    <Package className="h-8 w-8" />
-                  </div>
-                )}
-              </div>
-              <div className="flex-1">
-                <div className="flex justify-between">
-                  <div>
-                    <h4 className="font-medium">{item.product?.name}</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Código: {item.product?.sku}
-                    </p>
-                    <p className="font-medium text-pink-600">
-                      {formatPrice(price)}
-                    </p>
-                  </div>
-                  <div className="flex items-start">
-                    <div className="flex items-center">
-                      <Checkbox 
-                        id={`sold-${item.id}`}
-                        checked={isSold}
-                        onCheckedChange={(checked) => 
-                          handleToggleSold(item, checked as boolean)
-                        }
-                      />
-                      <label 
-                        htmlFor={`sold-${item.id}`}
-                        className="ml-2 text-sm font-medium"
-                      >
-                        Vendido
-                      </label>
-                    </div>
-                  </div>
+      {groupedItems.map((groupedItem) => (
+        <div key={groupedItem.product_id} className="border rounded-md p-3">
+          <div className="flex">
+            <div className="w-16 h-16 bg-gray-100 rounded-md mr-3 flex-shrink-0">
+              {groupedItem.photo_url ? (
+                <img 
+                  src={groupedItem.photo_url} 
+                  alt={groupedItem.product_name} 
+                  className="w-full h-full object-cover rounded-md" 
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-gray-400">
+                  <Package className="h-8 w-8" />
                 </div>
-                
-                {isSold && (
-                  <div className="mt-2 grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="text-xs text-gray-500">Cliente</label>
-                      <Input 
-                        placeholder="Nome do cliente"
-                        className="h-8 text-sm"
-                        value={item.sales?.[0]?.customer_name || ''}
-                        onChange={(e) => handleUpdateSaleInfo(item.id, 'customer_name', e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500">Forma de Pagamento</label>
-                      <Select 
-                        value={item.sales?.[0]?.payment_method || ''}
-                        onValueChange={(value) => handleUpdateSaleInfo(item.id, 'payment_method', value)}
-                      >
-                        <SelectTrigger className="h-8 text-sm">
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="cash">Dinheiro</SelectItem>
-                          <SelectItem value="credit">Cartão de Crédito</SelectItem>
-                          <SelectItem value="debit">Cartão de Débito</SelectItem>
-                          <SelectItem value="pix">PIX</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                )}
+              )}
+            </div>
+            <div className="flex-1">
+              <div className="flex justify-between">
+                <div>
+                  <h4 className="font-medium">{groupedItem.product_name}</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Código: {groupedItem.product_sku}
+                  </p>
+                  <p className="font-medium text-pink-600">
+                    {formatPrice(groupedItem.product_price)}
+                  </p>
+                  <p className="text-sm font-medium mt-1">
+                    Quantidade: {groupedItem.total_quantity}
+                  </p>
+                </div>
+                <div className="flex items-start">
+                  <ItemActionControls 
+                    groupedItem={groupedItem}
+                    onReturnToInventory={handleReturnToInventory}
+                  />
+                </div>
               </div>
             </div>
           </div>
-        );
-      })}
+        </div>
+      ))}
     </div>
   );
 }
@@ -252,12 +236,15 @@ function SummarySection({
   suitcaseItems: SuitcaseItem[],
   calculateTotalValue: () => number
 }) {
+  // Contar apenas itens em posse (não vendidos ou devolvidos)
+  const activeItems = suitcaseItems.filter(item => item.status === 'in_possession');
+
   return (
     <div className="mt-6 bg-gray-50 p-4 rounded-md">
       <h3 className="text-lg font-medium mb-2">Resumo da Maleta</h3>
       <div className="flex justify-between items-center">
         <div>
-          <p className="text-sm">Total de peças: {suitcaseItems.length} itens</p>
+          <p className="text-sm">Total de peças: {activeItems.length} itens</p>
         </div>
         <div className="text-right">
           <p className="text-sm text-muted-foreground">Valor total da maleta:</p>
