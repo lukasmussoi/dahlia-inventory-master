@@ -69,8 +69,8 @@ export interface Suitcase {
 }
 
 export interface SuitcaseFilters {
-  search?: string;
-  status?: string;
+  search: string;
+  status: string;
   city?: string;
   neighborhood?: string;
 }

@@ -46,6 +46,7 @@ export const CombinedSuitcaseController = {
   // SellerController
   getSellerById: SellerController.getSellerById,
   getAllSellers: SellerController.getAllSellers,
+  getPromoterForReseller: SellerController.getPromoterForReseller,
   
   // InventorySearchController
   searchInventoryItems: InventorySearchController.searchInventoryItems,

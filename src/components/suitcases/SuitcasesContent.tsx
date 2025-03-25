@@ -21,7 +21,10 @@ interface SuitcasesContentProps {
 }
 
 export function SuitcasesContent({ isAdmin = false, userProfile, summary }: SuitcasesContentProps) {
-  const [filters, setFilters] = useState<SuitcaseFilters>({});
+  const [filters, setFilters] = useState<SuitcaseFilters>({
+    search: "", // Inicializar com string vazia em vez de undefined
+    status: "todos" // Inicializar com um valor padrão
+  });
   const [showNewSuitcaseDialog, setShowNewSuitcaseDialog] = useState(false);
   const [selectedSuitcase, setSelectedSuitcase] = useState<any>(null);
   const [showAcertoDialog, setShowAcertoDialog] = useState(false);
@@ -37,7 +40,12 @@ export function SuitcasesContent({ isAdmin = false, userProfile, summary }: Suit
 
   // Função para aplicar filtros
   const handleApplyFilters = (newFilters: SuitcaseFilters) => {
-    setFilters(newFilters);
+    // Garantir que os filtros sempre tenham as propriedades necessárias
+    setFilters({
+      ...newFilters,
+      search: newFilters.search || "",
+      status: newFilters.status || "todos"
+    });
   };
 
   // Função para criar nova maleta

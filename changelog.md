@@ -1,6 +1,13 @@
 
 # Registro de Alterações
 
+## 2025-03-26
+- Correção de erros de tipo e exportação:
+  - Adicionada exportação `getPromoterForReseller` no controlador combinado de maletas
+  - Corrigido tipo `SuitcaseFilters` para garantir propriedades obrigatórias
+  - Ajustada inicialização dos filtros no componente `SuitcasesContent`
+  - Desenvolvedor: Equipe Dalia Manager
+
 ## 2023-10-25
 - Correção de bugs em funções de formatação:
   - Adicionada função `formatPrice` como alias para `formatMoney` para manter compatibilidade
