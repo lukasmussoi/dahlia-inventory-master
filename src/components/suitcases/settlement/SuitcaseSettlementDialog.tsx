@@ -1,0 +1,44 @@
+
+/**
+ * Componente de Diálogo de Acerto de Maleta
+ * @file Exibe formulário para realizar acerto de maleta
+ * @relacionamento Utilizado pelo componente SuitcaseCard
+ */
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Suitcase } from "@/types/suitcase";
+import { useState } from "react";
+
+interface SuitcaseSettlementDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  suitcase: Suitcase;
+  onRefresh?: () => void;
+}
+
+export function SuitcaseSettlementDialog({
+  open,
+  onOpenChange,
+  suitcase,
+  onRefresh
+}: SuitcaseSettlementDialogProps) {
+  // Estado local para controlar o carregamento
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Esta é uma implementação inicial para resolver o erro
+  // Será expandida posteriormente conforme solicitado pelo usuário
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Acerto da Maleta: {suitcase.code}</DialogTitle>
+        </DialogHeader>
+        
+        <div className="py-4">
+          <p className="text-center text-gray-500">
+            Funcionalidade de acerto em desenvolvimento.
+          </p>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}

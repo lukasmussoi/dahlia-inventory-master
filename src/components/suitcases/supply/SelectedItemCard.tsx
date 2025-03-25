@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MinusCircle, PlusCircle, X } from "lucide-react";
-import Image from "next/image";
 
 interface SelectedItemCardProps {
   item: {
@@ -65,14 +64,12 @@ export function SelectedItemCard({
     <Card className="overflow-hidden">
       <CardContent className="p-3">
         <div className="flex items-center gap-3">
-          {/* Miniatura do produto */}
+          {/* Miniatura do produto (substituída a implementação do next/image) */}
           <div className="flex-shrink-0 h-14 w-14 relative rounded bg-gray-50 overflow-hidden border">
             {photoUrl ? (
-              <Image
-                src={photoUrl}
-                alt={item.name}
-                fill
-                className="object-contain"
+              <div 
+                className="h-full w-full bg-center bg-no-repeat bg-contain" 
+                style={{ backgroundImage: `url(${photoUrl})` }}
               />
             ) : (
               <div className="h-full w-full flex items-center justify-center bg-gray-100 text-gray-400">

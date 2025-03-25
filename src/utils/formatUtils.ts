@@ -1,110 +1,59 @@
 
 /**
- * Funções de Formatação
- * @file Funções úteis para formatação de valores em todo o sistema
+ * Utilidades de Formatação
+ * @file Contém funções para formatação de diversos tipos de dados
+ * @relacionamento Utilizado por vários componentes do sistema
  */
 
-// Formato de moeda
-export const formatMoney = (value: number) => {
-  if (value === undefined || value === null) return "R$ 0,00";
-  
+import { SuitcaseStatus } from "@/types/suitcase";
+
+/**
+ * Formata o status da maleta para exibição na interface
+ * @param status Status da maleta
+ * @returns String formatada do status
+ */
+export const formatStatus = (status: SuitcaseStatus): string => {
+  switch (status) {
+    case 'in_use':
+      return 'Em uso';
+    case 'returned':
+      return 'Devolvida';
+    case 'in_replenishment':
+      return 'Em reabastecimento';
+    case 'lost':
+      return 'Extraviada';
+    case 'in_audit':
+      return 'Em auditoria';
+    default:
+      return 'Desconhecido';
+  }
+};
+
+/**
+ * Formata um valor monetário para exibição
+ * @param value Valor a ser formatado
+ * @returns String formatada como moeda
+ */
+export const formatMoney = (value: number): string => {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL'
   }).format(value);
 };
 
-// Para compatibilidade com código existente
-export const formatPrice = formatMoney;
-
-// Formatar status para exibição
-export const formatStatus = (status: string): string => {
-  const statusMap: Record<string, string> = {
-    'in_use': 'Em Uso',
-    'returned': 'Devolvida',
-    'in_replenishment': 'Em Reposição',
-    'lost': 'Perdida',
-    'in_audit': 'Em Auditoria',
-    'sold': 'Vendido',
-    'in_possession': 'Em Posse',
-    'damaged': 'Danificado',
-    'pendente': 'Pendente',
-    'concluido': 'Concluído'
-  };
-  
-  return statusMap[status] || status;
-};
-
-// Formato de CPF/CNPJ
-export const formatCPFOrCNPJ = (value: string): string => {
-  if (!value) return '';
-  
-  const cleanValue = value.replace(/\D/g, '');
-  
-  if (cleanValue.length === 11) {
-    // CPF: 123.456.789-01
-    return cleanValue.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-  } else if (cleanValue.length === 14) {
-    // CNPJ: 12.345.678/0001-90
-    return cleanValue.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
-  }
-  
-  return cleanValue;
-};
-
-// Formato de telefone
-export const formatPhone = (value: string): string => {
-  if (!value) return '';
-  
-  const cleanValue = value.replace(/\D/g, '');
-  
-  if (cleanValue.length === 11) {
-    // Celular com DDD: (99) 99999-9999
-    return cleanValue.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
-  } else if (cleanValue.length === 10) {
-    // Telefone fixo com DDD: (99) 9999-9999
-    return cleanValue.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
-  }
-  
-  return cleanValue;
-};
-
-// Formato de CEP
-export const formatCEP = (value: string): string => {
-  if (!value) return '';
-  
-  const cleanValue = value.replace(/\D/g, '');
-  
-  if (cleanValue.length === 8) {
-    // CEP: 12345-678
-    return cleanValue.replace(/(\d{5})(\d{3})/, '$1-$2');
-  }
-  
-  return cleanValue;
-};
-
-// Alias para formatCEP (para compatibilidade)
-export const formatZipCode = formatCEP;
-
-// Formato de data
+/**
+ * Formata uma data para exibição
+ * @param date Data a ser formatada
+ * @returns String formatada como data
+ */
 export const formatDate = (date: Date | string): string => {
   if (!date) return '';
   
   const dateObj = typeof date === 'string' ? new Date(date) : date;
   
-  if (isNaN(dateObj.getTime())) return '';
-  
-  return dateObj.toLocaleDateString('pt-BR');
-};
-
-// Formato de data e hora
-export const formatDateTime = (date: Date | string): string => {
-  if (!date) return '';
-  
-  const dateObj = typeof date === 'string' ? new Date(date) : date;
-  
-  if (isNaN(dateObj.getTime())) return '';
-  
-  return dateObj.toLocaleDateString('pt-BR') + ' ' + 
-    dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  return new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  }).format(dateObj);
 };

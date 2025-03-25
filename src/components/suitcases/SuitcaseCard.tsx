@@ -22,7 +22,8 @@ import {
   CalendarClock, 
   MapPin, 
   User, 
-  ArrowRightLeft
+  ArrowRightLeft,
+  MoreVertical
 } from "lucide-react";
 import { 
   DropdownMenu,
@@ -30,7 +31,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-import { DotsVertical } from "lucide-react";
 import { Suitcase } from "@/types/suitcase";
 import { SuitcaseDetailsDialog } from "./SuitcaseDetailsDialog";
 import { SuitcaseSupplyDialog } from "./supply/SuitcaseSupplyDialog";
@@ -55,6 +55,7 @@ export function SuitcaseCard({
   const hasLateSettlement = suitcase.next_settlement_date && 
     isPast(parseISO(suitcase.next_settlement_date));
 
+  // Atualizado para não usar a variante 'warning', que estava causando problemas
   const getBadgeVariant = () => {
     switch (suitcase.status) {
       case 'in_use':
@@ -66,7 +67,7 @@ export function SuitcaseCard({
       case 'lost':
         return 'destructive';
       case 'in_audit':
-        return 'warning';
+        return 'outline'; // Alterado de 'warning' para 'outline'
       default:
         return 'outline';
     }
@@ -149,7 +150,7 @@ export function SuitcaseCard({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8">
-                <DotsVertical className="h-4 w-4" />
+                <MoreVertical className="h-4 w-4" />
                 <span className="sr-only">Mais ações</span>
               </Button>
             </DropdownMenuTrigger>
