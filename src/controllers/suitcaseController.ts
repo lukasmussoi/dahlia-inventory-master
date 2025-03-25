@@ -9,3 +9,4 @@ import { CombinedSuitcaseController } from "./suitcase";
 
 // Exportar a classe combinada como SuitcaseController para manter compatibilidade
 export const SuitcaseController = CombinedSuitcaseController;
+

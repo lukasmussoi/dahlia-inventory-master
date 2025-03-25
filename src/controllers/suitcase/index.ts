@@ -35,3 +35,4 @@ export const CombinedSuitcaseController = {
   // Métodos do SettlementController
   ...SettlementController
 };
+
