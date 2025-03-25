@@ -85,7 +85,7 @@ export const SettlementController = {
    */
   async finalizeSettlement(acertoId: string, suitcaseId: string, formData: SuitcaseSettlementFormData): Promise<Acerto> {
     try {
-      console.log("Finalizando acerto:", acertoId);
+      console.log("Finalizando acerto:", acertoId, "com dados:", JSON.stringify(formData, null, 2));
       
       // Garantir que temos as datas em formato de string ISO antes de prosseguir
       const settlementDate = formData.settlement_date instanceof Date 
@@ -100,24 +100,61 @@ export const SettlementController = {
           ? formData.next_settlement_date
           : null;
       
+      // Processar os itens (presentes, vendidos)
+      // Extrair apenas os IDs dos itens (correção principal do bug)
+      const itemsPresentIds = formData.items_present.map(item => 
+        typeof item === 'string' ? item : item.id
+      );
+
+      const itemsSoldIds = formData.items_sold.map(item => 
+        typeof item === 'string' ? item : item.id
+      );
+      
+      console.log(`Processando itens: ${itemsPresentIds.length} presentes, ${itemsSoldIds.length} vendidos`);
+      
       // 1. Processar os itens (presentes, vendidos)
       await AcertoMaletaModel.processAcertoItems(
         acertoId,
         suitcaseId,
-        formData.items_present,
-        formData.items_sold
+        itemsPresentIds,
+        itemsSoldIds
       );
       
-      // 2. Calcular valores totais
+      // 2. Calcular valores totais com base nos itens vendidos
       let totalSales = 0;
-      formData.items_sold.forEach(item => {
-        totalSales += item.product?.price || 0;
-      });
+      
+      // Buscar detalhes dos itens vendidos para calcular o valor total
+      if (itemsSoldIds.length > 0) {
+        const { data: soldItems, error } = await supabase
+          .from('suitcase_items')
+          .select(`
+            *,
+            product:inventory_id (
+              id,
+              name,
+              price
+            )
+          `)
+          .in('id', itemsSoldIds);
+        
+        if (error) {
+          console.error("Erro ao buscar detalhes dos itens vendidos:", error);
+          throw new Error("Erro ao buscar detalhes dos itens vendidos");
+        }
+        
+        if (soldItems) {
+          totalSales = soldItems.reduce((sum, item) => {
+            return sum + (item.product?.price || 0);
+          }, 0);
+        }
+      }
       
       // 3. Buscar taxa de comissão do vendedor
       const suitcase = await SuitcaseModel.getSuitcaseById(suitcaseId);
       const commissionRate = suitcase?.seller?.commission_rate || 0.3;
       const commissionAmount = totalSales * commissionRate;
+      
+      console.log(`Valor total das vendas: ${totalSales}, Comissão (${commissionRate * 100}%): ${commissionAmount}`);
       
       // 4. Atualizar acerto com status concluído e valores calculados
       const { data: updatedAcerto, error } = await supabase

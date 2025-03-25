@@ -119,6 +119,14 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
     }
   };
 
+  const handleToggleSold = async (item: any, sold: boolean) => {
+    if (sold) {
+      setScannedItemsIds(prev => prev.filter(id => id !== item.id));
+    } else {
+      setScannedItemsIds(prev => [...prev, item.id]);
+    }
+  };
+
   const returnVerifiedItemsToInventory = async () => {
     for (const itemId of scannedItemsIds) {
       try {
@@ -166,31 +174,87 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
     try {
       setIsSubmitting(true);
       
-      const itemsPresent = suitcaseItems.filter(item => 
-        scannedItemsIds.includes(item.id)
-      );
+      const itemsPresentIds = suitcaseItems
+        .filter(item => scannedItemsIds.includes(item.id))
+        .map(item => item.id);
       
-      const itemsSold = suitcaseItems.filter(item => 
-        !scannedItemsIds.includes(item.id)
-      );
+      const itemsSoldIds = suitcaseItems
+        .filter(item => !scannedItemsIds.includes(item.id))
+        .map(item => item.id);
       
       const formData: SuitcaseSettlementFormData = {
         suitcase_id: suitcase.id,
         seller_id: suitcase.seller_id,
         settlement_date: settlementDate,
         next_settlement_date: nextSettlementDate,
-        items_present: itemsPresent,
-        items_sold: itemsSold
+        items_present: itemsPresentIds,
+        items_sold: itemsSoldIds
       };
       
       console.log("Iniciando acerto com dados:", formData);
       
-      const result = await AcertoMaletaController.createAcerto(formData);
-      console.log("Acerto criado com sucesso:", result);
-      setCreatedAcertoId(result.id);
+      const { data: pendingAcerto, error: createError } = await supabase
+        .from('acertos_maleta')
+        .insert({
+          suitcase_id: suitcase.id,
+          seller_id: suitcase.seller_id,
+          settlement_date: settlementDate.toISOString(),
+          next_settlement_date: nextSettlementDate ? nextSettlementDate.toISOString() : null,
+          status: 'pendente',
+          total_sales: 0,
+          commission_amount: 0
+        })
+        .select()
+        .single();
       
-      console.log("Gerando PDF do recibo...");
-      const pdfUrl = await generateReceiptPDF(result.id);
+      if (createError) {
+        console.error("Erro ao criar acerto pendente:", createError);
+        throw new Error("Erro ao criar acerto pendente");
+      }
+      
+      if (!pendingAcerto) {
+        throw new Error("Não foi possível criar o acerto");
+      }
+      
+      const acertoId = pendingAcerto.id;
+      
+      for (const itemId of itemsPresentIds) {
+        await SuitcaseItemModel.returnItemToInventory(itemId);
+      }
+      
+      const totalSales = await processItemsSold(itemsSoldIds, acertoId);
+      
+      const commissionRate = suitcase.seller?.commission_rate || 0.3;
+      const commissionAmount = totalSales * commissionRate;
+      
+      const { data: updatedAcerto, error: updateError } = await supabase
+        .from('acertos_maleta')
+        .update({
+          status: 'concluido',
+          total_sales: totalSales,
+          commission_amount: commissionAmount
+        })
+        .eq('id', acertoId)
+        .select()
+        .single();
+      
+      if (updateError) {
+        console.error("Erro ao finalizar acerto:", updateError);
+        throw new Error("Erro ao finalizar acerto");
+      }
+      
+      if (nextSettlementDate) {
+        await supabase
+          .from('suitcases')
+          .update({ 
+            next_settlement_date: nextSettlementDate.toISOString() 
+          })
+          .eq('id', suitcase.id);
+      }
+      
+      setCreatedAcertoId(acertoId);
+      
+      const pdfUrl = await generateReceiptPDF(acertoId);
       
       if (pdfUrl) {
         toast.success("Acerto da maleta realizado com sucesso! PDF gerado.");
@@ -211,6 +275,54 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const processItemsSold = async (itemIds: string[], acertoId: string): Promise<number> => {
+    let totalSales = 0;
+    
+    if (itemIds.length > 0) {
+      const { data: items, error } = await supabase
+        .from('suitcase_items')
+        .select(`
+          id,
+          inventory_id,
+          product:inventory_id (
+            id,
+            name,
+            price,
+            unit_cost
+          )
+        `)
+        .in('id', itemIds);
+      
+      if (error) {
+        console.error("Erro ao buscar itens para acerto:", error);
+        throw new Error("Erro ao processar itens vendidos");
+      }
+      
+      if (items) {
+        for (const item of items) {
+          await supabase
+            .from('suitcase_items')
+            .update({ status: 'sold' })
+            .eq('id', item.id);
+          
+          await supabase
+            .from('acerto_itens_vendidos')
+            .insert({
+              acerto_id: acertoId,
+              suitcase_item_id: item.id,
+              inventory_id: item.inventory_id,
+              price: item.product?.price || 0,
+              unit_cost: item.product?.unit_cost || 0
+            });
+          
+          totalSales += item.product?.price || 0;
+        }
+      }
+    }
+    
+    return totalSales;
   };
 
   const checkAllItems = () => {

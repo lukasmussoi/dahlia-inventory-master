@@ -144,6 +144,6 @@ export interface SuitcaseSettlementFormData {
   seller_id: string;
   settlement_date: Date;
   next_settlement_date?: Date;
-  items_present: SuitcaseItem[]; // IDs dos itens escaneados/confirmados como presentes
-  items_sold: SuitcaseItem[]; // Itens marcados como vendidos
+  items_present: string[] | SuitcaseItem[]; // Atualizado para aceitar tanto strings quanto objetos completos
+  items_sold: string[] | SuitcaseItem[]; // Atualizado para aceitar tanto strings quanto objetos completos
 }

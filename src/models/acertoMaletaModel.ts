@@ -43,44 +43,51 @@ export class AcertoMaletaModel {
    * Processa os itens de um acerto (presentes e vendidos)
    * @param acertoId ID do acerto
    * @param suitcaseId ID da maleta
-   * @param itemsPresent Itens presentes na maleta
-   * @param itemsSold Itens vendidos
+   * @param itemsPresent IDs dos itens presentes na maleta
+   * @param itemsSold IDs dos itens vendidos
    */
   static async processAcertoItems(
     acertoId: string,
     suitcaseId: string,
-    itemsPresent: SuitcaseItem[],
-    itemsSold: SuitcaseItem[]
+    itemsPresent: string[],
+    itemsSold: string[]
   ): Promise<void> {
     try {
       console.log(`Processando ${itemsPresent.length} itens presentes e ${itemsSold.length} itens vendidos`);
       
       // 1. Processar itens presentes (retornar ao estoque)
-      for (const item of itemsPresent) {
-        console.log(`Retornando item ${item.id} ao estoque`);
-        await SuitcaseItemModel.returnItemToInventory(item.id);
+      for (const itemId of itemsPresent) {
+        console.log(`Retornando item ${itemId} ao estoque`);
+        await SuitcaseItemModel.returnItemToInventory(itemId);
       }
       
       // 2. Processar itens vendidos (registrar vendas)
-      for (const item of itemsSold) {
-        console.log(`Registrando venda do item ${item.id}`);
+      for (const itemId of itemsSold) {
+        console.log(`Registrando venda do item ${itemId}`);
+        
+        // Buscar informações do item
+        const item = await SuitcaseItemModel.getSuitcaseItemById(itemId);
+        if (!item) {
+          console.warn(`Item ${itemId} não encontrado, pulando...`);
+          continue;
+        }
         
         // Atualizar status do item para vendido
-        await SuitcaseItemModel.updateSuitcaseItemStatus(item.id, 'sold');
+        await SuitcaseItemModel.updateSuitcaseItemStatus(itemId, 'sold');
         
         // Registrar na tabela de itens vendidos em acertos
         const { error } = await supabase
           .from('acerto_itens_vendidos')
           .insert({
             acerto_id: acertoId,
-            suitcase_item_id: item.id,
+            suitcase_item_id: itemId,
             inventory_id: item.inventory_id,
             price: item.product?.price || 0,
             unit_cost: item.product?.unit_cost || 0
           });
         
         if (error) {
-          console.error(`Erro ao registrar venda do item ${item.id}:`, error);
+          console.error(`Erro ao registrar venda do item ${itemId}:`, error);
           throw error;
         }
       }
