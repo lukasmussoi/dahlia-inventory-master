@@ -41,12 +41,16 @@ interface SuitcaseCardProps {
   suitcase: Suitcase;
   onRefresh?: () => void;
   isAdmin?: boolean;
+  onOpenAcertoDialog?: (suitcase: Suitcase) => void;
+  onOpenSupplyDialog?: (suitcase: Suitcase) => void;
 }
 
 export function SuitcaseCard({ 
   suitcase, 
   onRefresh,
-  isAdmin = false
+  isAdmin = false,
+  onOpenAcertoDialog,
+  onOpenSupplyDialog
 }: SuitcaseCardProps) {
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [showSupplyDialog, setShowSupplyDialog] = useState(false);
@@ -92,6 +96,23 @@ export function SuitcaseCard({
     return `${count} ${count === 1 ? 'item' : 'itens'}`;
   };
 
+  // Manipuladores de eventos de abastecimento e acerto
+  const handleSupplyClick = () => {
+    if (onOpenSupplyDialog) {
+      onOpenSupplyDialog(suitcase);
+    } else {
+      setShowSupplyDialog(true);
+    }
+  };
+
+  const handleAcertoClick = () => {
+    if (onOpenAcertoDialog) {
+      onOpenAcertoDialog(suitcase);
+    } else {
+      setShowSettlementDialog(true);
+    }
+  };
+
   return (
     <>
       <Card className={hasLateSettlement ? "border-red-300" : ""}>
@@ -131,7 +152,7 @@ export function SuitcaseCard({
             variant="outline" 
             size="sm" 
             className="text-blue-600"
-            onClick={() => setShowSupplyDialog(true)}
+            onClick={handleSupplyClick}
           >
             <Store className="h-4 w-4 mr-1" />
             Abastecer
@@ -141,7 +162,7 @@ export function SuitcaseCard({
             variant="outline" 
             size="sm" 
             className="text-purple-600"
-            onClick={() => setShowSettlementDialog(true)}
+            onClick={handleAcertoClick}
           >
             <ArrowRightLeft className="h-4 w-4 mr-1" />
             Acerto
