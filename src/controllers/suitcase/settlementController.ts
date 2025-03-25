@@ -6,13 +6,13 @@
 import { SuitcaseModel } from "@/models/suitcaseModel";
 import { Acerto } from "@/types/suitcase";
 
-export class SettlementController {
+export const SettlementController = {
   /**
    * Busca o histórico de acertos de uma maleta
    * @param suitcaseId ID da maleta
    * @returns Lista de acertos da maleta
    */
-  static async getHistoricoAcertos(suitcaseId: string): Promise<Acerto[]> {
+  async getHistoricoAcertos(suitcaseId: string): Promise<Acerto[]> {
     try {
       // Simulando um histórico vazio para fins de demonstração
       // Em um ambiente de produção, isso buscaria do banco de dados
@@ -24,7 +24,7 @@ export class SettlementController {
       console.error("Erro ao buscar histórico de acertos:", error);
       throw error;
     }
-  }
+  },
 
   /**
    * Cria um acerto pendente para uma maleta
@@ -32,7 +32,7 @@ export class SettlementController {
    * @param settlementDate Data do acerto
    * @returns Informações do acerto criado
    */
-  static async createPendingSettlement(suitcaseId: string, settlementDate: Date): Promise<Acerto> {
+  async createPendingSettlement(suitcaseId: string, settlementDate: Date): Promise<Acerto> {
     try {
       const acertoPendente: Acerto = {
         id: "temp-" + Date.now(),
@@ -52,5 +52,4 @@ export class SettlementController {
       throw error;
     }
   }
-}
-
+};
