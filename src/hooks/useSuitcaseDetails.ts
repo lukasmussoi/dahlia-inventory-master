@@ -110,6 +110,13 @@ export function useSuitcaseDetails(
     return calculateTotalValue(activeItems);
   };
 
+  // Função para resetar os estados
+  const resetStates = () => {
+    setActiveTab("informacoes");
+    setSearchTerm("");
+    setShowDeleteDialog(false);
+  };
+
   return {
     activeTab,
     setActiveTab,
@@ -140,6 +147,7 @@ export function useSuitcaseDetails(
     handleViewReceipt,
     handlePrint: handlePrintWrapper,
     handleUpdateNextSettlementDate: handleUpdateNextSettlementDateWrapper,
-    handleDeleteSuitcase: handleDeleteSuitcaseWrapper
+    handleDeleteSuitcase: handleDeleteSuitcaseWrapper,
+    resetStates
   };
 }
