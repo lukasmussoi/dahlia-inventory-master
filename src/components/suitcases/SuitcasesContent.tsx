@@ -1,234 +1,240 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { SuitcaseController } from "@/controllers/suitcaseController";
-import { SuitcaseGrid } from "@/components/suitcases/SuitcaseGrid";
-import { SuitcaseFilters } from "@/components/suitcases/SuitcaseFilters";
-import { SuitcaseSummary } from "@/components/suitcases/SuitcaseSummary";
-import { SuitcaseFormDialog } from "@/components/suitcases/SuitcaseFormDialog";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Briefcase, Calculator } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Plus } from "lucide-react";
+import { SuitcaseGrid } from "./SuitcaseGrid";
+import { SuitcaseFormDialog } from "./SuitcaseFormDialog";
+import { SuitcaseController } from "@/controllers/suitcaseController";
+import { AcertoMaletaDialog } from "./AcertoMaletaDialog";
+import { SuitcaseSummary } from "./SuitcaseSummary";
 import { toast } from "sonner";
-import { AcertoMaletaDialog } from "@/components/suitcases/settlement/AcertoMaletaDialog";
-import { AcertosList } from "@/components/suitcases/settlement/AcertosList";
-import { AcertoDetailsDialog } from "@/components/suitcases/settlement/AcertoDetailsDialog";
-import { Acerto, Suitcase } from "@/types/suitcase";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useQuery } from "@tanstack/react-query";
+import { CombinedSuitcaseController } from "@/controllers/suitcase";
+import { DeleteSpecificSuitcaseSection } from "./DeleteSpecificSuitcaseSection";
 
 interface SuitcasesContentProps {
   isAdmin?: boolean;
-  userProfile?: any; // Tipagem temporária, será melhorada posteriormente
+  userProfile?: any;
+}
+
+interface SuitcaseFiltersProps {
+  filters: any;
+  onChange: (filters: any) => void;
+}
+
+function SuitcaseFilters({ filters, onChange }: SuitcaseFiltersProps) {
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    onChange({ ...filters, search: e.target.value });
+  };
+
+  const handleStatusChange = (status: string) => {
+    onChange({ ...filters, status: status === "all" ? null : status });
+  };
+
+  const handleCityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    onChange({ ...filters, city: e.target.value });
+  };
+
+  const handleNeighborhoodChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    onChange({ ...filters, neighborhood: e.target.value });
+  };
+
+  return (
+    <div className="bg-white rounded-lg p-4">
+      <h4 className="text-lg font-semibold text-gray-900 mb-3">Filtrar Maletas</h4>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="search">Pesquisar</Label>
+          <Input
+            type="text"
+            id="search"
+            placeholder="Código ou Revendedor"
+            value={filters.search || ""}
+            onChange={handleSearchChange}
+          />
+        </div>
+        <div>
+          <Label htmlFor="status">Status</Label>
+          <Select onValueChange={handleStatusChange} defaultValue={filters.status || "all"}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Todos os Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os Status</SelectItem>
+              <SelectItem value="in_use">Em Uso</SelectItem>
+              <SelectItem value="returned">Devolvida</SelectItem>
+              <SelectItem value="lost">Perdida</SelectItem>
+              <SelectItem value="in_audit">Em Auditoria</SelectItem>
+              <SelectItem value="in_replenishment">Em Reposição</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label htmlFor="city">Cidade</Label>
+          <Input
+            type="text"
+            id="city"
+            placeholder="Cidade"
+            value={filters.city || ""}
+            onChange={handleCityChange}
+          />
+        </div>
+        <div>
+          <Label htmlFor="neighborhood">Bairro</Label>
+          <Input
+            type="text"
+            id="neighborhood"
+            placeholder="Bairro"
+            value={filters.neighborhood || ""}
+            onChange={handleNeighborhoodChange}
+          />
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function SuitcasesContent({ isAdmin, userProfile }: SuitcasesContentProps) {
-  const [isSearching, setIsSearching] = useState(false);
-  const [showNewSuitcaseDialog, setShowNewSuitcaseDialog] = useState(false);
+  const [suitcases, setSuitcases] = useState<any[]>([]);
+  const [filteredSuitcases, setFilteredSuitcases] = useState<any[]>([]);
+  const [filters, setFilters] = useState({ search: "", status: null, city: "", neighborhood: "" });
+  const [showCreateSuitcase, setShowCreateSuitcase] = useState(false);
   const [showAcertoDialog, setShowAcertoDialog] = useState(false);
-  const [showAcertoDetailsDialog, setShowAcertoDetailsDialog] = useState(false);
-  const [selectedSuitcase, setSelectedSuitcase] = useState<Suitcase | null>(null);
-  const [selectedAcerto, setSelectedAcerto] = useState<Acerto | null>(null);
-  const [activeTab, setActiveTab] = useState("suitcases");
-  const [filters, setFilters] = useState({
-    search: "",
-    status: "in_use", // Valor padrão é "in_use" (em uso)
-    city: "",
-    neighborhood: ""
-  });
+  const [selectedSuitcase, setSelectedSuitcase] = useState<any | null>(null);
+  const [summary, setSummary] = useState({ total: 0, in_use: 0, returned: 0, in_replenishment: 0, lost: 0, in_audit: 0 });
 
-  // Default empty summary if data is not yet loaded
-  const defaultSummary = {
-    total: 0,
-    in_use: 0,
-    returned: 0,
-    in_replenishment: 0
-  };
-
-  // Buscar maletas usando React Query
-  const { 
-    data: suitcases = [], 
-    isLoading: isLoadingSuitcases,
-    refetch: refetchSuitcases
-  } = useQuery({
+  // Buscar maletas
+  const { isLoading, refetch } = useQuery({
     queryKey: ['suitcases', filters],
-    queryFn: () => {
-      // Sempre usar searchSuitcases para aplicar os filtros consistentemente
-      return SuitcaseController.searchSuitcases(filters);
-    },
+    queryFn: () => SuitcaseController.searchSuitcases(filters),
+    onSuccess: (data) => {
+      setSuitcases(data);
+      setFilteredSuitcases(data);
+    }
   });
 
   // Buscar resumo das maletas
-  const { 
-    data: summary = defaultSummary, 
-    isLoading: isLoadingSummary,
-    refetch: refetchSummary 
-  } = useQuery({
-    queryKey: ['suitcases-summary'],
-    queryFn: () => SuitcaseController.getSuitcaseSummary(),
-  });
+  const fetchSuitcaseSummary = async () => {
+    try {
+      const summaryData = await SuitcaseController.getSuitcaseSummary();
+      setSummary(summaryData);
+    } catch (error) {
+      console.error("Erro ao buscar resumo das maletas:", error);
+    }
+  };
 
-  // Efetuar a primeira busca com filtro "in_use" ao carregar o componente
   useEffect(() => {
-    setIsSearching(true);
+    fetchSuitcaseSummary();
   }, []);
 
-  // Refazer consultas quando necessário
-  const refreshData = () => {
-    refetchSuitcases();
-    refetchSummary();
-    toast.success("Dados atualizados com sucesso");
+  // Atualizar lista de maletas
+  const fetchSuitcases = () => {
+    refetch();
+    fetchSuitcaseSummary();
   };
 
-  // Lidar com busca
-  const handleSearch = (newFilters: any) => {
+  // Função para aplicar os filtros
+  const handleFiltersChange = (newFilters: any) => {
     setFilters(newFilters);
-    setIsSearching(true);
   };
 
-  // Limpar filtros
-  const handleClearFilters = () => {
-    setFilters({
-      search: "",
-      status: "in_use", // Limpar para "in_use" em vez de "todos"
-      city: "",
-      neighborhood: ""
-    });
-    setIsSearching(true); // Manter o estado de busca ativo, mas com filtros padrão
-  };
-
-  // Lidar com criação de nova maleta
-  const handleCreateSuitcase = async (data: any) => {
+  // Criar nova maleta
+  const handleCreateSuitcase = async (suitcaseData: any) => {
     try {
-      await SuitcaseController.createSuitcase(data);
-      setShowNewSuitcaseDialog(false);
-      refreshData();
+      await SuitcaseController.createSuitcase(suitcaseData);
       toast.success("Maleta criada com sucesso");
+      setShowCreateSuitcase(false);
+      fetchSuitcases();
     } catch (error) {
       console.error("Erro ao criar maleta:", error);
       toast.error("Erro ao criar maleta");
     }
   };
 
-  // Abrir o modal de acerto da maleta para uma maleta específica
-  const handleOpenAcertoDialog = (suitcase: Suitcase) => {
+  // Abrir diálogo de acerto
+  const handleOpenAcertoDialog = (suitcase: any) => {
     setSelectedSuitcase(suitcase);
     setShowAcertoDialog(true);
   };
 
-  // Abrir o modal de detalhes de um acerto
-  const handleViewAcertoDetails = (acerto: Acerto) => {
-    setSelectedAcerto(acerto);
-    setShowAcertoDetailsDialog(true);
+  // Callback após sucesso no acerto
+  const handleAcertoSuccess = () => {
+    fetchSuitcases();
+    fetchSuitcaseSummary();
   };
 
-  if (isLoadingSuitcases || isLoadingSummary) {
+  // Função para atualizar a lista após exclusão bem-sucedida
+  const handleDeleteSuccess = () => {
+    fetchSuitcases(); // Recarregar a lista de maletas
+    fetchSuitcaseSummary(); // Atualizar o resumo
+    toast.success("Lista de maletas atualizada após exclusão");
+  };
+
+  if (isLoading) {
     return (
-      <div className="flex-1 p-8 flex justify-center items-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-pink-500"></div>
       </div>
     );
   }
 
   return (
-    <div className="flex-1 p-4 md:p-8">
-      <div className="flex flex-col gap-8">
-        {/* Cabeçalho */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h1 className="text-2xl font-bold mb-1 flex items-center">
-              <svg className="w-6 h-6 mr-2 text-pink-500" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M20 7H4C2.89543 7 2 7.89543 2 9V17C2 18.1046 2.89543 19 4 19H20C21.1046 19 22 18.1046 22 17V9C22 7.89543 21.1046 7 20 7Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M12 12H12.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M16 7V5C16 3.89543 15.1046 3 14 3H10C8.89543 3 8 3.89543 8 5V7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              Maletas das Revendedoras
-            </h1>
-          </div>
-          
-          <div className="flex flex-col md:flex-row gap-2">
-            {activeTab === "suitcases" && (
-              <Button 
-                onClick={() => setShowNewSuitcaseDialog(true)} 
-                className="bg-pink-500 hover:bg-pink-600 text-white whitespace-nowrap"
-              >
-                <Plus className="h-4 w-4 mr-2" /> 
-                Criar Nova Maleta
-              </Button>
-            )}
-          </div>
+    <div className="container py-8">
+      <div className="flex flex-col md:flex-row justify-between items-start mb-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Maletas</h1>
+          <p className="text-gray-600">Gerencie todas as maletas de joias em campo.</p>
         </div>
-
-        {/* Cards de Resumo */}
-        <SuitcaseSummary summary={summary} />
-        
-        {/* Abas para alternar entre maletas e acertos */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-6">
-            <TabsTrigger value="suitcases" className="flex gap-2 items-center">
-              <Briefcase className="h-4 w-4" />
-              Maletas
-            </TabsTrigger>
-            <TabsTrigger value="settlements" className="flex gap-2 items-center">
-              <Calculator className="h-4 w-4" />
-              Acertos
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="suitcases" className="mt-0">
-            {/* Filtros de Maletas */}
-            <SuitcaseFilters 
-              filters={filters}
-              onSearch={handleSearch}
-              onClear={handleClearFilters}
-            />
-            
-            {/* Lista de Maletas */}
-            <SuitcaseGrid 
-              suitcases={suitcases}
-              isAdmin={isAdmin}
-              onRefresh={refreshData}
-              onOpenAcertoDialog={handleOpenAcertoDialog}
-            />
-          </TabsContent>
-          
-          <TabsContent value="settlements" className="mt-0">
-            {/* Lista de Acertos */}
-            <AcertosList 
-              onViewAcerto={handleViewAcertoDetails}
-              onRefresh={() => {
-                // Atualizar os dados quando a lista de acertos for atualizada
-                setActiveTab("settlements");
-                refreshData(); // Adicionado refresh para garantir que dados são atualizados
-              }}
-              isAdmin={isAdmin}
-            />
-          </TabsContent>
-        </Tabs>
+        <div className="mt-4 md:mt-0">
+          <Button onClick={() => setShowCreateSuitcase(true)} className="bg-pink-500 hover:bg-pink-600">
+            <Plus className="mr-2 h-4 w-4" /> Nova Maleta
+          </Button>
+        </div>
       </div>
 
-      {/* Modal para criar nova maleta */}
+      {/* Seção de exclusão específica - visível apenas para administradores */}
+      {isAdmin && (
+        <div className="mb-6">
+          <DeleteSpecificSuitcaseSection onSuccess={handleDeleteSuccess} />
+        </div>
+      )}
+
+      {/* Resumo e Filtros */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <div className="lg:col-span-1">
+          <SuitcaseSummary summary={summary} />
+        </div>
+        <div className="lg:col-span-2">
+          <SuitcaseFilters
+            filters={filters}
+            onChange={handleFiltersChange}
+          />
+        </div>
+      </div>
+
+      {/* Grade de Maletas */}
+      <SuitcaseGrid 
+        suitcases={filteredSuitcases} 
+        isAdmin={isAdmin} 
+        onRefresh={fetchSuitcases}
+        onOpenAcertoDialog={handleOpenAcertoDialog}
+      />
+
+      {/* Diálogos */}
       <SuitcaseFormDialog
-        open={showNewSuitcaseDialog}
-        onOpenChange={setShowNewSuitcaseDialog}
+        open={showCreateSuitcase}
+        onOpenChange={setShowCreateSuitcase}
         onSubmit={handleCreateSuitcase}
         mode="create"
       />
-      
-      {/* Modal para realizar acerto da maleta */}
+
       <AcertoMaletaDialog
         open={showAcertoDialog}
         onOpenChange={setShowAcertoDialog}
         suitcase={selectedSuitcase}
-        onSuccess={() => {
-          refreshData();
-          // Mudar para a aba de acertos após concluir um acerto
-          setActiveTab("settlements");
-        }}
-      />
-      
-      {/* Modal para visualizar detalhes de um acerto */}
-      <AcertoDetailsDialog
-        open={showAcertoDetailsDialog}
-        onOpenChange={setShowAcertoDetailsDialog}
-        acertoId={selectedAcerto?.id}
+        onSuccess={handleAcertoSuccess}
       />
     </div>
   );
