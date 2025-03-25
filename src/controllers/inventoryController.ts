@@ -100,7 +100,7 @@ export const InventoryController = {
       throw error;
     }
   },
-
+  
   // Buscar itens por termo de pesquisa
   async searchInventoryItems(searchTerm: string) {
     try {
