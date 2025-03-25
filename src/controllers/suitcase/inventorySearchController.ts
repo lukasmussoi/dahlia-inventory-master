@@ -5,17 +5,17 @@
  */
 import { SuitcaseModel } from "@/models/suitcaseModel";
 
-export class InventorySearchController {
-  static async searchInventoryItems(query: string) {
+export const InventorySearchController = {
+  async searchInventoryItems(query: string) {
     try {
       return await SuitcaseModel.searchInventoryItems(query);
     } catch (error) {
       console.error("Erro ao buscar itens do inventário:", error);
       throw error;
     }
-  }
+  },
 
-  static async getItemSuitcaseInfo(inventoryId: string) {
+  async getItemSuitcaseInfo(inventoryId: string) {
     try {
       return await SuitcaseModel.getItemSuitcaseInfo(inventoryId);
     } catch (error) {
@@ -26,4 +26,4 @@ export class InventorySearchController {
       throw error;
     }
   }
-}
+};

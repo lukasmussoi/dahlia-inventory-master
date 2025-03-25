@@ -4,7 +4,7 @@
  * @file Este arquivo combina todos os controladores relacionados a maletas
  */
 
-import { SuitcaseController as BaseSuitcaseController } from "./suitcaseController";
+import { SuitcaseController } from "./suitcaseController";
 import { SuitcaseItemController } from "./suitcaseItemController";
 import { InventorySearchController } from "./inventorySearchController";
 import { SellerController } from "./sellerController";
@@ -15,7 +15,7 @@ import { SettlementController } from "./settlementController";
 // Exportar a classe CombinedSuitcaseController que agrega todos os métodos
 export const CombinedSuitcaseController = {
   // Métodos do SuitcaseController
-  ...BaseSuitcaseController,
+  ...SuitcaseController,
   
   // Métodos do SuitcaseItemController
   ...SuitcaseItemController,
@@ -26,7 +26,7 @@ export const CombinedSuitcaseController = {
   // Métodos do SellerController
   ...SellerController,
   
-  // Métodos do PDFController (agora corrigido para SuitcasePdfController)
+  // Métodos do PDFController
   ...SuitcasePdfController,
   
   // Métodos do DeleteSuitcaseController

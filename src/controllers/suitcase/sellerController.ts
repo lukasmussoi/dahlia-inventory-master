@@ -5,26 +5,26 @@
  */
 import { SuitcaseModel } from "@/models/suitcaseModel";
 
-export class SellerController {
-  static async getAllSellers() {
+export const SellerController = {
+  async getAllSellers() {
     try {
       return await SuitcaseModel.getAllSellers();
     } catch (error) {
       console.error("Erro ao buscar revendedoras:", error);
       throw error;
     }
-  }
+  },
 
-  static async getSellerById(sellerId: string) {
+  async getSellerById(sellerId: string) {
     try {
       return await SuitcaseModel.getSellerById(sellerId);
     } catch (error) {
       console.error("Erro ao buscar revendedora por ID:", error);
       throw error;
     }
-  }
+  },
 
-  static async getPromoterForReseller(resellerId: string): Promise<any | null> {
+  async getPromoterForReseller(resellerId: string): Promise<any | null> {
     try {
       const promotoras = [
         {
@@ -51,4 +51,4 @@ export class SellerController {
       return null;
     }
   }
-}
+};
