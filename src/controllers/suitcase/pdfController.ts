@@ -5,7 +5,7 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 
-export const PdfController = {
+export class PdfController {
   /**
    * Gera um PDF da maleta com seus itens
    * @param suitcaseId ID da maleta
@@ -13,7 +13,7 @@ export const PdfController = {
    * @param promoterInfo Informações da promotora
    * @returns URL do PDF gerado
    */
-  async generateSuitcasePDF(suitcaseId: string, items: any[], promoterInfo: any): Promise<string> {
+  static async generateSuitcasePDF(suitcaseId: string, items: any[], promoterInfo: any): Promise<string> {
     try {
       console.log("Gerando PDF para maleta", suitcaseId, "com", items.length, "itens");
       
@@ -26,4 +26,4 @@ export const PdfController = {
       throw error;
     }
   }
-};
+}

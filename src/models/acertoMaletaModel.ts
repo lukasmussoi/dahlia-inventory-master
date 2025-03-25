@@ -6,7 +6,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Acerto, AcertoStatus, SuitcaseItem } from "@/types/suitcase";
 import { Json } from "@/integrations/supabase/types";
-import { SuitcaseModel } from "./suitcaseModel";
+import { SuitcaseItemModel } from "./suitcase/suitcaseItemModel";
 
 export class AcertoMaletaModel {
   /**
@@ -58,7 +58,7 @@ export class AcertoMaletaModel {
       // 1. Processar itens presentes (retornar ao estoque)
       for (const item of itemsPresent) {
         console.log(`Retornando item ${item.id} ao estoque`);
-        await SuitcaseModel.returnItemToInventory(item.id);
+        await SuitcaseItemModel.returnItemToInventory(item.id);
       }
       
       // 2. Processar itens vendidos (registrar vendas)
@@ -66,7 +66,7 @@ export class AcertoMaletaModel {
         console.log(`Registrando venda do item ${item.id}`);
         
         // Atualizar status do item para vendido
-        await SuitcaseModel.updateSuitcaseItemStatus(item.id, 'sold');
+        await SuitcaseItemModel.updateSuitcaseItemStatus(item.id, 'sold');
         
         // Registrar na tabela de itens vendidos em acertos
         const { error } = await supabase

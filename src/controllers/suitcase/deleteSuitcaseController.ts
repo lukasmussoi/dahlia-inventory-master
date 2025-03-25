@@ -4,7 +4,8 @@
  * @file Este arquivo contém as operações para excluir maletas do sistema,
  * lidando com dependências como itens, acertos e vendas
  */
-import { SuitcaseModel } from "@/models/suitcaseModel";
+import { OriginalSuitcaseModel as SuitcaseModel } from "@/models/suitcase";
+import { SuitcaseItemModel } from "@/models/suitcase";
 import { AcertoMaletaModel } from "@/models/acertoMaletaModel";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -28,7 +29,7 @@ export const DeleteSuitcaseController = {
       // Como o Supabase não suporta transações diretamente, vamos usar try/catch para reverter operações em caso de erro
       
       // 2. Buscar os itens da maleta
-      const suitcaseItems = await SuitcaseModel.getSuitcaseItems(suitcaseId);
+      const suitcaseItems = await SuitcaseItemModel.getSuitcaseItems(suitcaseId);
       console.log(`A maleta possui ${suitcaseItems.length} itens para processar`);
 
       // 3. Retornar todos os itens ao estoque
@@ -37,11 +38,11 @@ export const DeleteSuitcaseController = {
         
         // Se o item estiver em posse, retornar ao estoque
         if (item.status === 'in_possession') {
-          await SuitcaseModel.returnItemToInventory(item.id);
+          await SuitcaseItemModel.returnItemToInventory(item.id);
           console.log(`Item ${item.id} retornado ao estoque`);
         } else {
           // Para itens em outros estados, apenas remover da maleta
-          await SuitcaseModel.removeSuitcaseItem(item.id);
+          await SuitcaseItemModel.removeSuitcaseItem(item.id);
           console.log(`Item ${item.id} removido da maleta`);
         }
       }

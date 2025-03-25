@@ -3,14 +3,14 @@
  * Controlador de Itens de Maleta
  * @file Este arquivo controla as operações relacionadas aos itens de maletas
  */
-import { SuitcaseModel } from "@/models/suitcaseModel";
+import { SuitcaseItemModel } from "@/models/suitcase/suitcaseItemModel";
 import { SuitcaseItemStatus } from "@/types/suitcase";
 import { supabase } from "@/integrations/supabase/client";
 
 export const SuitcaseItemController = {
   async getSuitcaseItemById(itemId: string) {
     try {
-      return await SuitcaseModel.getSuitcaseItemById(itemId);
+      return await SuitcaseItemModel.getSuitcaseItemById(itemId);
     } catch (error) {
       console.error("Erro ao buscar item da maleta:", error);
       throw error;
@@ -19,7 +19,7 @@ export const SuitcaseItemController = {
 
   async getSuitcaseItems(suitcaseId: string) {
     try {
-      return await SuitcaseModel.getSuitcaseItems(suitcaseId);
+      return await SuitcaseItemModel.getSuitcaseItems(suitcaseId);
     } catch (error) {
       console.error("Erro ao buscar itens da maleta:", error);
       throw error;
@@ -29,12 +29,12 @@ export const SuitcaseItemController = {
   async addItemToSuitcase(suitcaseId: string, inventoryId: string, quantity: number = 1) {
     try {
       // Verificar se o item já está em outra maleta
-      const itemInfo = await SuitcaseModel.getItemSuitcaseInfo(inventoryId);
+      const itemInfo = await SuitcaseItemModel.getItemSuitcaseInfo(inventoryId);
       if (itemInfo && itemInfo.suitcase_id && itemInfo.suitcase_id !== suitcaseId) {
         throw new Error(`Este item já está na maleta ${itemInfo.suitcase_code}`);
       }
       
-      const result = await SuitcaseModel.addItemToSuitcase({
+      const result = await SuitcaseItemModel.addItemToSuitcase({
         suitcase_id: suitcaseId,
         inventory_id: inventoryId,
         quantity
@@ -48,7 +48,7 @@ export const SuitcaseItemController = {
 
   async updateSuitcaseItemStatus(itemId: string, status: SuitcaseItemStatus) {
     try {
-      return await SuitcaseModel.updateSuitcaseItemStatus(itemId, status);
+      return await SuitcaseItemModel.updateSuitcaseItemStatus(itemId, status);
     } catch (error) {
       console.error("Erro ao atualizar status do item:", error);
       throw error;
@@ -57,7 +57,7 @@ export const SuitcaseItemController = {
 
   async removeSuitcaseItem(itemId: string) {
     try {
-      return await SuitcaseModel.removeSuitcaseItem(itemId);
+      return await SuitcaseItemModel.removeSuitcaseItem(itemId);
     } catch (error) {
       console.error("Erro ao remover item da maleta:", error);
       throw error;
@@ -66,7 +66,7 @@ export const SuitcaseItemController = {
 
   async updateSuitcaseItemQuantity(itemId: string, quantity: number) {
     try {
-      return await SuitcaseModel.updateSuitcaseItemQuantity(itemId, quantity);
+      return await SuitcaseItemModel.updateSuitcaseItemQuantity(itemId, quantity);
     } catch (error) {
       console.error("Erro ao atualizar quantidade do item:", error);
       throw error;
@@ -75,7 +75,7 @@ export const SuitcaseItemController = {
 
   async returnItemToInventory(itemId: string) {
     try {
-      return await SuitcaseModel.returnItemToInventory(itemId);
+      return await SuitcaseItemModel.returnItemToInventory(itemId);
     } catch (error) {
       console.error("Erro ao retornar item ao estoque:", error);
       throw error;

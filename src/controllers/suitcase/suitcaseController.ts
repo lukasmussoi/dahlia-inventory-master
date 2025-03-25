@@ -3,7 +3,8 @@
  * Controlador Principal de Maletas
  * @file Este arquivo controla as operações básicas de maletas
  */
-import { SuitcaseModel } from "@/models/suitcaseModel";
+import { OriginalSuitcaseModel as SuitcaseModel } from "@/models/suitcase";
+import { SuitcaseItemModel } from "@/models/suitcase";
 import { SuitcaseStatus, SuitcaseItemStatus, Suitcase, SuitcaseItem } from "@/types/suitcase";
 
 export const SuitcaseController = {
@@ -27,7 +28,7 @@ export const SuitcaseController = {
 
   async getSuitcaseItems(suitcaseId: string) {
     try {
-      return await SuitcaseModel.getSuitcaseItems(suitcaseId);
+      return await SuitcaseItemModel.getSuitcaseItems(suitcaseId);
     } catch (error) {
       console.error("Erro ao buscar itens da maleta:", error);
       throw error;

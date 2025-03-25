@@ -11,10 +11,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { SuitcaseModel } from "@/models/suitcaseModel";
 import { toast } from "sonner";
 import { Suitcase } from "@/types/suitcase";
-import { SuitcaseController } from "@/controllers/suitcaseController";
+import { CombinedSuitcaseController } from "@/controllers/suitcase";
 import { Loader2 } from "lucide-react";
 
 interface SuitcaseFormDialogProps {
@@ -76,7 +75,7 @@ export function SuitcaseFormDialog({
   // Gerar novo código de maleta
   const generateNewCode = async () => {
     try {
-      const newCode = await SuitcaseModel.generateSuitcaseCode();
+      const newCode = await CombinedSuitcaseController.generateSuitcaseCode();
       setCode(newCode);
     } catch (error) {
       console.error("Erro ao gerar código da maleta:", error);
@@ -88,7 +87,7 @@ export function SuitcaseFormDialog({
   const loadResellers = async () => {
     setIsLoading(true);
     try {
-      const data = await SuitcaseModel.getAllSellers();
+      const data = await CombinedSuitcaseController.getAllSellers();
       setSellers(data);
     } catch (error) {
       console.error("Erro ao carregar revendedoras:", error);
@@ -101,7 +100,7 @@ export function SuitcaseFormDialog({
   // Carregar endereço da revendedora selecionada
   const loadSellerAddress = async (sellerId: string) => {
     try {
-      const seller = await SuitcaseModel.getSellerById(sellerId);
+      const seller = await CombinedSuitcaseController.getSellerById(sellerId);
       
       if (seller) {
         // Processar o endereço (pode vir como string JSON ou objeto)

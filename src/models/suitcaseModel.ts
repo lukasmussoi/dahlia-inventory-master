@@ -5,10 +5,10 @@
  */
 
 // Importar e reexportar o modelo combinado do novo diretório de maletas
-import { SuitcaseModel as NewSuitcaseModel } from "./suitcase";
+import { CombinedSuitcaseModel } from "./suitcase";
 
 // Exportar a classe combinada para manter compatibilidade com código existente
-export const SuitcaseModel = NewSuitcaseModel;
+export const SuitcaseModel = CombinedSuitcaseModel;
 
 // Exportar a classe combinada diretamente também
-export default NewSuitcaseModel;
+export default CombinedSuitcaseModel;
