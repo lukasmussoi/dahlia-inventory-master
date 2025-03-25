@@ -1,25 +1,22 @@
 
 /**
  * Controlador Combinado de Maletas
- * @file Este arquivo exporta todas as funcionalidades relacionadas às maletas
- * para manter uma interface consistente para os componentes que utilizam o controlador
+ * @file Este arquivo exporta funções de outros controladores relacionados a maletas
  */
-
-// Importar todos os controladores de maletas
 import { SuitcaseController } from "./suitcaseController";
 import { SuitcaseItemController } from "./suitcaseItemController";
-import { DeleteSuitcaseController } from "./deleteSuitcaseController";
 import { SettlementController } from "./settlementController";
-import { InventorySearchController } from "./inventorySearchController";
+import { DeleteSuitcaseController } from "./deleteSuitcaseController";
 import { SellerController } from "./sellerController";
+import { InventorySearchController } from "./inventorySearchController";
 import { PdfController } from "./pdfController";
+import { SuitcaseSupplyController } from "./supplyController";
 
-// Exportar um controlador combinado com todas as funcionalidades
+// Criar e exportar o controlador combinado
 export const CombinedSuitcaseController = {
   // SuitcaseController
   getSuitcases: SuitcaseController.getSuitcases,
   getSuitcaseById: SuitcaseController.getSuitcaseById,
-  getSuitcaseItems: SuitcaseController.getSuitcaseItems,
   createSuitcase: SuitcaseController.createSuitcase,
   updateSuitcase: SuitcaseController.updateSuitcase,
   deleteSuitcase: SuitcaseController.deleteSuitcase,
@@ -29,6 +26,7 @@ export const CombinedSuitcaseController = {
   
   // SuitcaseItemController
   getSuitcaseItemById: SuitcaseItemController.getSuitcaseItemById,
+  getSuitcaseItems: SuitcaseItemController.getSuitcaseItems,
   addItemToSuitcase: SuitcaseItemController.addItemToSuitcase,
   updateSuitcaseItemStatus: SuitcaseItemController.updateSuitcaseItemStatus,
   removeSuitcaseItem: SuitcaseItemController.removeSuitcaseItem,
@@ -36,27 +34,29 @@ export const CombinedSuitcaseController = {
   returnItemToInventory: SuitcaseItemController.returnItemToInventory,
   updateSaleInfo: SuitcaseItemController.updateSaleInfo,
   
-  // DeleteSuitcaseController
-  deleteSuitcaseWithCascade: DeleteSuitcaseController.deleteSuitcase,
-  canDeleteSuitcase: DeleteSuitcaseController.canDeleteSuitcase,
-  
   // SettlementController
+  getPromoterForReseller: SettlementController.getPromoterForReseller,
   getHistoricoAcertos: SettlementController.getHistoricoAcertos,
-  createPendingSettlement: SettlementController.createPendingSettlement,
-  finalizeSettlement: SettlementController.finalizeSettlement,
   
-  // InventorySearchController
-  searchInventoryItems: InventorySearchController.searchInventoryItems,
-  getItemSuitcaseInfo: InventorySearchController.getItemSuitcaseInfo,
+  // DeleteSuitcaseController
+  checkCanDeleteSuitcase: DeleteSuitcaseController.checkCanDeleteSuitcase,
   
   // SellerController
   getSellerById: SellerController.getSellerById,
   getAllSellers: SellerController.getAllSellers,
-  getPromoterForReseller: SellerController.getPromoterForReseller,
+  
+  // InventorySearchController
+  searchInventoryForSuitcase: InventorySearchController.searchInventoryForSuitcase,
   
   // PdfController
-  generateSuitcasePDF: PdfController.generateSuitcasePDF
+  generateSuitcasePDF: PdfController.generateSuitcasePDF,
+
+  // SuitcaseSupplyController
+  searchInventoryItems: SuitcaseSupplyController.searchInventoryItems,
+  supplySuitcase: SuitcaseSupplyController.supplySuitcase,
+  generateSupplyPDF: SuitcaseSupplyController.generateSupplyPDF,
+  countSuitcaseItems: SuitcaseSupplyController.countSuitcaseItems,
+  getSuitcasesItemCounts: SuitcaseSupplyController.getSuitcasesItemCounts
 };
 
-// Export default for backwards compatibility
 export default CombinedSuitcaseController;

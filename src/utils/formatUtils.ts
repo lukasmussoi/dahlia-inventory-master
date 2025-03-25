@@ -1,54 +1,54 @@
+
 /**
- * Utilitários de formatação
- * @file Funções para formatação de valores, datas e outros dados
+ * Utilitários para formatação de dados
+ * @file Este arquivo contém funções para formatação de valores
  */
 
-// Formatar preço para exibição no formato brasileiro
-export const formatPrice = (price: number): string => {
-  return new Intl.NumberFormat('pt-BR', { 
-    style: 'currency', 
-    currency: 'BRL' 
-  }).format(price);
-};
+/**
+ * Formata um valor numérico para o formato de moeda (R$)
+ * @param value Valor a ser formatado
+ * @param options Opções de formatação
+ * @returns String formatada
+ */
+export function formatMoney(value: number, options?: Intl.NumberFormatOptions): string {
+  const defaultOptions: Intl.NumberFormatOptions = {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  };
 
-// Função para formatar CPF (XXX.XXX.XXX-XX)
-export function formatCPF(cpf: string): string {
-  const cleaned = cpf.replace(/\D/g, '');
-  if (cleaned.length !== 11) return cpf;
-  return cleaned.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+  const mergedOptions = { ...defaultOptions, ...options };
+
+  return new Intl.NumberFormat('pt-BR', mergedOptions).format(value || 0);
 }
 
-// Função para formatar CNPJ (XX.XXX.XXX/XXXX-XX)
-export function formatCNPJ(cnpj: string): string {
-  const cleaned = cnpj.replace(/\D/g, '');
-  if (cleaned.length !== 14) return cnpj;
-  return cleaned.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+/**
+ * Formata uma data para o formato dd/mm/yyyy
+ * @param date Data a ser formatada
+ * @returns String formatada
+ */
+export function formatDate(date: Date | string | null): string {
+  if (!date) return '-';
+  
+  const dateObject = typeof date === 'string' ? new Date(date) : date;
+  
+  return new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  }).format(dateObject);
 }
 
-// Função para formatar CPF ou CNPJ
-export function formatCPFOrCNPJ(value: string): string {
-  const cleaned = value.replace(/\D/g, '');
-  if (cleaned.length <= 11) {
-    return formatCPF(cleaned);
-  } else {
-    return formatCNPJ(cleaned);
-  }
-}
-
-// Função para formatar telefone ((XX) XXXXX-XXXX)
-export function formatPhone(phone: string): string {
-  const cleaned = phone.replace(/\D/g, '');
-  if (cleaned.length === 11) {
-    return cleaned.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
-  } else if (cleaned.length === 10) {
-    return cleaned.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
-  }
-  return phone;
-}
-
-// Função para formatar CEP (XXXXX-XXX)
-export function formatZipCode(zipCode: string): string {
-  const cleaned = zipCode.replace(/\D/g, '');
-  if (cleaned.length !== 8) return zipCode;
-  return cleaned.replace(/(\d{5})(\d{3})/, '$1-$2');
+/**
+ * Formata um número com casas decimais
+ * @param value Valor a ser formatado
+ * @param decimals Número de casas decimais
+ * @returns String formatada
+ */
+export function formatNumber(value: number, decimals: number = 0): string {
+  return new Intl.NumberFormat('pt-BR', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals
+  }).format(value || 0);
 }

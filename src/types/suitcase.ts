@@ -58,6 +58,7 @@ export interface Suitcase {
   updated_at?: string;
   next_settlement_date?: string;
   sent_at?: string;
+  items_count?: number;  // Novo campo para contagem de itens
   seller?: {
     id: string;
     name: string;

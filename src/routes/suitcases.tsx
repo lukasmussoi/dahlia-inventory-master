@@ -1,8 +1,9 @@
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { SuitcasesContent } from "@/components/suitcases/SuitcasesContent";
 import { AuthController } from "@/controllers/authController";
 import { useQuery } from "@tanstack/react-query";
+import { CombinedSuitcaseController } from "@/controllers/suitcase";
 
 const Suitcases = () => {
   // Verificar autenticação ao carregar a página

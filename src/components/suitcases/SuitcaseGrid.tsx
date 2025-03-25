@@ -12,8 +12,9 @@ import { SuitcaseController } from "@/controllers/suitcaseController";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Archive, RotateCcw, Calculator, Check, EllipsisVertical, Eye, Pencil, Printer, Truck } from "lucide-react";
+import { Archive, RotateCcw, Calculator, Check, EllipsisVertical, Eye, Pencil, Printer, Truck, Package } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { SuitcaseSupplyDialog } from "./supply/SuitcaseSupplyDialog";
 
 interface SuitcaseGridProps {
   suitcases: Suitcase[];
@@ -27,6 +28,7 @@ export function SuitcaseGrid({ suitcases, isAdmin = false, onRefresh, onOpenAcer
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [showPrintDialog, setShowPrintDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showSupplyDialog, setShowSupplyDialog] = useState(false); // Novo estado para o diálogo de abastecimento
   const [isUpdating, setIsUpdating] = useState<{ [key: string]: boolean }>({});
   const navigate = useNavigate();
 
@@ -76,6 +78,12 @@ export function SuitcaseGrid({ suitcases, isAdmin = false, onRefresh, onOpenAcer
   const handleViewDetails = (suitcase: Suitcase) => {
     setSelectedSuitcase(suitcase);
     setShowDetailsDialog(true);
+  };
+
+  // Open supply dialog
+  const handleOpenSupplyDialog = (suitcase: Suitcase) => {
+    setSelectedSuitcase(suitcase);
+    setShowSupplyDialog(true);
   };
 
   // Print dialog
@@ -171,6 +179,11 @@ export function SuitcaseGrid({ suitcases, isAdmin = false, onRefresh, onOpenAcer
                               Ver Detalhes
                             </DropdownMenuItem>
                             
+                            <DropdownMenuItem onClick={() => handleOpenSupplyDialog(suitcase)}>
+                              <Package className="mr-2 h-4 w-4" />
+                              Abastecer
+                            </DropdownMenuItem>
+                            
                             <DropdownMenuItem onClick={() => handleOpenPrintDialog(suitcase)}>
                               <Printer className="mr-2 h-4 w-4" />
                               Imprimir
@@ -229,6 +242,9 @@ export function SuitcaseGrid({ suitcases, isAdmin = false, onRefresh, onOpenAcer
                       {suitcase.next_settlement_date && (
                         <div><span className="font-medium">Próximo acerto:</span> {formatDate(suitcase.next_settlement_date)}</div>
                       )}
+                      <div className="mt-1 text-xs text-gray-500">
+                        {suitcase.items_count || 0} itens na maleta
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -238,10 +254,10 @@ export function SuitcaseGrid({ suitcases, isAdmin = false, onRefresh, onOpenAcer
                     variant="outline"
                     size="sm"
                     className="flex-1"
-                    onClick={() => handleViewDetails(suitcase)}
+                    onClick={() => handleOpenSupplyDialog(suitcase)}
                   >
-                    <Eye className="mr-1 h-4 w-4" />
-                    Detalhes
+                    <Package className="mr-1 h-4 w-4" />
+                    Abastecer
                   </Button>
                   
                   <Button
@@ -294,6 +310,14 @@ export function SuitcaseGrid({ suitcases, isAdmin = false, onRefresh, onOpenAcer
         onSubmit={(data) => handleUpdateSuitcase(selectedSuitcase?.id || "", data)}
         suitcase={selectedSuitcase}
         mode="edit"
+      />
+
+      {/* Dialog de Abastecimento */}
+      <SuitcaseSupplyDialog
+        open={showSupplyDialog}
+        onOpenChange={setShowSupplyDialog}
+        suitcase={selectedSuitcase}
+        onRefresh={onRefresh}
       />
     </div>
   );
