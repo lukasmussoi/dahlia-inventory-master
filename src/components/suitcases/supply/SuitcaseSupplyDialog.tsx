@@ -2,21 +2,19 @@
 /**
  * Diálogo de Abastecimento de Maleta
  * @file Este componente gerencia a interface para adicionar produtos a uma maleta
- * @relacionamento Utiliza o SuitcaseController para abastecer a maleta
+ * @relacionamento Utiliza o useSupplyDialog para controlar o estado e lógica
  */
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { toast } from "sonner";
-import { CombinedSuitcaseController } from "@/controllers/suitcase";
 import { Suitcase } from "@/types/suitcase";
-import { Package, Search, X, Plus, Minus, Loader2, FileText } from "lucide-react";
-import { openPdfInNewTab } from "@/utils/pdfUtils";
-import { formatMoney } from "@/utils/formatUtils";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Package, Search, Loader2, FileText } from "lucide-react";
+import { useSupplyDialog } from "@/hooks/suitcase/useSupplyDialog";
+import { SearchResultCard } from "./SearchResultCard";
+import { SelectedItemCard } from "./SelectedItemCard";
 
 interface SuitcaseSupplyDialogProps {
   open: boolean;
@@ -31,177 +29,26 @@ export function SuitcaseSupplyDialog({
   suitcase, 
   onRefresh 
 }: SuitcaseSupplyDialogProps) {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [isSearching, setIsSearching] = useState(false);
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [selectedItems, setSelectedItems] = useState<any[]>([]);
-  const [isSupplying, setIsSupplying] = useState(false);
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
-
-  // Limpar quando o diálogo for fechado
-  useEffect(() => {
-    if (!open) {
-      setSearchTerm("");
-      setSearchResults([]);
-      setSelectedItems([]);
-    }
-  }, [open]);
-
-  // Buscar itens do inventário
-  const handleSearch = async () => {
-    if (!searchTerm || searchTerm.length < 2) {
-      toast.warning("Digite pelo menos 2 caracteres para pesquisar");
-      return;
-    }
-
-    setIsSearching(true);
-    try {
-      const results = await CombinedSuitcaseController.searchInventoryItems(searchTerm);
-      setSearchResults(results);
-    } catch (error) {
-      console.error("Erro ao buscar itens:", error);
-      toast.error("Erro ao buscar itens do inventário");
-    } finally {
-      setIsSearching(false);
-    }
-  };
-
-  // Lidar com tecla Enter na busca
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      handleSearch();
-    }
-  };
-
-  // Adicionar item à lista de selecionados
-  const handleAddItem = (item: any) => {
-    // Verificar se o item já está na lista
-    const existingItemIndex = selectedItems.findIndex(
-      (selectedItem) => selectedItem.id === item.id
-    );
-
-    if (existingItemIndex !== -1) {
-      // Se já estiver na lista, incrementar a quantidade
-      const updatedItems = [...selectedItems];
-      updatedItems[existingItemIndex] = {
-        ...updatedItems[existingItemIndex],
-        quantity: (updatedItems[existingItemIndex].quantity || 1) + 1
-      };
-      setSelectedItems(updatedItems);
-    } else {
-      // Se não estiver na lista, adicionar com quantidade 1
-      setSelectedItems([...selectedItems, { ...item, quantity: 1 }]);
-    }
-
-    // Remover dos resultados da busca
-    setSearchResults(searchResults.filter((resultItem) => resultItem.id !== item.id));
-  };
-
-  // Remover item da lista de selecionados
-  const handleRemoveItem = (itemId: string) => {
-    setSelectedItems(selectedItems.filter((item) => item.id !== itemId));
-
-    // Adicionar de volta aos resultados da busca
-    const removedItem = selectedItems.find((item) => item.id === itemId);
-    if (removedItem) {
-      setSearchResults([...searchResults, { ...removedItem, quantity: undefined }]);
-    }
-  };
-
-  // Incrementar quantidade do item
-  const handleIncreaseQuantity = (itemId: string) => {
-    const updatedItems = selectedItems.map((item) => {
-      if (item.id === itemId) {
-        // Verificar limite de estoque
-        if ((item.quantity || 1) < (item.quantity_available || item.quantity)) {
-          return { ...item, quantity: (item.quantity || 1) + 1 };
-        }
-        toast.warning(`Limite de estoque atingido: ${item.quantity_available || item.quantity} unidades`);
-      }
-      return item;
-    });
-    setSelectedItems(updatedItems);
-  };
-
-  // Decrementar quantidade do item
-  const handleDecreaseQuantity = (itemId: string) => {
-    const updatedItems = selectedItems.map((item) => {
-      if (item.id === itemId && item.quantity > 1) {
-        return { ...item, quantity: item.quantity - 1 };
-      }
-      return item;
-    });
-    setSelectedItems(updatedItems);
-  };
-
-  // Calcular valor total
-  const calculateTotalValue = () => {
-    return selectedItems.reduce((total, item) => {
-      return total + (item.price || 0) * (item.quantity || 1);
-    }, 0);
-  };
-
-  // Finalizar abastecimento
-  const handleFinishSupply = async () => {
-    if (!suitcase?.id) {
-      toast.error("Maleta não encontrada");
-      return;
-    }
-
-    if (selectedItems.length === 0) {
-      toast.warning("Selecione pelo menos um item para abastecer a maleta");
-      return;
-    }
-
-    setIsSupplying(true);
-    try {
-      // Preparar os itens para abastecimento
-      const itemsToSupply = selectedItems.map(item => ({
-        inventory_id: item.id,
-        quantity: item.quantity || 1,
-        product: {
-          id: item.id,
-          name: item.name,
-          sku: item.sku,
-          price: item.price,
-          photo_url: item.photo_url
-        }
-      }));
-
-      // Abastecer a maleta
-      const addedItems = await CombinedSuitcaseController.supplySuitcase(
-        suitcase.id,
-        itemsToSupply
-      );
-
-      if (addedItems && addedItems.length > 0) {
-        toast.success(`Maleta abastecida com ${addedItems.length} itens`);
-        
-        // Gerar PDF após abastecimento
-        setIsGeneratingPdf(true);
-        const pdfUrl = await CombinedSuitcaseController.generateSupplyPDF(
-          suitcase.id,
-          addedItems,
-          suitcase
-        );
-        
-        // Abrir PDF em nova aba
-        openPdfInNewTab(pdfUrl);
-        
-        // Atualizar e fechar
-        if (onRefresh) onRefresh();
-        onOpenChange(false);
-      } else {
-        toast.warning("Nenhum item foi adicionado à maleta");
-      }
-    } catch (error) {
-      console.error("Erro ao abastecer maleta:", error);
-      toast.error("Erro ao abastecer maleta");
-    } finally {
-      setIsSupplying(false);
-      setIsGeneratingPdf(false);
-    }
-  };
+  const {
+    searchTerm,
+    setSearchTerm,
+    isSearching,
+    searchResults,
+    selectedItems,
+    isSupplying,
+    isGeneratingPdf,
+    isLoadingCurrentItems,
+    handleSearch,
+    handleKeyPress,
+    handleAddItem,
+    handleRemoveItem,
+    handleIncreaseQuantity,
+    handleDecreaseQuantity,
+    calculateTotalValue,
+    calculateTotalItems,
+    handleFinishSupply,
+    formatMoney
+  } = useSupplyDialog(suitcase?.id || null, open, onOpenChange, onRefresh);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -250,27 +97,12 @@ export function SuitcaseSupplyDialog({
                   </div>
                 ) : searchResults.length > 0 ? (
                   searchResults.map((item) => (
-                    <Card key={item.id} className="shadow-sm">
-                      <CardContent className="p-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1 min-w-0">
-                            <h4 className="text-sm font-medium truncate">{item.name}</h4>
-                            <p className="text-xs text-gray-500">{item.sku}</p>
-                            <p className="text-xs text-gray-500">Estoque: {item.quantity}</p>
-                          </div>
-                          <p className="text-sm font-medium text-pink-600 mx-2">
-                            {formatMoney(item.price)}
-                          </p>
-                          <Button
-                            size="sm"
-                            onClick={() => handleAddItem(item)}
-                            className="shrink-0 ml-2"
-                          >
-                            <Plus className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
+                    <SearchResultCard 
+                      key={item.id} 
+                      item={item}
+                      onAdd={handleAddItem}
+                      formatMoney={formatMoney}
+                    />
                   ))
                 ) : searchTerm.length > 0 ? (
                   <p className="text-center text-gray-500 py-8">
@@ -306,50 +138,20 @@ export function SuitcaseSupplyDialog({
 
             <ScrollArea className="h-[350px] rounded-md border">
               <div className="p-4 space-y-4">
-                {selectedItems.length > 0 ? (
+                {isLoadingCurrentItems ? (
+                  <div className="flex justify-center items-center h-32">
+                    <Loader2 className="h-8 w-8 animate-spin text-pink-500" />
+                  </div>
+                ) : selectedItems.length > 0 ? (
                   selectedItems.map((item) => (
-                    <Card key={item.id} className="shadow-sm">
-                      <CardContent className="p-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1 min-w-0">
-                            <h4 className="text-sm font-medium truncate">{item.name}</h4>
-                            <p className="text-xs text-gray-500">{item.sku}</p>
-                            <p className="text-xs text-gray-600">
-                              {formatMoney(item.price)} x {item.quantity} = {formatMoney(item.price * item.quantity)}
-                            </p>
-                          </div>
-                          <div className="flex items-center shrink-0 ml-2">
-                            <Button
-                              size="icon"
-                              variant="outline"
-                              onClick={() => handleDecreaseQuantity(item.id)}
-                              disabled={item.quantity <= 1}
-                              className="h-8 w-8"
-                            >
-                              <Minus className="h-3 w-3" />
-                            </Button>
-                            <span className="w-8 text-center text-sm">{item.quantity}</span>
-                            <Button
-                              size="icon"
-                              variant="outline"
-                              onClick={() => handleIncreaseQuantity(item.id)}
-                              disabled={(item.quantity || 1) >= (item.quantity_available || item.quantity)}
-                              className="h-8 w-8"
-                            >
-                              <Plus className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              onClick={() => handleRemoveItem(item.id)}
-                              className="h-8 w-8 ml-2"
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                    <SelectedItemCard 
+                      key={item.id} 
+                      item={item}
+                      onRemove={handleRemoveItem}
+                      onIncrease={handleIncreaseQuantity}
+                      onDecrease={handleDecreaseQuantity}
+                      formatMoney={formatMoney}
+                    />
                   ))
                 ) : (
                   <div className="flex flex-col items-center justify-center h-32 text-gray-500">
@@ -362,7 +164,7 @@ export function SuitcaseSupplyDialog({
 
             <div className="mt-4 p-3 bg-gray-50 rounded-md flex justify-between items-center">
               <div>
-                <p className="text-sm font-medium">Total de peças: <span className="font-semibold">{selectedItems.reduce((sum, item) => sum + (item.quantity || 1), 0)}</span></p>
+                <p className="text-sm font-medium">Total de peças: <span className="font-semibold">{calculateTotalItems()}</span></p>
                 <p className="text-lg font-semibold text-pink-600">
                   Total: {formatMoney(calculateTotalValue())}
                 </p>
@@ -380,7 +182,7 @@ export function SuitcaseSupplyDialog({
             Cancelar
           </Button>
           <Button
-            onClick={handleFinishSupply}
+            onClick={() => handleFinishSupply(suitcase)}
             disabled={selectedItems.length === 0 || isSupplying || isGeneratingPdf}
             className="gap-2"
           >

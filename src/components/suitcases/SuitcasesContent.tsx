@@ -1,4 +1,9 @@
 
+/**
+ * Conteúdo principal da página de Maletas
+ * @file Este componente gerencia a visualização e interação com as maletas
+ * @relacionamento Depende dos controllers de maleta e componentes de grid e filtros
+ */
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -13,6 +18,7 @@ import { PlusCircle, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { AcertoMaletaDialog } from "./settlement/AcertoMaletaDialog";
 import { CombinedSuitcaseController } from "@/controllers/suitcase";
+import { SuitcaseSupplyDialog } from "./supply/SuitcaseSupplyDialog";
 
 interface SuitcasesContentProps {
   isAdmin?: boolean;
@@ -28,6 +34,7 @@ export function SuitcasesContent({ isAdmin = false, userProfile, summary }: Suit
   const [showNewSuitcaseDialog, setShowNewSuitcaseDialog] = useState(false);
   const [selectedSuitcase, setSelectedSuitcase] = useState<any>(null);
   const [showAcertoDialog, setShowAcertoDialog] = useState(false);
+  const [showSupplyDialog, setShowSupplyDialog] = useState(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -67,9 +74,22 @@ export function SuitcasesContent({ isAdmin = false, userProfile, summary }: Suit
     setShowAcertoDialog(true);
   };
 
+  // Função para abrir diálogo de abastecimento
+  const handleOpenSupplyDialog = (suitcase: any) => {
+    setSelectedSuitcase(suitcase);
+    setShowSupplyDialog(true);
+  };
+
   // Função para fechar diálogo de acerto
   const handleCloseAcertoDialog = () => {
     setShowAcertoDialog(false);
+    setSelectedSuitcase(null);
+    refetch();
+  };
+
+  // Função para fechar diálogo de abastecimento
+  const handleCloseSupplyDialog = () => {
+    setShowSupplyDialog(false);
     setSelectedSuitcase(null);
     refetch();
   };
@@ -132,7 +152,8 @@ export function SuitcasesContent({ isAdmin = false, userProfile, summary }: Suit
             suitcases={suitcases} 
             isAdmin={isAdmin} 
             onRefresh={refetch}
-            onOpenAcertoDialog={handleOpenAcertoDialog} 
+            onOpenAcertoDialog={handleOpenAcertoDialog}
+            onOpenSupplyDialog={handleOpenSupplyDialog}
           />
         )}
       </div>
@@ -150,6 +171,14 @@ export function SuitcasesContent({ isAdmin = false, userProfile, summary }: Suit
         open={showAcertoDialog}
         onOpenChange={handleCloseAcertoDialog}
         suitcase={selectedSuitcase}
+      />
+
+      {/* Diálogo de abastecimento */}
+      <SuitcaseSupplyDialog
+        open={showSupplyDialog}
+        onOpenChange={handleCloseSupplyDialog}
+        suitcase={selectedSuitcase}
+        onRefresh={refetch}
       />
     </div>
   );

@@ -6,12 +6,12 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 import { SuitcaseItemModel } from "@/models/suitcase/item";
-import { PdfController } from "./pdfController";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { openPdfInNewTab } from "@/utils/pdfUtils";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { getProductPhotoUrl } from "@/utils/photoUtils";
 
 interface SupplyItem {
   inventory_id: string;
@@ -82,37 +82,40 @@ export class SuitcaseSupplyController {
       for (const item of items) {
         if (!item.inventory_id) continue;
         
-        try {
-          // Verificar se o item está disponível
-          const availability = await SuitcaseItemModel.checkItemAvailability(item.inventory_id);
-          
-          if (!availability.available) {
-            console.warn(`Item ${item.inventory_id} não disponível para abastecimento: ${JSON.stringify(availability)}`);
-            continue;
+        // Verificar se o item está disponível
+        const availability = await SuitcaseItemModel.checkItemAvailability(item.inventory_id);
+        
+        if (!availability.available) {
+          console.warn(`Item ${item.inventory_id} não disponível para abastecimento: ${JSON.stringify(availability)}`);
+          continue;
+        }
+        
+        // Verificar se a quantidade solicitada está disponível
+        const quantity = item.quantity || 1;
+        if (availability.quantity < quantity) {
+          console.warn(`Quantidade solicitada (${quantity}) excede disponível (${availability.quantity}) para item ${item.inventory_id}`);
+          continue;
+        }
+        
+        // Para cada unidade, adicionar como um item separado
+        for (let i = 0; i < quantity; i++) {
+          try {
+            // Adicionar item à maleta (um por vez)
+            const addedItem = await SuitcaseItemModel.addItemToSuitcase({
+              suitcase_id: suitcaseId,
+              inventory_id: item.inventory_id,
+              quantity: 1, // Sempre adicionar com quantidade 1
+              status: 'in_possession'
+            });
+            
+            // Adicionar à lista de itens adicionados
+            addedItems.push({
+              ...addedItem,
+              product: item.product
+            });
+          } catch (error) {
+            console.error(`Erro ao adicionar unidade ${i+1} do item ${item.inventory_id} à maleta:`, error);
           }
-          
-          // Verificar se a quantidade solicitada está disponível
-          const quantity = item.quantity || 1;
-          if (availability.quantity < quantity) {
-            console.warn(`Quantidade solicitada (${quantity}) excede disponível (${availability.quantity}) para item ${item.inventory_id}`);
-            continue;
-          }
-          
-          // Adicionar item à maleta
-          const addedItem = await SuitcaseItemModel.addItemToSuitcase({
-            suitcase_id: suitcaseId,
-            inventory_id: item.inventory_id,
-            quantity: quantity,
-            status: 'in_possession'
-          });
-          
-          addedItems.push({
-            ...addedItem,
-            product: item.product
-          });
-        } catch (error) {
-          console.error(`Erro ao adicionar item ${item.inventory_id} à maleta:`, error);
-          // Continuar com os próximos itens mesmo se houver erro
         }
       }
 
@@ -138,7 +141,7 @@ export class SuitcaseSupplyController {
           .from('suitcases')
           .select(`
             *,
-            seller:resellers(id, name, commission_rate)
+            seller:resellers(id, name, phone, commission_rate, address)
           `)
           .eq('id', suitcaseId)
           .single();
@@ -155,6 +158,9 @@ export class SuitcaseSupplyController {
         return total + (price * quantity);
       }, 0);
 
+      // Agrupar itens idênticos
+      const groupedItems = this.groupItems(items);
+
       // Criar o PDF
       const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.getWidth();
@@ -170,33 +176,73 @@ export class SuitcaseSupplyController {
       doc.setFont("helvetica", "normal");
       doc.text(`Código: ${suitcase.code || `#${suitcase.id.substring(0, 8)}`}`, 14, 35);
       doc.text(`Revendedora: ${suitcase.seller?.name || 'Não especificado'}`, 14, 43);
-      doc.text(`Cidade: ${suitcase.city || 'Não especificado'}, ${suitcase.neighborhood || ''}`, 14, 51);
+      
+      // Adicionar telefone se disponível
+      if (suitcase.seller?.phone) {
+        doc.text(`Telefone: ${suitcase.seller.phone}`, 14, 51);
+      }
+
+      // Adicionar cidade/bairro
+      const locationText = `${suitcase.city || 'Cidade não especificada'}${suitcase.neighborhood ? ', ' + suitcase.neighborhood : ''}`;
+      doc.text(`Localização: ${locationText}`, 14, suitcase.seller?.phone ? 59 : 51);
       
       const currentDate = format(new Date(), "dd/MM/yyyy", { locale: ptBR });
-      doc.text(`Data do abastecimento: ${currentDate}`, 14, 59);
+      doc.text(`Data do abastecimento: ${currentDate}`, 14, suitcase.seller?.phone ? 67 : 59);
       
       const nextSettlementDate = suitcase.next_settlement_date 
         ? format(new Date(suitcase.next_settlement_date), "dd/MM/yyyy", { locale: ptBR })
         : 'Não definida';
-      doc.text(`Data do próximo acerto: ${nextSettlementDate}`, 14, 67);
+      doc.text(`Data do próximo acerto: ${nextSettlementDate}`, 14, suitcase.seller?.phone ? 75 : 67);
 
-      // Tabela de itens
-      const tableColumn = ["Código", "Nome", "Qtd", "Preço", "Total"];
-      const tableRows = items.map(item => [
-        item.product?.sku || 'N/A',
-        item.product?.name || 'Item sem nome',
-        item.quantity?.toString() || '1',
-        `R$ ${item.product?.price?.toFixed(2) || '0,00'}`,
-        `R$ ${((item.product?.price || 0) * (item.quantity || 1)).toFixed(2)}`
-      ]);
-
+      // Tabela de itens com imagens
+      const startY = suitcase.seller?.phone ? 85 : 75;
+      const tableData = await this.generateTableData(groupedItems);
+      
       autoTable(doc, {
-        startY: 75,
-        head: [tableColumn],
-        body: tableRows,
+        startY: startY,
+        head: [['Produto', 'Código', 'Qtd', 'Preço', 'Total']],
+        body: tableData,
         theme: 'striped',
         headStyles: { fillColor: [233, 30, 99], textColor: 255 },
-        margin: { top: 75 }
+        margin: { top: startY },
+        columnStyles: {
+          0: { cellWidth: 80 }, // Produto com imagem
+          1: { cellWidth: 25 }, // Código
+          2: { cellWidth: 15 }, // Quantidade
+          3: { cellWidth: 25 }, // Preço
+          4: { cellWidth: 25 }  // Total
+        },
+        didDrawCell: (data) => {
+          // Se for a primeira coluna e não for cabeçalho
+          if (data.column.index === 0 && data.row.index > 0 && data.row.raw) {
+            // Verificar se há uma imagem para desenhar
+            const imageData = data.row.raw[5]; // A sexta coluna contém a URL da imagem
+            if (imageData && typeof imageData === 'string') {
+              try {
+                const imgProps = doc.getImageProperties(imageData);
+                const imgHeight = 10;
+                const imgWidth = (imgProps.width * imgHeight) / imgProps.height;
+                
+                // Desenhar a imagem na célula
+                doc.addImage(
+                  imageData, 
+                  'JPEG', 
+                  data.cell.x + 2, 
+                  data.cell.y + 2, 
+                  imgWidth, 
+                  imgHeight
+                );
+
+                // Ajustar o texto para não sobrepor a imagem
+                if (data.cell.text && data.cell.text.length > 0) {
+                  data.cell.text[0].x += imgWidth + 4;
+                }
+              } catch (error) {
+                console.error("Erro ao adicionar imagem ao PDF:", error);
+              }
+            }
+          }
+        }
       });
 
       // Total
@@ -219,6 +265,82 @@ export class SuitcaseSupplyController {
       console.error("Erro ao gerar PDF de abastecimento:", error);
       throw error;
     }
+  }
+
+  /**
+   * Agrupa itens idênticos para o PDF
+   */
+  private static groupItems(items: SupplyItem[]) {
+    const groupedMap = new Map();
+    
+    items.forEach(item => {
+      const key = item.inventory_id;
+      if (groupedMap.has(key)) {
+        const existing = groupedMap.get(key);
+        existing.quantity += item.quantity || 1;
+      } else {
+        groupedMap.set(key, {
+          ...item,
+          quantity: item.quantity || 1
+        });
+      }
+    });
+    
+    return Array.from(groupedMap.values());
+  }
+
+  /**
+   * Gera os dados da tabela para o PDF
+   */
+  private static async generateTableData(items: SupplyItem[]) {
+    const tableData = [];
+    
+    for (const item of items) {
+      const product = item.product;
+      if (!product) continue;
+      
+      const price = product.price || 0;
+      const quantity = item.quantity || 1;
+      const total = price * quantity;
+      
+      // Buscar URL da imagem
+      let imageUrl = getProductPhotoUrl(product.photo_url);
+      let base64Image = '';
+      
+      // Converter imagem para Base64 se existir
+      if (imageUrl) {
+        try {
+          const response = await fetch(imageUrl);
+          const blob = await response.blob();
+          base64Image = await this.blobToBase64(blob);
+        } catch (error) {
+          console.error(`Erro ao converter imagem para Base64: ${error}`);
+        }
+      }
+      
+      tableData.push([
+        product.name || 'Sem nome',
+        product.sku || 'N/A',
+        quantity.toString(),
+        `R$ ${price.toFixed(2)}`,
+        `R$ ${total.toFixed(2)}`,
+        base64Image // Esta coluna será usada para a imagem, não será mostrada como texto
+      ]);
+    }
+    
+    return tableData;
+  }
+
+  /**
+   * Converte um Blob para Base64
+   */
+  private static blobToBase64(blob: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
   }
 
   /**

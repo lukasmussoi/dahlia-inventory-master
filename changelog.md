@@ -1,6 +1,15 @@
 
 # Registro de Alterações
 
+## 2025-03-29
+- Implementação de melhorias no módulo de abastecimento de maletas:
+  - Corrigido bug nos botões de incremento/decremento de quantidade
+  - Adicionada exibição de miniaturas de imagens dos produtos
+  - Implementada exibição de itens existentes na maleta ao abrir o diálogo de abastecimento
+  - Aprimorada a geração de PDF com imagens e informações detalhadas
+  - Refatorado o componente para melhor manutenção e estabilidade
+  - Desenvolvedor: Equipe Dalia Manager
+
 ## 2025-03-27
 - Correção de interface do componente SuitcaseFilters:
   - Substituídos props `onSearch` e `onClear` por `onFiltersChange` para consistência
