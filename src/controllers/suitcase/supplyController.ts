@@ -238,13 +238,15 @@ export class SuitcaseSupplyController {
                   
                   // Verificação mais segura para modificar a coordenada x
                   if (firstText && typeof firstText === 'object') {
-                    const updatedText = { 
-                      ...firstText, 
-                      x: ((firstText as { x?: number }).x ?? 0) + imgWidth + 4 
-                    };
+                    // Tratamento seguro para evitar o erro TS2698
+                    const currentX = 'x' in firstText && typeof firstText.x === 'number' 
+                      ? firstText.x
+                      : 0;
                     
-                    // Substituir o primeiro elemento do texto
-                    data.cell.text[0] = updatedText;
+                    // Atualizar a coordenada x de forma segura
+                    if ('x' in firstText) {
+                      firstText.x = currentX + imgWidth + 4;
+                    }
                   }
                 }
               } catch (error) {

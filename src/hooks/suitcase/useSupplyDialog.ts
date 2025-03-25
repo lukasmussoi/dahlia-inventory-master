@@ -48,6 +48,29 @@ export function useSupplyDialog(
     }
   }, [open, suitcaseId]);
 
+  // Função auxiliar para agrupar itens idênticos
+  const groupIdenticalItems = (items: SelectedItem[]): SelectedItem[] => {
+    const groupedMap = new Map<string, SelectedItem>();
+    
+    items.forEach(item => {
+      if (groupedMap.has(item.id)) {
+        // Se o item já existe no map, apenas atualiza a quantidade
+        const existingItem = groupedMap.get(item.id)!;
+        existingItem.quantity += item.quantity;
+        
+        // Se algum dos itens está na maleta, marcar o item agrupado como na maleta
+        if (item.from_suitcase) {
+          existingItem.from_suitcase = true;
+        }
+      } else {
+        // Se não existe, adiciona ao map
+        groupedMap.set(item.id, { ...item });
+      }
+    });
+    
+    return Array.from(groupedMap.values());
+  };
+
   // Carregar itens existentes na maleta
   const loadCurrentSuitcaseItems = async (suitcaseId: string) => {
     try {
@@ -68,7 +91,8 @@ export function useSupplyDialog(
         from_suitcase: true // Marcar como item já existente na maleta
       }));
       
-      setSelectedItems(currentItems);
+      // Agrupar itens idênticos antes de definir no estado
+      setSelectedItems(groupIdenticalItems(currentItems));
     } catch (error) {
       console.error("Erro ao carregar itens da maleta:", error);
       toast.error("Erro ao carregar itens existentes da maleta");
@@ -126,7 +150,7 @@ export function useSupplyDialog(
       setSelectedItems(updatedItems);
     } else {
       // Se não estiver na lista, adicionar com quantidade 1
-      setSelectedItems([...selectedItems, { 
+      const newItem = { 
         id: item.id,
         name: item.name,
         sku: item.sku,
@@ -134,7 +158,8 @@ export function useSupplyDialog(
         quantity: 1,
         max_quantity: item.quantity,
         photo_url: item.photo_url
-      }]);
+      };
+      setSelectedItems(currentItems => groupIdenticalItems([...currentItems, newItem]));
     }
 
     // Remover dos resultados da busca
