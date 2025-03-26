@@ -24,14 +24,6 @@ interface SupplyItem {
   };
 }
 
-// Interface para corrigir o problema de tipagem do textLine
-interface CellTextLine {
-  x?: number;
-  y?: number;
-  text?: string;
-  [key: string]: any;
-}
-
 export class SupplyPdfController {
   /**
    * Gera um PDF de comprovante de abastecimento
@@ -137,43 +129,33 @@ export class SupplyPdfController {
             if (imageData && typeof imageData === 'string' && imageData.length > 0) {
               try {
                 const imgProps = doc.getImageProperties(imageData);
-                
-                // Definir tamanho máximo para a imagem (40px como solicitado)
-                const maxImgWidth = 12; // 12mm é aproximadamente 40px
                 const imgHeight = 10;
-                const imgWidth = Math.min(maxImgWidth, (imgProps.width * imgHeight) / imgProps.height);
+                const imgWidth = (imgProps.width * imgHeight) / imgProps.height;
                 
-                // Desenhar a imagem no início da célula
-                const imgX = data.cell.x + 2;
-                const imgY = data.cell.y + 2;
-                
+                // Desenhar a imagem na célula
                 doc.addImage(
                   imageData, 
                   'JPEG', 
-                  imgX, 
-                  imgY, 
+                  data.cell.x + 2, 
+                  data.cell.y + 2, 
                   imgWidth, 
                   imgHeight
                 );
 
-                // Mover o texto para a direita da imagem (com espaçamento)
-                const textPadding = imgWidth + 4; // 4mm de espaço entre imagem e texto
-                
                 // Verificações de segurança para texto
                 if (data.cell.text && Array.isArray(data.cell.text) && data.cell.text.length > 0) {
-                  // Percorrer todas as linhas de texto na célula
-                  data.cell.text.forEach((textLine) => {
-                    // Verificar se textLine não é null e é um objeto (não uma string)
-                    if (textLine && typeof textLine === 'object') {
-                      // Tratar o textLine como CellTextLine para corrigir o problema de tipagem
-                      const line = textLine as CellTextLine;
-                      // Verificação adicional para garantir que x existe
-                      if ('x' in line) {
-                        // Deslocar o texto para a direita da imagem
-                        line.x = imgX + textPadding;
-                      }
+                  const firstText = data.cell.text[0];
+                  
+                  // Verificação robusta para evitar erros de tipo
+                  if (firstText && typeof firstText === 'object') {
+                    // Usar type assertion para acessar a propriedade x de forma segura
+                    const textObject = firstText as { x?: number };
+                    
+                    // Verificar explicitamente se x existe e é um número
+                    if (textObject && textObject.x !== undefined && typeof textObject.x === 'number') {
+                      textObject.x = textObject.x + imgWidth + 4;
                     }
-                  });
+                  }
                 }
               } catch (error) {
                 console.error("Erro ao adicionar imagem ao PDF:", error);
