@@ -1,3 +1,4 @@
+
 import {
   Table,
   TableBody,
@@ -14,6 +15,7 @@ import { useQuery } from "@tanstack/react-query";
 import { InventoryModel } from "@/models/inventoryModel";
 import { Badge } from "@/components/ui/badge";
 import { CombinedSuitcaseController } from "@/controllers/suitcase";
+import { PrintLabelButton } from "./PrintLabelButton";
 
 interface InventoryTableProps {
   items: InventoryItem[];
@@ -152,6 +154,9 @@ export function InventoryTable({
         {(onEdit || onDelete || onArchive || onRestore) && (
           <TableCell className="text-right">
             <div className="flex justify-end space-x-2">
+              {/* Botão de impressão de etiqueta (novo) */}
+              <PrintLabelButton item={item} />
+              
               {onEdit && !showArchivedControls && (
                 <Button
                   variant="ghost"

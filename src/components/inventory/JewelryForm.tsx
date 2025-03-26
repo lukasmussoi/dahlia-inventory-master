@@ -44,7 +44,7 @@ interface JewelryFormProps {
   item?: InventoryItem | null;
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: () => void;
+  onSuccess?: (item: InventoryItem) => void;
 }
 
 export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormProps) {
@@ -158,25 +158,30 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
         };
       });
 
+      let createdOrUpdatedItem: InventoryItem | null = null;
+      
       if (item) {
         console.log("Atualizando item existente");
-        await InventoryModel.updateItem(item.id, itemData);
+        createdOrUpdatedItem = await InventoryModel.updateItem(item.id, itemData);
         if (photos.length > 0) {
           await InventoryModel.updateItemPhotos(item.id, processedPhotos);
         }
         toast.success("Peça atualizada com sucesso!");
       } else {
         console.log("Criando novo item");
-        const createdItem = await InventoryModel.createItem(itemData);
-        console.log("Item criado:", createdItem);
-        if (photos.length > 0 && createdItem) {
-          await InventoryModel.updateItemPhotos(createdItem.id, processedPhotos);
+        createdOrUpdatedItem = await InventoryModel.createItem(itemData);
+        console.log("Item criado:", createdOrUpdatedItem);
+        if (photos.length > 0 && createdOrUpdatedItem) {
+          await InventoryModel.updateItemPhotos(createdOrUpdatedItem.id, processedPhotos);
         }
         toast.success("Peça criada com sucesso!");
       }
       
-      onSuccess?.();
-      onClose();
+      if (onSuccess && createdOrUpdatedItem) {
+        onSuccess(createdOrUpdatedItem);
+      } else {
+        onClose();
+      }
     } catch (error) {
       console.error('Erro ao salvar peça:', error);
       toast.error("Erro ao salvar peça. Verifique os dados e tente novamente.");

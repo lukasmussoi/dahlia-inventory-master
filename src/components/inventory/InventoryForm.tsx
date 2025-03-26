@@ -21,7 +21,7 @@ interface InventoryFormProps {
   categories: InventoryCategory[];
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: () => void;
+  onSuccess?: (item: InventoryItem) => void;
 }
 
 export function InventoryForm({ item, categories, isOpen, onClose, onSuccess }: InventoryFormProps) {
@@ -34,7 +34,11 @@ export function InventoryForm({ item, categories, isOpen, onClose, onSuccess }: 
     setPhotos,
     primaryPhotoIndex,
     setPrimaryPhotoIndex 
-  } = useInventoryForm({ item, onSuccess, onClose });
+  } = useInventoryForm({ 
+    item, 
+    onSuccess, 
+    onClose
+  });
 
   useEffect(() => {
     const loadSuppliers = async () => {
@@ -64,7 +68,7 @@ export function InventoryForm({ item, categories, isOpen, onClose, onSuccess }: 
         
         <div className="flex-1 overflow-y-auto px-1 pb-4">
           <Form {...form}>
-            <form id="inventory-form" onSubmit={onSubmit} className="space-y-4">
+            <form id="inventory-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <MainFields 
                 form={form}
                 categories={categories}

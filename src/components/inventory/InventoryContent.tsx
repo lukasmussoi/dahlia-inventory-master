@@ -9,6 +9,7 @@ import { JewelryForm } from "./JewelryForm";
 import { CategoryForm } from "./CategoryForm";
 import { InventoryFilters as Filters } from "./InventoryFilters";
 import { toast } from "sonner";
+import { PrintConfirmDialog } from "./PrintConfirmDialog";
 
 interface InventoryContentProps {
   isAdmin?: boolean;
@@ -24,6 +25,8 @@ export function InventoryContent({ isAdmin }: InventoryContentProps) {
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<InventoryCategory | null>(null);
   const [isDeletingItem, setIsDeletingItem] = useState(false);
+  const [showPrintConfirm, setShowPrintConfirm] = useState(false);
+  const [itemForPrint, setItemForPrint] = useState<InventoryItem | null>(null);
 
   // Buscar dados do inventário e categorias
   const { data: items = [], isLoading: isLoadingItems, refetch: refetchItems } = useQuery({
@@ -78,8 +81,21 @@ export function InventoryContent({ isAdmin }: InventoryContentProps) {
     setSelectedCategory(null);
     setIsItemModalOpen(false);
     setIsCategoryModalOpen(false);
+  };
+
+  // Função para manipular sucesso na edição/criação de item
+  const handleItemSuccess = (item: InventoryItem) => {
+    handleCloseModals();
     refetchItems();
-    refetchCategories();
+    // Abrir diálogo de confirmação de impressão
+    setItemForPrint(item);
+    setShowPrintConfirm(true);
+  };
+
+  // Função para manipular fechamento do diálogo de confirmação de impressão
+  const handlePrintConfirmClose = () => {
+    setShowPrintConfirm(false);
+    setItemForPrint(null);
   };
 
   // Função para deletar um item
@@ -242,7 +258,7 @@ export function InventoryContent({ isAdmin }: InventoryContentProps) {
           onDelete={isAdmin ? handleDeleteItem : undefined}
           onArchive={isAdmin ? handleArchiveItem : undefined}
           onRestore={isAdmin ? handleRestoreItem : undefined}
-          showArchivedControls={filters.status === 'archived'}
+          showArchivedControls={filters.showArchived}
         />
       </div>
 
@@ -252,7 +268,7 @@ export function InventoryContent({ isAdmin }: InventoryContentProps) {
           item={selectedItem}
           isOpen={isItemModalOpen}
           onClose={handleCloseModals}
-          onSuccess={refetchItems}
+          onSuccess={handleItemSuccess}
         />
       )}
 
@@ -263,6 +279,15 @@ export function InventoryContent({ isAdmin }: InventoryContentProps) {
           isOpen={isCategoryModalOpen}
           onClose={handleCloseModals}
           onSuccess={refetchCategories}
+        />
+      )}
+
+      {/* Diálogo de confirmação de impressão */}
+      {showPrintConfirm && itemForPrint && (
+        <PrintConfirmDialog
+          isOpen={showPrintConfirm}
+          onClose={handlePrintConfirmClose}
+          item={itemForPrint}
         />
       )}
     </div>
