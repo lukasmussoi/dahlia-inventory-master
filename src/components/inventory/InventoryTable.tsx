@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Edit, Trash2, AlertTriangle, Image as ImageIcon, Briefcase, Pencil, Archive, RotateCcw } from "lucide-react";
 import { InventoryItem } from "@/models/inventoryModel";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useQuery } from "@tanstack/react-query";
 import { InventoryModel } from "@/models/inventoryModel";
 import { Badge } from "@/components/ui/badge";
@@ -111,16 +111,14 @@ export function InventoryTable({
           <div className="space-y-1">
             <div>{item.quantity}</div>
             {item.quantity <= item.min_stock && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger>
-                    <AlertTriangle className="h-4 w-4 text-amber-500 inline-block" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Estoque abaixo do mínimo ({item.min_stock})</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <AlertTriangle className="h-4 w-4 text-amber-500 inline-block" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Estoque abaixo do mínimo ({item.min_stock})</p>
+                </TooltipContent>
+              </Tooltip>
             )}
           </div>
         </TableCell>
