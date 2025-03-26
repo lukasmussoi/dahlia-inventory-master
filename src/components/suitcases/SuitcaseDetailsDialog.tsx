@@ -76,7 +76,7 @@ export function SuitcaseDetailsDialog({
     } else if (suitcase && !suitcase.next_settlement_date) {
       // Se não houver data definida, sugerir data para 30 dias no futuro
       const futureDate = addDays(new Date(), 30);
-      handleUpdateNextSettlementDate(futureDate);
+      void handleUpdateNextSettlementDate(futureDate);
     }
   }, [suitcase, handleUpdateNextSettlementDate]);
 
@@ -93,32 +93,32 @@ export function SuitcaseDetailsDialog({
   };
 
   // Adaptadores para ajustar os tipos de retorno
-  const handleUpdateNextSettlementDateAdapter = (date: Date) => {
-    handleUpdateNextSettlementDate(date);
+  const handleUpdateNextSettlementDateAdapter = async (date: Date) => {
+    await handleUpdateNextSettlementDate(date);
   };
 
-  const handleAddItemAdapter = (inventoryId: string) => {
-    void handleAddItem(inventoryId);
+  const handleAddItemAdapter = async (inventoryId: string) => {
+    await handleAddItem(inventoryId);
   };
 
-  const handleToggleSoldAdapter = (item: SuitcaseItem, sold: boolean) => {
-    void handleToggleSold(item, sold);
+  const handleToggleSoldAdapter = async (item: SuitcaseItem, sold: boolean) => {
+    await handleToggleSold(item, sold);
   };
 
-  const handleUpdateSaleInfoAdapter = (itemId: string, field: string, value: string) => {
-    void handleUpdateSaleInfo(itemId, field, value);
+  const handleUpdateSaleInfoAdapter = async (itemId: string, field: string, value: string) => {
+    await handleUpdateSaleInfo(itemId, field, value);
   };
 
-  const handleReturnToInventoryAdapter = (itemIds: string[], quantity: number, isDamaged: boolean) => {
-    void handleReturnToInventory(itemIds, quantity, isDamaged);
+  const handleReturnToInventoryAdapter = async (itemIds: string[], quantity: number, isDamaged: boolean) => {
+    await handleReturnToInventory(itemIds, quantity, isDamaged);
   };
 
-  const handlePrintAdapter = () => {
-    void handlePrint();
+  const handlePrintAdapter = async () => {
+    await handlePrint();
   };
 
-  const handleDeleteSuitcaseAdapter = () => {
-    void handleDeleteSuitcase();
+  const handleDeleteSuitcaseAdapter = async () => {
+    await handleDeleteSuitcase();
   };
 
   if (isLoadingSuitcase || !suitcase) {

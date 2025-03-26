@@ -13,7 +13,6 @@ export function useSettlementDates() {
   
   const handleUpdateNextSettlementDate = async (suitcaseId: string, date?: Date | null) => {
     try {
-      // Correção: a função correta é 'updateSuitcase', não 'updateNextSettlementDate'
       await CombinedSuitcaseController.updateSuitcase(suitcaseId, { next_settlement_date: date || nextSettlementDate });
       if (date) {
         setNextSettlementDate(date);
