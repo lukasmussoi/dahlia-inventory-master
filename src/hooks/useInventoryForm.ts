@@ -169,7 +169,7 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
         
         // Verificar se há fotos para atualizar
         if (preparedPhotos.length > 0) {
-          console.log("Atualizando fotos do item:", preparedPhotos.length, "fotos");
+          console.log("Atualizando fotos do item com novo bucket:", preparedPhotos.length, "fotos");
           
           // Logs detalhados para verificar o conteúdo do array de fotos
           console.log("Detalhes das fotos a serem enviadas:", 
@@ -182,7 +182,7 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
             }))
           );
           
-          // Enviar as fotos para atualização
+          // Enviar as fotos para atualização no novo bucket
           await InventoryModel.updateItemPhotos(item.id, preparedPhotos);
         }
         
@@ -194,7 +194,7 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
         
         // Verificar se há fotos para salvar e se o item foi criado com sucesso
         if (preparedPhotos.length > 0 && savedItem) {
-          console.log("Salvando fotos do novo item:", preparedPhotos.length, "fotos");
+          console.log("Salvando fotos do novo item no novo bucket:", preparedPhotos.length, "fotos");
           
           // Logs detalhados para verificar o conteúdo do array de fotos
           console.log("Detalhes das fotos a serem enviadas:", 
@@ -207,7 +207,7 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
             }))
           );
           
-          // Enviar as fotos para salvamento
+          // Enviar as fotos para salvamento no novo bucket
           await InventoryModel.updateItemPhotos(savedItem.id, preparedPhotos);
         }
         

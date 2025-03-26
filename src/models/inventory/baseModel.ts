@@ -1,4 +1,3 @@
-
 /**
  * Modelo Base de Inventário
  * @file Este arquivo contém funções básicas para gerenciamento do inventário
@@ -145,7 +144,7 @@ export class BaseInventoryModel {
     return processedItem;
   }
 
-  // Atualizar fotos de um item - usando o bucket 'inventory_photos'
+  // Atualizar fotos de um item - usando o novo bucket 'inventory_images'
   static async updateItemPhotos(
     itemId: string, 
     photos: Array<File | { 
@@ -161,7 +160,7 @@ export class BaseInventoryModel {
 
     try {
       // Logs detalhados para entender o início do processamento
-      console.log("=== INÍCIO: updateItemPhotos ===");
+      console.log("=== INÍCIO: updateItemPhotos com NOVO BUCKET ===");
       console.log(`Iniciando atualização de fotos para item ID: ${itemId}`);
       console.log(`Quantidade de fotos recebidas: ${photos.length}`);
 
@@ -194,13 +193,54 @@ export class BaseInventoryModel {
 
       // Primeiro vamos excluir as fotos existentes
       console.log("Excluindo fotos antigas do item...");
+      
+      // 1. Buscar registros existentes para obter URLs
+      const { data: existingPhotos, error: fetchError } = await supabase
+        .from('inventory_photos')
+        .select('*')
+        .eq('inventory_id', itemId);
+        
+      if (fetchError) {
+        console.error("Erro ao buscar fotos existentes:", fetchError);
+      } else if (existingPhotos && existingPhotos.length > 0) {
+        console.log(`Encontradas ${existingPhotos.length} fotos existentes para excluir`);
+        
+        // 2. Excluir arquivos do storage
+        for (const photo of existingPhotos) {
+          try {
+            // Extrair o caminho relativo da URL completa
+            const fullUrl = photo.photo_url;
+            const urlParts = fullUrl.split('/');
+            const bucketName = urlParts.includes('inventory_photos') ? 'inventory_photos' : 'inventory_images';
+            
+            // O caminho no storage geralmente começa após o nome do bucket na URL
+            const bucketIndex = urlParts.indexOf(bucketName);
+            if (bucketIndex !== -1 && bucketIndex < urlParts.length - 1) {
+              const storagePath = urlParts.slice(bucketIndex + 1).join('/');
+              console.log(`Removendo arquivo ${storagePath} do bucket ${bucketName}`);
+              
+              const { error: deleteStorageError } = await supabase.storage
+                .from(bucketName)
+                .remove([storagePath]);
+                
+              if (deleteStorageError) {
+                console.error(`Erro ao excluir arquivo do storage: ${storagePath}`, deleteStorageError);
+              }
+            }
+          } catch (error) {
+            console.error("Erro ao processar exclusão de arquivo:", error);
+          }
+        }
+      }
+      
+      // 3. Excluir registros da tabela
       const { error: deleteError } = await supabase
         .from('inventory_photos')
         .delete()
         .eq('inventory_id', itemId);
       
       if (deleteError) {
-        console.error("Erro ao excluir fotos antigas:", deleteError);
+        console.error("Erro ao excluir registros de fotos antigas:", deleteError);
         throw deleteError;
       }
       
@@ -259,36 +299,49 @@ export class BaseInventoryModel {
               continue;
             }
             
-            // Definir o caminho de armazenamento (formato: inventory/item_id/timestamp_filename.jpg)
+            // Definir o caminho de armazenamento usando o NOVO BUCKET
             const timestamp = new Date().getTime();
             // Garantir que o nome do arquivo seja seguro para URLs
             const safeFileName = fileToUpload.name
               .replace(/[^a-zA-Z0-9_\-.]/g, '_')
               .toLowerCase();
-            const filePath = `inventory/${itemId}/${timestamp}_${safeFileName}`;
+              
+            // Determinar a extensão correta com base no tipo MIME
+            let fileExtension = '.jpg'; // Padrão
+            if (fileToUpload.type === 'image/png') fileExtension = '.png';
+            if (fileToUpload.type === 'image/jpeg') fileExtension = '.jpg';
+            if (fileToUpload.type === 'image/gif') fileExtension = '.gif';
+            if (fileToUpload.type === 'image/webp') fileExtension = '.webp';
             
-            console.log(`Enviando arquivo para: ${filePath}`);
+            // Garantir que o nome do arquivo tenha a extensão correta
+            const fileNameWithoutExt = safeFileName.replace(/\.[^/.]+$/, "");
+            const finalFileName = `${fileNameWithoutExt}${fileExtension}`;
             
-            // USANDO EXCLUSIVAMENTE BUCKET 'inventory_photos'
+            // Caminho no formato: inventory/item_id/timestamp_filename.ext
+            const filePath = `inventory/${itemId}/${timestamp}_${finalFileName}`;
+            
+            console.log(`Enviando arquivo para o NOVO BUCKET 'inventory_images' no caminho: ${filePath}`);
+            
+            // USANDO O NOVO BUCKET 'inventory_images'
             const { data: uploadData, error: uploadError } = await supabase.storage
-              .from('inventory_photos')
+              .from('inventory_images')
               .upload(filePath, fileToUpload, {
                 cacheControl: '3600',
                 upsert: true
               });
             
             if (uploadError) {
-              console.error(`Erro ao fazer upload da foto ${i + 1}:`, uploadError);
+              console.error(`Erro ao fazer upload da foto ${i + 1} para o novo bucket:`, uploadError);
               throw uploadError;
             }
             
-            // USANDO EXCLUSIVAMENTE BUCKET 'inventory_photos' na obtenção da URL pública
+            // USANDO O NOVO BUCKET 'inventory_images' na obtenção da URL pública
             const { data: urlData } = supabase.storage
-              .from('inventory_photos')
+              .from('inventory_images')
               .getPublicUrl(filePath);
               
             photoUrl = urlData.publicUrl;
-            console.log(`Foto ${i + 1} enviada com sucesso. URL:`, photoUrl);
+            console.log(`Foto ${i + 1} enviada com sucesso para o novo bucket. URL:`, photoUrl);
             
             // Adicionar ao array de registros
             processedPhotoRecords.push({
@@ -358,7 +411,7 @@ export class BaseInventoryModel {
       }
       
       console.log("Fotos atualizadas com sucesso:", data?.length);
-      console.log("=== FIM: updateItemPhotos ===");
+      console.log("=== FIM: updateItemPhotos com NOVO BUCKET ===");
       
       return data || [];
     } catch (error) {
