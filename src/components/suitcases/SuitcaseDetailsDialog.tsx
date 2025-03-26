@@ -5,13 +5,15 @@
  * @relacionamento Utiliza hooks específicos para gerenciar estados e operações da maleta
  */
 import { useEffect } from "react";
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogClose } from "@/components/ui/dialog";
 import { SuitcaseDetailsTabs } from "./details/SuitcaseDetailsTabs";
 import { LoadingIndicator } from "@/components/shared/LoadingIndicator";
 import { DeleteSuitcaseDialog } from "./details/DeleteSuitcaseDialog";
 import { useSuitcaseDetails } from "@/hooks/useSuitcaseDetails";
 import { addDays } from "date-fns";
 import { SuitcaseItem } from "@/types/suitcase";
+import { Button } from "@/components/ui/button";
+import { X } from "lucide-react";
 
 interface SuitcaseDetailsDialogProps {
   open: boolean;
@@ -92,7 +94,7 @@ export function SuitcaseDetailsDialog({
     }
   };
 
-  // Adaptadores para ajustar os tipos de retorno
+  // Adaptadores para ajustar os tipos de retorno para Promise<void>
   const handleUpdateNextSettlementDateAdapter = async (date: Date) => {
     await handleUpdateNextSettlementDate(date);
   };
@@ -121,10 +123,15 @@ export function SuitcaseDetailsDialog({
     await handleDeleteSuitcase();
   };
 
+  // Função para fechar o diálogo
+  const handleClose = () => {
+    handleDialogChange(false);
+  };
+
   if (isLoadingSuitcase || !suitcase) {
     return (
       <Dialog open={open} onOpenChange={handleDialogChange}>
-        <DialogContent>
+        <DialogContent className="no-close-x">
           <DialogTitle>Detalhes da Maleta</DialogTitle>
           <DialogDescription>Carregando informações da maleta...</DialogDescription>
           <div className="flex justify-center items-center p-8">
@@ -138,7 +145,7 @@ export function SuitcaseDetailsDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={handleDialogChange}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto no-close-x">
           <DialogTitle>Detalhes da Maleta {suitcase.code}</DialogTitle>
           <DialogDescription>
             Visualize e gerencie as informações desta maleta
@@ -171,6 +178,9 @@ export function SuitcaseDetailsDialog({
             isAdmin={isAdmin}
             onDeleteClick={() => setShowDeleteDialog(true)}
           />
+          <div className="flex justify-end mt-4">
+            <Button variant="outline" onClick={handleClose}>Fechar Janela</Button>
+          </div>
         </DialogContent>
       </Dialog>
 

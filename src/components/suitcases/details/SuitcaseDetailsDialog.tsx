@@ -13,6 +13,7 @@ import { DeleteSuitcaseDialog } from "./DeleteSuitcaseDialog";
 import { useSuitcaseDetails } from "@/hooks/useSuitcaseDetails";
 import { addDays } from "date-fns";
 import { SuitcaseItem } from "@/types/suitcase";
+import { Button } from "@/components/ui/button";
 
 interface SuitcaseDetailsDialogProps {
   open: boolean;
@@ -94,7 +95,12 @@ export function SuitcaseDetailsDialog({
     }
   };
 
-  // Adaptadores para ajustar os tipos de retorno
+  // Função para fechar o diálogo
+  const handleClose = () => {
+    handleDialogChange(false);
+  };
+
+  // Adaptadores para ajustar os tipos de retorno para Promise<void>
   const handleUpdateNextSettlementDateAdapter = async (date: Date) => {
     await handleUpdateNextSettlementDate(date);
   };
@@ -126,7 +132,7 @@ export function SuitcaseDetailsDialog({
   if (isLoadingSuitcase || !suitcase) {
     return (
       <Dialog open={open} onOpenChange={handleDialogChange}>
-        <DialogContent>
+        <DialogContent className="no-close-x">
           <DialogTitle>Detalhes da Maleta</DialogTitle>
           <div className="flex justify-center items-center p-8">
             <LoadingIndicator />
@@ -139,7 +145,7 @@ export function SuitcaseDetailsDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={handleDialogChange}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto no-close-x">
           <DialogTitle>Detalhes da Maleta {suitcase.code}</DialogTitle>
           <SuitcaseDetailsTabs
             activeTab={activeTab}
@@ -169,6 +175,9 @@ export function SuitcaseDetailsDialog({
             isAdmin={isAdmin}
             onDeleteClick={() => setShowDeleteDialog(true)}
           />
+          <div className="flex justify-end mt-4">
+            <Button variant="outline" onClick={handleClose}>Fechar Janela</Button>
+          </div>
         </DialogContent>
       </Dialog>
 
