@@ -29,9 +29,12 @@ export function WebcamModal({ isOpen, onOpenChange, onCapture }: WebcamModalProp
   // Monitorar quando o modal é fechado para limpar os dados
   useEffect(() => {
     if (!isOpen) {
-      // Delay para garantir que a animação de fechamento seja concluída
+      // Garantir que a câmera esteja desligada, mas não resetar os dados imediatamente
+      // para permitir uma transição suave
       const timer = setTimeout(() => {
-        setActiveTab("capture");
+        if (!isOpen) {
+          setActiveTab("capture");
+        }
       }, 300);
       return () => clearTimeout(timer);
     }

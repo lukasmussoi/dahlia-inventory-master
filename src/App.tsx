@@ -1,4 +1,5 @@
 
+import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -6,6 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import Router from "./routes";
 import { useEffect, useState } from "react";
 import { initializeSupabaseStorage } from "@/utils/supabaseInit";
+import { toast } from "sonner";
 
 // Criando uma instância do QueryClient
 const queryClient = new QueryClient();
@@ -23,6 +25,7 @@ const App = () => {
         await initializeSupabaseStorage();
       } catch (error) {
         console.error("Erro durante a inicialização da aplicação:", error);
+        toast.error("Falha ao inicializar armazenamento. Algumas funcionalidades podem não funcionar corretamente.");
       } finally {
         setIsInitializing(false);
       }
@@ -32,14 +35,22 @@ const App = () => {
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      {/* Providers da interface do usuário */}
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <Router />
-      </TooltipProvider>
-    </QueryClientProvider>
+    <React.StrictMode>
+      <QueryClientProvider client={queryClient}>
+        {/* Providers da interface do usuário */}
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          {isInitializing ? (
+            <div className="flex items-center justify-center h-screen">
+              <p className="text-lg">Inicializando aplicação...</p>
+            </div>
+          ) : (
+            <Router />
+          )}
+        </TooltipProvider>
+      </QueryClientProvider>
+    </React.StrictMode>
   );
 };
 

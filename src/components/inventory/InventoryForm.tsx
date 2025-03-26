@@ -44,18 +44,20 @@ export function InventoryForm({ item, categories, isOpen, onClose, onSuccess }: 
   });
 
   useEffect(() => {
-    const loadSuppliers = async () => {
-      try {
-        const data = await InventoryModel.getAllSuppliers();
-        setSuppliers(data);
-      } catch (error) {
-        console.error('Erro ao carregar fornecedores:', error);
-        toast.error("Erro ao carregar fornecedores");
-      }
-    };
-
-    loadSuppliers();
-  }, []);
+    if (isOpen) {
+      const loadSuppliers = async () => {
+        try {
+          const data = await InventoryModel.getAllSuppliers();
+          setSuppliers(data);
+        } catch (error) {
+          console.error('Erro ao carregar fornecedores:', error);
+          toast.error("Erro ao carregar fornecedores");
+        }
+      };
+  
+      loadSuppliers();
+    }
+  }, [isOpen]);
 
   // Função para gerenciar o fechamento seguro
   const handleCloseForm = () => {
@@ -117,6 +119,7 @@ export function InventoryForm({ item, categories, isOpen, onClose, onSuccess }: 
               />
               <DimensionsFields form={form} />
               <PhotoFields
+                form={form}
                 photos={photos}
                 setPhotos={setPhotos}
                 primaryPhotoIndex={primaryPhotoIndex}

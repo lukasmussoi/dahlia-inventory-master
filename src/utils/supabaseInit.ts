@@ -1,15 +1,51 @@
 
 /**
- * Utilitários para inicialização dos recursos do Supabase
- * @file Este arquivo contém funções para garantir que os recursos necessários do Supabase
- * estejam disponíveis antes do uso da aplicação
+ * Utilitário para inicialização de recursos do Supabase
+ * Este arquivo contém funções para inicializar os buckets de armazenamento
+ * do Supabase e verificar se estão configurados corretamente.
+ * 
+ * Relacionamentos:
+ * - Utilizado pelo App.tsx durante a inicialização da aplicação
+ * - Depende da conexão supabase definida em integrations/supabase/client
  */
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 /**
- * Verifica e cria buckets necessários para armazenamento de imagens no Supabase Storage
- * @returns Promise<boolean> - true se os buckets estão prontos, false caso contrário
+ * Verifica o status de um bucket do Supabase Storage
+ * @param bucketName Nome do bucket a ser verificado
+ * @returns Objeto com informações do status do bucket
+ */
+export const checkBucketStatus = async (bucketName: string) => {
+  try {
+    // Verificar se o bucket existe
+    const { data: buckets, error } = await supabase.storage.listBuckets();
+    
+    if (error) {
+      console.error(`Erro ao verificar status do bucket ${bucketName}:`, error);
+      return { exists: false, isPublic: false, error: error.message };
+    }
+    
+    // Verificar se o bucket está na lista
+    const bucket = buckets.find(b => b.name === bucketName);
+    const exists = !!bucket;
+    
+    // Verificar se o bucket é público
+    const isPublic = exists && bucket.public;
+    
+    return { exists, isPublic };
+  } catch (error) {
+    console.error(`Erro ao verificar status do bucket ${bucketName}:`, error);
+    return { exists: false, isPublic: false, error: String(error) };
+  }
+};
+
+/**
+ * Inicializa os buckets de armazenamento do Supabase
+ * Verifica se os buckets necessários existem e cria-os se necessário
+ * Também cria a pasta 'inventory' em cada bucket
+ * 
+ * @returns Promise<boolean> indicando se a inicialização foi bem-sucedida
  */
 export const initializeSupabaseStorage = async (): Promise<boolean> => {
   try {
@@ -33,18 +69,20 @@ export const initializeSupabaseStorage = async (): Promise<boolean> => {
     // Verificar status dos buckets
     for (const bucketName of requiredBuckets) {
       if (!bucketNames.includes(bucketName)) {
-        console.log(`Bucket ${bucketName} não encontrado. Verificando se foi criado em outra sessão...`);
+        console.log(`Bucket ${bucketName} não encontrado. Tentando criar...`);
         
-        // Tentar acessar o bucket para verificar se ele existe
-        const { data, error } = await supabase.storage.from(bucketName).list();
+        // Tentar criar o bucket se não existir
+        const { error: createError } = await supabase.storage.createBucket(bucketName, {
+          public: true,
+          fileSizeLimit: 5 * 1024 * 1024 // 5MB
+        });
         
-        if (error && error.message.includes('The resource was not found')) {
-          console.error(`Erro ao acessar bucket ${bucketName}:`, error);
-          toast.error(`Não foi possível acessar o bucket ${bucketName}. Contate o administrador.`);
+        if (createError) {
+          console.error(`Erro ao criar bucket ${bucketName}:`, createError);
           return false;
         }
         
-        console.log(`Bucket ${bucketName} está acessível.`);
+        console.log(`Bucket ${bucketName} criado com sucesso.`);
       } else {
         console.log(`Bucket ${bucketName} encontrado.`);
         
@@ -53,21 +91,18 @@ export const initializeSupabaseStorage = async (): Promise<boolean> => {
         
         if (exists && !isPublic) {
           console.log(`Bucket ${bucketName} não é público. Algumas funcionalidades podem não funcionar corretamente.`);
-          toast.warning(`O bucket ${bucketName} não é público. Algumas imagens podem não ser exibidas corretamente.`);
         }
       }
       
-      // Verificar/criar pasta 'inventory' no bucket
+      // Criar pasta 'inventory' no bucket se não existir
       try {
         const { data: folders } = await supabase.storage.from(bucketName).list();
         
-        if (!folders?.some(item => item.name === 'inventory')) {
+        if (!folders?.some(item => item.name === 'inventory' && item.metadata?.mimetype === 'folder')) {
           // Criar um arquivo temporário para simular a criação da pasta
           const tempFile = new Blob([''], { type: 'text/plain' });
           await supabase.storage.from(bucketName).upload('inventory/.folder', tempFile);
           console.log(`Pasta 'inventory' criada no bucket ${bucketName}.`);
-        } else {
-          console.log(`Pasta 'inventory' já existe no bucket ${bucketName}.`);
         }
       } catch (folderError) {
         console.error(`Erro ao verificar/criar pasta 'inventory' no bucket ${bucketName}:`, folderError);
@@ -78,35 +113,6 @@ export const initializeSupabaseStorage = async (): Promise<boolean> => {
     return true;
   } catch (error) {
     console.error("Erro ao inicializar Supabase Storage:", error);
-    toast.error("Erro ao inicializar armazenamento. Algumas funcionalidades podem não funcionar corretamente.");
     return false;
-  }
-};
-
-/**
- * Verifica o status de um bucket específico
- * @param bucketName Nome do bucket a ser verificado
- * @returns Promise<{exists: boolean, isPublic: boolean}> Status do bucket
- */
-export const checkBucketStatus = async (bucketName: string): Promise<{exists: boolean, isPublic: boolean}> => {
-  try {
-    // Verificar se o bucket existe
-    const { data: buckets, error: listError } = await supabase.storage.listBuckets();
-    
-    if (listError) {
-      console.error("Erro ao listar buckets:", listError);
-      return { exists: false, isPublic: false };
-    }
-    
-    const bucket = buckets.find(b => b.name === bucketName);
-    
-    if (!bucket) {
-      return { exists: false, isPublic: false };
-    }
-    
-    return { exists: true, isPublic: bucket.public };
-  } catch (error) {
-    console.error(`Erro ao verificar status do bucket ${bucketName}:`, error);
-    return { exists: false, isPublic: false };
   }
 };
