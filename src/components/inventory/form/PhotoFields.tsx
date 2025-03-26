@@ -6,11 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Camera, Trash2, Upload, Save } from "lucide-react";
 import { useDropzone } from "react-dropzone";
 import { Progress } from "@/components/ui/progress";
+import { toast } from "sonner";
 import { FormValues } from "@/hooks/useInventoryForm";
 import { supabase } from "@/integrations/supabase/client";
+import { uploadMultiplePhotos } from "@/utils/photoUploadUtils";
 
 interface PhotoFieldsProps {
-  form: UseFormReturn<any>;
+  form?: UseFormReturn<any>; // Tornar form opcional
   photos: File[];
   setPhotos: React.Dispatch<React.SetStateAction<File[]>>;
   primaryPhotoIndex: number | null;
@@ -18,6 +20,8 @@ interface PhotoFieldsProps {
   uploadProgress: number;
   setUploadProgress: React.Dispatch<React.SetStateAction<number>>;
   onSavePhotos: () => void;
+  itemId?: string; // Adicionar itemId opcional para permitir salvamento direto
+  disabled?: boolean; // Adicionar disabled para controlar quando os botões devem estar desativados
 }
 
 export function PhotoFields({
@@ -28,7 +32,9 @@ export function PhotoFields({
   setPrimaryPhotoIndex,
   uploadProgress,
   setUploadProgress,
-  onSavePhotos
+  onSavePhotos,
+  itemId,
+  disabled = false
 }: PhotoFieldsProps) {
   // Configurar o dropzone para upload de arquivos
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -73,12 +79,81 @@ export function PhotoFields({
     }
   };
 
+  // Função para salvar fotos diretamente se itemId estiver disponível
+  const handleSaveDirectly = async () => {
+    if (!itemId) {
+      toast.error("É necessário salvar o item primeiro para anexar fotos.");
+      return;
+    }
+    
+    if (photos.length === 0) {
+      toast.warning("Nenhuma foto selecionada para upload.");
+      return;
+    }
+    
+    try {
+      setUploadProgress(0);
+      
+      // Fazer upload das fotos para o storage
+      const results = await uploadMultiplePhotos(
+        photos,
+        'inventory_images',
+        (progress) => setUploadProgress(progress),
+        itemId
+      );
+      
+      // Verificar resultados do upload
+      const successfulUploads = results.filter(r => r.success && r.url);
+      
+      if (successfulUploads.length > 0) {
+        // Preparar dados para salvar no banco
+        const photoRecords = successfulUploads.map((result, index) => ({
+          inventory_id: itemId,
+          photo_url: result.url as string,
+          is_primary: index === primaryPhotoIndex
+        }));
+        
+        // Remover fotos antigas
+        const { error: deleteError } = await supabase
+          .from('inventory_photos')
+          .delete()
+          .eq('inventory_id', itemId);
+          
+        if (deleteError) {
+          console.error("Erro ao excluir fotos antigas:", deleteError);
+          toast.error("Erro ao atualizar fotos antigas");
+          return;
+        }
+        
+        // Inserir novas fotos
+        const { data, error } = await supabase
+          .from('inventory_photos')
+          .insert(photoRecords)
+          .select();
+          
+        if (error) {
+          console.error("Erro ao salvar registros das fotos:", error);
+          toast.error("Erro ao salvar informações das fotos");
+        } else {
+          toast.success(`${successfulUploads.length} foto(s) salva(s) com sucesso!`);
+        }
+      } else {
+        toast.error("Não foi possível fazer upload das fotos. Tente novamente.");
+      }
+    } catch (error) {
+      console.error('Erro ao salvar fotos:', error);
+      toast.error("Erro ao salvar fotos. Verifique as permissões e tente novamente.");
+    } finally {
+      setUploadProgress(0);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="text-base font-medium">Fotos do Item</div>
         <div className="flex gap-2">
-          <WebcamButton onCaptureComplete={handleWebcamCapture} />
+          <WebcamButton onCaptureComplete={handleWebcamCapture} disabled={disabled} />
           
           <Button
             type="button"
@@ -86,8 +161,9 @@ export function PhotoFields({
             size="sm" 
             className="h-8 px-2" 
             {...getRootProps()}
+            disabled={disabled}
           >
-            <input {...getInputProps()} />
+            <input {...getInputProps()} disabled={disabled} />
             <Upload size={16} className="mr-1" />
             <span className="text-xs">Upload</span>
           </Button>
@@ -97,8 +173,8 @@ export function PhotoFields({
             variant="default" 
             size="sm" 
             className="h-8 px-2 bg-green-600 hover:bg-green-700"
-            onClick={onSavePhotos}
-            disabled={photos.length === 0}
+            onClick={itemId ? handleSaveDirectly : onSavePhotos}
+            disabled={photos.length === 0 || disabled}
           >
             <Save size={16} className="mr-1" />
             <span className="text-xs">Salvar Fotos</span>
@@ -111,9 +187,9 @@ export function PhotoFields({
         {...getRootProps()} 
         className={`border-2 border-dashed rounded-md p-4 text-center cursor-pointer transition-colors ${
           isDragActive ? 'border-primary bg-primary/5' : 'border-muted-foreground/25'
-        }`}
+        } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
       >
-        <input {...getInputProps()} />
+        <input {...getInputProps()} disabled={disabled} />
         <Camera className="mx-auto h-8 w-8 text-muted-foreground" />
         <p className="mt-2 text-sm text-muted-foreground">
           {isDragActive
@@ -166,6 +242,7 @@ export function PhotoFields({
                     size="sm" 
                     variant="secondary" 
                     onClick={() => handleSetPrimary(index)}
+                    disabled={disabled}
                   >
                     Definir como principal
                   </Button>
@@ -175,6 +252,7 @@ export function PhotoFields({
                   size="sm" 
                   variant="destructive" 
                   onClick={() => handleRemovePhoto(index)}
+                  disabled={disabled}
                 >
                   <Trash2 size={16} />
                 </Button>

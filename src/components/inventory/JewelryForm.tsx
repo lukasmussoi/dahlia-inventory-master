@@ -1,6 +1,4 @@
-/**
- * JewelryForm - Componente para criação e edição de joias no inventário
- */
+
 import { useState, useEffect, useMemo } from "react";
 import {
   Dialog,
@@ -54,6 +52,7 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
   const [photos, setPhotos] = useState<File[]>([]);
   const [primaryPhotoIndex, setPrimaryPhotoIndex] = useState<number | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [savedItem, setSavedItem] = useState<InventoryItem | null>(null);
 
   // Inicializar formulário com valores padrão
   const form = useForm<FormValues>({
@@ -72,6 +71,9 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
       price: item?.price || 0,
     },
   });
+
+  // Usar o item salvo ou o item original para o ID
+  const currentItemId = savedItem?.id || item?.id;
 
   // Buscar dados necessários
   const { data: categories = [] } = useQuery({
@@ -170,7 +172,7 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
 
   // Função para salvar apenas as fotos, sem submeter o resto do formulário
   const handleSavePhotosOnly = async () => {
-    if (!item) {
+    if (!currentItemId) {
       toast.error("É necessário salvar o item primeiro para anexar fotos.");
       return;
     }
@@ -189,7 +191,7 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
         photos,
         'inventory_images',
         (progress) => setUploadProgress(progress),
-        item.id
+        currentItemId
       );
       
       // Verificar resultados do upload
@@ -198,7 +200,7 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
       if (successfulUploads.length > 0) {
         // Preparar dados para salvar no banco
         const photoRecords = successfulUploads.map((result, index) => ({
-          inventory_id: item.id,
+          inventory_id: currentItemId,
           photo_url: result.url as string,
           is_primary: index === primaryPhotoIndex
         }));
@@ -207,7 +209,7 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
         const { error: deleteError } = await supabase
           .from('inventory_photos')
           .delete()
-          .eq('inventory_id', item.id);
+          .eq('inventory_id', currentItemId);
           
         if (deleteError) {
           console.error("Erro ao excluir fotos antigas:", deleteError);
@@ -273,16 +275,28 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
 
       let createdOrUpdatedItem: InventoryItem | null = null;
       
-      // Restante da função de submissão
-      if (item) {
+      // Importante: definir explicitamente barcode e sku como null para evitar 
+      // erro de duplicidade ao criar novo item
+      if (!item) {
+        // No modo de criação, certifique-se de não enviar barcode ou sku
+        // Deixe isso ser gerado pelo gatilho no banco de dados
+        const createData = {
+          ...itemData,
+          barcode: undefined, // Remover do objeto para deixar o trigger gerar
+          sku: undefined,     // Remover do objeto para deixar o trigger gerar
+        };
+        
+        console.log("Criando novo item");
+        createdOrUpdatedItem = await InventoryModel.createItem(createData);
+        console.log("Item criado:", createdOrUpdatedItem);
+        toast.success("Peça criada com sucesso!");
+        
+        // Armazenar o item criado para uso posterior
+        setSavedItem(createdOrUpdatedItem);
+      } else {
         console.log("Atualizando item existente");
         createdOrUpdatedItem = await InventoryModel.updateItem(item.id, itemData);
         toast.success("Peça atualizada com sucesso!");
-      } else {
-        console.log("Criando novo item");
-        createdOrUpdatedItem = await InventoryModel.createItem(itemData);
-        console.log("Item criado:", createdOrUpdatedItem);
-        toast.success("Peça criada com sucesso!");
       }
       
       // Se temos fotos e um item criado/atualizado, fazer upload das fotos
@@ -325,7 +339,16 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
       }
     } catch (error) {
       console.error('Erro ao salvar peça:', error);
-      toast.error("Erro ao salvar peça. Verifique os dados e tente novamente.");
+      if (error instanceof Error) {
+        // Verificar mensagem específica de erro para barcode duplicado
+        if (error.message?.includes('duplicate key') && error.message?.includes('inventory_barcode_key')) {
+          toast.error("Erro: código de barras duplicado. Tente novamente ou use um código diferente.");
+        } else {
+          toast.error(`Erro ao salvar peça: ${error.message}`);
+        }
+      } else {
+        toast.error("Erro ao salvar peça. Verifique os dados e tente novamente.");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -341,33 +364,6 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
     });
     return () => subscription.unsubscribe();
   }, [form]);
-
-  // Função para lidar com fotos capturadas pela webcam
-  const handleWebcamCapture = (capturedPhotos: File[]) => {
-    setPhotos((prev) => [...prev, ...capturedPhotos]);
-    
-    // Se não houver foto primária definida, define a primeira nova foto
-    if (primaryPhotoIndex === null && capturedPhotos.length > 0) {
-      setPrimaryPhotoIndex(photos.length);
-    }
-  };
-
-  // Função para remover uma foto da lista
-  const handleRemovePhoto = (index: number) => {
-    setPhotos((prev) => prev.filter((_, i) => i !== index));
-    
-    // Ajustar o índice da foto primária se necessário
-    if (primaryPhotoIndex === index) {
-      setPrimaryPhotoIndex(photos.length > 1 ? 0 : null);
-    } else if (primaryPhotoIndex !== null && primaryPhotoIndex > index) {
-      setPrimaryPhotoIndex(primaryPhotoIndex - 1);
-    }
-  };
-
-  // Função para definir foto principal
-  const handleSetPrimaryPhoto = (index: number) => {
-    setPrimaryPhotoIndex(index);
-  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -576,36 +572,76 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                       {form.formState.errors.price && (
                         <p className="text-red-500 text-sm">{form.formState.errors.price.message}</p>
                       )}
-                      <p className="text-sm text-muted-foreground">
-                        Preço sugerido: R$ {calculatedValues.suggestedPrice.toFixed(2)}
-                      </p>
                     </div>
                   </div>
+                  
+                  {/* Resumo calculado de preços */}
+                  <div className="mt-4 pt-4 border-t">
+                    <div className="flex flex-col gap-2">
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-500">Custo Total:</span>
+                        <span className="font-medium">
+                          {calculatedValues.totalCost.toLocaleString('pt-BR', { 
+                            style: 'currency', 
+                            currency: 'BRL' 
+                          })}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-500">Preço sugerido:</span>
+                        <span className="font-medium">
+                          {calculatedValues.suggestedPrice.toLocaleString('pt-BR', { 
+                            style: 'currency', 
+                            currency: 'BRL' 
+                          })}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-500">Lucro:</span>
+                        <span className={`font-medium ${calculatedValues.profit < 0 ? 'text-red-500' : 'text-green-500'}`}>
+                          {calculatedValues.profit.toLocaleString('pt-BR', { 
+                            style: 'currency', 
+                            currency: 'BRL' 
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={onClose}
+                    disabled={isSubmitting}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button 
+                    type="submit"
+                    className="min-w-[120px]"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      <div className="flex items-center">
+                        <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
+                        <span>Salvando...</span>
+                      </div>
+                    ) : (
+                      <span>{item ? "Atualizar" : "Salvar"}</span>
+                    )}
+                  </Button>
                 </div>
               </form>
             </Form>
           </div>
 
-          {/* Coluna lateral - Fotos e Resumo */}
-          <div className="flex flex-col gap-6">
-            {/* Seção de fotos - implementação completa com PhotoFields */}
-            <div className="bg-white rounded-lg p-4 shadow-sm border">
-              <div className="flex items-center justify-between mb-4">
-                <Label className="text-lg font-medium">Fotos da Peça</Label>
-                <Button 
-                  type="button" 
-                  size="sm"
-                  variant="outline"
-                  onClick={handleSavePhotosOnly}
-                  disabled={photos.length === 0 || isSubmitting}
-                >
-                  Salvar Fotos
-                </Button>
-              </div>
-
-              {/* Usar PhotoFields para gerenciar fotos */}
+          {/* Coluna lateral - Fotos e sumário */}
+          <div className="overflow-y-auto space-y-6">
+            {/* Componente para gerenciar as fotos */}
+            <div className="bg-white rounded-lg p-6 shadow-sm border">
               <PhotoFields 
-                form={form}
                 photos={photos}
                 setPhotos={setPhotos}
                 primaryPhotoIndex={primaryPhotoIndex}
@@ -613,30 +649,11 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                 uploadProgress={uploadProgress}
                 setUploadProgress={setUploadProgress}
                 onSavePhotos={handleSavePhotosOnly}
+                itemId={currentItemId}
+                disabled={isSubmitting}
               />
             </div>
-
-            <PriceSummary
-              totalCost={calculatedValues.totalCost}
-              finalPrice={form.watch('price') || 0}
-              finalProfit={calculatedValues.profit}
-              suggestedPrice={calculatedValues.suggestedPrice}
-            />
           </div>
-        </div>
-
-        <div className="flex justify-end gap-4 pt-4 border-t mt-4">
-          <Button variant="outline" onClick={onClose} className="h-12 px-6 text-base">
-            Cancelar
-          </Button>
-          <Button 
-            type="submit"
-            form="jewelry-form"
-            className="bg-[#F97316] hover:bg-[#F97316]/90 h-12 px-8 text-base font-semibold"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? "Salvando..." : "Salvar"}
-          </Button>
         </div>
       </DialogContent>
     </Dialog>
