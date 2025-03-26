@@ -163,12 +163,12 @@ export class SupplyPdfController {
                 if (data.cell.text && Array.isArray(data.cell.text) && data.cell.text.length > 0) {
                   // Percorrer todas as linhas de texto na célula
                   data.cell.text.forEach((textLine) => {
-                    // Verificar se textLine não é null e é um objeto
-                    if (textLine) {
+                    // Verificar se textLine não é null e é um objeto (não uma string)
+                    if (textLine && typeof textLine === 'object') {
                       // Tratar o textLine como CellTextLine para corrigir o problema de tipagem
                       const line = textLine as CellTextLine;
                       // Verificação adicional para garantir que x existe
-                      if (line && 'x' in line) {
+                      if ('x' in line) {
                         // Deslocar o texto para a direita da imagem
                         line.x = imgX + textPadding;
                       }
