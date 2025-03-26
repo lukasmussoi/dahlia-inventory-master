@@ -1,3 +1,4 @@
+
 /**
  * Componente para captura de fotos via webcam
  * 
@@ -91,7 +92,7 @@ export function WebcamCapture({ onCapture }: WebcamCaptureProps) {
             // CORREÇÃO: Criar um nome de arquivo único e seguro para URLs
             const timestamp = new Date().getTime();
             const randomStr = Math.random().toString(36).substring(2, 8);
-            // Remover caracteres problemáticos e garantir extensão .jpg
+            // Nomear arquivo com padrão seguro conforme solicitado
             const fileName = `webcam_${timestamp}_${randomStr}.jpg`;
             
             // CORREÇÃO: Criar um arquivo a partir do blob com tipo MIME explícito para JPEG

@@ -141,8 +141,7 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
       console.log("Dados preparados para salvamento:", itemData);
       console.log("Fotos para salvamento:", photos.length);
       
-      // Preparar as fotos para envio, adicionando informação de foto primária
-      // CORREÇÃO: Garantir que cada foto tenha a propriedade file e is_primary
+      // CORREÇÃO: Preparar as fotos para envio, garantindo que cada objeto tenha file e is_primary
       const preparedPhotos = photos.map((photo, index) => {
         // Verificação detalhada para depuração
         console.log(`Preparando foto ${index + 1}/${photos.length}:`, {
