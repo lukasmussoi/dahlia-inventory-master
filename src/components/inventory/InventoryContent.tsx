@@ -23,6 +23,7 @@ export function InventoryContent({ isAdmin }: InventoryContentProps) {
   });
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<InventoryCategory | null>(null);
+  const [isDeletingItem, setIsDeletingItem] = useState(false);
 
   // Buscar dados do inventário e categorias
   const { data: items = [], isLoading: isLoadingItems, refetch: refetchItems } = useQuery({
@@ -84,6 +85,8 @@ export function InventoryContent({ isAdmin }: InventoryContentProps) {
   // Função para deletar um item
   const handleDeleteItem = async (id: string) => {
     try {
+      if (isDeletingItem) return; // Evitar múltiplas exclusões simultâneas
+      
       const suitcaseInfo = await InventoryModel.checkItemInSuitcase(id);
       
       if (suitcaseInfo) {
@@ -99,17 +102,27 @@ export function InventoryContent({ isAdmin }: InventoryContentProps) {
 
       if (window.confirm("Tem certeza que deseja excluir este item?")) {
         try {
+          setIsDeletingItem(true);
+          toast.loading("Excluindo item e suas dependências...");
+          
           await InventoryModel.deleteItem(id);
+          
+          toast.dismiss();
           toast.success("Item removido com sucesso!");
-          refetchItems();
+          
+          // Garantir que a lista seja atualizada após a exclusão
+          await refetchItems();
         } catch (error: any) {
+          toast.dismiss();
           console.error('Erro ao deletar item:', error);
           // Tratamento específico para mensagens de erro vindas do controller
           if (error.message) {
             toast.error(error.message);
           } else {
-            toast.error("Erro ao remover item. Verifique se não há movimentações de estoque associadas.");
+            toast.error("Erro ao remover item. Verifique se não há dependências não tratadas.");
           }
+        } finally {
+          setIsDeletingItem(false);
         }
       }
     } catch (error) {

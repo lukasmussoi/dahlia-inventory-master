@@ -157,7 +157,19 @@ export class InventoryItemModel {
         }
       }
       
-      // 8. Finalmente, excluir o item do inventário
+      // 8. Verificar e excluir registros de itens danificados
+      console.log("Verificando e excluindo registros de itens danificados para o item:", id);
+      const { error: damagedItemsError } = await supabase
+        .from('inventory_damaged_items')
+        .delete()
+        .eq('inventory_id', id);
+      
+      if (damagedItemsError) {
+        console.error("Erro ao excluir registros de itens danificados:", damagedItemsError);
+        throw damagedItemsError;
+      }
+      
+      // 9. Finalmente, excluir o item do inventário
       console.log("Excluindo o item do inventário:", id);
       const { error } = await supabase
         .from('inventory')

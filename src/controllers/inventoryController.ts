@@ -58,8 +58,11 @@ export const InventoryController = {
         throw new Error("Não é possível excluir o item pois ele está em uma maleta ativa. Devolva a maleta primeiro.");
       }
       
+      console.log("Iniciando exclusão de item do inventário:", id);
+      
       // Executar a exclusão em cascata
       await InventoryModel.deleteItem(id);
+      console.log("Item excluído com sucesso:", id);
       return true;
     } catch (error) {
       console.error("Erro ao excluir item do inventário:", error);
@@ -117,9 +120,8 @@ export const InventoryController = {
       const itemsWithSuitcaseInfo = await Promise.all(
         items.map(async (item) => {
           try {
-            // Importar o controlador combinado para usar o método getItemSuitcaseInfo
-            const { CombinedSuitcaseController } = require("@/controllers/suitcase");
-            const suitcaseInfo = await CombinedSuitcaseController.getItemSuitcaseInfo(item.id);
+            // Importar o controlador de maletas diretamente para evitar erro de "require is not defined"
+            const suitcaseInfo = await this.checkItemInSuitcase(item.id);
             return {
               ...item,
               suitcase_info: suitcaseInfo
