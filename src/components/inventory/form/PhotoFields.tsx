@@ -21,6 +21,7 @@ interface PhotoFieldsProps {
 }
 
 export function PhotoFields({
+  form,
   photos,
   setPhotos,
   primaryPhotoIndex,
@@ -74,7 +75,7 @@ export function PhotoFields({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <FormLabel className="text-base">Fotos do Item</FormLabel>
+        <div className="text-base font-medium">Fotos do Item</div>
         <div className="flex gap-2">
           <WebcamButton onCaptureComplete={handleWebcamCapture} />
           
