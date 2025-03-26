@@ -144,7 +144,7 @@ export class BaseInventoryModel {
     return processedItem;
   }
 
-  // Atualizar fotos de um item - modificado para aceitar Files e lidar com a foto primária
+  // Atualizar fotos de um item - corrigido para lidar corretamente com foto da webcam
   static async updateItemPhotos(
     itemId: string, 
     photos: Array<File | { 
@@ -161,6 +161,33 @@ export class BaseInventoryModel {
     try {
       console.log("Iniciando atualização de fotos para item:", itemId);
       console.log("Quantidade de fotos recebidas:", photos.length);
+
+      // Diagnóstico detalhado das fotos recebidas
+      photos.forEach((photo, index) => {
+        if (photo instanceof File) {
+          console.log(`Foto ${index + 1}: Objeto File`, {
+            name: photo.name, 
+            type: photo.type,
+            size: photo.size,
+            lastModified: photo.lastModified
+          });
+        } else if ('file' in photo && photo.file instanceof File) {
+          console.log(`Foto ${index + 1}: Objeto com File e is_primary`, {
+            name: photo.file.name,
+            type: photo.file.type,
+            size: photo.file.size,
+            lastModified: photo.file.lastModified,
+            is_primary: photo.is_primary
+          });
+        } else if ('photo_url' in photo) {
+          console.log(`Foto ${index + 1}: Objeto com photo_url`, {
+            url: photo.photo_url,
+            is_primary: photo.is_primary
+          });
+        } else {
+          console.error(`Foto ${index + 1}: Formato desconhecido`, photo);
+        }
+      });
 
       // Primeiro vamos excluir as fotos existentes
       console.log("Excluindo fotos antigas do item");
@@ -189,22 +216,31 @@ export class BaseInventoryModel {
           // É um objeto com URL, usar diretamente
           photoUrl = photo.photo_url;
           isPrimary = photo.is_primary || false;
+          console.log(`Processando foto ${i + 1} com URL:`, photoUrl);
         } 
         else if ('file' in photo && photo.file instanceof File) {
           // É um objeto com File e possivelmente is_primary
           fileToUpload = photo.file;
           isPrimary = photo.is_primary || false;
+          console.log(`Processando foto ${i + 1} como objeto com file e is_primary:`, {
+            filename: photo.file.name,
+            isPrimary: isPrimary
+          });
         }
         else if (photo instanceof File) {
           // É um arquivo File direto (upload tradicional ou webcam)
           fileToUpload = photo;
           // Verificar se está usando a forma antiga (sem informação de primária)
           isPrimary = i === 0; // Primeira foto como primária por padrão no método antigo
+          console.log(`Processando foto ${i + 1} como File direto:`, {
+            filename: photo.name,
+            isPrimary: isPrimary
+          });
         }
         
         // Se temos um arquivo para upload, processá-lo
         if (fileToUpload) {
-          console.log(`Processando arquivo ${i + 1}/${photos.length}: ${fileToUpload.name} (${fileToUpload.type})`);
+          console.log(`Iniciando upload do arquivo ${i + 1}/${photos.length}: ${fileToUpload.name} (${fileToUpload.type})`);
           
           try {
             // Verificar tipo de arquivo e formato
