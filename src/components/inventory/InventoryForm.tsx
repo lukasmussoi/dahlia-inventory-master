@@ -29,7 +29,7 @@ export function InventoryForm({ item, categories, isOpen, onClose, onSuccess }: 
   const { 
     form, 
     isSubmitting, 
-    onSubmit,
+    handleSubmit,
     photos,
     setPhotos,
     primaryPhotoIndex,
@@ -68,7 +68,7 @@ export function InventoryForm({ item, categories, isOpen, onClose, onSuccess }: 
         
         <div className="flex-1 overflow-y-auto px-1 pb-4">
           <Form {...form}>
-            <form id="inventory-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form id="inventory-form" onSubmit={handleSubmit} className="space-y-4">
               <MainFields 
                 form={form}
                 categories={categories}

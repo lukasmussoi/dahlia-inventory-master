@@ -33,7 +33,8 @@ const formSchema = z.object({
   weight: z.number().optional(),
 });
 
-type FormValues = z.infer<typeof formSchema>;
+// Exportamos o tipo FormValues para uso em outros componentes
+export type FormValues = z.infer<typeof formSchema>;
 
 interface UseInventoryFormProps {
   item?: InventoryItem | null;
@@ -132,7 +133,8 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
   return {
     form,
     isSubmitting,
-    onSubmit: form.handleSubmit(onSubmit),
+    onSubmit,
+    handleSubmit: form.handleSubmit(onSubmit),
     photos,
     setPhotos,
     primaryPhotoIndex,

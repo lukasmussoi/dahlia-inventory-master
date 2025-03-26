@@ -170,25 +170,6 @@ export function MainFields({ form, categories, suppliers }: MainFieldsProps) {
           </FormItem>
         )}
       />
-
-      <FormField
-        control={form.control}
-        name="suggested_price"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Preço Sugerido</FormLabel>
-            <FormControl>
-              <Input
-                type="number"
-                step="0.01"
-                {...field}
-                onChange={(e) => field.onChange(Number(e.target.value))}
-              />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
     </div>
   );
 }
