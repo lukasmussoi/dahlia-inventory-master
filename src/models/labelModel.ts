@@ -132,7 +132,27 @@ export class LabelModel {
     try {
       console.log(`Excluindo histórico de etiquetas para o item: ${inventoryId}`);
       
-      // Novo método: excluir diretamente com uma única chamada de API
+      // Verificar quantos registros serão excluídos (para fins de log)
+      const { data: countData, error: countError } = await supabase
+        .from('inventory_label_history')
+        .select('id')
+        .eq('inventory_id', inventoryId);
+        
+      if (countError) {
+        console.error(`Erro ao verificar registros de etiquetas para o item ${inventoryId}:`, countError);
+        throw countError;
+      }
+      
+      const recordCount = countData?.length || 0;
+      console.log(`Encontrados ${recordCount} registros de histórico de etiquetas para excluir`);
+      
+      // Se não houver registros, retornar sucesso imediatamente
+      if (recordCount === 0) {
+        console.log(`Nenhum registro de etiqueta encontrado para o item ${inventoryId}`);
+        return true;
+      }
+      
+      // Excluir todos os registros em uma única operação
       const { error } = await supabase
         .from('inventory_label_history')
         .delete()
@@ -141,6 +161,23 @@ export class LabelModel {
       if (error) {
         console.error(`Erro ao excluir histórico de etiquetas para o item ${inventoryId}:`, error);
         throw error;
+      }
+      
+      // Verificar se a exclusão foi bem-sucedida
+      const { data: remainingData, error: remainingError } = await supabase
+        .from('inventory_label_history')
+        .select('id')
+        .eq('inventory_id', inventoryId);
+        
+      if (remainingError) {
+        console.error(`Erro ao verificar registros restantes para o item ${inventoryId}:`, remainingError);
+        throw remainingError;
+      }
+      
+      const remainingCount = remainingData?.length || 0;
+      if (remainingCount > 0) {
+        console.error(`ATENÇÃO: Ainda existem ${remainingCount} registros de etiquetas após a exclusão!`);
+        return false;
       }
       
       console.log(`Histórico de etiquetas do item ${inventoryId} excluído com sucesso`);

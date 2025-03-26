@@ -70,7 +70,7 @@ export class InventoryItemModel {
     try {
       console.log("Iniciando processo de exclusão do item:", id);
       
-      // 1. Verificar e obter todos os registros do histórico de etiquetas relacionados
+      // 1. Verificar se ainda existem registros do histórico de etiquetas
       console.log("Verificando histórico de etiquetas relacionadas ao item:", id);
       const { data: labelHistoryData, error: labelHistoryCheckError } = await supabase
         .from('inventory_label_history')
@@ -82,23 +82,10 @@ export class InventoryItemModel {
         throw labelHistoryCheckError;
       }
       
-      // Se existirem registros de histórico de etiquetas, excluí-los com uma única operação
+      // Se existirem registros de histórico de etiquetas, impedir a exclusão
       if (labelHistoryData && labelHistoryData.length > 0) {
-        console.log(`Excluindo ${labelHistoryData.length} registros de histórico de etiquetas para o item:`, id);
-        
-        const { error: deleteHistoryError } = await supabase
-          .from('inventory_label_history')
-          .delete()
-          .eq('inventory_id', id);
-          
-        if (deleteHistoryError) {
-          console.error("Erro ao excluir histórico de etiquetas:", deleteHistoryError);
-          throw deleteHistoryError;
-        }
-        
-        console.log("Todos os registros de histórico de etiquetas foram excluídos com sucesso");
-      } else {
-        console.log("Nenhum registro de histórico de etiquetas encontrado para o item:", id);
+        console.error(`Ainda existem ${labelHistoryData.length} registros de histórico de etiquetas para o item. Não é possível excluir.`);
+        throw new Error(`Ainda existem ${labelHistoryData.length} registros de histórico de etiquetas para o item. Não é possível excluir.`);
       }
       
       // 2. Excluir movimentações relacionadas
@@ -187,33 +174,7 @@ export class InventoryItemModel {
         throw damagedItemsError;
       }
       
-      // 9. Verificar novamente se ainda existem registros de histórico de etiquetas (dupla confirmação)
-      const { data: remainingLabelHistory, error: checkRemainingError } = await supabase
-        .from('inventory_label_history')
-        .select('id')
-        .eq('inventory_id', id);
-        
-      if (checkRemainingError) {
-        console.error("Erro ao verificar registros restantes de histórico de etiquetas:", checkRemainingError);
-        throw checkRemainingError;
-      }
-      
-      if (remainingLabelHistory && remainingLabelHistory.length > 0) {
-        console.warn(`Ainda existem ${remainingLabelHistory.length} registros de histórico de etiquetas. Tentando excluir novamente...`);
-        
-        // Abordagem alternativa: excluir usando uma única operação
-        const { error: finalDeleteError } = await supabase
-          .from('inventory_label_history')
-          .delete()
-          .eq('inventory_id', id);
-          
-        if (finalDeleteError) {
-          console.error("Erro na última tentativa de excluir histórico de etiquetas:", finalDeleteError);
-          throw finalDeleteError;
-        }
-      }
-      
-      // 10. Finalmente, excluir o item do inventário
+      // 9. Finalmente, excluir o item do inventário
       console.log("Excluindo o item do inventário:", id);
       const { error } = await supabase
         .from('inventory')
