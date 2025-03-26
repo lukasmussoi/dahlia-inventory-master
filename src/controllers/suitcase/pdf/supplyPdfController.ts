@@ -24,6 +24,14 @@ interface SupplyItem {
   };
 }
 
+// Interface para corrigir o problema de tipagem do textLine
+interface CellTextLine {
+  x?: number;
+  y?: number;
+  text?: string;
+  [key: string]: any;
+}
+
 export class SupplyPdfController {
   /**
    * Gera um PDF de comprovante de abastecimento
@@ -156,11 +164,13 @@ export class SupplyPdfController {
                   // Percorrer todas as linhas de texto na célula
                   data.cell.text.forEach((textLine) => {
                     // Verificar se textLine não é null e é um objeto
-                    if (textLine && typeof textLine === 'object') {
-                      // Verificação adicional para garantir que x existe e é um número
-                      if (textLine && 'x' in textLine && typeof textLine.x === 'number') {
+                    if (textLine) {
+                      // Tratar o textLine como CellTextLine para corrigir o problema de tipagem
+                      const line = textLine as CellTextLine;
+                      // Verificação adicional para garantir que x existe
+                      if (line && 'x' in line) {
                         // Deslocar o texto para a direita da imagem
-                        textLine.x = imgX + textPadding;
+                        line.x = imgX + textPadding;
                       }
                     }
                   });
