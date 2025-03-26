@@ -179,7 +179,9 @@ export const InventoryController = {
       };
     } catch (error) {
       console.error("Erro ao verificar se item está em maleta:", error);
-      return { inSuitcase: false, isActiveCase: false };
+      // Alteração: retornar explicitamente o estado para indicar que houve um erro
+      // Isso evita que a aplicação tente excluir o item quando houver erro na verificação
+      return { inSuitcase: false, isActiveCase: false, hasError: true };
     }
   }
 };

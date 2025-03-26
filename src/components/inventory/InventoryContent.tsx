@@ -50,6 +50,12 @@ export function InventoryContent({ isAdmin }: InventoryContentProps) {
       // Verificar se o item está em uma maleta ativa (não devolvida)
       const suitcaseInfo = await InventoryModel.checkItemInSuitcase(item.id);
       
+      // Verificar se ocorreu um erro durante a verificação
+      if (suitcaseInfo.hasError) {
+        toast.error("Erro ao verificar disponibilidade do item. Tente novamente mais tarde.");
+        return;
+      }
+      
       if (suitcaseInfo) {
         // Verifica se a maleta está em uso (não foi devolvida)
         const isActiveCase = suitcaseInfo.status === 'in_use' || 
@@ -105,6 +111,12 @@ export function InventoryContent({ isAdmin }: InventoryContentProps) {
       
       const suitcaseInfo = await InventoryModel.checkItemInSuitcase(id);
       
+      // Verificar se ocorreu um erro durante a verificação
+      if (suitcaseInfo.hasError) {
+        toast.error("Erro ao verificar disponibilidade do item. Tente novamente mais tarde.");
+        return;
+      }
+      
       if (suitcaseInfo) {
         // Verifica se a maleta está em uso (não foi devolvida)
         const isActiveCase = suitcaseInfo.status === 'in_use' || 
@@ -151,6 +163,12 @@ export function InventoryContent({ isAdmin }: InventoryContentProps) {
   const handleArchiveItem = async (id: string) => {
     try {
       const suitcaseInfo = await InventoryModel.checkItemInSuitcase(id);
+      
+      // Verificar se ocorreu um erro durante a verificação
+      if (suitcaseInfo.hasError) {
+        toast.error("Erro ao verificar disponibilidade do item. Tente novamente mais tarde.");
+        return;
+      }
       
       if (suitcaseInfo) {
         // Verifica se a maleta está em uso (não foi devolvida)

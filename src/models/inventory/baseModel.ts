@@ -1,10 +1,9 @@
-
 /**
- * Modelo Base para Inventário
- * @file Este arquivo contém operações comuns e utilitárias para o inventário
+ * Modelo Base de Inventário
+ * @file Este arquivo contém funções básicas para gerenciamento do inventário
  */
 import { supabase } from "@/integrations/supabase/client";
-import { InventoryFilters, InventoryItem, InventoryPhoto } from "./types";
+import { InventoryItem, InventoryFilters } from "./types";
 
 export class BaseInventoryModel {
   // Buscar todos os itens do inventário
@@ -198,8 +197,8 @@ export class BaseInventoryModel {
     return data || [];
   }
 
-  // Verificar se um item está em uso em alguma maleta
-  static async checkItemInSuitcase(itemId: string): Promise<any> {
+  // Verificar se um item está em uma maleta
+  static async checkItemInSuitcase(inventoryId: string) {
     try {
       const { data, error } = await supabase
         .from('suitcase_items')
@@ -207,30 +206,27 @@ export class BaseInventoryModel {
           id,
           suitcase_id,
           suitcases:suitcase_id (
-            id,
-            code,
+            code as suitcase_code,
             status,
-            seller_id,
             resellers:seller_id (
-              name
+              name as seller_name
             )
           )
         `)
-        .eq('inventory_id', itemId)
-        .eq('status', 'in_possession')
-        .maybeSingle();
+        .eq('inventory_id', inventoryId)
+        .eq('status', 'in_possession');
       
       if (error) throw error;
       
-      if (!data) return null;
+      if (!data || data.length === 0) return null;
+      
+      const firstItem = data[0];
       
       return {
-        id: data.id,
-        suitcase_id: data.suitcase_id,
-        status: data.suitcases?.status,
-        suitcase_code: data.suitcases?.code,
-        seller_id: data.suitcases?.seller_id,
-        seller_name: data.suitcases?.resellers?.name
+        suitcase_id: firstItem.suitcase_id,
+        suitcase_code: firstItem.suitcases?.suitcase_code || 'Desconhecido',
+        status: firstItem.suitcases?.status || 'unknown',
+        seller_name: firstItem.suitcases?.resellers?.seller_name || 'Desconhecido'
       };
     } catch (error) {
       console.error("Erro ao verificar se item está em maleta:", error);
