@@ -40,7 +40,9 @@ export function useSuitcaseItems() {
     const processingKey = itemIds.join('-');
     setProcessingItems(prev => ({ ...prev, [processingKey]: true }));
     try {
-      await CombinedSuitcaseController.returnItemsToInventory(itemIds, quantity, isDamaged);
+      // O erro está aqui - estamos passando 3 argumentos, mas a função só aceita 1 ou 2
+      // Verificando a definição da função no controlador
+      await CombinedSuitcaseController.returnItemsToInventory(itemIds, isDamaged);
       toast.success("Item(ns) devolvido(s) ao estoque");
       return true;
     } catch (error) {
