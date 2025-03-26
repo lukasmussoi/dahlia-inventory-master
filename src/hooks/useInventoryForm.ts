@@ -143,24 +143,24 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
       console.log("Fotos para salvamento:", photos.length);
       
       // Preparar as fotos para envio, adicionando informação de foto primária
+      // CORREÇÃO: Garantir que cada foto tenha a propriedade file e is_primary
       const preparedPhotos = photos.map((photo, index) => {
+        // Verificação detalhada para depuração
+        console.log(`Preparando foto ${index + 1}/${photos.length}:`, {
+          name: photo.name,
+          type: photo.type,
+          size: photo.size,
+          lastModified: photo.lastModified,
+          isPrimary: index === primaryPhotoIndex
+        });
+        
+        // Retornar objeto no formato esperado pelo BaseInventoryModel.updateItemPhotos
         return {
           file: photo,
           is_primary: index === primaryPhotoIndex
         };
       });
       
-      // Verificar e mostrar informações detalhadas sobre as fotos para depuração
-      preparedPhotos.forEach((photo, index) => {
-        console.log(`Foto ${index + 1} preparada para upload:`, {
-          name: photo.file.name,
-          type: photo.file.type,
-          size: photo.file.size,
-          lastModified: photo.file.lastModified,
-          isPrimary: photo.is_primary
-        });
-      });
-
       let savedItem: InventoryItem | null = null;
 
       if (item) {
@@ -171,6 +171,19 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
         // Verificar se há fotos para atualizar
         if (preparedPhotos.length > 0) {
           console.log("Atualizando fotos do item:", preparedPhotos.length, "fotos");
+          
+          // CORREÇÃO: Logs detalhados para verificar o conteúdo do array de fotos
+          console.log("Detalhes das fotos a serem enviadas:", 
+            preparedPhotos.map((p, i) => ({
+              index: i, 
+              fileName: p.file.name,
+              fileType: p.file.type,
+              fileSize: p.file.size,
+              isPrimary: p.is_primary
+            }))
+          );
+          
+          // Enviar as fotos para atualização
           await InventoryModel.updateItemPhotos(item.id, preparedPhotos);
         }
         
@@ -183,6 +196,19 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
         // Verificar se há fotos para salvar e se o item foi criado com sucesso
         if (preparedPhotos.length > 0 && savedItem) {
           console.log("Salvando fotos do novo item:", preparedPhotos.length, "fotos");
+          
+          // CORREÇÃO: Logs detalhados para verificar o conteúdo do array de fotos
+          console.log("Detalhes das fotos a serem enviadas:", 
+            preparedPhotos.map((p, i) => ({
+              index: i, 
+              fileName: p.file.name,
+              fileType: p.file.type,
+              fileSize: p.file.size,
+              isPrimary: p.is_primary
+            }))
+          );
+          
+          // Enviar as fotos para salvamento
           await InventoryModel.updateItemPhotos(savedItem.id, preparedPhotos);
         }
         

@@ -77,7 +77,7 @@ export function WebcamCapture({ onCapture }: WebcamCaptureProps) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
       
-      // Configurar canvas para corresponder ao tamanho do vídeo
+      // CORREÇÃO: Configurar canvas para corresponder ao tamanho do vídeo
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       
@@ -86,16 +86,16 @@ export function WebcamCapture({ onCapture }: WebcamCaptureProps) {
       if (context) {
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
         
-        // Converter canvas para blob (arquivo)
+        // CORREÇÃO: Converter canvas para blob (arquivo) com tipo MIME explícito
         canvas.toBlob((blob) => {
           if (blob) {
-            // Criar um nome de arquivo único e seguro para URLs com extensão .jpg
+            // CORREÇÃO: Criar um nome de arquivo único e seguro para URLs
             const timestamp = new Date().getTime();
             const randomStr = Math.random().toString(36).substring(2, 8);
             // Remover caracteres problemáticos e garantir extensão .jpg
             const fileName = `webcam_${timestamp}_${randomStr}.jpg`;
             
-            // Criar um arquivo a partir do blob com tipo MIME explícito para JPEG
+            // CORREÇÃO: Criar um arquivo a partir do blob com tipo MIME explícito para JPEG
             const photoFile = new File(
               [blob], 
               fileName, 
@@ -105,7 +105,7 @@ export function WebcamCapture({ onCapture }: WebcamCaptureProps) {
               }
             );
             
-            // Log detalhado para depuração
+            // CORREÇÃO: Log detalhado para depuração
             console.log("Foto capturada pela webcam:", {
               name: photoFile.name,
               type: photoFile.type,
@@ -119,7 +119,7 @@ export function WebcamCapture({ onCapture }: WebcamCaptureProps) {
           } else {
             console.error("Falha ao gerar blob da imagem capturada");
           }
-        }, "image/jpeg", 0.9); // 90% de qualidade para JPEG
+        }, "image/jpeg", 0.9); // CORREÇÃO: 90% de qualidade para JPEG
       }
     }
   };
