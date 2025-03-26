@@ -49,22 +49,26 @@ export class AcertoDetailsController {
       
       // Processar os itens vendidos para normalizar a estrutura das fotos dos produtos
       const itemsVendidosProcessados = itemsVendidos?.map(item => {
-        let product = item.product;
-        if (product && Array.isArray(product.photo_url) && product.photo_url.length > 0) {
-          // Extrair a primeira URL de foto do array
-          const photoUrl = product.photo_url[0]?.photo_url || null;
-          // Corrigindo o formato da propriedade photo_url para manter compatibilidade com o tipo esperado
-          product = {
-            ...product,
-            photo_url: photoUrl ? [{ photo_url: photoUrl }] : []
-          };
-        } else if (product && typeof product.photo_url === 'string') {
-          // Se photo_url for uma string, converte para o formato de array esperado
-          product = {
-            ...product,
-            photo_url: product.photo_url ? [{ photo_url: product.photo_url }] : []
-          };
+        let product = { ...item.product };
+        
+        // Garantir que product.photo_url seja sempre um array do tipo PhotoUrl[]
+        if (product) {
+          // Caso 1: photo_url é uma array de objetos com a estrutura correta
+          if (Array.isArray(product.photo_url) && product.photo_url.length > 0) {
+            // Extrair a primeira URL de foto do array e garantir formato correto
+            const photoUrl = product.photo_url[0]?.photo_url || null;
+            product.photo_url = photoUrl ? [{ photo_url: photoUrl }] : [];
+          } 
+          // Caso 2: photo_url é uma string
+          else if (typeof product.photo_url === 'string') {
+            product.photo_url = product.photo_url ? [{ photo_url: product.photo_url }] : [];
+          }
+          // Caso 3: photo_url é null, undefined ou outro formato inesperado
+          else {
+            product.photo_url = [];
+          }
         }
+        
         return {
           ...item,
           product

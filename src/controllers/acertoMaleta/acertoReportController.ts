@@ -60,42 +60,22 @@ export class AcertoReportController {
       let currentY = 55;
       
       if (acerto.items_vendidos && acerto.items_vendidos.length > 0) {
+        // Limitar a quantidade de itens por página para evitar PDFs enormes
+        const maxItemsPerPage = 20;
+        const limitedItems = acerto.items_vendidos.slice(0, maxItemsPerPage);
+        
+        if (acerto.items_vendidos.length > maxItemsPerPage) {
+          console.warn(`Limitando a exibição para ${maxItemsPerPage} de ${acerto.items_vendidos.length} itens vendidos para evitar PDFs muito grandes`);
+        }
+        
         // Preparar dados para a tabela
-        tableData = await Promise.all(acerto.items_vendidos.map(async (item) => {
-          let photoUrl = null;
-          try {
-            if (item.product?.photo_url) {
-              if (typeof item.product.photo_url === 'string') {
-                photoUrl = getProductPhotoUrl(item.product.photo_url);
-              } else if (Array.isArray(item.product.photo_url) && item.product.photo_url.length > 0) {
-                const firstPhoto = item.product.photo_url[0];
-                if (firstPhoto && typeof firstPhoto === 'object' && 'photo_url' in firstPhoto) {
-                  photoUrl = getProductPhotoUrl(firstPhoto.photo_url);
-                }
-              }
-            }
-          } catch (error) {
-            console.error("Erro ao processar URL da foto:", error);
-          }
-          
-          let base64Image = '';
-          if (photoUrl) {
-            try {
-              const response = await fetch(photoUrl);
-              if (response.ok) {
-                const blob = await response.blob();
-                base64Image = await this.blobToBase64(blob);
-              }
-            } catch (error) {
-              console.error("Erro ao carregar imagem:", error);
-            }
-          }
-          
+        tableData = await Promise.all(limitedItems.map(async (item) => {
+          // Simplificação: Não carregar imagens para o PDF para evitar problemas
+          // Apenas usar texto com as informações dos produtos
           return [
             item.product?.name || 'Produto sem nome',
             item.product?.sku || 'N/A',
-            formatCurrency(item.price || 0),
-            base64Image // Esta coluna será usada para a imagem, não será mostrada como texto
+            formatCurrency(item.price || 0)
           ];
         }));
         
@@ -105,60 +85,29 @@ export class AcertoReportController {
         doc.text("Itens Vendidos", 14, currentY);
         currentY += 5;
         
-        // Gerar tabela de itens vendidos
+        // Gerar tabela de itens vendidos sem imagens
         autoTable(doc, {
-          head: [['Produto', 'Código', 'Preço', '']],
+          head: [['Produto', 'Código', 'Preço']],
           body: tableData,
           startY: currentY,
           theme: 'striped',
           headStyles: { fillColor: [233, 30, 99], textColor: 255 },
           columnStyles: {
-            0: { cellWidth: 80 }, // Nome do produto com imagem
-            1: { cellWidth: 40 }, // Código
-            2: { cellWidth: 30 }  // Preço
-          },
-          didDrawCell: (data) => {
-            // Se for a primeira coluna e não for cabeçalho
-            if (data.column.index === 0 && data.row.index >= 0 && data.row.raw) {
-              // Verificar se há uma imagem para desenhar
-              const imageData = data.row.raw[3]; // A quarta coluna contém a URL da imagem
-              if (imageData && typeof imageData === 'string' && imageData.length > 0) {
-                try {
-                  const imgProps = doc.getImageProperties(imageData);
-                  const imgHeight = 10;
-                  const imgWidth = (imgProps.width * imgHeight) / imgProps.height;
-                  
-                  // Desenhar a imagem na célula
-                  doc.addImage(
-                    imageData, 
-                    'JPEG', 
-                    data.cell.x + 2, 
-                    data.cell.y + 2, 
-                    imgWidth, 
-                    imgHeight
-                  );
-                  
-                  // Ajustar o posicionamento do texto para dar espaço à imagem
-                  if (data.cell.text && Array.isArray(data.cell.text) && data.cell.text.length > 0) {
-                    const firstText = data.cell.text[0];
-                    
-                    if (firstText && typeof firstText === 'object') {
-                      const textObject = firstText as { x?: number };
-                      
-                      if (textObject && textObject.x !== undefined && typeof textObject.x === 'number') {
-                        textObject.x = textObject.x + imgWidth + 4;
-                      }
-                    }
-                  }
-                } catch (error) {
-                  console.error("Erro ao adicionar imagem ao PDF:", error);
-                }
-              }
-            }
+            0: { cellWidth: 90 }, // Nome do produto
+            1: { cellWidth: 50 }, // Código
+            2: { cellWidth: 40 }  // Preço
           }
         });
         
         currentY = (doc as any).lastAutoTable.finalY + 10;
+        
+        // Se tivermos muitos itens, adicionar nota sobre itens não exibidos
+        if (acerto.items_vendidos.length > maxItemsPerPage) {
+          doc.setFont("helvetica", "italic");
+          doc.setFontSize(8);
+          doc.text(`* Exibindo ${maxItemsPerPage} de ${acerto.items_vendidos.length} itens vendidos.`, 14, currentY);
+          currentY += 5;
+        }
       } else {
         doc.text("Nenhum item vendido neste acerto.", 14, currentY);
         currentY += 10;
@@ -218,17 +167,5 @@ export class AcertoReportController {
       console.error("Erro ao gerar PDF do recibo de acerto:", error);
       throw new Error("Falha ao gerar PDF de recibo");
     }
-  }
-  
-  /**
-   * Converte um Blob para Base64
-   */
-  private static blobToBase64(blob: Blob): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
   }
 }

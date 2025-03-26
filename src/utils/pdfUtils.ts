@@ -1,52 +1,101 @@
 
 /**
- * Utilitários para Manipulação de PDFs
- * @file Este arquivo contém funções auxiliares para manipulação de PDFs na aplicação
- * @relacionamento Utilizado pelos controladores que geram PDFs
+ * Utilitários para geração de PDF
  */
-
-import { generatePdfLabel as generateLabelPdf } from "./pdf/labelGenerator";
+import { toast } from "sonner";
+import { generatePrintablePDF } from "@/utils/etiqueta/printGenerator";
+import { EtiquetaCustomModel } from "@/models/etiquetaCustomModel";
+import { validateLabelDimensions } from "./pdf/validationUtils";
+import type { GeneratePdfLabelOptions } from "./pdf/types";
 
 /**
  * Abre um PDF em uma nova aba do navegador
- * @param pdfUrl URL do blob do PDF ou URL remota
- * @returns boolean indicando sucesso
+ * @param pdfUrl URL do PDF a ser aberto
  */
-export const openPdfInNewTab = (pdfUrl: string): boolean => {
-  try {
-    if (!pdfUrl) {
-      console.error("URL do PDF não fornecida");
-      return false;
-    }
-    
-    console.log("Abrindo PDF em nova aba:", pdfUrl);
-    
-    // Abrir em uma nova aba
-    const newWindow = window.open(pdfUrl, '_blank');
-    
-    // Verificar se a abertura foi bloqueada pelo navegador
-    if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-      console.warn("A abertura da nova aba foi bloqueada pelo navegador. Tentando abordagem alternativa...");
-      
-      // Tentar abordagem alternativa
-      const link = document.createElement('a');
-      link.href = pdfUrl;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
-    
-    return true;
-  } catch (error) {
-    console.error("Erro ao abrir PDF em nova aba:", error);
-    return false;
+export const openPdfInNewTab = (pdfUrl: string): void => {
+  if (!pdfUrl) {
+    toast.error("URL do PDF não fornecida");
+    return;
+  }
+
+  const newWindow = window.open();
+  if (newWindow) {
+    newWindow.document.write(`
+      <iframe src="${pdfUrl}" width="100%" height="100%" style="border: none;"></iframe>
+    `);
+  } else {
+    toast.error("Não foi possível abrir o PDF. Verifique se o bloqueador de pop-ups está ativo.");
   }
 };
 
 /**
- * Re-exporta a função de geração de PDF de etiquetas
- * Isso mantém compatibilidade com código existente
+ * Gera um PDF com etiquetas baseado nas opções fornecidas
+ * 
+ * @param options Opções para geração do PDF
+ * @returns Uma Promise com a URL do PDF gerado
  */
-export { generateLabelPdf as generatePdfLabel };
+export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promise<string> {
+  try {
+    const { items, copies, multiplyByStock, selectedModeloId } = options;
+    
+    if (!items || items.length === 0) {
+      throw new Error("Nenhum item fornecido para gerar etiquetas");
+    }
+    
+    console.log(`Gerando etiquetas para ${items.length} itens, ${copies} cópias por item, multiplicar por estoque: ${multiplyByStock}`);
+    
+    // Validar se um modelo personalizado foi fornecido
+    if (!selectedModeloId) {
+      throw new Error("Nenhum modelo de etiqueta selecionado. Por favor, selecione um modelo personalizado.");
+    }
+
+    // Buscar e usar o modelo personalizado
+    console.log("Usando modelo personalizado ID:", selectedModeloId);
+    const modeloCustom = await EtiquetaCustomModel.getById(selectedModeloId);
+    
+    if (!modeloCustom) {
+      console.warn("Modelo personalizado não encontrado, ID:", selectedModeloId);
+      throw new Error("Modelo de etiqueta não encontrado. Por favor, selecione outro modelo.");
+    }
+      
+    console.log("Modelo personalizado encontrado:", modeloCustom);
+    console.log("Campos do modelo:", modeloCustom.campos);
+    
+    // Validar dimensões do modelo
+    const validationError = validateLabelDimensions(modeloCustom);
+    if (validationError) {
+      throw new Error(validationError);
+    }
+    
+    try {
+      console.log("Iniciando geração de PDF com modelo personalizado");
+      return await generatePrintablePDF(
+        modeloCustom,
+        items, // Aqui passamos o array completo de itens
+        {
+          copias: copies
+        }
+      );
+    } catch (error) {
+      console.error("Erro ao gerar PDF com modelo personalizado:", error);
+      
+      // Mensagem de erro específica
+      if (error instanceof Error) {
+        throw new Error(`Erro ao gerar etiquetas personalizadas: ${error.message}`);
+      } else {
+        throw new Error("Erro ao gerar etiquetas personalizadas. Verifique as configurações do modelo.");
+      }
+    }
+  } catch (error) {
+    console.error("Erro ao gerar PDF:", error);
+    
+    // Exibir mensagem de erro mais descritiva
+    if (error instanceof Error) {
+      toast.error(`Erro ao gerar etiquetas: ${error.message}`);
+    } else {
+      toast.error("Erro ao gerar etiquetas. Por favor, verifique as configurações e tente novamente.");
+    }
+    
+    throw error;
+  }
+}

@@ -57,27 +57,7 @@ export class AcertoMaletaModel {
       // Manter um registro dos itens já processados para evitar duplicação
       const processedItems = new Set<string>();
       
-      // 1. Processar itens presentes (retornar ao estoque)
-      for (const itemId of itemsPresent) {
-        // Verificar se o item já foi processado
-        if (processedItems.has(itemId)) {
-          console.log(`Item ${itemId} já foi processado anteriormente, ignorando para evitar duplicação.`);
-          continue;
-        }
-        
-        console.log(`Retornando item ${itemId} ao estoque`);
-        try {
-          // Chamar função melhorada para garantir que o item seja devolvido ao estoque E removido da maleta
-          await SuitcaseItemModel.returnItemToInventory(itemId);
-          // Marcar o item como processado
-          processedItems.add(itemId);
-        } catch (error) {
-          console.error(`Erro ao retornar item ${itemId} ao estoque:`, error);
-          // Continuar processando outros itens mesmo se ocorrer um erro
-        }
-      }
-      
-      // 2. Processar itens vendidos (registrar vendas)
+      // 1. Processar itens vendidos (registrar vendas)
       for (const itemId of itemsSold) {
         // Verificar se o item já foi processado
         if (processedItems.has(itemId)) {
@@ -137,27 +117,45 @@ export class AcertoMaletaModel {
             console.log(`Item ${itemId} já registrado como vendido para o acerto ${acertoId}, ignorando duplicação.`);
           }
           
-          // CORREÇÃO: Remover explicitamente o item da maleta após registrar como vendido
-          console.log(`Removendo item vendido ${itemId} da maleta...`);
-          const { error: deleteError } = await supabase
-            .from('suitcase_items')
-            .delete()
-            .eq('id', itemId);
-          
-          if (deleteError) {
-            console.error(`Erro ao remover item vendido ${itemId} da maleta:`, deleteError);
-            console.error(`Detalhes do erro:`, JSON.stringify(deleteError));
-            
-            // Se não conseguir deletar, pelo menos garantimos que está marcado como vendido
-            console.log(`Não foi possível excluir o item, mas ele está marcado como vendido.`);
-          } else {
-            console.log(`Item vendido ${itemId} removido da maleta com sucesso`);
-          }
-          
           // Marcar o item como processado
           processedItems.add(itemId);
         } catch (error) {
           console.error(`Erro ao processar item vendido ${itemId}:`, error);
+          // Continuar processando outros itens mesmo se ocorrer um erro
+        }
+      }
+      
+      // 2. Processar itens presentes (retornar ao estoque)
+      for (const itemId of itemsPresent) {
+        // Verificar se o item já foi processado
+        if (processedItems.has(itemId)) {
+          console.log(`Item ${itemId} já foi processado anteriormente, ignorando para evitar duplicação.`);
+          continue;
+        }
+        
+        console.log(`Retornando item ${itemId} ao estoque`);
+        try {
+          // Buscar informações do item para verificar seu status atual
+          const item = await SuitcaseItemModel.getSuitcaseItemById(itemId);
+          if (!item) {
+            console.warn(`Item ${itemId} não encontrado, pulando...`);
+            continue;
+          }
+          
+          // Verificar se o item já foi devolvido ao estoque
+          if (item.status === 'returned') {
+            console.log(`Item ${itemId} já está com status 'returned', ignorando processamento duplicado.`);
+            processedItems.add(itemId);
+            continue;
+          }
+          
+          // Chamar função melhorada para garantir que o item seja devolvido ao estoque
+          await SuitcaseItemModel.returnItemToInventory(itemId);
+          
+          // Marcar o item como processado
+          processedItems.add(itemId);
+        } catch (error) {
+          console.error(`Erro ao retornar item ${itemId} ao estoque:`, error);
           // Continuar processando outros itens mesmo se ocorrer um erro
         }
       }
@@ -171,40 +169,9 @@ export class AcertoMaletaModel {
       if (checkError) {
         console.error(`Erro ao verificar itens restantes na maleta ${suitcaseId}:`, checkError);
       } else if (remainingItems && remainingItems.length > 0) {
-        console.warn(`Foram encontrados ${remainingItems.length} itens ainda na maleta após o processamento. Verificando status...`);
-        
-        // Classificar itens restantes por status para evitar processamento inadequado
-        const itemsJaProcessados = remainingItems.filter(
-          item => item.status === 'sold' || item.status === 'returned' || item.status === 'damaged'
-        );
-        
-        const itemsParaProcessar = remainingItems.filter(
-          item => item.status !== 'sold' && item.status !== 'returned' && item.status !== 'damaged'
-        );
-        
-        console.log(`Itens já processados: ${itemsJaProcessados.length}, Itens para processar: ${itemsParaProcessar.length}`);
-        
-        // Processar apenas os itens que ainda não foram processados
-        if (itemsParaProcessar.length > 0) {
-          console.log(`Processando ${itemsParaProcessar.length} itens restantes não processados...`);
-          
-          for (const item of itemsParaProcessar) {
-            // Verificar se já foi processado
-            if (processedItems.has(item.id)) {
-              console.log(`Item ${item.id} já foi processado, ignorando para evitar duplicação.`);
-              continue;
-            }
-            
-            try {
-              // Assumimos que itens não processados devem ser devolvidos ao estoque
-              console.log(`Devolvendo item ${item.id} ao estoque (não estava na lista de processados)...`);
-              await SuitcaseItemModel.returnItemToInventory(item.id);
-              processedItems.add(item.id);
-            } catch (returnError) {
-              console.error(`Erro ao devolver item ${item.id} ao estoque:`, returnError);
-            }
-          }
-        }
+        // Apenas verificar e logar, não processar automaticamente para evitar operações não solicitadas
+        console.log(`Foram encontrados ${remainingItems.length} itens ainda na maleta após o processamento.`);
+        console.log(`Status dos itens restantes:`, remainingItems.map(item => ({ id: item.id, status: item.status })));
       } else {
         console.log(`Nenhum item restante na maleta ${suitcaseId}. Processamento concluído com sucesso.`);
       }
