@@ -15,6 +15,7 @@ import { z } from "zod";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { InventoryItem, InventoryModel } from "@/models/inventory";
+import { supabase } from "@/integrations/supabase/client";
 
 // Esquema de validação do formulário
 const formSchema = z.object({
@@ -46,6 +47,7 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [photos, setPhotos] = useState<File[]>([]);
   const [primaryPhotoIndex, setPrimaryPhotoIndex] = useState<number | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   // Inicializa o formulário com valores padrão
   const form = useForm<FormValues>({
@@ -117,6 +119,82 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
     }
   }, [item]);
 
+  // Função para fazer upload direto das fotos para o Storage do Supabase
+  const uploadPhotosToSupabase = async (itemId: string): Promise<Array<{photo_url: string; is_primary: boolean}>> => {
+    if (photos.length === 0) return [];
+    
+    try {
+      console.log(`Iniciando upload de ${photos.length} fotos para o item ${itemId}`);
+      setUploadProgress(0);
+      
+      const results = [];
+      
+      for (let i = 0; i < photos.length; i++) {
+        const photo = photos[i];
+        const isPrimary = i === primaryPhotoIndex;
+        
+        // Garantir que o nome do arquivo seja seguro para URLs
+        const timestamp = new Date().getTime();
+        const safeFileName = photo.name
+          .replace(/[^a-zA-Z0-9_\-.]/g, '_')
+          .toLowerCase();
+        
+        // Determinar a extensão correta com base no tipo MIME
+        let fileExtension = '.jpg'; // Padrão
+        if (photo.type === 'image/png') fileExtension = '.png';
+        if (photo.type === 'image/jpeg') fileExtension = '.jpg';
+        if (photo.type === 'image/gif') fileExtension = '.gif';
+        if (photo.type === 'image/webp') fileExtension = '.webp';
+        
+        // Garantir que o nome do arquivo tenha a extensão correta
+        const fileNameWithoutExt = safeFileName.replace(/\.[^/.]+$/, "");
+        const finalFileName = `${fileNameWithoutExt}${fileExtension}`;
+        
+        // Caminho no formato: inventory/item_id/timestamp_filename.ext
+        const filePath = `inventory/${itemId}/${timestamp}_${finalFileName}`;
+        
+        console.log(`Enviando foto ${i+1}/${photos.length}: ${filePath}`);
+        
+        // Upload do arquivo para o novo bucket 'inventory_images'
+        const { data, error } = await supabase.storage
+          .from('inventory_images')
+          .upload(filePath, photo, {
+            cacheControl: '3600',
+            upsert: true
+          });
+        
+        if (error) {
+          console.error(`Erro ao fazer upload da foto ${i+1}:`, error);
+          toast.error(`Erro ao enviar foto ${i+1}: ${error.message}`);
+          continue;
+        }
+        
+        // Obter URL pública
+        const { data: urlData } = supabase.storage
+          .from('inventory_images')
+          .getPublicUrl(filePath);
+        
+        console.log(`Foto ${i+1} enviada com sucesso. URL:`, urlData.publicUrl);
+        
+        results.push({
+          photo_url: urlData.publicUrl,
+          is_primary: isPrimary
+        });
+        
+        // Atualizar progresso
+        setUploadProgress(Math.round(((i + 1) / photos.length) * 100));
+      }
+      
+      console.log(`Upload finalizado. ${results.length} fotos enviadas com sucesso.`);
+      return results;
+      
+    } catch (error) {
+      console.error('Erro ao fazer upload das fotos:', error);
+      toast.error("Erro ao enviar as fotos. Tente novamente.");
+      return [];
+    }
+  };
+
   // Função para envio do formulário
   const onSubmit = async (values: FormValues) => {
     try {
@@ -140,77 +218,70 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
       };
 
       console.log("Dados preparados para salvamento:", itemData);
-      console.log("Fotos para salvamento:", photos.length);
-      
-      // Preparar as fotos para envio, garantindo que cada objeto tenha file e is_primary
-      const preparedPhotos = photos.map((photo, index) => {
-        // Verificação detalhada para depuração
-        console.log(`Preparando foto ${index + 1}/${photos.length}:`, {
-          name: photo.name,
-          type: photo.type,
-          size: photo.size,
-          lastModified: photo.lastModified,
-          isPrimary: index === primaryPhotoIndex
-        });
-        
-        // Retornar objeto no formato esperado pelo BaseInventoryModel.updateItemPhotos
-        return {
-          file: photo,
-          is_primary: index === primaryPhotoIndex
-        };
-      });
       
       let savedItem: InventoryItem | null = null;
 
+      // Primeiro, salvar os dados do item sem as fotos
       if (item) {
         // Modo de edição
         console.log("Atualizando item existente");
         savedItem = await InventoryModel.updateItem(item.id, itemData);
-        
-        // Verificar se há fotos para atualizar
-        if (preparedPhotos.length > 0) {
-          console.log("Atualizando fotos do item com novo bucket:", preparedPhotos.length, "fotos");
-          
-          // Logs detalhados para verificar o conteúdo do array de fotos
-          console.log("Detalhes das fotos a serem enviadas:", 
-            preparedPhotos.map((p, i) => ({
-              index: i, 
-              fileName: p.file.name,
-              fileType: p.file.type,
-              fileSize: p.file.size,
-              isPrimary: p.is_primary
-            }))
-          );
-          
-          // Enviar as fotos para atualização no novo bucket
-          await InventoryModel.updateItemPhotos(item.id, preparedPhotos);
-        }
-        
-        toast.success("Item atualizado com sucesso!");
       } else {
         // Modo de criação
         console.log("Criando novo item");
         savedItem = await InventoryModel.createItem(itemData);
+      }
+      
+      if (!savedItem) {
+        throw new Error("Erro ao salvar dados do item");
+      }
+      
+      // Em seguida, fazer upload das fotos diretamente para o Storage
+      if (photos.length > 0) {
+        console.log("Iniciando upload das fotos");
+        const uploadedPhotos = await uploadPhotosToSupabase(savedItem.id);
         
-        // Verificar se há fotos para salvar e se o item foi criado com sucesso
-        if (preparedPhotos.length > 0 && savedItem) {
-          console.log("Salvando fotos do novo item no novo bucket:", preparedPhotos.length, "fotos");
+        if (uploadedPhotos.length > 0) {
+          // Após o upload, inserir os registros na tabela inventory_photos
+          console.log("Salvando registros das fotos no banco de dados");
+          const photoRecords = uploadedPhotos.map(photo => ({
+            inventory_id: savedItem!.id,
+            photo_url: photo.photo_url,
+            is_primary: photo.is_primary
+          }));
           
-          // Logs detalhados para verificar o conteúdo do array de fotos
-          console.log("Detalhes das fotos a serem enviadas:", 
-            preparedPhotos.map((p, i) => ({
-              index: i, 
-              fileName: p.file.name,
-              fileType: p.file.type,
-              fileSize: p.file.size,
-              isPrimary: p.is_primary
-            }))
-          );
+          // Remover fotos antigas primeiro
+          const { error: deleteError } = await supabase
+            .from('inventory_photos')
+            .delete()
+            .eq('inventory_id', savedItem.id);
+            
+          if (deleteError) {
+            console.error("Erro ao excluir fotos antigas:", deleteError);
+            toast.error("Erro ao atualizar fotos antigas");
+          }
           
-          // Enviar as fotos para salvamento no novo bucket
-          await InventoryModel.updateItemPhotos(savedItem.id, preparedPhotos);
+          // Inserir novas fotos
+          const { data, error } = await supabase
+            .from('inventory_photos')
+            .insert(photoRecords)
+            .select();
+            
+          if (error) {
+            console.error("Erro ao salvar registros das fotos:", error);
+            toast.error("Erro ao salvar informações das fotos");
+          } else {
+            console.log("Fotos salvas com sucesso:", data);
+            
+            // Atualizar o objeto savedItem com as fotos
+            savedItem.photos = data;
+          }
         }
-        
+      }
+
+      if (item) {
+        toast.success("Item atualizado com sucesso!");
+      } else {
         toast.success("Item criado com sucesso!");
       }
 
@@ -224,6 +295,7 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
       toast.error("Erro ao salvar item. Verifique os dados e tente novamente.");
     } finally {
       setIsSubmitting(false);
+      setUploadProgress(0);
     }
   };
 
@@ -235,6 +307,7 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
     photos,
     setPhotos,
     primaryPhotoIndex,
-    setPrimaryPhotoIndex
+    setPrimaryPhotoIndex,
+    uploadProgress
   };
 }

@@ -11,12 +11,14 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { X, Upload, Camera } from "lucide-react";
 import { WebcamButton } from "@/components/ui/webcam-button";
+import { Progress } from "@/components/ui/progress";
 
 interface PhotoFieldsProps {
   photos: File[];
   setPhotos: (photos: File[]) => void;
   primaryPhotoIndex: number | null;
   setPrimaryPhotoIndex: (index: number | null) => void;
+  uploadProgress?: number;
 }
 
 export function PhotoFields({
@@ -24,6 +26,7 @@ export function PhotoFields({
   setPhotos,
   primaryPhotoIndex,
   setPrimaryPhotoIndex,
+  uploadProgress = 0,
 }: PhotoFieldsProps) {
   const [dragActive, setDragActive] = useState(false);
 
@@ -141,6 +144,14 @@ export function PhotoFields({
       <div className="flex justify-end">
         <WebcamButton onCaptureComplete={handleWebcamPhotos} />
       </div>
+
+      {/* Progresso de upload */}
+      {uploadProgress > 0 && (
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Enviando fotos: {uploadProgress}%</p>
+          <Progress value={uploadProgress} className="h-2" />
+        </div>
+      )}
 
       {/* Lista de fotos */}
       {photos.length > 0 && (

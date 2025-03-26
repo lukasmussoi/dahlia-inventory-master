@@ -33,7 +33,8 @@ export function InventoryForm({ item, categories, isOpen, onClose, onSuccess }: 
     photos,
     setPhotos,
     primaryPhotoIndex,
-    setPrimaryPhotoIndex 
+    setPrimaryPhotoIndex,
+    uploadProgress 
   } = useInventoryForm({ 
     item, 
     onSuccess, 
@@ -80,6 +81,7 @@ export function InventoryForm({ item, categories, isOpen, onClose, onSuccess }: 
                 setPhotos={setPhotos}
                 primaryPhotoIndex={primaryPhotoIndex}
                 setPrimaryPhotoIndex={setPrimaryPhotoIndex}
+                uploadProgress={uploadProgress}
               />
             </form>
           </Form>
