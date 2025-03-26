@@ -1,8 +1,16 @@
 
+/**
+ * Este componente gerencia a adição, remoção e visualização de fotos
+ * para itens do inventário. Permite upload de arquivos e captura via webcam.
+ * 
+ * Relaciona-se com:
+ * - InventoryForm.tsx / JewelryForm.tsx (componentes pais)
+ * - WebcamButton.tsx para captura de fotos via webcam
+ */
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { useDropzone } from "react-dropzone";
-import { ImageIcon, StarIcon, UploadCloud } from "lucide-react";
-import { toast } from "sonner";
+import { X, Upload, Camera } from "lucide-react";
+import { WebcamButton } from "@/components/ui/webcam-button";
 
 interface PhotoFieldsProps {
   photos: File[];
@@ -11,99 +19,181 @@ interface PhotoFieldsProps {
   setPrimaryPhotoIndex: (index: number | null) => void;
 }
 
-export function PhotoFields({ photos, setPhotos, primaryPhotoIndex, setPrimaryPhotoIndex }: PhotoFieldsProps) {
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    accept: {
-      'image/*': ['.jpeg', '.jpg', '.png', '.gif', '.webp']
-    },
-    maxFiles: 5,
-    onDrop: (acceptedFiles) => {
-      if (acceptedFiles.length + photos.length > 5) {
-        toast.error("Máximo de 5 fotos permitido");
-        return;
-      }
-      setPhotos([...photos, ...acceptedFiles]);
-    },
-    onDropRejected: () => {
-      toast.error("Arquivo inválido. Envie apenas imagens.");
-    }
-  });
+export function PhotoFields({
+  photos,
+  setPhotos,
+  primaryPhotoIndex,
+  setPrimaryPhotoIndex,
+}: PhotoFieldsProps) {
+  const [dragActive, setDragActive] = useState(false);
 
+  // Manipuladores de eventos para arrastar e soltar
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  // Manipulador para quando arquivos são soltos na área de arrastar
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const newFiles = Array.from(e.dataTransfer.files).filter(
+        file => file.type.startsWith("image/")
+      );
+      
+      if (newFiles.length > 0) {
+        handleFilesAdded(newFiles);
+      }
+    }
+  };
+
+  // Manipulador para quando arquivos são selecionados pelo input
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const newFiles = Array.from(e.target.files).filter(
+        file => file.type.startsWith("image/")
+      );
+      
+      if (newFiles.length > 0) {
+        handleFilesAdded(newFiles);
+      }
+    }
+  };
+
+  // Função auxiliar para adicionar novos arquivos
+  const handleFilesAdded = (newFiles: File[]) => {
+    setPhotos([...photos, ...newFiles]);
+    
+    // Se for a primeira foto, definir como primária automaticamente
+    if (photos.length === 0 && primaryPhotoIndex === null) {
+      setPrimaryPhotoIndex(0);
+    }
+  };
+
+  // Remover uma foto
   const removePhoto = (index: number) => {
     const newPhotos = [...photos];
     newPhotos.splice(index, 1);
     setPhotos(newPhotos);
-
+    
+    // Ajustar o índice da foto primária se necessário
     if (primaryPhotoIndex === index) {
-      setPrimaryPhotoIndex(null);
+      setPrimaryPhotoIndex(newPhotos.length > 0 ? 0 : null);
     } else if (primaryPhotoIndex !== null && primaryPhotoIndex > index) {
       setPrimaryPhotoIndex(primaryPhotoIndex - 1);
     }
   };
 
+  // Definir uma foto como primária
+  const setPrimary = (index: number) => {
+    setPrimaryPhotoIndex(index);
+  };
+
+  // Manipulador para receber fotos da webcam
+  const handleWebcamPhotos = (webcamPhotos: File[]) => {
+    handleFilesAdded(webcamPhotos);
+  };
+
   return (
     <div className="space-y-4">
+      {/* Área de arrastar e soltar + upload de arquivos */}
       <div
-        {...getRootProps()}
-        className={`
-          border-2 border-dashed rounded-lg p-6 cursor-pointer
-          transition-colors duration-200 text-center
-          ${isDragActive ? 'border-gold bg-gold/10' : 'border-gray-300 hover:border-gold'}
-        `}
+        className={`border-2 border-dashed rounded-md p-4 text-center transition-colors ${
+          dragActive ? "border-primary bg-primary/5" : "border-border"
+        }`}
+        onDragEnter={handleDrag}
+        onDragOver={handleDrag}
+        onDragLeave={handleDrag}
+        onDrop={handleDrop}
       >
-        <input {...getInputProps()} />
-        <UploadCloud className="mx-auto h-12 w-12 text-gray-400 mb-2" />
-        <p className="text-sm text-gray-600">
-          {isDragActive ? (
-            "Solte as imagens aqui..."
-          ) : (
-            <>
-              Arraste e solte as fotos aqui, ou <span className="text-gold">clique para selecionar</span>
-              <br />
-              <span className="text-xs text-gray-500">(Máximo 5 fotos)</span>
-            </>
-          )}
-        </p>
+        <input
+          type="file"
+          id="photo-upload"
+          multiple
+          accept="image/*"
+          onChange={handleFileChange}
+          className="hidden"
+        />
+        
+        <label
+          htmlFor="photo-upload"
+          className="flex flex-col items-center cursor-pointer py-2"
+        >
+          <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+          <p className="text-sm font-medium mb-1">
+            Arraste e solte suas fotos aqui ou clique para selecionar
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Formatos suportados: JPG, PNG, GIF (máx. 5MB por arquivo)
+          </p>
+        </label>
       </div>
 
+      {/* Botão para captura de fotos via webcam */}
+      <div className="flex justify-end">
+        <WebcamButton onCaptureComplete={handleWebcamPhotos} />
+      </div>
+
+      {/* Lista de fotos */}
       {photos.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-          {photos.map((photo, index) => (
-            <div key={URL.createObjectURL(photo)} className="relative group aspect-square">
-              <img
-                src={URL.createObjectURL(photo)}
-                alt={`Preview ${index + 1}`}
-                className="w-full h-full object-cover rounded-lg"
-              />
-              <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all rounded-lg flex items-center justify-center gap-2">
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  className="opacity-0 group-hover:opacity-100"
-                  onClick={() => setPrimaryPhotoIndex(index)}
-                >
-                  <StarIcon 
-                    className={`w-6 h-6 ${primaryPhotoIndex === index ? 'text-yellow-400 fill-yellow-400' : 'text-white'}`}
-                  />
-                </Button>
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="destructive"
-                  className="opacity-0 group-hover:opacity-100"
-                  onClick={() => removePhoto(index)}
-                >
-                  ✕
-                </Button>
-              </div>
-              {primaryPhotoIndex === index && (
-                <div className="absolute top-0 right-0 bg-yellow-400 text-xs px-2 py-1 rounded-bl-lg rounded-tr-lg">
-                  Principal
+        <div className="space-y-3">
+          <p className="text-sm font-medium">Fotos ({photos.length})</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {photos.map((photo, index) => (
+              <div
+                key={index}
+                className={`group relative rounded-md overflow-hidden border-2 ${
+                  index === primaryPhotoIndex
+                    ? "border-primary ring-1 ring-primary"
+                    : "border-border"
+                }`}
+              >
+                <img
+                  src={URL.createObjectURL(photo)}
+                  alt={`Foto ${index + 1}`}
+                  className="w-full h-32 object-cover"
+                />
+                
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                  {index !== primaryPhotoIndex && (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setPrimary(index)}
+                      className="text-xs h-8"
+                    >
+                      Principal
+                    </Button>
+                  )}
+                  
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => removePhoto(index)}
+                    className="h-8 w-8 p-0"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
                 </div>
-              )}
-            </div>
-          ))}
+                
+                {index === primaryPhotoIndex && (
+                  <div className="absolute top-1 left-1 bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-sm">
+                    Principal
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
