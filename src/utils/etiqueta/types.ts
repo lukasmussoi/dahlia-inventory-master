@@ -31,6 +31,7 @@ export interface EtiquetaPrintOptions {
   mostrarValores?: boolean;
   mostrarCodigos?: boolean;
   incluirBordas?: boolean;
+  multiplicarPorEstoque?: boolean;
 }
 
 /**

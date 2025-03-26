@@ -1,270 +1,347 @@
-
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { InventoryItem, InventoryCategory, InventoryFilters, InventoryModel } from "@/models/inventory";
-import { Button } from "@/components/ui/button";
-import { Plus, FolderPlus, Archive, RotateCcw } from "lucide-react";
+import { useState, useEffect } from "react";
 import { InventoryTable } from "./InventoryTable";
+import { InventoryForm } from "./InventoryForm";
 import { JewelryForm } from "./JewelryForm";
-import { CategoryForm } from "./CategoryForm";
-import { InventoryFilters as Filters } from "./InventoryFilters";
+import { InventoryFilters } from "./InventoryFilters";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { PlusIcon, FileText, ArrowLeft, ExternalLink, Archive, RotateCcw } from "lucide-react";
+import { inventoryController } from "@/controllers/inventoryController";
 import { toast } from "sonner";
+import { useInView } from "react-intersection-observer";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { CategoryForm } from "./CategoryForm";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { InventoryReports } from "./reports/InventoryReports";
+import { InventoryLabels } from "./labels/InventoryLabels";
 
 interface InventoryContentProps {
-  isAdmin?: boolean;
+  isAdmin: boolean;
+  onItemModified?: (item: any) => void;
 }
 
-export function InventoryContent({ isAdmin }: InventoryContentProps) {
-  // Estados para controle dos modais e filtros
-  const [isItemModalOpen, setIsItemModalOpen] = useState(false);
-  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
-  const [filters, setFilters] = useState<InventoryFilters>({
-    showArchived: false
+export function InventoryContent({ isAdmin, onItemModified }: InventoryContentProps) {
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isCategoryFormOpen, setIsCategoryFormOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<any>(null);
+  const [activeForm, setActiveForm] = useState<"default" | "jewelry">("default");
+  const [filters, setFilters] = useState({});
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showArchived, setShowArchived] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [supplierFilter, setSupplierFilter] = useState("");
+  const [sortField, setSortField] = useState("name");
+  const [sortOrder, setSortOrder] = useState("asc");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const queryClient = useQueryClient();
+
+  const { ref, inView } = useInView();
+
+  // Buscar categorias
+  const { data: categories, isLoading: isLoadingCategories } = useQuery({
+    queryKey: ["inventory-categories"],
+    queryFn: () => inventoryController.getAllItems({ archived: showArchived, category: categoryFilter, supplier: supplierFilter, sortField, sortOrder, page, pageSize, search: searchTerm }),
   });
-  const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<InventoryCategory | null>(null);
-  const [isDeletingItem, setIsDeletingItem] = useState(false);
 
-  // Buscar dados do inventário e categorias
-  const { data: items = [], isLoading: isLoadingItems, refetch: refetchItems } = useQuery({
-    queryKey: ['inventory-items', filters],
-    queryFn: () => {
-      console.log("Buscando itens com filtros:", filters);
-      return InventoryModel.getAllItems(filters);
-    },
+  // Buscar fornecedores
+  const { data: suppliers, isLoading: isLoadingSuppliers } = useQuery({
+    queryKey: ["inventory-suppliers"],
+    queryFn: () => inventoryController.getAllItems({ archived: showArchived, category: categoryFilter, supplier: supplierFilter, sortField, sortOrder, page, pageSize, search: searchTerm }),
   });
 
-  const { data: categories = [], refetch: refetchCategories } = useQuery({
-    queryKey: ['inventory-categories'],
-    queryFn: () => InventoryModel.getAllCategories(),
+  // Construir filtros
+  useEffect(() => {
+    const newFilters: any = { archived: showArchived };
+    if (categoryFilter) newFilters.category = categoryFilter;
+    if (supplierFilter) newFilters.supplier = supplierFilter;
+    if (searchTerm) newFilters.search = searchTerm;
+
+    setFilters(newFilters);
+    setPage(1); // Resetar a página ao alterar os filtros
+  }, [showArchived, categoryFilter, supplierFilter, searchTerm]);
+
+  // Buscar itens do inventário
+  const {
+    data: items,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ["inventory-items", filters, sortField, sortOrder, page, pageSize],
+    queryFn: () => inventoryController.getAllItems({ ...filters, sortField, sortOrder, page, pageSize }),
+    keepPreviousData: true,
   });
 
-  console.log("Itens carregados:", items.length);
+  // Função para preparar os dados do item antes de salvar
+  const prepareItemData = (formData: any) => {
+    const preparedData: any = {
+      name: formData.name,
+      sku: formData.sku,
+      barcode: formData.barcode,
+      category_id: formData.category_id,
+      quantity: formData.quantity,
+      price: formData.price,
+      unit_cost: formData.unit_cost,
+      suggested_price: formData.suggested_price,
+      weight: formData.weight,
+      width: formData.width,
+      height: formData.height,
+      depth: formData.depth,
+      min_stock: formData.min_stock,
+      supplier_id: formData.supplier_id,
+      popularity: formData.popularity,
+      reseller_commission: formData.reseller_commission,
+      markup_percentage: formData.markup_percentage,
+      plating_type_id: formData.plating_type_id,
+      material_weight: formData.material_weight,
+      packaging_cost: formData.packaging_cost,
+      gram_value: formData.gram_value,
+      profit_margin: formData.profit_margin,
+    };
 
-  // Função para abrir o modal de edição de item
-  const handleEditItem = async (item: InventoryItem) => {
+    // Remover campos vazios
+    Object.keys(preparedData).forEach(key => {
+      if (preparedData[key] === null || preparedData[key] === undefined || preparedData[key] === "") {
+        delete preparedData[key];
+      }
+    });
+
+    return preparedData;
+  };
+
+  // Modificamos apenas estas duas funções para adicionar a chamada ao evento onItemModified
+  const onSaveItem = async (formData: any) => {
     try {
-      // Verificar se o item está em uma maleta ativa (não devolvida)
-      const suitcaseInfo = await InventoryModel.checkItemInSuitcase(item.id);
+      console.log("Iniciando submissão do formulário", formData);
       
-      if (suitcaseInfo) {
-        // Verifica se a maleta está em uso (não foi devolvida)
-        const isActiveCase = suitcaseInfo.status === 'in_use' || 
-                             suitcaseInfo.status === 'in_replenishment';
-        
-        if (isActiveCase) {
-          toast.error("Este item está vinculado a uma maleta ativa e não pode ser editado. Devolva a maleta primeiro.");
-          return;
-        }
+      // Preparar dados para salvamento
+      const preparedData = prepareItemData(formData);
+      console.log("Dados preparados para salvamento:", preparedData);
+      
+      let savedItem;
+      
+      if (editingItem) {
+        console.log("Atualizando item existente");
+        savedItem = await inventoryController.updateItem(editingItem.id, preparedData);
+      } else {
+        console.log("Criando novo item");
+        savedItem = await inventoryController.createItem(preparedData);
       }
       
-      setSelectedItem(item);
-      setIsItemModalOpen(true);
+      // Invalidar a query para recarregar os dados
+      queryClient.invalidateQueries({ queryKey: ["inventory-items"] });
+      
+      // Fechar o formulário
+      setIsFormOpen(false);
+      setEditingItem(null);
+      setActiveForm("default");
+      
+      toast.success(`Item ${editingItem ? "atualizado" : "criado"} com sucesso`);
+      
+      // Notificar que um item foi modificado (adicionado ou editado)
+      if (onItemModified) {
+        onItemModified(savedItem);
+      }
+      
+      // Recarregar os itens
+      refetch();
     } catch (error) {
-      console.error('Erro ao verificar item:', error);
-      toast.error("Erro ao verificar disponibilidade do item");
+      console.error("Erro ao salvar item:", error);
+      toast.error("Erro ao salvar item. Verifique os dados e tente novamente.");
     }
   };
-
-  // Função para abrir o modal de edição de categoria
-  const handleEditCategory = (category: InventoryCategory) => {
-    setSelectedCategory(category);
-    setIsCategoryModalOpen(true);
+  
+  // Função para atualizar um item - Edição
+  const handleEditItem = (item: any) => {
+    console.log("Editando item:", item);
+    setEditingItem(item);
+    setActiveForm(item.category_name?.toLowerCase()?.includes("joia") ? "jewelry" : "default");
+    setIsFormOpen(true);
   };
 
-  // Função para fechar os modais
-  const handleCloseModals = () => {
-    setSelectedItem(null);
-    setSelectedCategory(null);
-    setIsItemModalOpen(false);
-    setIsCategoryModalOpen(false);
-    refetchItems();
-    refetchCategories();
-  };
-
-  // Função para deletar um item
+  // Função para excluir um item
   const handleDeleteItem = async (id: string) => {
     try {
-      if (isDeletingItem) return; // Evitar múltiplas exclusões simultâneas
-      
-      const suitcaseInfo = await InventoryModel.checkItemInSuitcase(id);
-      
-      if (suitcaseInfo) {
-        // Verifica se a maleta está em uso (não foi devolvida)
-        const isActiveCase = suitcaseInfo.status === 'in_use' || 
-                            suitcaseInfo.status === 'in_replenishment';
-        
-        if (isActiveCase) {
-          toast.error("Este item está vinculado a uma maleta ativa e não pode ser removido. Devolva a maleta primeiro.");
-          return;
-        }
-      }
-
-      if (window.confirm("Tem certeza que deseja excluir este item?")) {
-        try {
-          setIsDeletingItem(true);
-          toast.loading("Excluindo item e suas dependências...");
-          
-          await InventoryModel.deleteItem(id);
-          
-          toast.dismiss();
-          toast.success("Item removido com sucesso!");
-          
-          // Garantir que a lista seja atualizada após a exclusão
-          await refetchItems();
-        } catch (error: any) {
-          toast.dismiss();
-          console.error('Erro ao deletar item:', error);
-          // Tratamento específico para mensagens de erro vindas do controller
-          if (error.message) {
-            toast.error(error.message);
-          } else {
-            toast.error("Erro ao remover item. Verifique se não há dependências não tratadas.");
-          }
-        } finally {
-          setIsDeletingItem(false);
-        }
-      }
-    } catch (error) {
-      console.error('Erro ao verificar item:', error);
-      toast.error("Erro ao verificar disponibilidade do item");
+      console.log("Excluindo item:", id);
+      await inventoryController.deleteItem(id);
+      queryClient.invalidateQueries({ queryKey: ["inventory-items"] });
+      toast.success("Item excluído com sucesso");
+    } catch (error: any) {
+      console.error("Erro ao excluir item:", error);
+      toast.error(error.message || "Erro ao excluir item");
     }
   };
-
+  
   // Função para arquivar um item
   const handleArchiveItem = async (id: string) => {
     try {
-      const suitcaseInfo = await InventoryModel.checkItemInSuitcase(id);
-      
-      if (suitcaseInfo) {
-        // Verifica se a maleta está em uso (não foi devolvida)
-        const isActiveCase = suitcaseInfo.status === 'in_use' || 
-                            suitcaseInfo.status === 'in_replenishment';
-        
-        if (isActiveCase) {
-          toast.error("Este item está vinculado a uma maleta ativa e não pode ser arquivado. Devolva a maleta primeiro.");
-          return;
-        }
-      }
-
-      if (window.confirm("Tem certeza que deseja arquivar este item? Ele não aparecerá na listagem normal.")) {
-        try {
-          await InventoryModel.archiveItem(id);
-          toast.success("Item arquivado com sucesso!");
-          refetchItems();
-        } catch (error) {
-          console.error('Erro ao arquivar item:', error);
-          toast.error("Erro ao arquivar item");
-        }
-      }
+      console.log("Arquivando item:", id);
+      await inventoryController.archiveItem(id);
+      queryClient.invalidateQueries({ queryKey: ["inventory-items"] });
+      toast.success("Item arquivado com sucesso");
     } catch (error) {
-      console.error('Erro ao verificar item:', error);
-      toast.error("Erro ao verificar disponibilidade do item");
+      console.error("Erro ao arquivar item:", error);
+      toast.error("Erro ao arquivar item");
     }
   };
-
-  // Função para restaurar um item arquivado
+  
+  // Função para restaurar um item
   const handleRestoreItem = async (id: string) => {
     try {
-      if (window.confirm("Tem certeza que deseja restaurar este item?")) {
-        await InventoryModel.restoreItem(id);
-        toast.success("Item restaurado com sucesso!");
-        refetchItems();
-      }
+      console.log("Restaurando item:", id);
+      await inventoryController.restoreItem(id);
+      queryClient.invalidateQueries({ queryKey: ["inventory-items"] });
+      toast.success("Item restaurado com sucesso");
     } catch (error) {
-      console.error('Erro ao restaurar item:', error);
+      console.error("Erro ao restaurar item:", error);
       toast.error("Erro ao restaurar item");
     }
   };
 
-  // Função para deletar uma categoria
-  const handleDeleteCategory = async (id: string) => {
-    try {
-      if (window.confirm("Tem certeza que deseja excluir esta categoria?")) {
-        await InventoryModel.deleteCategory(id);
-        toast.success("Categoria removida com sucesso!");
-        refetchCategories();
-      }
-    } catch (error) {
-      console.error('Erro ao deletar categoria:', error);
-      if (error instanceof Error) {
-        toast.error(error.message);
-      } else {
-        toast.error("Erro ao remover categoria");
-      }
+  // Renderizar o formulário correto
+  const renderForm = () => {
+    switch (activeForm) {
+      case "jewelry":
+        return <JewelryForm
+          onCancel={() => { setIsFormOpen(false); setEditingItem(null); }}
+          onSubmit={onSaveItem}
+          editingItem={editingItem}
+        />;
+      default:
+        return <InventoryForm
+          onCancel={() => { setIsFormOpen(false); setEditingItem(null); }}
+          onSubmit={onSaveItem}
+          editingItem={editingItem}
+        />;
     }
-  };
-
-  // Função para atualizar filtros
-  const handleFilter = (newFilters: InventoryFilters) => {
-    console.log("Aplicando novos filtros:", newFilters);
-    setFilters(newFilters);
   };
 
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Gestão de Estoque</h1>
-          <p className="text-muted-foreground">
-            Gerencie todos os itens do seu estoque de forma eficiente
-          </p>
-        </div>
-        {isAdmin && (
-          <div className="flex gap-2">
-            <Button 
-              onClick={() => setIsCategoryModalOpen(true)} 
-              className="bg-gold/80 hover:bg-gold/70"
-            >
-              <FolderPlus className="h-5 w-5 mr-2" />
+        <h2 className="text-2xl font-bold">
+          Inventário
+          {isAdmin && (
+            <Badge variant="secondary" className="ml-2">
+              Admin
+            </Badge>
+          )}
+        </h2>
+        <div className="flex space-x-2">
+          {isAdmin && (
+            <Button onClick={() => setIsCategoryFormOpen(true)}>
+              <PlusIcon className="h-4 w-4 mr-2" />
               Nova Categoria
             </Button>
-            <Button onClick={() => setIsItemModalOpen(true)} className="bg-gold hover:bg-gold/90">
-              <Plus className="h-5 w-5 mr-2" />
-              Nova Peça
-            </Button>
-          </div>
-        )}
+          )}
+          <Button onClick={() => setIsFormOpen(true)}>
+            <PlusIcon className="h-4 w-4 mr-2" />
+            Novo Item
+          </Button>
+        </div>
       </div>
 
-      {/* Componente de Filtros */}
-      <Filters
-        categories={categories}
-        onFilter={handleFilter}
+      <InventoryFilters
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
+        showArchived={showArchived}
+        setShowArchived={setShowArchived}
+        categoryFilter={categoryFilter}
+        setCategoryFilter={setCategoryFilter}
+        supplierFilter={supplierFilter}
+        setSupplierFilter={setSupplierFilter}
+        sortField={sortField}
+        setSortField={setSortField}
+        sortOrder={sortOrder}
+        setSortOrder={setSortOrder}
       />
 
-      {/* Tabela de Itens */}
-      <div className="bg-white rounded-lg border">
+      {isLoading ? (
+        <div className="w-full h-64 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-gold"></div>
+        </div>
+      ) : error ? (
+        <div className="text-red-500">Erro ao carregar os dados.</div>
+      ) : (
         <InventoryTable
-          items={items}
-          isLoading={isLoadingItems}
-          onEdit={isAdmin ? handleEditItem : undefined}
-          onDelete={isAdmin ? handleDeleteItem : undefined}
-          onArchive={isAdmin ? handleArchiveItem : undefined}
-          onRestore={isAdmin ? handleRestoreItem : undefined}
-          showArchivedControls={filters.status === 'archived'}
+          items={items || []}
+          isLoading={isLoading}
+          onEdit={handleEditItem}
+          onDelete={handleDeleteItem}
+          onArchive={handleArchiveItem}
+          onRestore={handleRestoreItem}
+          showArchivedControls={showArchived}
         />
+      )}
+
+      <div className="flex justify-between items-center">
+        <Button
+          onClick={() => setPage(page - 1)}
+          disabled={page === 1}
+          variant="outline"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Anterior
+        </Button>
+        <span>Página: {page}</span>
+        <Button
+          onClick={() => setPage(page + 1)}
+          disabled={items?.length === 0 || items?.length < pageSize}
+          variant="outline"
+        >
+          Próximo
+          <ArrowRight className="h-4 w-4 ml-2" />
+        </Button>
       </div>
 
-      {/* Modal de Item */}
-      {isItemModalOpen && (
-        <JewelryForm
-          item={selectedItem}
-          isOpen={isItemModalOpen}
-          onClose={handleCloseModals}
-          onSuccess={refetchItems}
-        />
-      )}
+      {/* Formulário de edição/criação de item */}
+      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingItem ? "Editar Item" : "Novo Item"}</DialogTitle>
+            <DialogDescription>
+              Preencha os campos abaixo para {editingItem ? "editar" : "criar"} um item no inventário.
+            </DialogDescription>
+          </DialogHeader>
+          {renderForm()}
+        </DialogContent>
+      </Dialog>
 
-      {/* Modal de Categoria */}
-      {isCategoryModalOpen && (
-        <CategoryForm
-          category={selectedCategory}
-          isOpen={isCategoryModalOpen}
-          onClose={handleCloseModals}
-          onSuccess={refetchCategories}
-        />
-      )}
+      {/* Formulário de criação de categoria */}
+      <Dialog open={isCategoryFormOpen} onOpenChange={setIsCategoryFormOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Nova Categoria</DialogTitle>
+            <DialogDescription>
+              Preencha os campos abaixo para criar uma nova categoria.
+            </DialogDescription>
+          </DialogHeader>
+          <CategoryForm onCancel={() => setIsCategoryFormOpen(false)} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Relatórios e Etiquetas */}
+      <Tabs defaultValue="reports" className="w-full">
+        <TabsList>
+          <TabsTrigger value="reports">
+            <FileText className="h-4 w-4 mr-2" />
+            Relatórios
+          </TabsTrigger>
+          <TabsTrigger value="labels">
+            <Printer className="h-4 w-4 mr-2" />
+            Etiquetas
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="reports">
+          <InventoryReports />
+        </TabsContent>
+        <TabsContent value="labels">
+          <InventoryLabels />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

@@ -49,11 +49,20 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
     
     try {
       console.log("Iniciando geração de PDF com modelo personalizado");
+      
+      // Se o multiplicador por estoque estiver ativo, ajustar o número de cópias para cada item
+      let adjustedCopies = copies;
+      if (multiplyByStock) {
+        console.log("Multiplicando cópias pela quantidade em estoque");
+        // Não precisamos ajustar o array de itens, apenas passamos a informação para o gerador
+      }
+      
       return await generatePrintablePDF(
         modeloCustom,
         items, // Aqui passamos o array completo de itens
         {
-          copias: copies
+          copias: adjustedCopies,
+          multiplicarPorEstoque: multiplyByStock
         }
       );
     } catch (error) {
