@@ -4,6 +4,7 @@
  * @file Este arquivo controla a geração de PDFs relacionados às maletas
  */
 import { supabase } from "@/integrations/supabase/client";
+import { SupplyPdfController } from "./pdf/supplyPdfController";
 
 export class PdfController {
   /**
@@ -17,10 +18,24 @@ export class PdfController {
     try {
       console.log("Gerando PDF para maleta", suitcaseId, "com", items.length, "itens");
       
-      // TODO: Implementar geração real de PDF usando uma biblioteca ou serviço
+      // Buscar dados da maleta se não fornecidos no parâmetro promoterInfo
+      let suitcaseInfo = promoterInfo;
+      if (!suitcaseInfo || !suitcaseInfo.code) {
+        const { data: suitcase, error } = await supabase
+          .from('suitcases')
+          .select(`
+            *,
+            seller:resellers(*)
+          `)
+          .eq('id', suitcaseId)
+          .single();
+          
+        if (error) throw error;
+        suitcaseInfo = suitcase;
+      }
       
-      // Retornar URL temporária
-      return "https://example.com/suitcase-pdf.pdf";
+      // Usar o SupplyPdfController para gerar o PDF no mesmo formato de abastecimento
+      return await SupplyPdfController.generateSupplyPDF(suitcaseId, items, suitcaseInfo);
     } catch (error) {
       console.error("Erro ao gerar PDF da maleta:", error);
       throw error;

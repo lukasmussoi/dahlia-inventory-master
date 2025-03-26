@@ -1,4 +1,3 @@
-
 /**
  * Controlador Combinado de Maletas
  * @file Este arquivo exporta funções de outros controladores relacionados a maletas
@@ -53,7 +52,7 @@ export const CombinedSuitcaseController = {
   searchInventoryItems: InventorySearchController.searchInventoryItems,
   getItemSuitcaseInfo: InventorySearchController.getItemSuitcaseInfo,
   
-  // PdfController
+  // Atualizar o método generateSuitcasePDF para utilizar a mesma abordagem do abastecimento
   generateSuitcasePDF: PdfController.generateSuitcasePDF,
 
   // SuitcaseSupplyController

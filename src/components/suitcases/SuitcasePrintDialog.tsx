@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { CombinedSuitcaseController } from "@/controllers/suitcase";
@@ -6,6 +7,8 @@ import { Suitcase } from "@/types/suitcase";
 import { toast } from "sonner";
 import { Printer, FileText } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { SupplyPdfController } from "@/controllers/suitcase/pdf/supplyPdfController";
+import { openPdfInNewTab } from "@/utils/pdfUtils";
 
 interface SuitcasePrintDialogProps {
   open: boolean;
@@ -35,12 +38,15 @@ export function SuitcasePrintDialog({ open, onOpenChange, suitcase }: SuitcasePr
     
     setIsGeneratingPdf(true);
     try {
-      const pdfUrl = await CombinedSuitcaseController.generateSuitcasePDF(
+      // Usar o SupplyPdfController para gerar o PDF com o mesmo formato do PDF de abastecimento
+      const pdfUrl = await SupplyPdfController.generateSupplyPDF(
         suitcase.id,
         suitcaseItems,
-        promoterInfo
+        suitcase
       );
-      window.open(pdfUrl, '_blank');
+      
+      // Abrir o PDF em uma nova aba
+      openPdfInNewTab(pdfUrl);
     } catch (error) {
       console.error("Erro ao gerar PDF:", error);
       toast.error("Erro ao gerar PDF da maleta");

@@ -3,6 +3,8 @@ import { useState } from "react";
 import { SuitcaseController } from "@/controllers/suitcaseController";
 import { SuitcaseItem } from "@/types/suitcase";
 import { toast } from "sonner";
+import { openPdfInNewTab } from "@/utils/pdfUtils";
+import { SupplyPdfController } from "@/controllers/suitcase/pdf/supplyPdfController";
 
 export function usePrintOperations() {
   const [isPrintingPdf, setIsPrintingPdf] = useState(false);
@@ -14,37 +16,23 @@ export function usePrintOperations() {
       return;
     }
 
-    // Abrir recibo em nova janela
-    const newWindow = window.open();
-    if (newWindow) {
-      newWindow.document.write(`
-        <iframe src="${receiptUrl}" width="100%" height="100%" style="border: none;"></iframe>
-      `);
-    } else {
-      toast.error("Não foi possível abrir o recibo. Verifique se o bloqueador de pop-ups está ativo.");
-    }
+    // Abrir recibo em nova janela usando a função utilitária
+    openPdfInNewTab(receiptUrl);
   };
 
   // Imprimir PDF da maleta
-  const handlePrint = async (suitcaseId: string, items: SuitcaseItem[], promoterInfo: any) => {
+  const handlePrint = async (suitcaseId: string, items: SuitcaseItem[], suitcaseInfo: any) => {
     setIsPrintingPdf(true);
     try {
-      // Gerar PDF usando o SuitcasePdfController
-      const pdfDataUri = await SuitcaseController.generateSuitcasePDF(
+      // Utilizar o SupplyPdfController para gerar um PDF com o formato do abastecimento
+      const pdfDataUri = await SupplyPdfController.generateSupplyPDF(
         suitcaseId,
         items,
-        promoterInfo
+        suitcaseInfo
       );
       
-      // Abrir PDF em nova janela
-      const newWindow = window.open();
-      if (newWindow) {
-        newWindow.document.write(`
-          <iframe src="${pdfDataUri}" width="100%" height="100%" style="border: none;"></iframe>
-        `);
-      } else {
-        toast.error("Não foi possível abrir o PDF. Verifique se o bloqueador de pop-ups está ativo.");
-      }
+      // Abrir PDF em nova janela usando a função utilitária
+      openPdfInNewTab(pdfDataUri);
     } catch (error: any) {
       console.error("Erro ao gerar PDF:", error);
       toast.error(error.message || "Erro ao gerar PDF");
