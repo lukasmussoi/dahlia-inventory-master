@@ -1,3 +1,4 @@
+
 /**
  * Hook para gerenciar o formulário de inventário
  * 
@@ -141,7 +142,7 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
       console.log("Dados preparados para salvamento:", itemData);
       console.log("Fotos para salvamento:", photos.length);
       
-      // CORREÇÃO: Preparar as fotos para envio, garantindo que cada objeto tenha file e is_primary
+      // Preparar as fotos para envio, garantindo que cada objeto tenha file e is_primary
       const preparedPhotos = photos.map((photo, index) => {
         // Verificação detalhada para depuração
         console.log(`Preparando foto ${index + 1}/${photos.length}:`, {
@@ -170,7 +171,7 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
         if (preparedPhotos.length > 0) {
           console.log("Atualizando fotos do item:", preparedPhotos.length, "fotos");
           
-          // CORREÇÃO: Logs detalhados para verificar o conteúdo do array de fotos
+          // Logs detalhados para verificar o conteúdo do array de fotos
           console.log("Detalhes das fotos a serem enviadas:", 
             preparedPhotos.map((p, i) => ({
               index: i, 
@@ -195,7 +196,7 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
         if (preparedPhotos.length > 0 && savedItem) {
           console.log("Salvando fotos do novo item:", preparedPhotos.length, "fotos");
           
-          // CORREÇÃO: Logs detalhados para verificar o conteúdo do array de fotos
+          // Logs detalhados para verificar o conteúdo do array de fotos
           console.log("Detalhes das fotos a serem enviadas:", 
             preparedPhotos.map((p, i) => ({
               index: i, 

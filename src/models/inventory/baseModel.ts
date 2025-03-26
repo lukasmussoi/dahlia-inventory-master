@@ -1,3 +1,4 @@
+
 /**
  * Modelo Base de Inventário
  * @file Este arquivo contém funções básicas para gerenciamento do inventário
@@ -144,7 +145,7 @@ export class BaseInventoryModel {
     return processedItem;
   }
 
-  // Atualizar fotos de um item - corrigido para usar o bucket 'inventory_photos'
+  // Atualizar fotos de um item - usando o bucket 'inventory_photos'
   static async updateItemPhotos(
     itemId: string, 
     photos: Array<File | { 
@@ -159,12 +160,12 @@ export class BaseInventoryModel {
     if (!photos || photos.length === 0) return [];
 
     try {
-      // CORREÇÃO: Logs detalhados para entender o início do processamento
+      // Logs detalhados para entender o início do processamento
       console.log("=== INÍCIO: updateItemPhotos ===");
       console.log(`Iniciando atualização de fotos para item ID: ${itemId}`);
       console.log(`Quantidade de fotos recebidas: ${photos.length}`);
 
-      // CORREÇÃO: Diagnóstico detalhado das fotos recebidas
+      // Diagnóstico detalhado das fotos recebidas
       photos.forEach((photo, index) => {
         if (photo instanceof File) {
           console.log(`Foto ${index + 1}: Objeto File`, {
@@ -191,7 +192,7 @@ export class BaseInventoryModel {
         }
       });
 
-      // CORREÇÃO: Primeiro vamos excluir as fotos existentes
+      // Primeiro vamos excluir as fotos existentes
       console.log("Excluindo fotos antigas do item...");
       const { error: deleteError } = await supabase
         .from('inventory_photos')
@@ -206,7 +207,7 @@ export class BaseInventoryModel {
       // Preparar o array para armazenar os registros processados
       const processedPhotoRecords: { inventory_id: string; photo_url: string; is_primary: boolean }[] = [];
       
-      // CORREÇÃO: Processar cada foto com maior clareza e robustez
+      // Processar cada foto com maior clareza e robustez
       for (let i = 0; i < photos.length; i++) {
         const photo = photos[i];
         let photoUrl = '';
@@ -215,7 +216,7 @@ export class BaseInventoryModel {
         
         console.log(`Processando foto ${i + 1}/${photos.length}...`);
         
-        // CORREÇÃO: Determinar o tipo de objeto para processamento adequado
+        // Determinar o tipo de objeto para processamento adequado
         if ('photo_url' in photo && typeof photo.photo_url === 'string') {
           // É um objeto com URL, usar diretamente
           photoUrl = photo.photo_url;
@@ -242,25 +243,25 @@ export class BaseInventoryModel {
           });
         }
         else {
-          // CORREÇÃO: Se chegou aqui, o objeto não é compatível
+          // Se chegou aqui, o objeto não é compatível
           console.error(`Foto ${i + 1} tem formato incompatível:`, photo);
           continue;
         }
         
-        // CORREÇÃO: Se temos um arquivo para upload, processá-lo
+        // Se temos um arquivo para upload, processá-lo
         if (fileToUpload) {
           console.log(`Iniciando upload do arquivo ${i + 1}/${photos.length}: ${fileToUpload.name} (${fileToUpload.type})`);
           
           try {
-            // CORREÇÃO: Verificar tipo de arquivo e formato
+            // Verificar tipo de arquivo e formato
             if (!fileToUpload.type.startsWith('image/')) {
               console.error(`Arquivo ${fileToUpload.name} não é uma imagem válida (tipo: ${fileToUpload.type})`);
               continue;
             }
             
-            // CORREÇÃO: Definir o caminho de armazenamento (formato: inventory/item_id/timestamp_filename.jpg)
+            // Definir o caminho de armazenamento (formato: inventory/item_id/timestamp_filename.jpg)
             const timestamp = new Date().getTime();
-            // CORREÇÃO: Garantir que o nome do arquivo seja seguro para URLs
+            // Garantir que o nome do arquivo seja seguro para URLs
             const safeFileName = fileToUpload.name
               .replace(/[^a-zA-Z0-9_\-.]/g, '_')
               .toLowerCase();
@@ -268,9 +269,9 @@ export class BaseInventoryModel {
             
             console.log(`Enviando arquivo para: ${filePath}`);
             
-            // CORREÇÃO DO BUCKET: Alterando 'photos' para 'inventory_photos'
+            // USANDO EXCLUSIVAMENTE BUCKET 'inventory_photos'
             const { data: uploadData, error: uploadError } = await supabase.storage
-              .from('inventory_photos') // ⚠️ CORREÇÃO DO BUCKET: era 'photos', agora é 'inventory_photos'
+              .from('inventory_photos')
               .upload(filePath, fileToUpload, {
                 cacheControl: '3600',
                 upsert: true
@@ -281,9 +282,9 @@ export class BaseInventoryModel {
               throw uploadError;
             }
             
-            // CORREÇÃO DO BUCKET: Alterando 'photos' para 'inventory_photos' na obtenção da URL pública
+            // USANDO EXCLUSIVAMENTE BUCKET 'inventory_photos' na obtenção da URL pública
             const { data: urlData } = supabase.storage
-              .from('inventory_photos') // ⚠️ CORREÇÃO DO BUCKET: era 'photos', agora é 'inventory_photos'
+              .from('inventory_photos')
               .getPublicUrl(filePath);
               
             photoUrl = urlData.publicUrl;
@@ -310,13 +311,13 @@ export class BaseInventoryModel {
         }
       }
       
-      // CORREÇÃO: Se não houver fotos processadas, retornar array vazio
+      // Se não houver fotos processadas, retornar array vazio
       if (processedPhotoRecords.length === 0) {
         console.log("Nenhuma foto válida para inserir no banco.");
         return [];
       }
       
-      // CORREÇÃO: Garantir que apenas uma foto seja marcada como primária
+      // Garantir que apenas uma foto seja marcada como primária
       let hasPrimary = false;
       for (let i = 0; i < processedPhotoRecords.length; i++) {
         if (processedPhotoRecords[i].is_primary) {
@@ -334,7 +335,7 @@ export class BaseInventoryModel {
         processedPhotoRecords[0].is_primary = true;
       }
       
-      // CORREÇÃO: Inserir os registros no banco de dados
+      // Inserir os registros no banco de dados
       console.log("Inserindo registros de fotos no banco:", processedPhotoRecords.length, "registros");
       
       // Mostrar detalhes dos registros para depuração
