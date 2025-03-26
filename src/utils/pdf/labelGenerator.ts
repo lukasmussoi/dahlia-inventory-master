@@ -49,11 +49,51 @@ export async function generatePdfLabel(options: GeneratePdfLabelOptions): Promis
     
     try {
       console.log("Iniciando geração de PDF com modelo personalizado");
+      
+      // Se a opção "Multiplicar por estoque" estiver ativada, ajustar as cópias para cada item
+      // baseado na quantidade em estoque
+      let itemsToProcess = [];
+      
+      if (multiplyByStock) {
+        console.log("Opção 'Multiplicar por estoque' ativada - gerando etiquetas baseadas na quantidade em estoque");
+        
+        // Para cada item, criar cópias baseadas na quantidade em estoque
+        for (const item of items) {
+          const stockQuantity = item.quantity || 0;
+          
+          if (stockQuantity > 0) {
+            console.log(`Item ${item.name || item.id} tem ${stockQuantity} unidades em estoque`);
+            
+            // Adicionar o item à lista de processamento com sua quantidade de estoque
+            itemsToProcess.push({
+              ...item,
+              _copiesForStock: stockQuantity
+            });
+          } else {
+            console.warn(`Item ${item.name || item.id} tem estoque zero, gerando apenas uma etiqueta`);
+            
+            // Mesmo com estoque zero, adicionamos uma cópia para garantir pelo menos uma etiqueta
+            itemsToProcess.push({
+              ...item,
+              _copiesForStock: 1
+            });
+          }
+        }
+        
+        // Calcular o total de etiquetas que serão geradas
+        const totalLabels = itemsToProcess.reduce((total, item) => total + item._copiesForStock, 0);
+        console.log(`Total de etiquetas a serem geradas (multiplicado por estoque): ${totalLabels}`);
+      } else {
+        // Modo normal, usar o número de cópias definido pelo usuário
+        itemsToProcess = items;
+      }
+      
       return await generatePrintablePDF(
         modeloCustom,
-        items, // Aqui passamos o array completo de itens
+        itemsToProcess, // Passamos os itens processados (com informação de quantidade)
         {
-          copias: copies
+          copias: copies,
+          multiplicarPorEstoque: multiplyByStock // Enviar flag para o gerador
         }
       );
     } catch (error) {

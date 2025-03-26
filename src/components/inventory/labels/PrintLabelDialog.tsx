@@ -128,10 +128,13 @@ export function PrintLabelDialog({
       return false;
     }
     
-    const copiesNum = parseInt(copies);
-    if (isNaN(copiesNum) || copiesNum < 1) {
-      toast.error("Número de cópias deve ser pelo menos 1");
-      return false;
+    // Validar número de cópias apenas se não estiver multiplicando por estoque
+    if (!multiplyByStock) {
+      const copiesNum = parseInt(copies);
+      if (isNaN(copiesNum) || copiesNum < 1) {
+        toast.error("Número de cópias deve ser pelo menos 1");
+        return false;
+      }
     }
     
     if (selectedModeloId && modeloWarning) {
@@ -149,6 +152,7 @@ export function PrintLabelDialog({
       setIsProcessing(true);
       console.log("Iniciando impressão de múltiplas etiquetas com modelo:", selectedModeloId);
       console.log("Itens para imprimir:", items);
+      console.log("Multiplicar por estoque:", multiplyByStock);
       
       if (!selectedModeloId) {
         throw new Error("Nenhum modelo de etiqueta selecionado");
@@ -163,12 +167,22 @@ export function PrintLabelDialog({
 
       // Registrar impressão no histórico para cada item
       for (const item of items) {
-        await LabelModel.registerLabelPrint(item.id, parseInt(copies));
+        // Se estiver multiplicando por estoque, use a quantidade em estoque como número de cópias
+        const quantidade = multiplyByStock ? item.quantity : parseInt(copies);
+        await LabelModel.registerLabelPrint(item.id, quantidade);
       }
 
       // Abrir PDF em nova aba
       window.open(pdfUrl, '_blank');
-      toast.success(`${items.length} etiquetas geradas com sucesso!`);
+      
+      // Mensagem de sucesso baseada na multiplicação por estoque
+      if (multiplyByStock) {
+        const totalEtiquetas = items.reduce((total, item) => total + (item.quantity || 1), 0);
+        toast.success(`${totalEtiquetas} etiquetas geradas com sucesso (multiplicado por estoque)!`);
+      } else {
+        toast.success(`${items.length} etiquetas geradas com sucesso!`);
+      }
+      
       onClose();
     } catch (error) {
       console.error("Erro ao gerar PDF:", error);

@@ -57,7 +57,15 @@ export function PrintLabelForm({
         </div>
         <div className="space-y-2">
           <Label htmlFor="copies">Cópias</Label>
-          <Input id="copies" type="number" min="1" value={copies} onChange={e => setCopies(e.target.value)} />
+          <Input 
+            id="copies" 
+            type="number" 
+            min="1" 
+            value={copies} 
+            onChange={e => setCopies(e.target.value)} 
+            disabled={multiplyByStock} 
+            className={multiplyByStock ? "bg-gray-100 text-gray-500" : ""}
+          />
         </div>
       </div>
       

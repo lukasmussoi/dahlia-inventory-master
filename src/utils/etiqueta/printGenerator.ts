@@ -109,17 +109,38 @@ export const generatePrintablePDF = async (
     let currentPage = 0;
     
     // Calcular número total de etiquetas a serem geradas
-    const totalLabels = items.reduce((total, item) => {
-      return total + options.copias;
-    }, 0);
+    let totalLabels = 0;
     
-    console.log(`Gerando ${totalLabels} etiquetas no total`);
+    // Verificar se deve multiplicar por estoque
+    if (options.multiplicarPorEstoque) {
+      // Se a opção 'multiplicar por estoque' estiver ativa, usar a propriedade _copiesForStock
+      // que foi adicionada anteriormente no labelGenerator.ts
+      totalLabels = items.reduce((total, item) => {
+        return total + (item._copiesForStock || 1);
+      }, 0);
+      
+      console.log(`Multiplicando por estoque: gerando ${totalLabels} etiquetas no total`);
+    } else {
+      // Caso contrário, usar o número de cópias padrão
+      totalLabels = items.reduce((total, item) => {
+        return total + options.copias;
+      }, 0);
+      
+      console.log(`Gerando ${totalLabels} etiquetas no total (${options.copias} por item)`);
+    }
     
     let labelCounter = 0;
     
     // Para cada item, gerar as etiquetas solicitadas
     for (const item of items) {
-      for (let i = 0; i < options.copias; i++) {
+      // Determinar quantas cópias precisamos para este item
+      const copiasParaEsteItem = options.multiplicarPorEstoque ? 
+        (item._copiesForStock || 1) : // Usar quantidade em estoque se opção ativa
+        options.copias; // Caso contrário, usar número padrão de cópias
+      
+      console.log(`Gerando ${copiasParaEsteItem} etiquetas para o item ${item.name || item.id}`);
+      
+      for (let i = 0; i < copiasParaEsteItem; i++) {
         // Verificar se precisa de nova página
         if (currentRow >= etiquetasPorColuna) {
           currentRow = 0;
