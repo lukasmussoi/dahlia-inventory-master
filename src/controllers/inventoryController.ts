@@ -1,4 +1,8 @@
 
+/**
+ * Controlador de Inventário
+ * @file Este arquivo contém funcionalidades para gerenciar o inventário de produtos
+ */
 import { InventoryModel } from "@/models/inventory";
 import { LabelModel } from "@/models/labelModel";
 
@@ -173,12 +177,12 @@ export const InventoryController = {
       
       // Verificar se foi retornado algo do modelo
       if (suitcaseInfo) {
-        // Se o modelo já adicionou a propriedade hasError, retornar conforme recebido
+        // Verificar se o objeto já tem a estrutura esperada
         if ('hasError' in suitcaseInfo) {
           return suitcaseInfo;
         }
         
-        // Caso contrário, adicionar a propriedade hasError como false
+        // Caso contrário, criar a estrutura esperada
         return {
           ...suitcaseInfo,
           inSuitcase: true,

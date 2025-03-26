@@ -201,7 +201,7 @@ export class BaseInventoryModel {
   // Verificar se um item está em uma maleta
   static async checkItemInSuitcase(inventoryId: string) {
     try {
-      // Corrigida a consulta para usar parênteses corretamente e corrigir a sintaxe
+      // Consulta ajustada para retornar os dados corretamente
       const { data, error } = await supabase
         .from('suitcase_items')
         .select(`
@@ -222,6 +222,7 @@ export class BaseInventoryModel {
       
       const firstItem = data[0];
       
+      // Garantir que o retorno tenha a estrutura consistente
       return {
         suitcase_id: firstItem.suitcase_id,
         suitcase_code: firstItem.suitcases?.code || 'Desconhecido',
@@ -231,7 +232,14 @@ export class BaseInventoryModel {
       };
     } catch (error) {
       console.error("Erro ao verificar se item está em maleta:", error);
-      throw error;
+      // Retornar um objeto com hasError: true para indicar que ocorreu um erro
+      return { 
+        suitcase_id: null, 
+        suitcase_code: null, 
+        status: null, 
+        seller_name: null,
+        hasError: true 
+      };
     }
   }
 
