@@ -1,4 +1,3 @@
-
 /**
  * JewelryForm - Componente para criação e edição de joias no inventário
  */
@@ -23,6 +22,8 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { PriceSummary } from "./form/PriceSummary";
 import { PhotoFields } from "./form/PhotoFields";
+import { uploadMultiplePhotos } from "@/utils/photoUploadUtils";
+import { supabase } from "@/integrations/supabase/client";
 
 // Schema de validação do formulário
 const formSchema = z.object({
@@ -88,6 +89,55 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
     queryFn: () => InventoryModel.getAllSuppliers(),
   });
 
+  // Carregar fotos existentes se estiver editando um item
+  useEffect(() => {
+    if (item && item.photos && item.photos.length > 0) {
+      const loadExistingPhotos = async () => {
+        try {
+          const photoFiles: File[] = [];
+          let primaryIndex = null;
+          
+          for (let i = 0; i < item.photos.length; i++) {
+            const photo = item.photos[i];
+            try {
+              // Fetch da imagem para converter para blob
+              const response = await fetch(photo.photo_url);
+              const blob = await response.blob();
+              
+              // Extrair nome do arquivo da URL
+              const urlParts = photo.photo_url.split('/');
+              const fileName = urlParts[urlParts.length - 1] || `photo_${i}.jpg`;
+              
+              // Criar objeto File
+              const file = new File([blob], fileName, { 
+                type: blob.type || 'image/jpeg',
+                lastModified: new Date().getTime()
+              });
+              
+              photoFiles.push(file);
+              
+              // Verificar se é a foto primária
+              if (photo.is_primary) {
+                primaryIndex = i;
+              }
+            } catch (error) {
+              console.error(`Erro ao carregar foto ${photo.photo_url}:`, error);
+            }
+          }
+          
+          setPhotos(photoFiles);
+          setPrimaryPhotoIndex(primaryIndex !== null ? primaryIndex : (photoFiles.length > 0 ? 0 : null));
+          
+        } catch (error) {
+          console.error('Erro ao carregar fotos existentes:', error);
+          toast.error("Não foi possível carregar as fotos existentes");
+        }
+      };
+      
+      loadExistingPhotos();
+    }
+  }, [item]);
+
   // Calcular valores em tempo real
   const calculatedValues = useMemo(() => {
     const rawCost = form.watch('raw_cost') || 0;
@@ -120,20 +170,68 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
 
   // Função para salvar apenas as fotos, sem submeter o resto do formulário
   const handleSavePhotosOnly = async () => {
+    if (!item) {
+      toast.error("É necessário salvar o item primeiro para anexar fotos.");
+      return;
+    }
+    
+    if (photos.length === 0) {
+      toast.warning("Nenhuma foto selecionada para upload.");
+      return;
+    }
+    
     try {
-      if (!item) {
-        toast.error("É necessário salvar o item primeiro para anexar fotos.");
-        return;
-      }
-      
       setIsSubmitting(true);
-      toast.success("As fotos serão salvas em breve.");
-      // Simular uma operação de upload para o exemplo
-      setUploadProgress(100);
+      setUploadProgress(0);
       
+      // Fazer upload das fotos para o storage
+      const results = await uploadMultiplePhotos(
+        photos,
+        'inventory_images',
+        (progress) => setUploadProgress(progress),
+        item.id
+      );
+      
+      // Verificar resultados do upload
+      const successfulUploads = results.filter(r => r.success && r.url);
+      
+      if (successfulUploads.length > 0) {
+        // Preparar dados para salvar no banco
+        const photoRecords = successfulUploads.map((result, index) => ({
+          inventory_id: item.id,
+          photo_url: result.url as string,
+          is_primary: index === primaryPhotoIndex
+        }));
+        
+        // Remover fotos antigas
+        const { error: deleteError } = await supabase
+          .from('inventory_photos')
+          .delete()
+          .eq('inventory_id', item.id);
+          
+        if (deleteError) {
+          console.error("Erro ao excluir fotos antigas:", deleteError);
+          toast.error("Erro ao atualizar fotos antigas");
+        }
+        
+        // Inserir novas fotos
+        const { data, error } = await supabase
+          .from('inventory_photos')
+          .insert(photoRecords)
+          .select();
+          
+        if (error) {
+          console.error("Erro ao salvar registros das fotos:", error);
+          toast.error("Erro ao salvar informações das fotos");
+        } else {
+          toast.success(`${successfulUploads.length} foto(s) salva(s) com sucesso!`);
+        }
+      } else {
+        toast.error("Não foi possível fazer upload das fotos. Tente novamente.");
+      }
     } catch (error) {
       console.error('Erro ao salvar fotos:', error);
-      toast.error("Erro ao salvar fotos.");
+      toast.error("Erro ao salvar fotos. Verifique as permissões e tente novamente.");
     } finally {
       setIsSubmitting(false);
       setUploadProgress(0);
@@ -173,32 +271,51 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
 
       console.log("Dados preparados para salvamento:", itemData);
 
-      // Processar fotos para o formato correto
-      const processedPhotos = photos.map(file => {
-        return {
-          // Usar URL temporária para simular o upload
-          photo_url: URL.createObjectURL(file),
-          is_primary: false
-        };
-      });
-
       let createdOrUpdatedItem: InventoryItem | null = null;
       
+      // Restante da função de submissão
       if (item) {
         console.log("Atualizando item existente");
         createdOrUpdatedItem = await InventoryModel.updateItem(item.id, itemData);
-        if (photos.length > 0) {
-          await InventoryModel.updateItemPhotos(item.id, processedPhotos);
-        }
         toast.success("Peça atualizada com sucesso!");
       } else {
         console.log("Criando novo item");
         createdOrUpdatedItem = await InventoryModel.createItem(itemData);
         console.log("Item criado:", createdOrUpdatedItem);
-        if (photos.length > 0 && createdOrUpdatedItem) {
-          await InventoryModel.updateItemPhotos(createdOrUpdatedItem.id, processedPhotos);
-        }
         toast.success("Peça criada com sucesso!");
+      }
+      
+      // Se temos fotos e um item criado/atualizado, fazer upload das fotos
+      if (photos.length > 0 && createdOrUpdatedItem) {
+        const uploadResults = await uploadMultiplePhotos(
+          photos,
+          'inventory_images',
+          (progress) => setUploadProgress(progress),
+          createdOrUpdatedItem.id
+        );
+        
+        const successfulUploads = uploadResults.filter(r => r.success && r.url);
+        
+        if (successfulUploads.length > 0) {
+          const photoRecords = successfulUploads.map((result, index) => ({
+            inventory_id: createdOrUpdatedItem!.id,
+            photo_url: result.url as string,
+            is_primary: index === primaryPhotoIndex
+          }));
+          
+          // Salvar registros das fotos no banco
+          const { data, error } = await supabase
+            .from('inventory_photos')
+            .insert(photoRecords)
+            .select();
+            
+          if (error) {
+            console.error("Erro ao salvar registros das fotos:", error);
+          } else {
+            console.log("Fotos salvas com sucesso:", data);
+            createdOrUpdatedItem.photos = data;
+          }
+        }
       }
       
       if (onSuccess && createdOrUpdatedItem) {
@@ -225,6 +342,33 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
     return () => subscription.unsubscribe();
   }, [form]);
 
+  // Função para lidar com fotos capturadas pela webcam
+  const handleWebcamCapture = (capturedPhotos: File[]) => {
+    setPhotos((prev) => [...prev, ...capturedPhotos]);
+    
+    // Se não houver foto primária definida, define a primeira nova foto
+    if (primaryPhotoIndex === null && capturedPhotos.length > 0) {
+      setPrimaryPhotoIndex(photos.length);
+    }
+  };
+
+  // Função para remover uma foto da lista
+  const handleRemovePhoto = (index: number) => {
+    setPhotos((prev) => prev.filter((_, i) => i !== index));
+    
+    // Ajustar o índice da foto primária se necessário
+    if (primaryPhotoIndex === index) {
+      setPrimaryPhotoIndex(photos.length > 1 ? 0 : null);
+    } else if (primaryPhotoIndex !== null && primaryPhotoIndex > index) {
+      setPrimaryPhotoIndex(primaryPhotoIndex - 1);
+    }
+  };
+
+  // Função para definir foto principal
+  const handleSetPrimaryPhoto = (index: number) => {
+    setPrimaryPhotoIndex(index);
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-[95vw] max-h-[95vh] h-auto flex flex-col p-6 gap-4">
@@ -242,7 +386,7 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
           <div className="overflow-y-auto pr-2">
             <Form {...form}>
               <form id="jewelry-form" onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-                {/* Seção: Informações Básicas */}
+                {/* Formulário: seções de informações básicas, custos e precificação */}
                 <div className="bg-white rounded-lg p-6 shadow-sm border">
                   <h3 className="text-lg font-medium mb-4">Informações Básicas</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -324,7 +468,6 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                   </div>
                 </div>
 
-                {/* Seção: Custos e Pesos */}
                 <div className="bg-white rounded-lg p-6 shadow-sm border">
                   <h3 className="text-lg font-medium mb-4">Custos e Pesos</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -402,7 +545,6 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                   </div>
                 </div>
 
-                {/* Seção: Precificação */}
                 <div className="bg-white rounded-lg p-6 shadow-sm border">
                   <h3 className="text-lg font-medium mb-4">Precificação</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -446,6 +588,7 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
 
           {/* Coluna lateral - Fotos e Resumo */}
           <div className="flex flex-col gap-6">
+            {/* Seção de fotos - implementação completa com PhotoFields */}
             <div className="bg-white rounded-lg p-4 shadow-sm border">
               <div className="flex items-center justify-between mb-4">
                 <Label className="text-lg font-medium">Fotos da Peça</Label>
@@ -454,42 +597,23 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                   size="sm"
                   variant="outline"
                   onClick={handleSavePhotosOnly}
-                  disabled={photos.length === 0 || !item}
+                  disabled={photos.length === 0 || isSubmitting}
                 >
                   Salvar Fotos
                 </Button>
               </div>
 
-              {/* Usar um div em vez do componente PhotoFields que exige o Form */}
-              <div className="space-y-4">
-                <div className="border-2 border-dashed rounded-md p-4 text-center cursor-pointer">
-                  <div className="mx-auto h-8 w-8 text-muted-foreground">📷</div>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Funcionalidade de upload de fotos simplificada
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Implementação completa no InventoryForm
-                  </p>
-                </div>
-
-                {/* Exibir fotos (simplificado) */}
-                {photos.length > 0 && (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-4">
-                    {photos.map((photo, index) => (
-                      <div 
-                        key={index} 
-                        className="relative border rounded-md overflow-hidden"
-                      >
-                        <img 
-                          src={URL.createObjectURL(photo)} 
-                          alt={`Foto ${index + 1}`} 
-                          className="w-full h-32 object-cover"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+              {/* Usar PhotoFields para gerenciar fotos */}
+              <PhotoFields 
+                form={form}
+                photos={photos}
+                setPhotos={setPhotos}
+                primaryPhotoIndex={primaryPhotoIndex}
+                setPrimaryPhotoIndex={setPrimaryPhotoIndex}
+                uploadProgress={uploadProgress}
+                setUploadProgress={setUploadProgress}
+                onSavePhotos={handleSavePhotosOnly}
+              />
             </div>
 
             <PriceSummary

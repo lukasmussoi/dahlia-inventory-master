@@ -1,6 +1,5 @@
 
 import React from "react";
-import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { UseFormReturn } from "react-hook-form";
 import { WebcamButton } from "@/components/ui/webcam-button";
 import { Button } from "@/components/ui/button";
@@ -8,9 +7,10 @@ import { Camera, Trash2, Upload, Save } from "lucide-react";
 import { useDropzone } from "react-dropzone";
 import { Progress } from "@/components/ui/progress";
 import { FormValues } from "@/hooks/useInventoryForm";
+import { supabase } from "@/integrations/supabase/client";
 
 interface PhotoFieldsProps {
-  form: UseFormReturn<FormValues>;
+  form: UseFormReturn<any>;
   photos: File[];
   setPhotos: React.Dispatch<React.SetStateAction<File[]>>;
   primaryPhotoIndex: number | null;
@@ -64,6 +64,7 @@ export function PhotoFields({
 
   // Função para adicionar fotos da webcam
   const handleWebcamCapture = (capturedPhotos: File[]) => {
+    console.log("Fotos capturadas pela webcam:", capturedPhotos);
     setPhotos((prev) => [...prev, ...capturedPhotos]);
     
     // Se não houver foto primária definida, define a primeira nova foto

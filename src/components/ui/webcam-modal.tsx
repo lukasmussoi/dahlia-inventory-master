@@ -25,28 +25,35 @@ interface WebcamModalProps {
 export function WebcamModal({ isOpen, onOpenChange, onCapture }: WebcamModalProps) {
   const [capturedPhotos, setCapturedPhotos] = useState<File[]>([]);
   const [activeTab, setActiveTab] = useState<"capture" | "review">("capture");
-  const webcamActive = useRef(false);
+  const [webcamActive, setWebcamActive] = useState(false);
   
-  // Monitorar quando o modal é fechado para limpar os dados
+  // Monitorar quando o modal é aberto/fechado para gerenciar o estado da webcam
   useEffect(() => {
-    if (!isOpen) {
-      // Garantir que a câmera esteja desligada, mas não resetar os dados imediatamente
-      // para permitir uma transição suave
-      webcamActive.current = false;
+    if (isOpen) {
+      // Quando o modal abre, ativamos a webcam se a aba de captura estiver ativa
+      if (activeTab === "capture") {
+        setWebcamActive(true);
+      }
+    } else {
+      // Quando o modal fecha, garantimos que a webcam esteja desligada
+      setWebcamActive(false);
+      
+      // Resetar estado após um delay para permitir a animação de fechamento
       const timer = setTimeout(() => {
         if (!isOpen) {
           setActiveTab("capture");
+          setCapturedPhotos([]);
         }
       }, 300);
+      
       return () => clearTimeout(timer);
-    } else {
-      webcamActive.current = activeTab === "capture";
     }
   }, [isOpen, activeTab]);
 
   // Monitorar mudanças na aba ativa
   useEffect(() => {
-    webcamActive.current = isOpen && activeTab === "capture";
+    // Ativar webcam apenas se o modal estiver aberto e na aba de captura
+    setWebcamActive(isOpen && activeTab === "capture");
   }, [activeTab, isOpen]);
 
   // Função para adicionar uma foto capturada à lista
@@ -63,7 +70,12 @@ export function WebcamModal({ isOpen, onOpenChange, onCapture }: WebcamModalProp
 
   // Função para confirmar as fotos capturadas
   const handleConfirm = () => {
-    onCapture(capturedPhotos);
+    if (capturedPhotos.length > 0) {
+      onCapture(capturedPhotos);
+    }
+    
+    // Desativar a webcam antes de fechar o modal
+    setWebcamActive(false);
     setCapturedPhotos([]);
     setActiveTab("capture");
     onOpenChange(false);
@@ -71,6 +83,8 @@ export function WebcamModal({ isOpen, onOpenChange, onCapture }: WebcamModalProp
 
   // Função para cancelar e fechar o modal
   const handleCancel = () => {
+    // Desativar a webcam, limpar fotos e fechar modal
+    setWebcamActive(false);
     setCapturedPhotos([]);
     setActiveTab("capture");
     onOpenChange(false);
@@ -79,9 +93,9 @@ export function WebcamModal({ isOpen, onOpenChange, onCapture }: WebcamModalProp
   // Função de gerenciamento que fecha o modal com segurança
   const handleOpenChange = (open: boolean) => {
     if (!open) {
-      // Garantir que a webcam seja desligada
-      webcamActive.current = false;
-      // Fechar modalidade. A câmera será desligada pelo efeito no WebcamCapture
+      // Garantir que a webcam seja desligada antes de fechar
+      setWebcamActive(false);
+      // Fechar o modal
       onOpenChange(false);
     } else {
       onOpenChange(true);
@@ -121,7 +135,7 @@ export function WebcamModal({ isOpen, onOpenChange, onCapture }: WebcamModalProp
           <div className="flex flex-col items-center">
             <WebcamCapture 
               onCapture={handlePhotoCaptured} 
-              isActive={isOpen && activeTab === "capture" && webcamActive.current} 
+              isActive={webcamActive} 
             />
           </div>
         ) : (
