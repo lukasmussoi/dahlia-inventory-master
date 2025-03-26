@@ -1,4 +1,3 @@
-
 /**
  * Controlador de Inventário
  * @file Este arquivo contém funcionalidades para gerenciar o inventário de produtos
@@ -64,22 +63,7 @@ export const InventoryController = {
       
       console.log("Iniciando exclusão de item do inventário:", id);
       
-      // Primeiro excluir o histórico de etiquetas usando o LabelModel
-      try {
-        console.log("Excluindo histórico de etiquetas...");
-        const labelHistoryDeleted = await LabelModel.deleteLabelHistory(id);
-        
-        if (!labelHistoryDeleted) {
-          throw new Error("Não foi possível excluir todo o histórico de etiquetas. Tente novamente.");
-        }
-        
-        console.log("Histórico de etiquetas excluído com sucesso");
-      } catch (error) {
-        console.error("Erro ao excluir histórico de etiquetas:", error);
-        throw new Error("Erro ao excluir histórico de etiquetas. Por favor, tente novamente.");
-      }
-      
-      // Executar a exclusão em cascata
+      // Chamar diretamente a função de exclusão no modelo, que agora cuida de todas as dependências
       await InventoryModel.deleteItem(id);
       console.log("Item excluído com sucesso:", id);
       return true;

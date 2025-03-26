@@ -5,6 +5,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { InventoryItem } from "./types";
 import { BaseInventoryModel } from "./baseModel";
+import { LabelModel } from "../labelModel";
 
 export class InventoryItemModel {
   // Criar novo item
@@ -70,23 +71,9 @@ export class InventoryItemModel {
     try {
       console.log("Iniciando processo de exclusão do item:", id);
       
-      // 1. Verificar se ainda existem registros do histórico de etiquetas
-      console.log("Verificando histórico de etiquetas relacionadas ao item:", id);
-      const { data: labelHistoryData, error: labelHistoryCheckError } = await supabase
-        .from('inventory_label_history')
-        .select('id')
-        .eq('inventory_id', id);
-      
-      if (labelHistoryCheckError) {
-        console.error("Erro ao verificar histórico de etiquetas:", labelHistoryCheckError);
-        throw labelHistoryCheckError;
-      }
-      
-      // Se existirem registros de histórico de etiquetas, impedir a exclusão
-      if (labelHistoryData && labelHistoryData.length > 0) {
-        console.error(`Ainda existem ${labelHistoryData.length} registros de histórico de etiquetas para o item. Não é possível excluir.`);
-        throw new Error(`Ainda existem ${labelHistoryData.length} registros de histórico de etiquetas para o item. Não é possível excluir.`);
-      }
+      // 1. Excluir histórico de etiquetas relacionadas
+      console.log("Excluindo histórico de etiquetas relacionadas ao item:", id);
+      await LabelModel.deleteLabelHistory(id);
       
       // 2. Excluir movimentações relacionadas
       console.log("Excluindo movimentações de estoque relacionadas ao item:", id);
