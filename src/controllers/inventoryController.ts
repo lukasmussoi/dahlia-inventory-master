@@ -175,7 +175,8 @@ export const InventoryController = {
         isActiveCase: suitcaseInfo ? 
           (suitcaseInfo.status === 'in_use' || suitcaseInfo.status === 'in_replenishment') : 
           false,
-        suitcaseInfo: suitcaseInfo
+        suitcaseInfo: suitcaseInfo,
+        hasError: false
       };
     } catch (error) {
       console.error("Erro ao verificar se item está em maleta:", error);

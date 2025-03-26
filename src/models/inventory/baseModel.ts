@@ -1,9 +1,10 @@
+
 /**
  * Modelo Base de Inventário
  * @file Este arquivo contém funções básicas para gerenciamento do inventário
  */
 import { supabase } from "@/integrations/supabase/client";
-import { InventoryItem, InventoryFilters } from "./types";
+import { InventoryItem, InventoryFilters, InventoryPhoto } from "./types";
 
 export class BaseInventoryModel {
   // Buscar todos os itens do inventário
@@ -200,17 +201,16 @@ export class BaseInventoryModel {
   // Verificar se um item está em uma maleta
   static async checkItemInSuitcase(inventoryId: string) {
     try {
+      // Corrigida a consulta para usar parênteses corretamente e corrigir a sintaxe
       const { data, error } = await supabase
         .from('suitcase_items')
         .select(`
           id,
           suitcase_id,
-          suitcases:suitcase_id (
-            code as suitcase_code,
+          suitcases:suitcases(
+            code, 
             status,
-            resellers:seller_id (
-              name as seller_name
-            )
+            resellers:resellers(name)
           )
         `)
         .eq('inventory_id', inventoryId)
@@ -224,9 +224,10 @@ export class BaseInventoryModel {
       
       return {
         suitcase_id: firstItem.suitcase_id,
-        suitcase_code: firstItem.suitcases?.suitcase_code || 'Desconhecido',
+        suitcase_code: firstItem.suitcases?.code || 'Desconhecido',
         status: firstItem.suitcases?.status || 'unknown',
-        seller_name: firstItem.suitcases?.resellers?.seller_name || 'Desconhecido'
+        seller_name: firstItem.suitcases?.resellers?.name || 'Desconhecido',
+        hasError: false
       };
     } catch (error) {
       console.error("Erro ao verificar se item está em maleta:", error);
