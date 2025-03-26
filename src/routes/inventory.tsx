@@ -5,14 +5,11 @@ import { InventoryContent } from "@/components/inventory/InventoryContent";
 import { AuthController } from "@/controllers/authController";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { PrintLabelConfirmDialog } from "@/components/inventory/PrintLabelConfirmDialog";
 
 const Inventory = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [showPrintDialog, setShowPrintDialog] = useState(false);
-  const [lastModifiedItem, setLastModifiedItem] = useState<any>(null);
 
   // Verificar autenticação ao carregar a página
   useEffect(() => {
@@ -46,19 +43,6 @@ const Inventory = () => {
     checkAuth();
   }, [navigate]);
 
-  // Manipulador para quando um item for criado ou editado
-  const handleItemModified = (item: any) => {
-    console.log("Item modificado:", item);
-    setLastModifiedItem(item);
-    setShowPrintDialog(true);
-  };
-
-  // Fechar diálogo de impressão
-  const handleClosePrintDialog = () => {
-    setShowPrintDialog(false);
-    setLastModifiedItem(null);
-  };
-
   // Se estiver carregando, mostrar loading
   if (isLoading) {
     return (
@@ -71,16 +55,7 @@ const Inventory = () => {
   return (
     <div className="h-full min-h-screen bg-background">
       <main className="flex-1 space-y-4 p-4 pt-20">
-        <InventoryContent isAdmin={isAdmin} onItemModified={handleItemModified} />
-        
-        {/* Diálogo de confirmação para impressão de etiqueta */}
-        {showPrintDialog && lastModifiedItem && (
-          <PrintLabelConfirmDialog 
-            isOpen={showPrintDialog}
-            onClose={handleClosePrintDialog}
-            item={lastModifiedItem}
-          />
-        )}
+        <InventoryContent isAdmin={isAdmin} />
       </main>
     </div>
   );

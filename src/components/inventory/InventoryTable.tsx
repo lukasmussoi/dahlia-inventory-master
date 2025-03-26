@@ -1,4 +1,3 @@
-
 import {
   Table,
   TableBody,
@@ -15,7 +14,6 @@ import { useQuery } from "@tanstack/react-query";
 import { InventoryModel } from "@/models/inventoryModel";
 import { Badge } from "@/components/ui/badge";
 import { CombinedSuitcaseController } from "@/controllers/suitcase";
-import { PrintLabelButton } from "./PrintLabelButton";
 
 interface InventoryTableProps {
   items: InventoryItem[];
@@ -151,56 +149,55 @@ export function InventoryTable({
               : 'Disponível'}
           </span>
         </TableCell>
-        <TableCell className="text-right">
-          <div className="flex justify-end space-x-2">
-            {/* Botão de Impressão de Etiqueta */}
-            <PrintLabelButton item={item} />
-            
-            {onEdit && !showArchivedControls && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => onEdit(item)}
-                className="h-8 w-8"
-              >
-                <Pencil className="h-4 w-4" />
-              </Button>
-            )}
-            
-            {onArchive && !showArchivedControls && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => onArchive(item.id)}
-                className="h-8 w-8 text-amber-600 hover:text-amber-800 hover:bg-amber-100"
-              >
-                <Archive className="h-4 w-4" />
-              </Button>
-            )}
-            
-            {onRestore && showArchivedControls && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => onRestore(item.id)}
-                className="h-8 w-8 text-green-600 hover:text-green-800 hover:bg-green-100"
-              >
-                <RotateCcw className="h-4 w-4" />
-              </Button>
-            )}
-            
-            {onDelete && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => onDelete(item.id)}
-                className="h-8 w-8 text-red-600 hover:text-red-800 hover:bg-red-100"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
-        </TableCell>
+        {(onEdit || onDelete || onArchive || onRestore) && (
+          <TableCell className="text-right">
+            <div className="flex justify-end space-x-2">
+              {onEdit && !showArchivedControls && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onEdit(item)}
+                  className="h-8 w-8"
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+              )}
+              
+              {onArchive && !showArchivedControls && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onArchive(item.id)}
+                  className="h-8 w-8 text-amber-600 hover:text-amber-800 hover:bg-amber-100"
+                >
+                  <Archive className="h-4 w-4" />
+                </Button>
+              )}
+              
+              {onRestore && showArchivedControls && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onRestore(item.id)}
+                  className="h-8 w-8 text-green-600 hover:text-green-800 hover:bg-green-100"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                </Button>
+              )}
+              
+              {onDelete && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onDelete(item.id)}
+                  className="h-8 w-8 text-red-600 hover:text-red-800 hover:bg-red-100"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          </TableCell>
+        )}
       </TableRow>
     );
   };
@@ -218,7 +215,7 @@ export function InventoryTable({
             <TableHead className="text-right">Custo</TableHead>
             <TableHead className="text-right">Preço</TableHead>
             <TableHead>Status</TableHead>
-            <TableHead className="text-right">Ações</TableHead>
+            {(onEdit || onDelete || onArchive || onRestore) && <TableHead className="text-right">Ações</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>

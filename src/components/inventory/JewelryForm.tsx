@@ -1,4 +1,3 @@
-
 /**
  * JewelryForm - Componente para criação e edição de joias no inventário
  */
@@ -41,7 +40,7 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-export interface JewelryFormProps {
+interface JewelryFormProps {
   item?: InventoryItem | null;
   isOpen: boolean;
   onClose: () => void;

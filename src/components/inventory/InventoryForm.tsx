@@ -16,7 +16,7 @@ import { DimensionsFields } from "./form/DimensionsFields";
 import { PhotoFields } from "./form/PhotoFields";
 import { useInventoryForm } from "@/hooks/useInventoryForm";
 
-export interface InventoryFormProps {
+interface InventoryFormProps {
   item?: InventoryItem | null;
   categories: InventoryCategory[];
   isOpen: boolean;
