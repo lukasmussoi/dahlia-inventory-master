@@ -15,9 +15,10 @@ import { WebcamModal } from "./webcam-modal";
 
 interface WebcamButtonProps {
   onCaptureComplete: (capturedPhotos: File[]) => void;
+  disabled?: boolean; // Adicionando propriedade opcional de desativação
 }
 
-export function WebcamButton({ onCaptureComplete }: WebcamButtonProps) {
+export function WebcamButton({ onCaptureComplete, disabled = false }: WebcamButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   const handleOpenChange = (open: boolean) => {
@@ -38,6 +39,7 @@ export function WebcamButton({ onCaptureComplete }: WebcamButtonProps) {
         className="h-8 px-2" 
         onClick={() => setIsOpen(true)}
         title="Capturar foto com webcam"
+        disabled={disabled} // Usando a propriedade disabled no botão
       >
         <Camera size={16} className="mr-1" />
         <span className="text-xs">Webcam</span>
