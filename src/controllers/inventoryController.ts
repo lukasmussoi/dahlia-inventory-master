@@ -1,6 +1,6 @@
 
 import { InventoryModel } from "@/models/inventory";
-import { SuitcaseController } from "./suitcaseController";
+import { LabelModel } from "@/models/labelModel";
 
 export const InventoryController = {
   // Buscar todos os itens do inventário
@@ -59,6 +59,14 @@ export const InventoryController = {
       }
       
       console.log("Iniciando exclusão de item do inventário:", id);
+      
+      // Primeiro excluir o histórico de etiquetas usando o LabelModel
+      try {
+        await LabelModel.deleteLabelHistory(id);
+      } catch (error) {
+        console.error("Erro ao excluir histórico de etiquetas:", error);
+        // Não interrompemos o processo se falhar aqui, tentaremos na exclusão em cascata
+      }
       
       // Executar a exclusão em cascata
       await InventoryModel.deleteItem(id);

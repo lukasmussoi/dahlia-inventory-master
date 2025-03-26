@@ -94,4 +94,19 @@ export class LabelModel {
     console.log('Perfis encontrados:', data);
     return data;
   }
+  
+  // Excluir histórico de impressão para um item
+  static async deleteLabelHistory(inventoryId: string): Promise<void> {
+    console.log('Excluindo histórico de etiquetas para o item:', inventoryId);
+    const { error } = await supabase
+      .from('inventory_label_history')
+      .delete()
+      .eq('inventory_id', inventoryId);
+      
+    if (error) {
+      console.error('Erro ao excluir histórico de etiquetas:', error);
+      throw error;
+    }
+    console.log('Histórico de etiquetas excluído com sucesso');
+  }
 }
