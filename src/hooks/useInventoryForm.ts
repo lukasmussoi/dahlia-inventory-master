@@ -12,7 +12,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { InventoryItem, InventoryModel } from "@/models/inventory";
 
@@ -67,6 +67,56 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
     },
   });
 
+  // Carregar fotos existentes se estiver editando um item
+  useEffect(() => {
+    if (item && item.photos && item.photos.length > 0) {
+      // Convertemos as URLs das fotos existentes para objetos File usando fetch
+      const loadExistingPhotos = async () => {
+        try {
+          const photoFiles: File[] = [];
+          let primaryIndex = null;
+          
+          for (let i = 0; i < item.photos.length; i++) {
+            const photo = item.photos[i];
+            try {
+              // Fetch da imagem para converter para blob
+              const response = await fetch(photo.photo_url);
+              const blob = await response.blob();
+              
+              // Extrair nome do arquivo da URL
+              const urlParts = photo.photo_url.split('/');
+              const fileName = urlParts[urlParts.length - 1] || `photo_${i}.jpg`;
+              
+              // Criar objeto File
+              const file = new File([blob], fileName, { 
+                type: blob.type || 'image/jpeg',
+                lastModified: new Date().getTime()
+              });
+              
+              photoFiles.push(file);
+              
+              // Verificar se é a foto primária
+              if (photo.is_primary) {
+                primaryIndex = i;
+              }
+            } catch (error) {
+              console.error(`Erro ao carregar foto ${photo.photo_url}:`, error);
+            }
+          }
+          
+          setPhotos(photoFiles);
+          setPrimaryPhotoIndex(primaryIndex !== null ? primaryIndex : (photoFiles.length > 0 ? 0 : null));
+          
+        } catch (error) {
+          console.error('Erro ao carregar fotos existentes:', error);
+          toast.error("Não foi possível carregar as fotos existentes");
+        }
+      };
+      
+      loadExistingPhotos();
+    }
+  }, [item]);
+
   // Função para envio do formulário
   const onSubmit = async (values: FormValues) => {
     try {
@@ -90,12 +140,21 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
       };
 
       console.log("Dados preparados para salvamento:", itemData);
+      console.log("Fotos para salvamento:", photos.length);
 
       // Processar fotos para o formato correto
-      const processedPhotos = photos.map((file, index) => ({
-        photo_url: URL.createObjectURL(file),
-        is_primary: index === primaryPhotoIndex
-      }));
+      const processedPhotos = photos.map((file, index) => {
+        // Verificar se já não é uma URL (fotos existentes)
+        const isExistingUrl = typeof file === 'string' || file instanceof String;
+        
+        return {
+          // Se for uma URL existente, usá-la diretamente, caso contrário criar uma URL temporária
+          photo_url: isExistingUrl ? file.toString() : URL.createObjectURL(file),
+          is_primary: index === primaryPhotoIndex,
+          // Manter referência ao arquivo original para upload
+          file: !isExistingUrl ? file : null
+        };
+      });
 
       let savedItem: InventoryItem | null = null;
 
@@ -103,17 +162,25 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
         // Modo de edição
         console.log("Atualizando item existente");
         savedItem = await InventoryModel.updateItem(item.id, itemData);
+        
+        // Verificar se há fotos para atualizar
         if (photos.length > 0) {
-          await InventoryModel.updateItemPhotos(item.id, processedPhotos);
+          console.log("Atualizando fotos do item:", processedPhotos.length, "fotos");
+          await InventoryModel.updateItemPhotos(item.id, photos);
         }
+        
         toast.success("Item atualizado com sucesso!");
       } else {
         // Modo de criação
         console.log("Criando novo item");
         savedItem = await InventoryModel.createItem(itemData);
+        
+        // Verificar se há fotos para salvar e se o item foi criado com sucesso
         if (photos.length > 0 && savedItem) {
-          await InventoryModel.updateItemPhotos(savedItem.id, processedPhotos);
+          console.log("Salvando fotos do novo item:", processedPhotos.length, "fotos");
+          await InventoryModel.updateItemPhotos(savedItem.id, photos);
         }
+        
         toast.success("Item criado com sucesso!");
       }
 

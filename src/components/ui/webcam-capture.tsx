@@ -89,11 +89,12 @@ export function WebcamCapture({ onCapture }: WebcamCaptureProps) {
         // Converter canvas para blob (arquivo)
         canvas.toBlob((blob) => {
           if (blob) {
-            // Criar um arquivo a partir do blob
+            // Criar um arquivo a partir do blob com nome único para evitar conflitos
+            const timestamp = new Date().getTime();
             const photoFile = new File(
               [blob], 
-              `photo_${new Date().getTime()}.jpg`, 
-              { type: "image/jpeg" }
+              `webcam_photo_${timestamp}.jpg`, 
+              { type: "image/jpeg", lastModified: timestamp }
             );
             
             // Enviar o arquivo para o callback

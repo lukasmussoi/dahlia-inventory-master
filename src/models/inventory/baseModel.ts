@@ -1,4 +1,3 @@
-
 /**
  * Modelo Base de Inventário
  * @file Este arquivo contém funções básicas para gerenciamento do inventário
@@ -149,41 +148,110 @@ export class BaseInventoryModel {
   static async updateItemPhotos(itemId: string, photos: File[] | { id?: string; photo_url: string; is_primary?: boolean }[]): Promise<InventoryPhoto[]> {
     if (!photos || photos.length === 0) return [];
 
-    const processedPhotos: { inventory_id: string; photo_url: string; is_primary: boolean }[] = [];
+    try {
+      console.log("Iniciando atualização de fotos para item:", itemId);
+      console.log("Quantidade de fotos recebidas:", photos.length);
 
-    for (const photo of photos) {
-      if ('photo_url' in photo) {
-        processedPhotos.push({
-          inventory_id: itemId,
-          photo_url: photo.photo_url,
-          is_primary: photo.is_primary || false
-        });
-      } else if (photo instanceof File) {
-        processedPhotos.push({
-          inventory_id: itemId,
-          photo_url: URL.createObjectURL(photo),
-          is_primary: false
-        });
+      // Primeiro vamos excluir as fotos existentes
+      console.log("Excluindo fotos antigas do item");
+      const { error: deleteError } = await supabase
+        .from('inventory_photos')
+        .delete()
+        .eq('inventory_id', itemId);
+      
+      if (deleteError) {
+        console.error("Erro ao excluir fotos antigas:", deleteError);
+        throw deleteError;
       }
+      
+      // Preparar o array para armazenar os registros processados
+      const processedPhotoRecords: { inventory_id: string; photo_url: string; is_primary: boolean }[] = [];
+      
+      // Processar cada foto
+      for (let i = 0; i < photos.length; i++) {
+        const photo = photos[i];
+        let photoUrl = '';
+        
+        // Verificar o tipo do objeto photo
+        if ('photo_url' in photo) {
+          // É um objeto com URL, usar diretamente
+          photoUrl = photo.photo_url;
+          
+          // Adicionar ao array de registros
+          processedPhotoRecords.push({
+            inventory_id: itemId,
+            photo_url: photoUrl,
+            is_primary: photo.is_primary || false
+          });
+        } 
+        else if (photo instanceof File) {
+          // É um arquivo File (upload tradicional ou webcam), precisamos fazer upload
+          console.log(`Processando arquivo ${i + 1}/${photos.length}: ${photo.name}`);
+          
+          try {
+            // Definir o caminho de armazenamento (formato: inventory/item_id/timestamp_filename.jpg)
+            const timestamp = new Date().getTime();
+            const fileExtension = photo.name.split('.').pop() || 'jpg';
+            const filePath = `inventory/${itemId}/${timestamp}_${photo.name}`;
+            
+            // Fazer o upload do arquivo para o Supabase Storage
+            const { data: uploadData, error: uploadError } = await supabase.storage
+              .from('photos')
+              .upload(filePath, photo, {
+                cacheControl: '3600',
+                upsert: true
+              });
+            
+            if (uploadError) {
+              console.error(`Erro ao fazer upload da foto ${i + 1}:`, uploadError);
+              throw uploadError;
+            }
+            
+            // Obter a URL pública do arquivo
+            const { data: urlData } = supabase.storage
+              .from('photos')
+              .getPublicUrl(filePath);
+              
+            photoUrl = urlData.publicUrl;
+            console.log(`Foto ${i + 1} enviada com sucesso:`, photoUrl);
+            
+            // Adicionar ao array de registros
+            processedPhotoRecords.push({
+              inventory_id: itemId,
+              photo_url: photoUrl,
+              is_primary: photos.length === 1 || i === 0 // Primeira foto como primária por padrão
+            });
+          } catch (error) {
+            console.error(`Erro ao processar arquivo ${i + 1}:`, error);
+            // Continuar para o próximo arquivo em caso de erro
+          }
+        }
+      }
+      
+      // Se não houver fotos processadas, retornar array vazio
+      if (processedPhotoRecords.length === 0) {
+        console.log("Nenhuma foto válida para inserir");
+        return [];
+      }
+      
+      // Inserir os registros no banco de dados
+      console.log("Inserindo registros de fotos no banco:", processedPhotoRecords.length, "registros");
+      const { data, error } = await supabase
+        .from('inventory_photos')
+        .insert(processedPhotoRecords)
+        .select();
+      
+      if (error) {
+        console.error("Erro ao inserir fotos no banco:", error);
+        throw error;
+      }
+      
+      console.log("Fotos atualizadas com sucesso:", data?.length);
+      return data || [];
+    } catch (error) {
+      console.error("Erro geral ao atualizar fotos:", error);
+      throw error;
     }
-    
-    const { error: deleteError } = await supabase
-      .from('inventory_photos')
-      .delete()
-      .eq('inventory_id', itemId);
-    
-    if (deleteError) throw deleteError;
-    
-    if (processedPhotos.length === 0) return [];
-    
-    const { data, error } = await supabase
-      .from('inventory_photos')
-      .insert(processedPhotos)
-      .select();
-    
-    if (error) throw error;
-    
-    return data || [];
   }
 
   // Buscar fotos de um item
