@@ -1,4 +1,3 @@
-
 /**
  * Controlador de Inventário
  * @file Este arquivo contém funcionalidades para gerenciar o inventário de produtos
@@ -66,10 +65,12 @@ export const InventoryController = {
       
       // Primeiro excluir o histórico de etiquetas usando o LabelModel
       try {
+        console.log("Excluindo histórico de etiquetas...");
         await LabelModel.deleteLabelHistory(id);
+        console.log("Histórico de etiquetas excluído com sucesso");
       } catch (error) {
         console.error("Erro ao excluir histórico de etiquetas:", error);
-        // Não interrompemos o processo se falhar aqui, tentaremos na exclusão em cascata
+        throw new Error("Erro ao excluir histórico de etiquetas. Por favor, tente novamente.");
       }
       
       // Executar a exclusão em cascata

@@ -1,112 +1,99 @@
 
+/**
+ * Modelo para gerenciamento de etiquetas de inventário
+ * 
+ * Este arquivo contém funções para registrar histórico de impressão
+ * de etiquetas e consultar informações sobre impressões anteriores.
+ * 
+ * Relaciona-se com:
+ * - InventoryModel (ao verificar histórico de impressões)
+ * - PrintLabelButton (ao registrar nova impressão)
+ */
 import { supabase } from "@/integrations/supabase/client";
 
-export interface LabelHistory {
-  id: string;
-  inventory_id: string;
-  user_id: string;
-  printed_at: string;
-  quantity: number;
-  created_at: string;
-}
-
-export interface UserProfile {
-  id: string;
-  full_name: string;
-}
-
 export class LabelModel {
-  // Buscar todo o histórico de impressão de etiquetas
-  static async getAllLabelHistory(): Promise<LabelHistory[]> {
-    console.log('Buscando histórico de etiquetas...');
-    const { data, error } = await supabase
-      .from('inventory_label_history')
-      .select('*')
-      .order('printed_at', { ascending: false });
-
-    if (error) {
-      console.error('Erro ao buscar histórico:', error);
-      throw error;
+  /**
+   * Registra uma nova impressão de etiqueta no histórico
+   */
+  static async registerLabelPrint(inventoryId: string, quantity: number = 1): Promise<boolean> {
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData?.user?.id;
+      
+      if (!userId) {
+        console.error("Usuário não autenticado ao registrar impressão de etiqueta");
+        return false;
+      }
+      
+      const { data, error } = await supabase
+        .from('inventory_label_history')
+        .insert({
+          inventory_id: inventoryId,
+          user_id: userId,
+          quantity: quantity,
+          printed_at: new Date().toISOString()
+        });
+      
+      if (error) {
+        console.error("Erro ao registrar impressão de etiqueta:", error);
+        return false;
+      }
+      
+      console.log("Impressão de etiqueta registrada com sucesso");
+      return true;
+    } catch (error) {
+      console.error("Erro ao registrar impressão de etiqueta:", error);
+      return false;
     }
-    console.log('Histórico encontrado:', data);
-    return data;
-  }
-
-  // Buscar histórico de impressão para um item específico
-  static async getItemLabelHistory(inventoryId: string): Promise<LabelHistory[]> {
-    console.log('Buscando histórico para o item:', inventoryId);
-    const { data, error } = await supabase
-      .from('inventory_label_history')
-      .select('*')
-      .eq('inventory_id', inventoryId)
-      .order('printed_at', { ascending: false });
-
-    if (error) {
-      console.error('Erro ao buscar histórico do item:', error);
-      throw error;
-    }
-    console.log('Histórico do item encontrado:', data);
-    return data;
-  }
-
-  // Registrar uma nova impressão de etiqueta
-  static async registerLabelPrint(inventoryId: string, quantity: number = 1): Promise<void> {
-    console.log('Registrando impressão de etiqueta:', { inventoryId, quantity });
-    // Obter o usuário atual
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
-    if (userError) {
-      console.error('Erro ao obter usuário:', userError);
-      throw userError;
-    }
-    if (!user) {
-      console.error('Usuário não autenticado');
-      throw new Error('Usuário não autenticado');
-    }
-
-    const { error } = await supabase
-      .from('inventory_label_history')
-      .insert({
-        inventory_id: inventoryId,
-        user_id: user.id,
-        quantity: quantity,
-        printed_at: new Date().toISOString(),
-      });
-
-    if (error) {
-      console.error('Erro ao registrar impressão:', error);
-      throw error;
-    }
-    console.log('Impressão registrada com sucesso');
-  }
-
-  // Buscar perfis de usuários para exibir nomes
-  static async getAllProfiles(): Promise<UserProfile[]> {
-    console.log('Buscando perfis de usuários...');
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, full_name');
-
-    if (error) {
-      console.error('Erro ao buscar perfis:', error);
-      throw error;
-    }
-    console.log('Perfis encontrados:', data);
-    return data;
   }
   
-  // Excluir histórico de impressão para um item
-  static async deleteLabelHistory(inventoryId: string): Promise<void> {
-    console.log('Excluindo histórico de etiquetas para o item:', inventoryId);
-    const { error } = await supabase
-      .from('inventory_label_history')
-      .delete()
-      .eq('inventory_id', inventoryId);
+  /**
+   * Busca o histórico de impressão de etiquetas para um item específico
+   */
+  static async getItemLabelHistory(inventoryId: string) {
+    try {
+      const { data, error } = await supabase
+        .from('inventory_label_history')
+        .select('*')
+        .eq('inventory_id', inventoryId)
+        .order('printed_at', { ascending: false });
       
-    if (error) {
-      console.error('Erro ao excluir histórico de etiquetas:', error);
+      if (error) {
+        console.error("Erro ao buscar histórico de etiquetas:", error);
+        return [];
+      }
+      
+      return data || [];
+    } catch (error) {
+      console.error("Erro ao buscar histórico de etiquetas:", error);
+      return [];
+    }
+  }
+
+  /**
+   * Exclui todo o histórico de etiquetas para um item específico
+   * Esta função é necessária para garantir que o item possa ser excluído
+   */
+  static async deleteLabelHistory(inventoryId: string): Promise<boolean> {
+    try {
+      console.log(`Excluindo histórico de etiquetas para o item: ${inventoryId}`);
+      
+      // Novo método: excluir diretamente com uma única chamada de API
+      const { error } = await supabase
+        .from('inventory_label_history')
+        .delete()
+        .eq('inventory_id', inventoryId);
+      
+      if (error) {
+        console.error(`Erro ao excluir histórico de etiquetas para o item ${inventoryId}:`, error);
+        throw error;
+      }
+      
+      console.log(`Histórico de etiquetas do item ${inventoryId} excluído com sucesso`);
+      return true;
+    } catch (error) {
+      console.error(`Erro ao excluir histórico de etiquetas para o item ${inventoryId}:`, error);
       throw error;
     }
-    console.log('Histórico de etiquetas excluído com sucesso');
   }
 }

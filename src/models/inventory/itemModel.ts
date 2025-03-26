@@ -1,4 +1,3 @@
-
 /**
  * Modelo de Item de Inventário
  * @file Este arquivo contém operações específicas para itens do inventário
@@ -83,20 +82,18 @@ export class InventoryItemModel {
         throw labelHistoryCheckError;
       }
       
-      // Se existirem registros de histórico de etiquetas, excluí-los um por um
+      // Se existirem registros de histórico de etiquetas, excluí-los com uma única operação
       if (labelHistoryData && labelHistoryData.length > 0) {
         console.log(`Excluindo ${labelHistoryData.length} registros de histórico de etiquetas para o item:`, id);
         
-        for (const record of labelHistoryData) {
-          const { error: deleteError } = await supabase
-            .from('inventory_label_history')
-            .delete()
-            .eq('id', record.id);
-            
-          if (deleteError) {
-            console.error(`Erro ao excluir registro de histórico de etiqueta ${record.id}:`, deleteError);
-            throw deleteError;
-          }
+        const { error: deleteHistoryError } = await supabase
+          .from('inventory_label_history')
+          .delete()
+          .eq('inventory_id', id);
+          
+        if (deleteHistoryError) {
+          console.error("Erro ao excluir histórico de etiquetas:", deleteHistoryError);
+          throw deleteHistoryError;
         }
         
         console.log("Todos os registros de histórico de etiquetas foram excluídos com sucesso");
