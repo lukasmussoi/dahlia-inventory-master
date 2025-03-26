@@ -1,4 +1,9 @@
 
+/**
+ * Hook para Gerenciamento de Datas de Acerto
+ * @file Gerencia estado e operações relacionadas às datas de acerto da maleta
+ * @relacionamento Utilizado pelo hook useSuitcaseDetails
+ */
 import { useState, useCallback } from "react";
 import { CombinedSuitcaseController } from "@/controllers/suitcase";
 import { toast } from "sonner";
@@ -8,7 +13,8 @@ export function useSettlementDates() {
   
   const handleUpdateNextSettlementDate = async (suitcaseId: string, date?: Date | null) => {
     try {
-      await CombinedSuitcaseController.updateNextSettlementDate(suitcaseId, date || nextSettlementDate);
+      // Correção: a função correta é 'updateSuitcase', não 'updateNextSettlementDate'
+      await CombinedSuitcaseController.updateSuitcase(suitcaseId, { next_settlement_date: date || nextSettlementDate });
       if (date) {
         setNextSettlementDate(date);
       }
@@ -21,7 +27,7 @@ export function useSettlementDates() {
     }
   };
   
-  // Adicionar função de reset
+  // Função de reset
   const resetDateState = useCallback(() => {
     setNextSettlementDate(null);
   }, []);

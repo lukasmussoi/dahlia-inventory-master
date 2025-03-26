@@ -46,6 +46,43 @@ export function useSuitcaseDetails(
     resetQueryState
   } = useSuitcaseQueries(suitcaseId, open);
 
+  // Função para resetar todos os estados - definida ANTES de ser utilizada
+  const resetStates = useCallback(() => {
+    // Resetar estados de navegação
+    if (resetTabState) resetTabState();
+    else setActiveTab("informacoes");
+    
+    // Resetar estado de busca
+    setSearchTerm("");
+    if (resetSearchState) resetSearchState();
+    
+    // Resetar estado de exclusão
+    setShowDeleteDialog(false);
+    if (resetDeletionState) resetDeletionState();
+    
+    // Resetar outros estados específicos
+    if (resetItemsState) resetItemsState();
+    if (resetPrintState) resetPrintState();
+    if (resetDateState) resetDateState();
+    
+    // Resetar estado de queries
+    if (resetQueryState) resetQueryState();
+    
+    // Garantir que os estados locais sejam resetados
+    setIsClosing(false);
+  }, [
+    setActiveTab,
+    resetTabState,
+    setSearchTerm,
+    resetSearchState,
+    setShowDeleteDialog,
+    resetDeletionState,
+    resetItemsState,
+    resetPrintState,
+    resetDateState,
+    resetQueryState
+  ]);
+
   // Efeito para monitorar quando o diálogo é fechado
   useEffect(() => {
     if (!open && !isClosing) {
@@ -131,43 +168,6 @@ export function useSuitcaseDetails(
     const activeItems = suitcaseItems.filter(item => item.status === 'in_possession');
     return calculateTotalValue(activeItems);
   };
-
-  // Função para resetar todos os estados - implementada corretamente
-  const resetStates = useCallback(() => {
-    // Resetar estados de navegação
-    if (resetTabState) resetTabState();
-    else setActiveTab("informacoes");
-    
-    // Resetar estado de busca
-    setSearchTerm("");
-    if (resetSearchState) resetSearchState();
-    
-    // Resetar estado de exclusão
-    setShowDeleteDialog(false);
-    if (resetDeletionState) resetDeletionState();
-    
-    // Resetar outros estados específicos
-    if (resetItemsState) resetItemsState();
-    if (resetPrintState) resetPrintState();
-    if (resetDateState) resetDateState();
-    
-    // Resetar estado de queries
-    if (resetQueryState) resetQueryState();
-    
-    // Garantir que os estados locais sejam resetados
-    setIsClosing(false);
-  }, [
-    setActiveTab,
-    resetTabState,
-    setSearchTerm,
-    resetSearchState,
-    setShowDeleteDialog,
-    resetDeletionState,
-    resetItemsState,
-    resetPrintState,
-    resetDateState,
-    resetQueryState
-  ]);
 
   return {
     activeTab,

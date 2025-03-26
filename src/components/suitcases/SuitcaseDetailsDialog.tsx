@@ -11,6 +11,7 @@ import { LoadingIndicator } from "@/components/shared/LoadingIndicator";
 import { DeleteSuitcaseDialog } from "./details/DeleteSuitcaseDialog";
 import { useSuitcaseDetails } from "@/hooks/useSuitcaseDetails";
 import { addDays } from "date-fns";
+import { SuitcaseItem } from "@/types/suitcase";
 
 interface SuitcaseDetailsDialogProps {
   open: boolean;
@@ -91,6 +92,35 @@ export function SuitcaseDetailsDialog({
     }
   };
 
+  // Adaptadores para ajustar os tipos de retorno
+  const handleUpdateNextSettlementDateAdapter = (date: Date) => {
+    handleUpdateNextSettlementDate(date);
+  };
+
+  const handleAddItemAdapter = (inventoryId: string) => {
+    void handleAddItem(inventoryId);
+  };
+
+  const handleToggleSoldAdapter = (item: SuitcaseItem, sold: boolean) => {
+    void handleToggleSold(item, sold);
+  };
+
+  const handleUpdateSaleInfoAdapter = (itemId: string, field: string, value: string) => {
+    void handleUpdateSaleInfo(itemId, field, value);
+  };
+
+  const handleReturnToInventoryAdapter = (itemIds: string[], quantity: number, isDamaged: boolean) => {
+    void handleReturnToInventory(itemIds, quantity, isDamaged);
+  };
+
+  const handlePrintAdapter = () => {
+    void handlePrint();
+  };
+
+  const handleDeleteSuitcaseAdapter = () => {
+    void handleDeleteSuitcase();
+  };
+
   if (isLoadingSuitcase || !suitcase) {
     return (
       <Dialog open={open} onOpenChange={handleDialogChange}>
@@ -118,7 +148,7 @@ export function SuitcaseDetailsDialog({
             setActiveTab={setActiveTab}
             suitcase={suitcase}
             nextSettlementDate={nextSettlementDate}
-            handleUpdateNextSettlementDate={handleUpdateNextSettlementDate}
+            handleUpdateNextSettlementDate={handleUpdateNextSettlementDateAdapter}
             promoterInfo={promoterInfo}
             loadingPromoterInfo={loadingPromoterInfo}
             suitcaseItems={suitcaseItems}
@@ -128,15 +158,15 @@ export function SuitcaseDetailsDialog({
             searchResults={searchResults}
             isSearching={isSearching}
             isAdding={isAdding}
-            handleAddItem={handleAddItem}
-            handleToggleSold={handleToggleSold}
-            handleUpdateSaleInfo={handleUpdateSaleInfo}
-            handleReturnToInventory={handleReturnToInventory}
+            handleAddItem={handleAddItemAdapter}
+            handleToggleSold={handleToggleSoldAdapter}
+            handleUpdateSaleInfo={handleUpdateSaleInfoAdapter}
+            handleReturnToInventory={handleReturnToInventoryAdapter}
             calculateTotalValue={calculateTotalValue}
             acertosHistorico={acertosHistorico}
             isLoadingAcertos={isLoadingAcertos}
             handleViewReceipt={handleViewReceipt}
-            handlePrint={handlePrint}
+            handlePrint={handlePrintAdapter}
             isPrintingPdf={isPrintingPdf}
             isAdmin={isAdmin}
             onDeleteClick={() => setShowDeleteDialog(true)}
@@ -148,7 +178,7 @@ export function SuitcaseDetailsDialog({
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
         isDeleting={isDeleting}
-        onDelete={handleDeleteSuitcase}
+        onDelete={handleDeleteSuitcaseAdapter}
       />
     </>
   );
