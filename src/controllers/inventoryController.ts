@@ -182,15 +182,21 @@ export const InventoryController = {
           return suitcaseInfo;
         }
         
-        // Garantir que o objeto suitcaseInfo tenha as propriedades necessárias
+        // Definir explicitamente o tipo e propriedades para evitar erros de tipo "never"
         const suitcaseData = {
           inSuitcase: true,
-          isActiveCase: suitcaseInfo.status === 'in_use' || suitcaseInfo.status === 'in_replenishment',
+          isActiveCase: typeof suitcaseInfo === 'object' && 'status' in suitcaseInfo ? 
+            (suitcaseInfo.status === 'in_use' || suitcaseInfo.status === 'in_replenishment') : 
+            false,
           hasError: false,
-          suitcase_id: suitcaseInfo.suitcase_id || null,
-          suitcase_code: suitcaseInfo.suitcase_code || 'Desconhecido',
-          status: suitcaseInfo.status || 'unknown',
-          seller_name: suitcaseInfo.seller_name || 'Desconhecido'
+          suitcase_id: typeof suitcaseInfo === 'object' && 'suitcase_id' in suitcaseInfo ? 
+            suitcaseInfo.suitcase_id : null,
+          suitcase_code: typeof suitcaseInfo === 'object' && 'suitcase_code' in suitcaseInfo ? 
+            suitcaseInfo.suitcase_code : 'Desconhecido',
+          status: typeof suitcaseInfo === 'object' && 'status' in suitcaseInfo ? 
+            suitcaseInfo.status : 'unknown',
+          seller_name: typeof suitcaseInfo === 'object' && 'seller_name' in suitcaseInfo ? 
+            suitcaseInfo.seller_name : 'Desconhecido'
         };
         
         return suitcaseData;
