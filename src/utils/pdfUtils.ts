@@ -13,34 +13,40 @@ import { toast } from "sonner";
  */
 export const openPdfInNewTab = (pdfUrl: string): void => {
   try {
-    console.log("Iniciando abertura do PDF em nova aba");
+    console.log("Iniciando abertura do PDF em nova aba", pdfUrl?.substring(0, 50) + "...");
     
-    // Verifica se é uma URL de objeto blob
+    // Verificar se a URL não está vazia
+    if (!pdfUrl) {
+      console.error("URL do PDF inválida ou vazia");
+      throw new Error("URL do PDF inválida ou vazia");
+    }
+    
+    // Verificar se é uma URL de objeto blob
     if (pdfUrl.startsWith('blob:')) {
       window.open(pdfUrl, '_blank');
       return;
     }
     
-    // Verifica se é uma data URI
+    // Verificar se é uma data URI
     if (pdfUrl.startsWith('data:application/pdf;base64,')) {
       window.open(pdfUrl, '_blank');
       return;
     }
     
-    // Verifica se é um formato customizado (que precisa ser normalizado)
-    if (pdfUrl.startsWith('data:application/pdf;filename=')) {
-      // Extrai e formata corretamente a base64
+    // Verificar se é um formato customizado (que precisa ser normalizado)
+    if (pdfUrl.includes('base64,')) {
       const base64Start = pdfUrl.indexOf('base64,');
       if (base64Start !== -1) {
         const formattedDataUri = 'data:application/pdf;base64,' + pdfUrl.substring(base64Start + 7);
+        console.log("Reformatando URI do PDF para:", formattedDataUri.substring(0, 50) + "...");
         window.open(formattedDataUri, '_blank');
         return;
       }
     }
     
-    // Se chegou aqui, o formato não é reconhecido
-    console.error("Formato de dados inválido:", pdfUrl.substring(0, 100) + "...");
-    throw new Error("Formato de dados do PDF inválido");
+    // Tentar abrir como URL normal se nenhum dos formatos acima for reconhecido
+    console.log("Tentando abrir como URL normal:", pdfUrl.substring(0, 50) + "...");
+    window.open(pdfUrl, '_blank');
     
   } catch (error) {
     console.error("Erro ao abrir PDF em nova aba:", error);

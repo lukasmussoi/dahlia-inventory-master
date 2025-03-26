@@ -131,6 +131,7 @@ export class AcertoReportController {
       doc.text(`${formatCurrency(acerto.commission_amount)}`, pageWidth - margin, y, { align: 'right' });
       y += lineHeight * 2;
       
+      // Verificamos se existem itens vendidos antes de tentar processá-los
       if (acerto.items_vendidos && acerto.items_vendidos.length > 0) {
         doc.setFontSize(subtitleFontSize);
         doc.setFont('helvetica', 'bold');
@@ -188,7 +189,7 @@ export class AcertoReportController {
           const sku = item.product?.sku || "-";
           const prodName = item.product?.name || "Produto não encontrado";
           const custName = item.customer_name || "-";
-          const price = formatCurrency(item.price);
+          const price = formatCurrency(item.price || 0);
           
           try {
             doc.text(sku, margin, y);
@@ -261,45 +262,41 @@ export class AcertoReportController {
       console.log("Renderização do PDF concluída com sucesso");
       
       try {
-        console.log("Gerando string base64 do PDF...");
-        const pdfOutput = doc.output('blob');
+        console.log("Gerando Blob do PDF...");
+        const pdfBlob = doc.output('blob');
         
-        const pdfDataUri = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          
-          reader.onload = () => {
-            const result = reader.result as string;
-            console.log("PDF base64 gerado:", result.substring(0, 50) + "...");
-            resolve(result);
-          };
-          
-          reader.onerror = (e) => {
-            console.error("Erro ao ler blob:", e);
-            reject(new Error("Falha ao converter PDF para base64"));
-          };
-          
-          reader.readAsDataURL(pdfOutput);
-        });
+        // Criar URL do Blob para retornar
+        const blobUrl = URL.createObjectURL(pdfBlob);
+        console.log("URL do Blob do PDF gerada:", blobUrl);
         
-        if (!pdfDataUri.startsWith('data:application/pdf;base64,')) {
-          console.error("Erro no formato do URI do PDF:", pdfDataUri.substring(0, 30));
-          throw new Error("Formato inválido do URI do PDF");
-        }
+        // Também vamos salvar como base64 para armazenamento no banco
+        const reader = new FileReader();
+        reader.readAsDataURL(pdfBlob);
         
-        const { error: updateError } = await supabase
-          .from('acertos_maleta')
-          .update({ receipt_url: pdfDataUri })
-          .eq('id', acertoId);
+        reader.onload = async () => {
+          try {
+            const pdfBase64 = reader.result as string;
+            if (pdfBase64) {
+              const { error: updateError } = await supabase
+                .from('acertos_maleta')
+                .update({ receipt_url: pdfBase64 })
+                .eq('id', acertoId);
+              
+              if (updateError) {
+                console.error("Erro ao salvar URL do recibo no banco:", updateError);
+              } else {
+                console.log("PDF base64 salvo no banco de dados com sucesso");
+              }
+            }
+          } catch (e) {
+            console.error("Erro ao salvar base64 no banco:", e);
+          }
+        };
         
-        if (updateError) {
-          console.error("Erro ao salvar URL do recibo:", updateError);
-        }
-        
-        console.log("URI do PDF gerado e salvo com sucesso");
-        return pdfDataUri;
+        return blobUrl;
       } catch (uriError) {
-        console.error("Erro ao gerar URI do PDF:", uriError);
-        throw new Error("Erro ao gerar URI do PDF");
+        console.error("Erro ao gerar URL do PDF:", uriError);
+        throw new Error("Erro ao gerar URL do PDF");
       }
     } catch (error) {
       console.error("Erro ao gerar PDF:", error);

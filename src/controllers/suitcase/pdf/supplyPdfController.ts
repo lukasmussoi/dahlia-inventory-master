@@ -33,6 +33,8 @@ export class SupplyPdfController {
    */
   static async generateSupplyPDF(suitcaseId: string, items: SupplyItem[], suitcaseInfo: any): Promise<string> {
     try {
+      console.log(`Iniciando geração de PDF de abastecimento para maleta ${suitcaseId}`);
+      
       // Buscar informações da maleta se não fornecidas
       let suitcase = suitcaseInfo;
       if (!suitcase) {
@@ -47,6 +49,11 @@ export class SupplyPdfController {
 
         if (error) throw error;
         suitcase = data;
+      }
+
+      // Verificar se a maleta existe
+      if (!suitcase) {
+        throw new Error("Maleta não encontrada");
       }
 
       // Calcular total de peças e valor
@@ -116,10 +123,10 @@ export class SupplyPdfController {
         },
         didDrawCell: (data) => {
           // Se for a primeira coluna e não for cabeçalho
-          if (data.column.index === 0 && data.row.index > 0 && data.row.raw) {
+          if (data.column.index === 0 && data.row.index >= 0 && data.row.raw) {
             // Verificar se há uma imagem para desenhar
             const imageData = data.row.raw[5]; // A sexta coluna contém a URL da imagem
-            if (imageData && typeof imageData === 'string') {
+            if (imageData && typeof imageData === 'string' && imageData.length > 0) {
               try {
                 const imgProps = doc.getImageProperties(imageData);
                 const imgHeight = 10;
@@ -171,9 +178,13 @@ export class SupplyPdfController {
       doc.setFont("helvetica", "normal");
       doc.text("Assinatura da revendedora confirmando o recebimento das peças acima", pageWidth / 2, signatureY + 5, { align: "center" });
 
-      // Retornar o PDF como URL
+      // Retornar o PDF como URL de Blob
+      console.log("Gerando blob do PDF de abastecimento...");
       const pdfBlob = doc.output('blob');
-      return URL.createObjectURL(pdfBlob);
+      const blobUrl = URL.createObjectURL(pdfBlob);
+      console.log("URL do blob do PDF gerada:", blobUrl);
+      
+      return blobUrl;
     } catch (error) {
       console.error("Erro ao gerar PDF de abastecimento:", error);
       throw error;
@@ -224,10 +235,16 @@ export class SupplyPdfController {
       if (imageUrl) {
         try {
           const response = await fetch(imageUrl);
-          const blob = await response.blob();
-          base64Image = await this.blobToBase64(blob);
+          if (!response.ok) {
+            console.error(`Erro ao buscar imagem: ${response.status} ${response.statusText}`);
+            // Continuar sem a imagem se não conseguir carregar
+          } else {
+            const blob = await response.blob();
+            base64Image = await this.blobToBase64(blob);
+          }
         } catch (error) {
           console.error(`Erro ao converter imagem para Base64: ${error}`);
+          // Continuar sem a imagem em caso de erro
         }
       }
       
