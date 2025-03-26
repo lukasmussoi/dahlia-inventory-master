@@ -40,7 +40,7 @@ export class AcertoMaletaController {
   }
 
   static async getAcertoDetails(acertoId: string) {
-    return AcertoDetailsController.getAcertoDetails(acertoId);
+    return AcertoDetailsController.getAcertoById(acertoId);
   }
 
   // Operações de relatórios
@@ -53,5 +53,8 @@ export class AcertoMaletaController {
     return formatCurrency(value || 0);
   }
 }
+
+// Instância para uso em importações padrão
+export const acertoMaletaController = AcertoMaletaController;
 
 export default AcertoMaletaController;

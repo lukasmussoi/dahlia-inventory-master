@@ -108,7 +108,7 @@ export function SuitcasesContent({ isAdmin = false, userProfile, summary }: Suit
 
   // Função para atualizar a lista de acertos
   const handleRefreshAcertos = () => {
-    queryClient.invalidateQueries(['acertos']);
+    queryClient.invalidateQueries({ queryKey: ['acertos'] });
   };
 
   // Buscar contagem de itens para todas as maletas

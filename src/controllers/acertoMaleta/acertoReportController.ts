@@ -23,7 +23,7 @@ export class AcertoReportController {
       console.log(`Gerando PDF do recibo para acerto ${acertoId}`);
       
       // Buscar detalhes completos do acerto
-      const acerto = await AcertoDetailsController.getAcertoDetails(acertoId);
+      const acerto = await AcertoDetailsController.getAcertoById(acertoId);
       
       if (!acerto) {
         throw new Error("Acerto não encontrado");
