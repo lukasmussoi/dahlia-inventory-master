@@ -1,4 +1,9 @@
 
+/**
+ * Componente de listagem de Acertos
+ * @file Este componente mostra a lista de acertos realizados em maletas
+ * @relacionamento Utiliza o AcertoMaletaController e depende de vários componentes da UI
+ */
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -78,6 +83,7 @@ export function AcertosList({ onViewAcerto, onRefresh, isAdmin = false }: Acerto
       toast.info("Gerando recibo em PDF...");
       
       const pdfUrl = await AcertoMaletaController.generateReceiptPDF(acertoId);
+      console.log("PDF gerado, abrindo URL:", pdfUrl);
       openPdfInNewTab(pdfUrl);
     } catch (error) {
       console.error("Erro ao gerar PDF do acerto:", error);

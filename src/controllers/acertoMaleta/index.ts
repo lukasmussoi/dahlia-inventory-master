@@ -54,7 +54,8 @@ export class AcertoMaletaController {
   }
 }
 
-// Instância para uso em importações padrão
+// Exportar a instância do controlador para uso em importações nomeadas
 export const acertoMaletaController = AcertoMaletaController;
 
+// Exportar por padrão para uso em importações padrão
 export default AcertoMaletaController;

@@ -6,10 +6,10 @@
  */
 
 // Importar e reexportar a implementação refatorada
-import { AcertoMaletaController } from './acertoMaleta';
+import { AcertoMaletaController, acertoMaletaController } from './acertoMaleta';
 
 // Exportar para manter compatibilidade com código existente
-export { AcertoMaletaController };
+export { acertoMaletaController, AcertoMaletaController };
 
 // Export default para casos onde é importado via import default
 export default AcertoMaletaController;

@@ -62,9 +62,21 @@ export class AcertoReportController {
       if (acerto.items_vendidos && acerto.items_vendidos.length > 0) {
         // Preparar dados para a tabela
         tableData = await Promise.all(acerto.items_vendidos.map(async (item) => {
-          const photoUrl = item.product?.photo_url 
-            ? getProductPhotoUrl(item.product.photo_url) 
-            : null;
+          let photoUrl = null;
+          try {
+            if (item.product?.photo_url) {
+              if (typeof item.product.photo_url === 'string') {
+                photoUrl = getProductPhotoUrl(item.product.photo_url);
+              } else if (Array.isArray(item.product.photo_url) && item.product.photo_url.length > 0) {
+                const firstPhoto = item.product.photo_url[0];
+                if (firstPhoto && typeof firstPhoto === 'object' && 'photo_url' in firstPhoto) {
+                  photoUrl = getProductPhotoUrl(firstPhoto.photo_url);
+                }
+              }
+            }
+          } catch (error) {
+            console.error("Erro ao processar URL da foto:", error);
+          }
           
           let base64Image = '';
           if (photoUrl) {
@@ -200,6 +212,7 @@ export class AcertoReportController {
       const pdfBlob = doc.output('blob');
       const blobUrl = URL.createObjectURL(pdfBlob);
       
+      console.log("URL do blob gerada:", blobUrl);
       return blobUrl;
     } catch (error) {
       console.error("Erro ao gerar PDF do recibo de acerto:", error);
