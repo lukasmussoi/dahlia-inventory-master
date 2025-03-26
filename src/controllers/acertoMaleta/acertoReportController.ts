@@ -131,15 +131,8 @@ export class AcertoReportController {
       doc.text(`Comissão (${commissionRate}): ${formatCurrency(acerto.commission_amount || 0)}`, 14, currentY);
       currentY += 5;
       
-      if (acerto.total_cost !== undefined && acerto.total_cost !== null) {
-        doc.text(`Custo Total: ${formatCurrency(acerto.total_cost)}`, 14, currentY);
-        currentY += 5;
-      }
-      
-      if (acerto.net_profit !== undefined && acerto.net_profit !== null) {
-        doc.text(`Lucro Líquido: ${formatCurrency(acerto.net_profit)}`, 14, currentY);
-        currentY += 5;
-      }
+      // Removido: Informações de custo total
+      // Removido: Informações de lucro líquido
       
       // Assinaturas
       currentY += 20;
