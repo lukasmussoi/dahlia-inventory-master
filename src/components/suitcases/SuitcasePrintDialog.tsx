@@ -1,9 +1,8 @@
-
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { CombinedSuitcaseController } from "@/controllers/suitcase";
-import { Suitcase } from "@/types/suitcase";
+import { Suitcase, SuitcaseItem, SupplyItem } from "@/types/suitcase";
 import { toast } from "sonner";
 import { Printer, FileText } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -33,15 +32,27 @@ export function SuitcasePrintDialog({ open, onOpenChange, suitcase }: SuitcasePr
     enabled: !!suitcase?.seller_id && open,
   });
 
+  // Converter itens de maleta para formato de abastecimento
+  const convertToSupplyItems = (items: SuitcaseItem[]): SupplyItem[] => {
+    return items.map(item => ({
+      inventory_id: item.inventory_id,
+      quantity: item.quantity || 1, // Usar 1 como valor padrão se quantity for undefined
+      product: item.product
+    }));
+  };
+
   const handlePrintPDF = async () => {
     if (!suitcase) return;
     
     setIsGeneratingPdf(true);
     try {
+      // Converter itens para o formato esperado pelo SupplyPdfController
+      const supplyItems = convertToSupplyItems(suitcaseItems);
+      
       // Usar o SupplyPdfController para gerar o PDF com o mesmo formato do PDF de abastecimento
       const pdfUrl = await SupplyPdfController.generateSupplyPDF(
         suitcase.id,
-        suitcaseItems,
+        supplyItems,
         suitcase
       );
       

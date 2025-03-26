@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { SuitcaseController } from "@/controllers/suitcaseController";
-import { SuitcaseItem } from "@/types/suitcase";
+import { SuitcaseItem, SupplyItem } from "@/types/suitcase";
 import { toast } from "sonner";
 import { openPdfInNewTab } from "@/utils/pdfUtils";
 import { SupplyPdfController } from "@/controllers/suitcase/pdf/supplyPdfController";
@@ -20,14 +20,26 @@ export function usePrintOperations() {
     openPdfInNewTab(receiptUrl);
   };
 
+  // Converter itens de maleta para formato de abastecimento
+  const convertToSupplyItems = (items: SuitcaseItem[]): SupplyItem[] => {
+    return items.map(item => ({
+      inventory_id: item.inventory_id,
+      quantity: item.quantity || 1, // Usar 1 como valor padrão se quantity for undefined
+      product: item.product
+    }));
+  };
+
   // Imprimir PDF da maleta
   const handlePrint = async (suitcaseId: string, items: SuitcaseItem[], suitcaseInfo: any) => {
     setIsPrintingPdf(true);
     try {
+      // Converter itens para o formato esperado pelo SupplyPdfController
+      const supplyItems = convertToSupplyItems(items);
+      
       // Utilizar o SupplyPdfController para gerar um PDF com o formato do abastecimento
       const pdfDataUri = await SupplyPdfController.generateSupplyPDF(
         suitcaseId,
-        items,
+        supplyItems,
         suitcaseInfo
       );
       

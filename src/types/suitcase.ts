@@ -1,7 +1,18 @@
-
 export type SuitcaseStatus = 'in_use' | 'returned' | 'in_replenishment' | 'lost' | 'in_audit';
 export type SuitcaseItemStatus = 'in_possession' | 'sold' | 'returned' | 'lost' | 'damaged';
 export type AcertoStatus = 'pendente' | 'concluido';
+
+export interface SupplyItem {
+  inventory_id: string;
+  quantity: number;
+  product?: {
+    id: string;
+    name: string;
+    sku: string;
+    price: number;
+    photo_url?: string | { photo_url: string }[];
+  };
+}
 
 export interface SuitcaseItemSale {
   id: string;
