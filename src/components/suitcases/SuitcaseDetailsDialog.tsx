@@ -13,7 +13,6 @@ import { useSuitcaseDetails } from "@/hooks/useSuitcaseDetails";
 import { addDays } from "date-fns";
 import { SuitcaseItem } from "@/types/suitcase";
 import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
 
 interface SuitcaseDetailsDialogProps {
   open: boolean;
@@ -85,9 +84,8 @@ export function SuitcaseDetailsDialog({
   // Manipulador de mudança de diálogo que garante limpeza de estados
   const handleDialogChange = (newOpen: boolean) => {
     if (!newOpen) {
-      // Resetamos os estados imediatamente antes de fechar
+      // Resetamos os estados e notificamos o componente pai imediatamente
       resetStates();
-      // Notificamos o componente pai sobre a mudança
       onOpenChange(newOpen);
     } else {
       onOpenChange(newOpen);
@@ -123,9 +121,12 @@ export function SuitcaseDetailsDialog({
     await handleDeleteSuitcase();
   };
 
-  // Função para fechar o diálogo
+  // Função para fechar o diálogo com limpeza completa de estados
   const handleClose = () => {
-    handleDialogChange(false);
+    // Forçar o reset de estados antes de fechar
+    resetStates();
+    // Notificar o componente pai que o diálogo deve fechar
+    onOpenChange(false);
   };
 
   if (isLoadingSuitcase || !suitcase) {

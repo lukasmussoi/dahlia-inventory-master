@@ -85,19 +85,20 @@ export function SuitcaseDetailsDialog({
   // Manipulador de mudança de diálogo que garante limpeza de estados
   const handleDialogChange = (newOpen: boolean) => {
     if (!newOpen) {
-      // Primeiro resetamos os estados e só depois notificamos o componente pai
+      // Resetamos os estados e notificamos o componente pai imediatamente
       resetStates();
-      setTimeout(() => {
-        onOpenChange(newOpen);
-      }, 10);
+      onOpenChange(newOpen);
     } else {
       onOpenChange(newOpen);
     }
   };
 
-  // Função para fechar o diálogo
+  // Função para fechar o diálogo com limpeza completa de estados
   const handleClose = () => {
-    handleDialogChange(false);
+    // Forçar o reset de estados antes de fechar
+    resetStates();
+    // Notificar o componente pai que o diálogo deve fechar
+    onOpenChange(false);
   };
 
   // Adaptadores para ajustar os tipos de retorno para Promise<void>

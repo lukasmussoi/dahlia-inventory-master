@@ -45,8 +45,8 @@ export function useSuitcaseDetails(
     isLoadingAcertos,
     resetQueryState
   } = useSuitcaseQueries(suitcaseId, open);
-
-  // Função para resetar todos os estados - definida ANTES de ser utilizada
+  
+  // Função para resetar todos os estados
   const resetStates = useCallback(() => {
     // Resetar estados de navegação
     if (resetTabState) resetTabState();
@@ -157,6 +157,8 @@ export function useSuitcaseDetails(
     if (!suitcaseId) return false;
     const success = await handleDeleteSuitcase(suitcaseId);
     if (success) {
+      // Fechar o diálogo e notificar para atualização
+      resetStates();
       onOpenChange(false);
       if (onRefresh) onRefresh();
     }

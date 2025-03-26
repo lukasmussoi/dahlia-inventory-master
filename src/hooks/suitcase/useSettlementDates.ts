@@ -1,39 +1,44 @@
 
-/**
- * Hook para Gerenciamento de Datas de Acerto
- * @file Gerencia estado e operações relacionadas às datas de acerto da maleta
- * @relacionamento Utilizado pelo hook useSuitcaseDetails
- */
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { CombinedSuitcaseController } from "@/controllers/suitcase";
-import { toast } from "sonner";
 
 export function useSettlementDates() {
   const [nextSettlementDate, setNextSettlementDate] = useState<Date | null>(null);
-  
-  const handleUpdateNextSettlementDate = async (suitcaseId: string, date?: Date | null) => {
+  const [isUpdatingDate, setIsUpdatingDate] = useState(false);
+
+  // Atualiza a data do próximo acerto
+  const handleUpdateNextSettlementDate = async (suitcaseId: string, date: Date | null | undefined) => {
+    if (!suitcaseId || !date) return false;
+    
     try {
-      await CombinedSuitcaseController.updateSuitcase(suitcaseId, { next_settlement_date: date || nextSettlementDate });
-      if (date) {
-        setNextSettlementDate(date);
-      }
-      toast.success("Data do próximo acerto atualizada");
+      setIsUpdatingDate(true);
+      
+      // Atualizar a data de próximo acerto
+      await CombinedSuitcaseController.updateSuitcase(suitcaseId, {
+        next_settlement_date: date.toISOString()
+      });
+      
+      // Atualizar estado local
+      setNextSettlementDate(date);
       return true;
     } catch (error) {
-      console.error("Erro ao atualizar data do próximo acerto:", error);
-      toast.error("Erro ao atualizar data do próximo acerto");
+      console.error("Erro ao atualizar data de próximo acerto:", error);
       return false;
+    } finally {
+      setIsUpdatingDate(false);
     }
   };
-  
-  // Função de reset
-  const resetDateState = useCallback(() => {
+
+  // Resetar estado
+  const resetDateState = () => {
     setNextSettlementDate(null);
-  }, []);
-  
+    setIsUpdatingDate(false);
+  };
+
   return {
     nextSettlementDate,
     setNextSettlementDate,
+    isUpdatingDate,
     handleUpdateNextSettlementDate,
     resetDateState
   };
