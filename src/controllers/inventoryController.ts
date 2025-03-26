@@ -1,3 +1,4 @@
+
 /**
  * Controlador de Inventário
  * @file Este arquivo contém funcionalidades para gerenciar o inventário de produtos
@@ -181,16 +182,18 @@ export const InventoryController = {
           return suitcaseInfo;
         }
         
-        // Caso contrário, criar a estrutura esperada com valores definidos
-        return {
+        // Garantir que o objeto suitcaseInfo tenha as propriedades necessárias
+        const suitcaseData = {
           inSuitcase: true,
           isActiveCase: suitcaseInfo.status === 'in_use' || suitcaseInfo.status === 'in_replenishment',
           hasError: false,
-          suitcase_id: suitcaseInfo.suitcase_id,
-          suitcase_code: suitcaseInfo.suitcase_code,
-          status: suitcaseInfo.status,
-          seller_name: suitcaseInfo.seller_name
+          suitcase_id: suitcaseInfo.suitcase_id || null,
+          suitcase_code: suitcaseInfo.suitcase_code || 'Desconhecido',
+          status: suitcaseInfo.status || 'unknown',
+          seller_name: suitcaseInfo.seller_name || 'Desconhecido'
         };
+        
+        return suitcaseData;
       }
       
       // Se não há informações da maleta, o item não está em nenhuma maleta

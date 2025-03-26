@@ -1,4 +1,3 @@
-
 /**
  * Modelo Base de Inventário
  * @file Este arquivo contém funções básicas para gerenciamento do inventário
@@ -222,7 +221,7 @@ export class BaseInventoryModel {
       
       const firstItem = data[0];
       
-      // Garantir que o retorno tenha a estrutura consistente
+      // Estrutura de retorno padronizada com tipos definidos
       return {
         suitcase_id: firstItem.suitcase_id,
         suitcase_code: firstItem.suitcases?.code || 'Desconhecido',
