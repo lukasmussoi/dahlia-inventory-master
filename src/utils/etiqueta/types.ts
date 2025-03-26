@@ -15,3 +15,16 @@ export interface PreviewPDFOptions {
   pageOrientation: string;
   gridSize?: number;
 }
+
+// Interfaces para definição de margens e espaçamentos
+export interface Margins {
+  superior: number;
+  inferior: number;
+  esquerda: number;
+  direita: number;
+}
+
+export interface Spacing {
+  horizontal: number;
+  vertical: number;
+}
