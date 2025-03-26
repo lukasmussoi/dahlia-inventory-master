@@ -16,6 +16,7 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { InventoryItem, InventoryModel } from "@/models/inventory";
 import { supabase } from "@/integrations/supabase/client";
+import { uploadMultiplePhotos } from "@/utils/photoUploadUtils";
 
 // Esquema de validação do formulário
 const formSchema = z.object({
@@ -46,6 +47,8 @@ interface UseInventoryFormProps {
 export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [photos, setPhotos] = useState<File[]>([]);
+  const [photosUploaded, setPhotosUploaded] = useState<boolean>(false);
+  const [uploadedPhotoUrls, setUploadedPhotoUrls] = useState<string[]>([]);
   const [primaryPhotoIndex, setPrimaryPhotoIndex] = useState<number | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
 
@@ -75,6 +78,11 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
       // Convertemos as URLs das fotos existentes para objetos File usando fetch
       const loadExistingPhotos = async () => {
         try {
+          // Armazenar as URLs das fotos existentes
+          const existingUrls = item.photos.map(photo => photo.photo_url);
+          setUploadedPhotoUrls(existingUrls);
+          setPhotosUploaded(true);
+          
           const photoFiles: File[] = [];
           let primaryIndex = null;
           
@@ -119,74 +127,47 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
     }
   }, [item]);
 
-  // Função para fazer upload direto das fotos para o Storage do Supabase
-  const uploadPhotosToSupabase = async (itemId: string): Promise<Array<{photo_url: string; is_primary: boolean}>> => {
+  // Função para fazer upload diretamente das fotos para o Storage 
+  const handleUploadPhotos = async (itemId: string): Promise<Array<{photo_url: string; is_primary: boolean}>> => {
+    // Se as fotos já foram enviadas previamente, retornar os resultados
+    if (photosUploaded && uploadedPhotoUrls.length > 0) {
+      console.log("Fotos já foram enviadas anteriormente:", uploadedPhotoUrls);
+      return uploadedPhotoUrls.map((url, index) => ({
+        photo_url: url,
+        is_primary: index === primaryPhotoIndex
+      }));
+    }
+    
     if (photos.length === 0) return [];
     
     try {
       console.log(`Iniciando upload de ${photos.length} fotos para o item ${itemId}`);
       setUploadProgress(0);
       
-      const results = [];
+      // Usar a função uploadMultiplePhotos para processar todas as fotos
+      const results = await uploadMultiplePhotos(
+        photos, 
+        'inventory_images', 
+        (progress) => setUploadProgress(progress),
+        itemId
+      );
       
-      for (let i = 0; i < photos.length; i++) {
-        const photo = photos[i];
-        const isPrimary = i === primaryPhotoIndex;
-        
-        // Garantir que o nome do arquivo seja seguro para URLs
-        const timestamp = new Date().getTime();
-        const safeFileName = photo.name
-          .replace(/[^a-zA-Z0-9_\-.]/g, '_')
-          .toLowerCase();
-        
-        // Determinar a extensão correta com base no tipo MIME
-        let fileExtension = '.jpg'; // Padrão
-        if (photo.type === 'image/png') fileExtension = '.png';
-        if (photo.type === 'image/jpeg') fileExtension = '.jpg';
-        if (photo.type === 'image/gif') fileExtension = '.gif';
-        if (photo.type === 'image/webp') fileExtension = '.webp';
-        
-        // Garantir que o nome do arquivo tenha a extensão correta
-        const fileNameWithoutExt = safeFileName.replace(/\.[^/.]+$/, "");
-        const finalFileName = `${fileNameWithoutExt}${fileExtension}`;
-        
-        // Caminho no formato: inventory/item_id/timestamp_filename.ext
-        const filePath = `inventory/${itemId}/${timestamp}_${finalFileName}`;
-        
-        console.log(`Enviando foto ${i+1}/${photos.length}: ${filePath}`);
-        
-        // Upload do arquivo para o novo bucket 'inventory_images'
-        const { data, error } = await supabase.storage
-          .from('inventory_images')
-          .upload(filePath, photo, {
-            cacheControl: '3600',
-            upsert: true
-          });
-        
-        if (error) {
-          console.error(`Erro ao fazer upload da foto ${i+1}:`, error);
-          toast.error(`Erro ao enviar foto ${i+1}: ${error.message}`);
-          continue;
-        }
-        
-        // Obter URL pública
-        const { data: urlData } = supabase.storage
-          .from('inventory_images')
-          .getPublicUrl(filePath);
-        
-        console.log(`Foto ${i+1} enviada com sucesso. URL:`, urlData.publicUrl);
-        
-        results.push({
-          photo_url: urlData.publicUrl,
-          is_primary: isPrimary
-        });
-        
-        // Atualizar progresso
-        setUploadProgress(Math.round(((i + 1) / photos.length) * 100));
-      }
+      // Filtrar apenas os resultados bem-sucedidos
+      const successfulUploads = results.filter(r => r.success && r.url);
       
-      console.log(`Upload finalizado. ${results.length} fotos enviadas com sucesso.`);
-      return results;
+      // Criar o array de resultados no formato esperado pelo modelo
+      const photoResults = successfulUploads.map((result, index) => ({
+        photo_url: result.url as string,
+        is_primary: index === primaryPhotoIndex
+      }));
+      
+      console.log(`Upload finalizado. ${photoResults.length} fotos enviadas com sucesso.`);
+      
+      // Armazenar URLs para uso posterior
+      setUploadedPhotoUrls(photoResults.map(p => p.photo_url));
+      setPhotosUploaded(true);
+      
+      return photoResults;
       
     } catch (error) {
       console.error('Erro ao fazer upload das fotos:', error);
@@ -195,7 +176,67 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
     }
   };
 
-  // Função para envio do formulário
+  // Função para salvar somente as fotos, sem submeter o formulário
+  const handleSavePhotosOnly = async () => {
+    try {
+      if (!item) {
+        toast.error("É necessário salvar o item primeiro para anexar fotos.");
+        return;
+      }
+      
+      setIsSubmitting(true);
+      
+      // Fazer upload das fotos para o item existente
+      const uploadedPhotos = await handleUploadPhotos(item.id);
+      
+      if (uploadedPhotos.length > 0) {
+        // Salvar registros das fotos no banco
+        const photoRecords = uploadedPhotos.map(photo => ({
+          inventory_id: item.id,
+          photo_url: photo.photo_url,
+          is_primary: photo.is_primary
+        }));
+        
+        // Remover fotos antigas
+        const { error: deleteError } = await supabase
+          .from('inventory_photos')
+          .delete()
+          .eq('inventory_id', item.id);
+          
+        if (deleteError) {
+          console.error("Erro ao excluir fotos antigas:", deleteError);
+          toast.error("Erro ao atualizar fotos antigas");
+        }
+        
+        // Inserir novas fotos
+        const { data, error } = await supabase
+          .from('inventory_photos')
+          .insert(photoRecords)
+          .select();
+          
+        if (error) {
+          console.error("Erro ao salvar registros das fotos:", error);
+          toast.error("Erro ao salvar informações das fotos");
+        } else {
+          console.log("Fotos salvas com sucesso:", data);
+          toast.success(`${data.length} foto(s) salva(s) com sucesso!`);
+          
+          // Atualizar o objeto item com as novas fotos
+          if (item) {
+            item.photos = data;
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao salvar fotos:', error);
+      toast.error("Erro ao salvar fotos. Verifique as permissões e tente novamente.");
+    } finally {
+      setIsSubmitting(false);
+      setUploadProgress(0);
+    }
+  };
+
+  // Função para envio do formulário completo
   const onSubmit = async (values: FormValues) => {
     try {
       console.log("Iniciando submissão do formulário", values);
@@ -236,10 +277,10 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
         throw new Error("Erro ao salvar dados do item");
       }
       
-      // Em seguida, fazer upload das fotos diretamente para o Storage
+      // Em seguida, fazer upload das fotos
       if (photos.length > 0) {
         console.log("Iniciando upload das fotos");
-        const uploadedPhotos = await uploadPhotosToSupabase(savedItem.id);
+        const uploadedPhotos = await handleUploadPhotos(savedItem.id);
         
         if (uploadedPhotos.length > 0) {
           // Após o upload, inserir os registros na tabela inventory_photos
@@ -250,15 +291,17 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
             is_primary: photo.is_primary
           }));
           
-          // Remover fotos antigas primeiro
-          const { error: deleteError } = await supabase
-            .from('inventory_photos')
-            .delete()
-            .eq('inventory_id', savedItem.id);
-            
-          if (deleteError) {
-            console.error("Erro ao excluir fotos antigas:", deleteError);
-            toast.error("Erro ao atualizar fotos antigas");
+          // Remover fotos antigas primeiro (se estiver editando)
+          if (item) {
+            const { error: deleteError } = await supabase
+              .from('inventory_photos')
+              .delete()
+              .eq('inventory_id', savedItem.id);
+              
+            if (deleteError) {
+              console.error("Erro ao excluir fotos antigas:", deleteError);
+              toast.error("Erro ao atualizar fotos antigas");
+            }
           }
           
           // Inserir novas fotos
@@ -308,6 +351,8 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
     setPhotos,
     primaryPhotoIndex,
     setPrimaryPhotoIndex,
-    uploadProgress
+    uploadProgress,
+    setUploadProgress,
+    savePhotosOnly: handleSavePhotosOnly
   };
 }

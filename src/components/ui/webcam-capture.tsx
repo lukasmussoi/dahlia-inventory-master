@@ -14,25 +14,36 @@ import { Camera, RefreshCw } from "lucide-react";
 
 interface WebcamCaptureProps {
   onCapture: (photoFile: File) => void;
+  isActive: boolean; // Nova prop para controlar o estado da câmera
 }
 
-export function WebcamCapture({ onCapture }: WebcamCaptureProps) {
+export function WebcamCapture({ onCapture, isActive }: WebcamCaptureProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const streamRef = useRef<MediaStream | null>(null); // Referência para o stream
 
-  // Iniciar a câmera ao montar o componente
+  // Iniciar a câmera ao montar o componente ou quando isActive mudar
   useEffect(() => {
-    startCamera();
+    if (isActive) {
+      startCamera();
+    } else {
+      stopCamera();
+    }
+    
+    // Cleanup function para garantir que a câmera seja desligada
     return () => {
       stopCamera();
     };
-  }, []);
+  }, [isActive]);
 
   // Função para iniciar a câmera
   const startCamera = async () => {
     try {
+      // Primeiro, pare qualquer stream ativo para evitar múltiplas instâncias
+      stopCamera();
+      
       setError(null);
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: { 
@@ -42,10 +53,15 @@ export function WebcamCapture({ onCapture }: WebcamCaptureProps) {
         } 
       });
       
+      // Armazenar o stream na ref para uso posterior
+      streamRef.current = stream;
+      
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         setIsCameraActive(true);
       }
+      
+      console.log("Câmera iniciada com sucesso");
     } catch (err) {
       console.error("Erro ao acessar a webcam:", err);
       setError("Não foi possível acessar a câmera. Verifique as permissões do navegador.");
@@ -55,14 +71,29 @@ export function WebcamCapture({ onCapture }: WebcamCaptureProps) {
 
   // Função para parar a câmera
   const stopCamera = () => {
+    // Verificar e parar o stream armazenado na ref
+    if (streamRef.current) {
+      const tracks = streamRef.current.getTracks();
+      tracks.forEach(track => {
+        track.stop();
+        console.log("Track parada:", track.kind, track.id, track.readyState);
+      });
+      streamRef.current = null;
+    }
+    
+    // Limpar também o srcObject do vídeo como garantia adicional
     if (videoRef.current && videoRef.current.srcObject) {
       const stream = videoRef.current.srcObject as MediaStream;
       const tracks = stream.getTracks();
-      
-      tracks.forEach(track => track.stop());
+      tracks.forEach(track => {
+        track.stop();
+        console.log("Track do vídeo parada:", track.kind, track.id, track.readyState);
+      });
       videoRef.current.srcObject = null;
-      setIsCameraActive(false);
     }
+    
+    setIsCameraActive(false);
+    console.log("Câmera desligada");
   };
 
   // Função para reiniciar a câmera

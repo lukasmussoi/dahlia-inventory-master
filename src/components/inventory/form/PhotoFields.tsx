@@ -9,9 +9,11 @@
  */
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { X, Upload, Camera } from "lucide-react";
+import { X, Upload, Camera, Save } from "lucide-react";
 import { WebcamButton } from "@/components/ui/webcam-button";
 import { Progress } from "@/components/ui/progress";
+import { toast } from "sonner";
+import { uploadMultiplePhotos } from "@/utils/photoUploadUtils";
 
 interface PhotoFieldsProps {
   photos: File[];
@@ -19,6 +21,8 @@ interface PhotoFieldsProps {
   primaryPhotoIndex: number | null;
   setPrimaryPhotoIndex: (index: number | null) => void;
   uploadProgress?: number;
+  setUploadProgress?: (progress: number) => void;
+  onSavePhotos?: () => void;
 }
 
 export function PhotoFields({
@@ -27,8 +31,11 @@ export function PhotoFields({
   primaryPhotoIndex,
   setPrimaryPhotoIndex,
   uploadProgress = 0,
+  setUploadProgress,
+  onSavePhotos
 }: PhotoFieldsProps) {
   const [dragActive, setDragActive] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Manipuladores de eventos para arrastar e soltar
   const handleDrag = (e: React.DragEvent) => {
@@ -105,6 +112,52 @@ export function PhotoFields({
     handleFilesAdded(webcamPhotos);
   };
 
+  // Função para salvar fotos manualmente
+  const handleSavePhotos = async () => {
+    if (photos.length === 0) {
+      toast.warning("Nenhuma foto para salvar. Adicione fotos primeiro.");
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      
+      // Usar a função uploadMultiplePhotos para salvar as fotos no Supabase
+      const results = await uploadMultiplePhotos(
+        photos, 
+        'inventory_images',
+        (progress) => {
+          if (setUploadProgress) {
+            setUploadProgress(progress);
+          }
+        }
+      );
+      
+      // Verificar erros no upload
+      const errors = results.filter(result => !result.success);
+      
+      if (errors.length > 0) {
+        toast.error(`Erro ao enviar ${errors.length} foto(s). Tente novamente.`);
+        console.error("Erros no upload:", errors);
+      } else {
+        toast.success(`${results.length} foto(s) salva(s) com sucesso!`);
+        
+        // Chamar callback se fornecido
+        if (onSavePhotos) {
+          onSavePhotos();
+        }
+      }
+    } catch (error) {
+      console.error("Erro ao salvar fotos:", error);
+      toast.error("Erro ao salvar fotos. Tente novamente.");
+    } finally {
+      setIsSaving(false);
+      if (setUploadProgress) {
+        setUploadProgress(0);
+      }
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Área de arrastar e soltar + upload de arquivos */}
@@ -140,9 +193,26 @@ export function PhotoFields({
         </label>
       </div>
 
-      {/* Botão para captura de fotos via webcam */}
-      <div className="flex justify-end">
+      {/* Botões para captura de fotos via webcam e salvar fotos */}
+      <div className="flex justify-between">
         <WebcamButton onCaptureComplete={handleWebcamPhotos} />
+        
+        {photos.length > 0 && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8 px-3"
+            onClick={handleSavePhotos}
+            disabled={isSaving || photos.length === 0}
+            title="Salvar fotos no servidor"
+          >
+            <Save size={16} className="mr-1" />
+            <span className="text-xs">
+              {isSaving ? "Salvando..." : "Salvar Fotos"}
+            </span>
+          </Button>
+        )}
       </div>
 
       {/* Progresso de upload */}

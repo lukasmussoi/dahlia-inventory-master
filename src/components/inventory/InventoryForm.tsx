@@ -34,7 +34,9 @@ export function InventoryForm({ item, categories, isOpen, onClose, onSuccess }: 
     setPhotos,
     primaryPhotoIndex,
     setPrimaryPhotoIndex,
-    uploadProgress 
+    uploadProgress,
+    setUploadProgress,
+    savePhotosOnly
   } = useInventoryForm({ 
     item, 
     onSuccess, 
@@ -55,8 +57,46 @@ export function InventoryForm({ item, categories, isOpen, onClose, onSuccess }: 
     loadSuppliers();
   }, []);
 
+  // Função para gerenciar o fechamento seguro
+  const handleCloseForm = () => {
+    // Verificar se há fotos não enviadas
+    if (photos.length > 0 && !isSubmitting) {
+      // Perguntar ao usuário se ele quer fechar sem salvar (usando Toast interativo)
+      toast.custom((toastId) => (
+        <div className="bg-white rounded-lg p-4 shadow-lg border">
+          <p className="mb-3">Você tem fotos não salvas. Deseja salvar antes de fechar?</p>
+          <div className="flex justify-end gap-2">
+            <Button 
+              size="sm" 
+              variant="ghost" 
+              onClick={() => {
+                toast.dismiss(toastId);
+                onClose();
+              }}
+            >
+              Fechar sem salvar
+            </Button>
+            <Button 
+              size="sm" 
+              variant="default" 
+              onClick={() => {
+                toast.dismiss(toastId);
+                savePhotosOnly();
+                onClose();
+              }}
+            >
+              Salvar fotos e fechar
+            </Button>
+          </div>
+        </div>
+      ), { duration: 10000 });
+    } else {
+      onClose();
+    }
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleCloseForm}>
       <DialogContent className="sm:max-w-[600px] h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>
@@ -82,13 +122,15 @@ export function InventoryForm({ item, categories, isOpen, onClose, onSuccess }: 
                 primaryPhotoIndex={primaryPhotoIndex}
                 setPrimaryPhotoIndex={setPrimaryPhotoIndex}
                 uploadProgress={uploadProgress}
+                setUploadProgress={setUploadProgress}
+                onSavePhotos={savePhotosOnly}
               />
             </form>
           </Form>
         </div>
 
         <div className="flex justify-end gap-2 pt-4 border-t">
-          <Button type="button" variant="outline" onClick={onClose}>
+          <Button type="button" variant="outline" onClick={handleCloseForm}>
             Cancelar
           </Button>
           <Button 

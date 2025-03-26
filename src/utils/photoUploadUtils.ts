@@ -22,12 +22,14 @@ export type ProgressCallback = (progress: number) => void;
  * @param file Arquivo a ser enviado
  * @param bucket Nome do bucket ('inventory_images' ou 'inventory_photos')
  * @param onProgress Callback opcional para reportar progresso
+ * @param itemId ID opcional do item ao qual a foto pertence
  * @returns Promise com resultado do upload
  */
 export const uploadPhoto = async (
   file: File,
   bucket: 'inventory_images' | 'inventory_photos' = 'inventory_images',
-  onProgress?: ProgressCallback
+  onProgress?: ProgressCallback,
+  itemId?: string
 ): Promise<UploadResult> => {
   try {
     if (!file) {
@@ -45,17 +47,27 @@ export const uploadPhoto = async (
       return { success: false, error: 'A imagem deve ter no máximo 5MB' };
     }
 
+    // Determinar a extensão correta com base no tipo MIME
+    let fileExtension = '.jpg'; // Padrão
+    if (file.type === 'image/png') fileExtension = '.png';
+    if (file.type === 'image/jpeg') fileExtension = '.jpg';
+    if (file.type === 'image/gif') fileExtension = '.gif';
+    if (file.type === 'image/webp') fileExtension = '.webp';
+    
     // Gerar nome único para o arquivo
-    const fileExt = file.name.split('.').pop();
     const timestamp = new Date().getTime();
     const safeFileName = file.name
       .replace(/[^a-zA-Z0-9_\-.]/g, '_')
-      .toLowerCase();
-    const finalFileName = `${timestamp}_${safeFileName}`;
+      .toLowerCase()
+      .replace(/\.[^/.]+$/, ""); // Remover extensão existente
     
-    // Usar um ID temporário se não for fornecido
-    const tempId = uuidv4();
-    const filePath = `inventory/${tempId}/${finalFileName}`;
+    const finalFileName = `${safeFileName}${fileExtension}`;
+    
+    // Usar ID do item se fornecido, ou gerar ID temporário
+    const dirId = itemId || uuidv4();
+    
+    // Caminho no formato: inventory/item_id/timestamp_filename.ext
+    const filePath = `inventory/${dirId}/${timestamp}_${finalFileName}`;
 
     console.log(`Iniciando upload para ${bucket}, caminho: ${filePath}`);
 
@@ -64,7 +76,7 @@ export const uploadPhoto = async (
       .from(bucket)
       .upload(filePath, file, {
         cacheControl: '3600',
-        upsert: false,
+        upsert: true, // Importante: permite sobrescrever arquivo existente
       });
 
     if (error) {
@@ -97,12 +109,14 @@ export const uploadPhoto = async (
  * @param files Array de arquivos a serem enviados
  * @param bucket Nome do bucket ('inventory_images' ou 'inventory_photos')
  * @param onProgress Callback opcional para reportar progresso
+ * @param itemId ID opcional do item ao qual as fotos pertencem
  * @returns Promise com resultados dos uploads
  */
 export const uploadMultiplePhotos = async (
   files: File[],
   bucket: 'inventory_images' | 'inventory_photos' = 'inventory_images',
-  onProgress?: ProgressCallback
+  onProgress?: ProgressCallback,
+  itemId?: string
 ): Promise<UploadResult[]> => {
   if (!files.length) {
     return [{ success: false, error: 'Nenhum arquivo fornecido' }];
@@ -111,7 +125,7 @@ export const uploadMultiplePhotos = async (
   const results: UploadResult[] = [];
   
   for (let i = 0; i < files.length; i++) {
-    const result = await uploadPhoto(files[i], bucket);
+    const result = await uploadPhoto(files[i], bucket, undefined, itemId);
     results.push(result);
     
     // Calcular e reportar progresso

@@ -10,7 +10,7 @@
  * - WebcamButton.tsx que é o componente que o aciona
  * - WebcamCapture.tsx para manipulação da câmera e captura
  */
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { WebcamCapture } from "./webcam-capture";
@@ -25,6 +25,17 @@ interface WebcamModalProps {
 export function WebcamModal({ isOpen, onOpenChange, onCapture }: WebcamModalProps) {
   const [capturedPhotos, setCapturedPhotos] = useState<File[]>([]);
   const [activeTab, setActiveTab] = useState<"capture" | "review">("capture");
+  
+  // Monitorar quando o modal é fechado para limpar os dados
+  useEffect(() => {
+    if (!isOpen) {
+      // Delay para garantir que a animação de fechamento seja concluída
+      const timer = setTimeout(() => {
+        setActiveTab("capture");
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
 
   // Função para adicionar uma foto capturada à lista
   const handlePhotoCaptured = (photoFile: File) => {
@@ -43,6 +54,7 @@ export function WebcamModal({ isOpen, onOpenChange, onCapture }: WebcamModalProp
     onCapture(capturedPhotos);
     setCapturedPhotos([]);
     setActiveTab("capture");
+    onOpenChange(false);
   };
 
   // Função para cancelar e fechar o modal
@@ -52,8 +64,18 @@ export function WebcamModal({ isOpen, onOpenChange, onCapture }: WebcamModalProp
     onOpenChange(false);
   };
 
+  // Função de gerenciamento que fecha o modal com segurança
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      // Fechar modalidade. A câmera será desligada pelo efeito no WebcamCapture
+      onOpenChange(false);
+    } else {
+      onOpenChange(true);
+    }
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Capturar Fotos via Webcam</DialogTitle>
@@ -83,7 +105,10 @@ export function WebcamModal({ isOpen, onOpenChange, onCapture }: WebcamModalProp
 
         {activeTab === "capture" ? (
           <div className="flex flex-col items-center">
-            <WebcamCapture onCapture={handlePhotoCaptured} />
+            <WebcamCapture 
+              onCapture={handlePhotoCaptured} 
+              isActive={isOpen && activeTab === "capture"} 
+            />
           </div>
         ) : (
           <div className="space-y-4">
