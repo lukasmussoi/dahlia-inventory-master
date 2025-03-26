@@ -47,6 +47,30 @@ export const initializeSupabaseStorage = async (): Promise<boolean> => {
         console.log(`Bucket ${bucketName} está acessível.`);
       } else {
         console.log(`Bucket ${bucketName} encontrado.`);
+        
+        // Verificar se o bucket é público
+        const { exists, isPublic } = await checkBucketStatus(bucketName);
+        
+        if (exists && !isPublic) {
+          console.log(`Bucket ${bucketName} não é público. Algumas funcionalidades podem não funcionar corretamente.`);
+          toast.warning(`O bucket ${bucketName} não é público. Algumas imagens podem não ser exibidas corretamente.`);
+        }
+      }
+      
+      // Verificar/criar pasta 'inventory' no bucket
+      try {
+        const { data: folders } = await supabase.storage.from(bucketName).list();
+        
+        if (!folders?.some(item => item.name === 'inventory')) {
+          // Criar um arquivo temporário para simular a criação da pasta
+          const tempFile = new Blob([''], { type: 'text/plain' });
+          await supabase.storage.from(bucketName).upload('inventory/.folder', tempFile);
+          console.log(`Pasta 'inventory' criada no bucket ${bucketName}.`);
+        } else {
+          console.log(`Pasta 'inventory' já existe no bucket ${bucketName}.`);
+        }
+      } catch (folderError) {
+        console.error(`Erro ao verificar/criar pasta 'inventory' no bucket ${bucketName}:`, folderError);
       }
     }
     

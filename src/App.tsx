@@ -12,7 +12,7 @@ const queryClient = new QueryClient();
 
 // Componente App que encapsula a aplicação com os providers necessários
 const App = () => {
-  const [isInitializing, setIsInitializing] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
 
   // Inicializar recursos do Supabase
   useEffect(() => {
