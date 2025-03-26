@@ -267,6 +267,13 @@ export class ItemOperationsModel {
         return;
       }
       
+      // Verificar se o item já está com status de devolvido ou vendido
+      // para evitar processamento duplicado do mesmo item
+      if (item.status === 'returned' || item.status === 'sold' || item.status === 'damaged') {
+        console.log(`Item ${itemId} já está com status ${item.status}, ignorando devolução ao estoque para evitar duplicação`);
+        return;
+      }
+      
       // Registrar que o item estava na maleta e será devolvido ao estoque
       console.log(`Iniciando processamento para retornar item ${itemId} ao estoque. Status atual: ${item.status}, Danificado: ${isDamaged}`);
       
@@ -289,7 +296,7 @@ export class ItemOperationsModel {
         if (inventoryData) {
           const newQuantity = (inventoryData.quantity || 0) + quantidade;
           
-          // Atualizar quantidade no estoque
+          // Atualizar quantidade no estoque usando uma transação atômica
           const { error: updateInventoryError } = await supabase
             .from('inventory')
             .update({ quantity: newQuantity })

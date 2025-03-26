@@ -1,4 +1,3 @@
-
 /**
  * Controlador de Acertos de Maleta
  * @file Este arquivo controla as operações relacionadas aos acertos de maleta,
@@ -113,7 +112,7 @@ export const SettlementController = {
       
       console.log(`Processando itens: ${itemsPresentIds.length} presentes, ${itemsSoldIds.length} vendidos`);
       
-      // 1. Processar os itens (presentes, vendidos)
+      // 1. Processar os itens usando uma única chamada para evitar processamento duplicado
       await AcertoMaletaModel.processAcertoItems(
         acertoId,
         suitcaseId,
@@ -126,26 +125,19 @@ export const SettlementController = {
       
       // Buscar detalhes dos itens vendidos para calcular o valor total
       if (itemsSoldIds.length > 0) {
-        const { data: soldItems, error } = await supabase
-          .from('suitcase_items')
-          .select(`
-            *,
-            product:inventory_id (
-              id,
-              name,
-              price
-            )
-          `)
-          .in('id', itemsSoldIds);
-        
-        if (error) {
-          console.error("Erro ao buscar detalhes dos itens vendidos:", error);
+        // Buscar detalhes a partir da tabela acerto_itens_vendidos
+        // em vez de buscar da tabela suitcase_items para garantir precisão
+        const { data: vendaRegistros, error: vendaError } = await supabase
+          .from('acerto_itens_vendidos')
+          .select('price')
+          .eq('acerto_id', acertoId);
+          
+        if (vendaError) {
+          console.error("Erro ao buscar registros de venda:", vendaError);
           // Não lançar erro aqui, continuar o processamento
-          toast.error("Erro ao buscar detalhes dos itens vendidos, usando valor total zero");
-        } else if (soldItems) {
-          totalSales = soldItems.reduce((sum, item) => {
-            return sum + (item.product?.price || 0);
-          }, 0);
+          toast.error("Erro ao buscar detalhes dos itens vendidos, usando valores calculados alternativos");
+        } else if (vendaRegistros && vendaRegistros.length > 0) {
+          totalSales = vendaRegistros.reduce((sum, item) => sum + (item.price || 0), 0);
         }
       }
       

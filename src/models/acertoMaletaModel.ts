@@ -1,4 +1,3 @@
-
 /**
  * Modelo de Acertos de Maleta
  * @file Este arquivo contém as operações de banco de dados para os acertos de maleta
@@ -55,12 +54,23 @@ export class AcertoMaletaModel {
     try {
       console.log(`Processando ${itemsPresent.length} itens presentes e ${itemsSold.length} itens vendidos`);
       
+      // Manter um registro dos itens já processados para evitar duplicação
+      const processedItems = new Set<string>();
+      
       // 1. Processar itens presentes (retornar ao estoque)
       for (const itemId of itemsPresent) {
+        // Verificar se o item já foi processado
+        if (processedItems.has(itemId)) {
+          console.log(`Item ${itemId} já foi processado anteriormente, ignorando para evitar duplicação.`);
+          continue;
+        }
+        
         console.log(`Retornando item ${itemId} ao estoque`);
         try {
           // Chamar função melhorada para garantir que o item seja devolvido ao estoque E removido da maleta
           await SuitcaseItemModel.returnItemToInventory(itemId);
+          // Marcar o item como processado
+          processedItems.add(itemId);
         } catch (error) {
           console.error(`Erro ao retornar item ${itemId} ao estoque:`, error);
           // Continuar processando outros itens mesmo se ocorrer um erro
@@ -69,6 +79,12 @@ export class AcertoMaletaModel {
       
       // 2. Processar itens vendidos (registrar vendas)
       for (const itemId of itemsSold) {
+        // Verificar se o item já foi processado
+        if (processedItems.has(itemId)) {
+          console.log(`Item vendido ${itemId} já foi processado anteriormente, ignorando para evitar duplicação.`);
+          continue;
+        }
+        
         console.log(`Registrando venda do item ${itemId}`);
         
         try {
@@ -79,23 +95,46 @@ export class AcertoMaletaModel {
             continue;
           }
           
+          // Verificar se o item já está com status de vendido
+          if (item.status === 'sold') {
+            console.log(`Item ${itemId} já está marcado como vendido, ignorando processamento duplicado.`);
+            processedItems.add(itemId);
+            continue;
+          }
+          
           // Atualizar status do item para vendido
           await SuitcaseItemModel.updateSuitcaseItemStatus(itemId, 'sold');
           
-          // Registrar na tabela de itens vendidos em acertos
-          const { error } = await supabase
+          // Verificar se o item já foi registrado como vendido para este acerto
+          const { data: existingVendido, error: checkExistingError } = await supabase
             .from('acerto_itens_vendidos')
-            .insert({
-              acerto_id: acertoId,
-              suitcase_item_id: itemId,
-              inventory_id: item.inventory_id,
-              price: item.product?.price || 0,
-              unit_cost: item.product?.unit_cost || 0
-            });
+            .select('id')
+            .eq('acerto_id', acertoId)
+            .eq('suitcase_item_id', itemId);
           
-          if (error) {
-            console.error(`Erro ao registrar venda do item ${itemId}:`, error);
-            throw error;
+          if (checkExistingError) {
+            console.error(`Erro ao verificar registros existentes para o item ${itemId}:`, checkExistingError);
+          }
+          
+          // Só registrar se ainda não existir um registro
+          if (!existingVendido || existingVendido.length === 0) {
+            // Registrar na tabela de itens vendidos em acertos
+            const { error } = await supabase
+              .from('acerto_itens_vendidos')
+              .insert({
+                acerto_id: acertoId,
+                suitcase_item_id: itemId,
+                inventory_id: item.inventory_id,
+                price: item.product?.price || 0,
+                unit_cost: item.product?.unit_cost || 0
+              });
+            
+            if (error) {
+              console.error(`Erro ao registrar venda do item ${itemId}:`, error);
+              throw error;
+            }
+          } else {
+            console.log(`Item ${itemId} já registrado como vendido para o acerto ${acertoId}, ignorando duplicação.`);
           }
           
           // CORREÇÃO: Remover explicitamente o item da maleta após registrar como vendido
@@ -109,33 +148,14 @@ export class AcertoMaletaModel {
             console.error(`Erro ao remover item vendido ${itemId} da maleta:`, deleteError);
             console.error(`Detalhes do erro:`, JSON.stringify(deleteError));
             
-            // Verificar se o erro é devido a uma constraint de chave estrangeira
-            if (deleteError.message?.includes('foreign key constraint')) {
-              console.log(`Detectada constraint de chave estrangeira. Tentando abordagem alternativa...`);
-              
-              // Primeiro verificar se o item já foi registrado como vendido
-              await supabase
-                .from('suitcase_items')
-                .update({ status: 'sold' })
-                .eq('id', itemId);
-                
-              // Depois verificar se há registros na tabela acerto_itens_vendidos que dependem deste item
-              const { data: dependencies } = await supabase
-                .from('acerto_itens_vendidos')
-                .select('id')
-                .eq('suitcase_item_id', itemId);
-                
-              if (dependencies && dependencies.length > 0) {
-                console.log(`Item ${itemId} tem ${dependencies.length} dependências em acerto_itens_vendidos`);
-                // Se houver, podemos atualizar a referência ou criar uma solução alternativa
-                // Por exemplo, podemos marcar o item como 'deleted' em vez de removê-lo
-              }
-            }
-            
-            throw deleteError;
+            // Se não conseguir deletar, pelo menos garantimos que está marcado como vendido
+            console.log(`Não foi possível excluir o item, mas ele está marcado como vendido.`);
+          } else {
+            console.log(`Item vendido ${itemId} removido da maleta com sucesso`);
           }
           
-          console.log(`Item vendido ${itemId} registrado e removido da maleta com sucesso`);
+          // Marcar o item como processado
+          processedItems.add(itemId);
         } catch (error) {
           console.error(`Erro ao processar item vendido ${itemId}:`, error);
           // Continuar processando outros itens mesmo se ocorrer um erro
@@ -151,64 +171,37 @@ export class AcertoMaletaModel {
       if (checkError) {
         console.error(`Erro ao verificar itens restantes na maleta ${suitcaseId}:`, checkError);
       } else if (remainingItems && remainingItems.length > 0) {
-        console.warn(`Foram encontrados ${remainingItems.length} itens ainda na maleta após o processamento. Removendo-os...`);
+        console.warn(`Foram encontrados ${remainingItems.length} itens ainda na maleta após o processamento. Verificando status...`);
         
-        // Classificar itens restantes por status
-        const soldItems = remainingItems.filter(item => item.status === 'sold').map(item => item.id);
-        const otherItems = remainingItems.filter(item => item.status !== 'sold').map(item => item.id);
+        // Classificar itens restantes por status para evitar processamento inadequado
+        const itemsJaProcessados = remainingItems.filter(
+          item => item.status === 'sold' || item.status === 'returned' || item.status === 'damaged'
+        );
         
-        // Processar itens vendidos que ainda restam
-        if (soldItems.length > 0) {
-          console.log(`Removendo ${soldItems.length} itens vendidos que ainda estão na maleta...`);
+        const itemsParaProcessar = remainingItems.filter(
+          item => item.status !== 'sold' && item.status !== 'returned' && item.status !== 'damaged'
+        );
+        
+        console.log(`Itens já processados: ${itemsJaProcessados.length}, Itens para processar: ${itemsParaProcessar.length}`);
+        
+        // Processar apenas os itens que ainda não foram processados
+        if (itemsParaProcessar.length > 0) {
+          console.log(`Processando ${itemsParaProcessar.length} itens restantes não processados...`);
           
-          // Para cada item vendido restante, registrar na tabela de itens vendidos em acertos se ainda não foi registrado
-          for (const itemId of soldItems) {
-            // Verificar se o item já está registrado
-            const { data: existingRecord } = await supabase
-              .from('acerto_itens_vendidos')
-              .select('id')
-              .eq('suitcase_item_id', itemId)
-              .eq('acerto_id', acertoId);
-            
-            if (!existingRecord || existingRecord.length === 0) {
-              // Se não estiver registrado, buscar informações do item e registrar
-              const item = await SuitcaseItemModel.getSuitcaseItemById(itemId);
-              if (item) {
-                await supabase
-                  .from('acerto_itens_vendidos')
-                  .insert({
-                    acerto_id: acertoId,
-                    suitcase_item_id: itemId,
-                    inventory_id: item.inventory_id,
-                    price: item.product?.price || 0,
-                    unit_cost: item.product?.unit_cost || 0
-                  });
-              }
+          for (const item of itemsParaProcessar) {
+            // Verificar se já foi processado
+            if (processedItems.has(item.id)) {
+              console.log(`Item ${item.id} já foi processado, ignorando para evitar duplicação.`);
+              continue;
             }
-          }
-          
-          // Depois, remover todos os itens vendidos
-          const { error: removeError } = await supabase
-            .from('suitcase_items')
-            .delete()
-            .in('id', soldItems);
-          
-          if (removeError) {
-            console.error(`Erro ao remover itens vendidos restantes da maleta:`, removeError);
-          } else {
-            console.log(`${soldItems.length} itens vendidos restantes removidos da maleta com sucesso`);
-          }
-        }
-        
-        // Processar outros itens que ainda restam (devolver ao estoque)
-        if (otherItems.length > 0) {
-          console.log(`Devolvendo ${otherItems.length} outros itens restantes ao estoque...`);
-          
-          for (const itemId of otherItems) {
+            
             try {
-              await SuitcaseItemModel.returnItemToInventory(itemId);
-            } catch (error) {
-              console.error(`Erro ao devolver item ${itemId} ao estoque:`, error);
+              // Assumimos que itens não processados devem ser devolvidos ao estoque
+              console.log(`Devolvendo item ${item.id} ao estoque (não estava na lista de processados)...`);
+              await SuitcaseItemModel.returnItemToInventory(item.id);
+              processedItems.add(item.id);
+            } catch (returnError) {
+              console.error(`Erro ao devolver item ${item.id} ao estoque:`, returnError);
             }
           }
         }
