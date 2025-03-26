@@ -53,9 +53,16 @@ export class AcertoDetailsController {
         if (product && Array.isArray(product.photo_url) && product.photo_url.length > 0) {
           // Extrair a primeira URL de foto do array
           const photoUrl = product.photo_url[0]?.photo_url || null;
+          // Corrigindo o formato da propriedade photo_url para manter compatibilidade com o tipo esperado
           product = {
             ...product,
-            photo_url: photoUrl
+            photo_url: photoUrl ? [{ photo_url: photoUrl }] : []
+          };
+        } else if (product && typeof product.photo_url === 'string') {
+          // Se photo_url for uma string, converte para o formato de array esperado
+          product = {
+            ...product,
+            photo_url: product.photo_url ? [{ photo_url: product.photo_url }] : []
           };
         }
         return {

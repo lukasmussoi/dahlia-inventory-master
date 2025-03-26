@@ -5,6 +5,8 @@
  * @relacionamento Utilizado pelos controladores que geram PDFs
  */
 
+import { generatePdfLabel as generateLabelPdf } from "./pdf/labelGenerator";
+
 /**
  * Abre um PDF em uma nova aba do navegador
  * @param pdfUrl URL do blob do PDF ou URL remota
@@ -42,3 +44,9 @@ export const openPdfInNewTab = (pdfUrl: string): boolean => {
     return false;
   }
 };
+
+/**
+ * Re-exporta a função de geração de PDF de etiquetas
+ * Isso mantém compatibilidade com código existente
+ */
+export { generateLabelPdf as generatePdfLabel };
