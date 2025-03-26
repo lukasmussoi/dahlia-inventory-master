@@ -87,18 +87,35 @@ export function WebcamCapture({ onCapture }: WebcamCaptureProps) {
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
         
         // Converter canvas para blob (arquivo)
+        // Importante: usando 'image/jpeg' explicitamente para garantir compatibilidade
         canvas.toBlob((blob) => {
           if (blob) {
-            // Criar um arquivo a partir do blob com nome único para evitar conflitos
+            // Criar um nome de arquivo único com extensão .jpg
             const timestamp = new Date().getTime();
+            const randomStr = Math.random().toString(36).substring(2, 8);
+            const fileName = `webcam_${timestamp}_${randomStr}.jpg`;
+            
+            // Criar um arquivo a partir do blob com tipo explícito
             const photoFile = new File(
               [blob], 
-              `webcam_photo_${timestamp}.jpg`, 
-              { type: "image/jpeg", lastModified: timestamp }
+              fileName, 
+              { 
+                type: "image/jpeg", 
+                lastModified: timestamp 
+              }
             );
+            
+            console.log("Foto capturada pela webcam:", {
+              name: photoFile.name,
+              type: photoFile.type,
+              size: photoFile.size,
+              lastModified: photoFile.lastModified
+            });
             
             // Enviar o arquivo para o callback
             onCapture(photoFile);
+          } else {
+            console.error("Falha ao gerar blob da imagem capturada");
           }
         }, "image/jpeg", 0.9); // 90% de qualidade
       }

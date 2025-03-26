@@ -144,8 +144,18 @@ export class BaseInventoryModel {
     return processedItem;
   }
 
-  // Atualizar fotos de um item - modificado para aceitar Files
-  static async updateItemPhotos(itemId: string, photos: File[] | { id?: string; photo_url: string; is_primary?: boolean }[]): Promise<InventoryPhoto[]> {
+  // Atualizar fotos de um item - modificado para aceitar Files e lidar com a foto primária
+  static async updateItemPhotos(
+    itemId: string, 
+    photos: Array<File | { 
+      file: File; 
+      is_primary?: boolean 
+    } | { 
+      id?: string; 
+      photo_url: string; 
+      is_primary?: boolean 
+    }>
+  ): Promise<InventoryPhoto[]> {
     if (!photos || photos.length === 0) return [];
 
     try {
@@ -171,33 +181,53 @@ export class BaseInventoryModel {
       for (let i = 0; i < photos.length; i++) {
         const photo = photos[i];
         let photoUrl = '';
+        let isPrimary = false;
+        let fileToUpload: File | null = null;
         
-        // Verificar o tipo do objeto photo
-        if ('photo_url' in photo) {
+        // Determinar o tipo de objeto para processamento adequado
+        if ('photo_url' in photo && typeof photo.photo_url === 'string') {
           // É um objeto com URL, usar diretamente
           photoUrl = photo.photo_url;
-          
-          // Adicionar ao array de registros
-          processedPhotoRecords.push({
-            inventory_id: itemId,
-            photo_url: photoUrl,
-            is_primary: photo.is_primary || false
-          });
+          isPrimary = photo.is_primary || false;
         } 
+        else if ('file' in photo && photo.file instanceof File) {
+          // É um objeto com File e possivelmente is_primary
+          fileToUpload = photo.file;
+          isPrimary = photo.is_primary || false;
+        }
         else if (photo instanceof File) {
-          // É um arquivo File (upload tradicional ou webcam), precisamos fazer upload
-          console.log(`Processando arquivo ${i + 1}/${photos.length}: ${photo.name}`);
+          // É um arquivo File direto (upload tradicional ou webcam)
+          fileToUpload = photo;
+          // Verificar se está usando a forma antiga (sem informação de primária)
+          isPrimary = i === 0; // Primeira foto como primária por padrão no método antigo
+        }
+        
+        // Se temos um arquivo para upload, processá-lo
+        if (fileToUpload) {
+          console.log(`Processando arquivo ${i + 1}/${photos.length}: ${fileToUpload.name} (${fileToUpload.type})`);
           
           try {
+            // Verificar tipo de arquivo e formato
+            if (!fileToUpload.type.startsWith('image/')) {
+              console.error(`Arquivo ${fileToUpload.name} não é uma imagem válida (tipo: ${fileToUpload.type})`);
+              continue;
+            }
+            
             // Definir o caminho de armazenamento (formato: inventory/item_id/timestamp_filename.jpg)
             const timestamp = new Date().getTime();
-            const fileExtension = photo.name.split('.').pop() || 'jpg';
-            const filePath = `inventory/${itemId}/${timestamp}_${photo.name}`;
+            const fileExtension = fileToUpload.name.split('.').pop()?.toLowerCase() || 'jpg';
+            // Garantir que o nome do arquivo seja seguro para URLs
+            const safeFileName = fileToUpload.name
+              .replace(/[^a-zA-Z0-9_\-.]/g, '_')
+              .toLowerCase();
+            const filePath = `inventory/${itemId}/${timestamp}_${safeFileName}`;
+            
+            console.log(`Enviando arquivo para: ${filePath}`);
             
             // Fazer o upload do arquivo para o Supabase Storage
             const { data: uploadData, error: uploadError } = await supabase.storage
               .from('photos')
-              .upload(filePath, photo, {
+              .upload(filePath, fileToUpload, {
                 cacheControl: '3600',
                 upsert: true
               });
@@ -219,12 +249,20 @@ export class BaseInventoryModel {
             processedPhotoRecords.push({
               inventory_id: itemId,
               photo_url: photoUrl,
-              is_primary: photos.length === 1 || i === 0 // Primeira foto como primária por padrão
+              is_primary: isPrimary
             });
           } catch (error) {
             console.error(`Erro ao processar arquivo ${i + 1}:`, error);
             // Continuar para o próximo arquivo em caso de erro
           }
+        } 
+        else if (photoUrl) {
+          // URL direta - adicionar ao array de registros
+          processedPhotoRecords.push({
+            inventory_id: itemId,
+            photo_url: photoUrl,
+            is_primary: isPrimary
+          });
         }
       }
       
@@ -232,6 +270,24 @@ export class BaseInventoryModel {
       if (processedPhotoRecords.length === 0) {
         console.log("Nenhuma foto válida para inserir");
         return [];
+      }
+      
+      // Garantir que apenas uma foto seja marcada como primária
+      let hasPrimary = false;
+      for (let i = 0; i < processedPhotoRecords.length; i++) {
+        if (processedPhotoRecords[i].is_primary) {
+          if (hasPrimary) {
+            // Se já temos uma foto primária, desmarcar as demais
+            processedPhotoRecords[i].is_primary = false;
+          } else {
+            hasPrimary = true;
+          }
+        }
+      }
+      
+      // Se nenhuma foto foi marcada como primária, marcar a primeira
+      if (!hasPrimary && processedPhotoRecords.length > 0) {
+        processedPhotoRecords[0].is_primary = true;
       }
       
       // Inserir os registros no banco de dados
