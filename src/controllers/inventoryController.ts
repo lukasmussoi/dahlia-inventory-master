@@ -170,13 +170,29 @@ export const InventoryController = {
   async checkItemInSuitcase(inventoryId: string) {
     try {
       const suitcaseInfo = await InventoryModel.checkItemInSuitcase(inventoryId);
-      return {
-        inSuitcase: !!suitcaseInfo,
-        isActiveCase: suitcaseInfo ? 
-          (suitcaseInfo.status === 'in_use' || suitcaseInfo.status === 'in_replenishment') : 
-          false,
-        suitcaseInfo: suitcaseInfo,
-        hasError: false
+      
+      // Verificar se foi retornado algo do modelo
+      if (suitcaseInfo) {
+        // Se o modelo já adicionou a propriedade hasError, retornar conforme recebido
+        if ('hasError' in suitcaseInfo) {
+          return suitcaseInfo;
+        }
+        
+        // Caso contrário, adicionar a propriedade hasError como false
+        return {
+          ...suitcaseInfo,
+          inSuitcase: true,
+          isActiveCase: suitcaseInfo.status === 'in_use' || suitcaseInfo.status === 'in_replenishment',
+          hasError: false
+        };
+      }
+      
+      // Se não há informações da maleta, o item não está em nenhuma maleta
+      return { 
+        inSuitcase: false, 
+        isActiveCase: false, 
+        hasError: false,
+        suitcaseInfo: null
       };
     } catch (error) {
       console.error("Erro ao verificar se item está em maleta:", error);

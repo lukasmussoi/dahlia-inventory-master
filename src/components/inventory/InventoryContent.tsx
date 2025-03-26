@@ -48,23 +48,20 @@ export function InventoryContent({ isAdmin }: InventoryContentProps) {
   const handleEditItem = async (item: InventoryItem) => {
     try {
       // Verificar se o item está em uma maleta ativa (não devolvida)
-      const suitcaseInfo = await InventoryModel.checkItemInSuitcase(item.id);
+      const suitcaseCheckResult = await InventoryModel.checkItemInSuitcase(item.id);
       
       // Verificar se ocorreu um erro durante a verificação
-      if (suitcaseInfo.hasError) {
+      if (suitcaseCheckResult && 'hasError' in suitcaseCheckResult && suitcaseCheckResult.hasError) {
         toast.error("Erro ao verificar disponibilidade do item. Tente novamente mais tarde.");
         return;
       }
-      
-      if (suitcaseInfo) {
-        // Verifica se a maleta está em uso (não foi devolvida)
-        const isActiveCase = suitcaseInfo.status === 'in_use' || 
-                             suitcaseInfo.status === 'in_replenishment';
-        
-        if (isActiveCase) {
-          toast.error("Este item está vinculado a uma maleta ativa e não pode ser editado. Devolva a maleta primeiro.");
-          return;
-        }
+
+      // Se o item estiver em uma maleta ativa, impedir a edição
+      if (suitcaseCheckResult && 
+          'status' in suitcaseCheckResult && 
+          (suitcaseCheckResult.status === 'in_use' || suitcaseCheckResult.status === 'in_replenishment')) {
+        toast.error("Este item está vinculado a uma maleta ativa e não pode ser editado. Devolva a maleta primeiro.");
+        return;
       }
       
       setSelectedItem(item);
@@ -109,23 +106,20 @@ export function InventoryContent({ isAdmin }: InventoryContentProps) {
     try {
       if (isDeletingItem) return; // Evitar múltiplas exclusões simultâneas
       
-      const suitcaseInfo = await InventoryModel.checkItemInSuitcase(id);
+      const suitcaseCheckResult = await InventoryModel.checkItemInSuitcase(id);
       
       // Verificar se ocorreu um erro durante a verificação
-      if (suitcaseInfo.hasError) {
+      if (suitcaseCheckResult && 'hasError' in suitcaseCheckResult && suitcaseCheckResult.hasError) {
         toast.error("Erro ao verificar disponibilidade do item. Tente novamente mais tarde.");
         return;
       }
-      
-      if (suitcaseInfo) {
-        // Verifica se a maleta está em uso (não foi devolvida)
-        const isActiveCase = suitcaseInfo.status === 'in_use' || 
-                            suitcaseInfo.status === 'in_replenishment';
-        
-        if (isActiveCase) {
-          toast.error("Este item está vinculado a uma maleta ativa e não pode ser removido. Devolva a maleta primeiro.");
-          return;
-        }
+
+      // Se o item estiver em uma maleta ativa, impedir a exclusão
+      if (suitcaseCheckResult && 
+          'status' in suitcaseCheckResult && 
+          (suitcaseCheckResult.status === 'in_use' || suitcaseCheckResult.status === 'in_replenishment')) {
+        toast.error("Este item está vinculado a uma maleta ativa e não pode ser removido. Devolva a maleta primeiro.");
+        return;
       }
 
       if (window.confirm("Tem certeza que deseja excluir este item?")) {
@@ -162,23 +156,20 @@ export function InventoryContent({ isAdmin }: InventoryContentProps) {
   // Função para arquivar um item
   const handleArchiveItem = async (id: string) => {
     try {
-      const suitcaseInfo = await InventoryModel.checkItemInSuitcase(id);
+      const suitcaseCheckResult = await InventoryModel.checkItemInSuitcase(id);
       
       // Verificar se ocorreu um erro durante a verificação
-      if (suitcaseInfo.hasError) {
+      if (suitcaseCheckResult && 'hasError' in suitcaseCheckResult && suitcaseCheckResult.hasError) {
         toast.error("Erro ao verificar disponibilidade do item. Tente novamente mais tarde.");
         return;
       }
-      
-      if (suitcaseInfo) {
-        // Verifica se a maleta está em uso (não foi devolvida)
-        const isActiveCase = suitcaseInfo.status === 'in_use' || 
-                            suitcaseInfo.status === 'in_replenishment';
-        
-        if (isActiveCase) {
-          toast.error("Este item está vinculado a uma maleta ativa e não pode ser arquivado. Devolva a maleta primeiro.");
-          return;
-        }
+
+      // Se o item estiver em uma maleta ativa, impedir o arquivamento
+      if (suitcaseCheckResult && 
+          'status' in suitcaseCheckResult && 
+          (suitcaseCheckResult.status === 'in_use' || suitcaseCheckResult.status === 'in_replenishment')) {
+        toast.error("Este item está vinculado a uma maleta ativa e não pode ser arquivado. Devolva a maleta primeiro.");
+        return;
       }
 
       if (window.confirm("Tem certeza que deseja arquivar este item? Ele não aparecerá na listagem normal.")) {
