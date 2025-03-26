@@ -1,4 +1,3 @@
-
 /**
  * Componente para captura de fotos via webcam
  * 

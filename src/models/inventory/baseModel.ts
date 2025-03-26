@@ -1,4 +1,3 @@
-
 /**
  * Modelo Base de Inventário
  * @file Este arquivo contém funções básicas para gerenciamento do inventário
@@ -145,7 +144,7 @@ export class BaseInventoryModel {
     return processedItem;
   }
 
-  // Atualizar fotos de um item - corrigido para lidar corretamente com foto da webcam
+  // Atualizar fotos de um item - corrigido para usar o bucket 'inventory_photos'
   static async updateItemPhotos(
     itemId: string, 
     photos: Array<File | { 
@@ -269,9 +268,9 @@ export class BaseInventoryModel {
             
             console.log(`Enviando arquivo para: ${filePath}`);
             
-            // CORREÇÃO: Fazer o upload do arquivo para o Supabase Storage
+            // CORREÇÃO DO BUCKET: Alterando 'photos' para 'inventory_photos'
             const { data: uploadData, error: uploadError } = await supabase.storage
-              .from('photos')
+              .from('inventory_photos') // ⚠️ CORREÇÃO DO BUCKET: era 'photos', agora é 'inventory_photos'
               .upload(filePath, fileToUpload, {
                 cacheControl: '3600',
                 upsert: true
@@ -282,9 +281,9 @@ export class BaseInventoryModel {
               throw uploadError;
             }
             
-            // CORREÇÃO: Obter a URL pública do arquivo
+            // CORREÇÃO DO BUCKET: Alterando 'photos' para 'inventory_photos' na obtenção da URL pública
             const { data: urlData } = supabase.storage
-              .from('photos')
+              .from('inventory_photos') // ⚠️ CORREÇÃO DO BUCKET: era 'photos', agora é 'inventory_photos'
               .getPublicUrl(filePath);
               
             photoUrl = urlData.publicUrl;

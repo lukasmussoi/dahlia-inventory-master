@@ -1,4 +1,3 @@
-
 /**
  * Hook para gerenciar o formulário de inventário
  * 
