@@ -4,7 +4,7 @@
  * @file Agrupa funcionalidades para gerenciar detalhes e operações em maletas
  * @relacionamento Utiliza hooks específicos como useInventorySearch, useSuitcaseItems
  */
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { addDays } from "date-fns";
 import { useTabNavigation } from "./suitcase/useTabNavigation";
 import { useInventorySearch } from "./suitcase/useInventorySearch";
@@ -20,12 +20,15 @@ export function useSuitcaseDetails(
   onOpenChange: (open: boolean) => void,
   onRefresh?: () => void
 ) {
+  // Estado local para controlar se o componente está sendo desmontado
+  const [isClosing, setIsClosing] = useState(false);
+
   // Utilizando hooks específicos
-  const { activeTab, setActiveTab } = useTabNavigation();
+  const { activeTab, setActiveTab, resetTabState } = useTabNavigation();
   const { searchTerm, setSearchTerm, searchResults, isSearching, isAdding, handleSearch, handleAddItem, resetSearchState } = useInventorySearch();
   const { processingItems, handleToggleSold, handleUpdateSaleInfo, handleReturnToInventory, calculateTotalValue, resetItemsState } = useSuitcaseItems();
-  const { isPrintingPdf, handleViewReceipt, handlePrint } = usePrintOperations();
-  const { nextSettlementDate, setNextSettlementDate, handleUpdateNextSettlementDate } = useSettlementDates();
+  const { isPrintingPdf, handleViewReceipt, handlePrint, resetPrintState } = usePrintOperations();
+  const { nextSettlementDate, setNextSettlementDate, handleUpdateNextSettlementDate, resetDateState } = useSettlementDates();
   const { showDeleteDialog, setShowDeleteDialog, isDeleting, handleDeleteSuitcase, resetDeletionState } = useSuitcaseDeletion();
   
   // Utilizando o hook de queries
@@ -43,6 +46,16 @@ export function useSuitcaseDetails(
     resetQueryState
   } = useSuitcaseQueries(suitcaseId, open);
 
+  // Efeito para monitorar quando o diálogo é fechado
+  useEffect(() => {
+    if (!open && !isClosing) {
+      // Se o diálogo está sendo fechado, limpar todos os estados
+      resetStates();
+    }
+    // Atualizar o estado de fechamento
+    setIsClosing(!open);
+  }, [open, isClosing, resetStates]);
+
   // Atualizar a data do próximo acerto na primeira carga
   useEffect(() => {
     if (suitcase?.next_settlement_date) {
@@ -52,15 +65,16 @@ export function useSuitcaseDetails(
       const futureDate = addDays(new Date(), 30);
       handleUpdateNextSettlementDateWrapper(futureDate);
     }
-  }, [suitcase]);
+  }, [suitcase, setNextSettlementDate]);
 
   // Wrappers para integrar os hooks específicos ao contexto do hook principal
   const handleAddItemWrapper = async (inventoryId: string) => {
-    if (!suitcaseId) return;
+    if (!suitcaseId) return false;
     const success = await handleAddItem(suitcaseId, inventoryId);
     if (success) {
       refetchSuitcaseItems();
     }
+    return success;
   };
 
   const handleToggleSoldWrapper = async (item: any, sold: boolean) => {
@@ -68,6 +82,7 @@ export function useSuitcaseDetails(
     if (success) {
       refetchSuitcaseItems();
     }
+    return success;
   };
 
   const handleUpdateSaleInfoWrapper = async (itemId: string, field: string, value: string) => {
@@ -75,6 +90,7 @@ export function useSuitcaseDetails(
     if (success) {
       refetchSuitcaseItems();
     }
+    return success;
   };
 
   const handleReturnToInventoryWrapper = async (itemIds: string[], quantity: number, isDamaged: boolean) => {
@@ -82,28 +98,32 @@ export function useSuitcaseDetails(
     if (success) {
       refetchSuitcaseItems();
     }
+    return success;
   };
 
   const handlePrintWrapper = async () => {
-    if (!suitcaseId) return;
-    await handlePrint(suitcaseId, suitcaseItems, promoterInfo);
+    if (!suitcaseId) return false;
+    const success = await handlePrint(suitcaseId, suitcaseItems, promoterInfo);
+    return success;
   };
 
   const handleUpdateNextSettlementDateWrapper = async (date?: Date | null) => {
-    if (!suitcaseId) return;
+    if (!suitcaseId) return false;
     const success = await handleUpdateNextSettlementDate(suitcaseId, date);
     if (success) {
       refetchSuitcase();
     }
+    return success;
   };
 
   const handleDeleteSuitcaseWrapper = async () => {
-    if (!suitcaseId) return;
+    if (!suitcaseId) return false;
     const success = await handleDeleteSuitcase(suitcaseId);
     if (success) {
       onOpenChange(false);
       if (onRefresh) onRefresh();
     }
+    return success;
   };
 
   const calculateTotalValueWrapper = () => {
@@ -112,24 +132,40 @@ export function useSuitcaseDetails(
     return calculateTotalValue(activeItems);
   };
 
-  // Função para resetar todos os estados - implementada corretamente agora
+  // Função para resetar todos os estados - implementada corretamente
   const resetStates = useCallback(() => {
-    setActiveTab("informacoes");
-    setSearchTerm("");
-    setShowDeleteDialog(false);
+    // Resetar estados de navegação
+    if (resetTabState) resetTabState();
+    else setActiveTab("informacoes");
     
-    // Chamar as funções de reset de cada hook específico
+    // Resetar estado de busca
+    setSearchTerm("");
     if (resetSearchState) resetSearchState();
-    if (resetItemsState) resetItemsState();
+    
+    // Resetar estado de exclusão
+    setShowDeleteDialog(false);
     if (resetDeletionState) resetDeletionState();
+    
+    // Resetar outros estados específicos
+    if (resetItemsState) resetItemsState();
+    if (resetPrintState) resetPrintState();
+    if (resetDateState) resetDateState();
+    
+    // Resetar estado de queries
     if (resetQueryState) resetQueryState();
+    
+    // Garantir que os estados locais sejam resetados
+    setIsClosing(false);
   }, [
-    setActiveTab, 
-    setSearchTerm, 
-    setShowDeleteDialog, 
-    resetSearchState, 
-    resetItemsState, 
+    setActiveTab,
+    resetTabState,
+    setSearchTerm,
+    resetSearchState,
+    setShowDeleteDialog,
     resetDeletionState,
+    resetItemsState,
+    resetPrintState,
+    resetDateState,
     resetQueryState
   ]);
 

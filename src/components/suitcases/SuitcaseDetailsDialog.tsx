@@ -5,7 +5,7 @@
  * @relacionamento Utiliza hooks específicos para gerenciar estados e operações da maleta
  */
 import { useEffect } from "react";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { SuitcaseDetailsTabs } from "./details/SuitcaseDetailsTabs";
 import { LoadingIndicator } from "@/components/shared/LoadingIndicator";
 import { DeleteSuitcaseDialog } from "./details/DeleteSuitcaseDialog";
@@ -82,8 +82,9 @@ export function SuitcaseDetailsDialog({
   // Manipulador de mudança de diálogo que garante limpeza de estados
   const handleDialogChange = (newOpen: boolean) => {
     if (!newOpen) {
-      // Primeiro resetamos os estados e só depois notificamos o componente pai
+      // Resetamos os estados imediatamente antes de fechar
       resetStates();
+      // Notificamos o componente pai sobre a mudança
       onOpenChange(newOpen);
     } else {
       onOpenChange(newOpen);
@@ -95,6 +96,7 @@ export function SuitcaseDetailsDialog({
       <Dialog open={open} onOpenChange={handleDialogChange}>
         <DialogContent>
           <DialogTitle>Detalhes da Maleta</DialogTitle>
+          <DialogDescription>Carregando informações da maleta...</DialogDescription>
           <div className="flex justify-center items-center p-8">
             <LoadingIndicator />
           </div>
@@ -108,6 +110,9 @@ export function SuitcaseDetailsDialog({
       <Dialog open={open} onOpenChange={handleDialogChange}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogTitle>Detalhes da Maleta {suitcase.code}</DialogTitle>
+          <DialogDescription>
+            Visualize e gerencie as informações desta maleta
+          </DialogDescription>
           <SuitcaseDetailsTabs
             activeTab={activeTab}
             setActiveTab={setActiveTab}

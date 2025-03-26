@@ -37,6 +37,12 @@ export function SuitcaseSettlementDialog({
       // Não fechar se estiver em processamento
       return;
     }
+    
+    // Limpar estado antes de fechar
+    if (!newOpen) {
+      setIsLoading(false);
+    }
+    
     onOpenChange(newOpen);
   };
 
