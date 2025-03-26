@@ -11,6 +11,17 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 
+// Definição do tipo para o histórico de etiquetas
+export interface LabelHistory {
+  id: string;
+  inventory_id: string;
+  user_id: string;
+  quantity: number;
+  printed_at: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export class LabelModel {
   /**
    * Registra uma nova impressão de etiqueta no histórico
@@ -50,7 +61,7 @@ export class LabelModel {
   /**
    * Busca o histórico de impressão de etiquetas para um item específico
    */
-  static async getItemLabelHistory(inventoryId: string) {
+  static async getItemLabelHistory(inventoryId: string): Promise<LabelHistory[]> {
     try {
       const { data, error } = await supabase
         .from('inventory_label_history')
@@ -66,6 +77,49 @@ export class LabelModel {
       return data || [];
     } catch (error) {
       console.error("Erro ao buscar histórico de etiquetas:", error);
+      return [];
+    }
+  }
+
+  /**
+   * Busca todo o histórico de impressão de etiquetas
+   */
+  static async getAllLabelHistory(): Promise<LabelHistory[]> {
+    try {
+      const { data, error } = await supabase
+        .from('inventory_label_history')
+        .select('*')
+        .order('printed_at', { ascending: false });
+      
+      if (error) {
+        console.error("Erro ao buscar histórico completo de etiquetas:", error);
+        return [];
+      }
+      
+      return data || [];
+    } catch (error) {
+      console.error("Erro ao buscar histórico completo de etiquetas:", error);
+      return [];
+    }
+  }
+
+  /**
+   * Busca todos os perfis de usuários
+   */
+  static async getAllProfiles() {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*');
+      
+      if (error) {
+        console.error("Erro ao buscar perfis de usuários:", error);
+        return [];
+      }
+      
+      return data || [];
+    } catch (error) {
+      console.error("Erro ao buscar perfis de usuários:", error);
       return [];
     }
   }
