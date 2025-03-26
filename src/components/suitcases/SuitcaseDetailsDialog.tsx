@@ -51,8 +51,16 @@ export function SuitcaseDetailsDialog({
     handleViewReceipt,
     handlePrint,
     handleUpdateNextSettlementDate,
-    handleDeleteSuitcase
+    handleDeleteSuitcase,
+    resetStates
   } = useSuitcaseDetails(suitcaseId, open, onOpenChange, onRefresh);
+
+  // Limpar estados ao fechar o diálogo
+  useEffect(() => {
+    if (!open) {
+      resetStates();
+    }
+  }, [open, resetStates]);
 
   // Atualizar a data do próximo acerto na primeira carga
   useEffect(() => {
@@ -66,9 +74,22 @@ export function SuitcaseDetailsDialog({
     }
   }, [suitcase]);
 
+  // Manipulador de mudança de diálogo que garante limpeza de estados
+  const handleDialogChange = (newOpen: boolean) => {
+    if (!newOpen) {
+      // Primeiro resetamos os estados e só depois notificamos o componente pai
+      resetStates();
+      setTimeout(() => {
+        onOpenChange(newOpen);
+      }, 10);
+    } else {
+      onOpenChange(newOpen);
+    }
+  };
+
   if (isLoadingSuitcase || !suitcase) {
     return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={handleDialogChange}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
           <div className="flex justify-center items-center p-8">
             <LoadingIndicator />
@@ -82,14 +103,7 @@ export function SuitcaseDetailsDialog({
     <>
       <Dialog 
         open={open} 
-        onOpenChange={(newOpen) => {
-          // Resetar o estado ao fechar o diálogo
-          if (!newOpen) {
-            setActiveTab("informacoes");
-            setSearchTerm("");
-          }
-          onOpenChange(newOpen);
-        }}
+        onOpenChange={handleDialogChange}
       >
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
           <SuitcaseDetailsTabs
@@ -123,7 +137,6 @@ export function SuitcaseDetailsDialog({
         </DialogContent>
       </Dialog>
 
-      {/* Diálogo de confirmação de exclusão */}
       <DeleteSuitcaseDialog 
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}

@@ -6,7 +6,7 @@
  */
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Suitcase } from "@/types/suitcase";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface SuitcaseSettlementDialogProps {
   open: boolean;
@@ -24,10 +24,26 @@ export function SuitcaseSettlementDialog({
   // Estado local para controlar o carregamento
   const [isLoading, setIsLoading] = useState(false);
 
+  // Limpar estado ao fechar
+  useEffect(() => {
+    if (!open) {
+      setIsLoading(false);
+    }
+  }, [open]);
+
+  // Manipular mudança segura do diálogo
+  const handleDialogChange = (newOpen: boolean) => {
+    if (!newOpen && isLoading) {
+      // Não fechar se estiver em processamento
+      return;
+    }
+    onOpenChange(newOpen);
+  };
+
   // Esta é uma implementação inicial para resolver o erro
   // Será expandida posteriormente conforme solicitado pelo usuário
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleDialogChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Acerto da Maleta: {suitcase.code}</DialogTitle>

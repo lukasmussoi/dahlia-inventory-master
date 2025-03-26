@@ -1,9 +1,10 @@
+
 /**
  * Hook para Detalhes de Maleta
  * @file Agrupa funcionalidades para gerenciar detalhes e operações em maletas
  * @relacionamento Utiliza hooks específicos como useInventorySearch, useSuitcaseItems
  */
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import { addDays } from "date-fns";
 import { useTabNavigation } from "./suitcase/useTabNavigation";
 import { useInventorySearch } from "./suitcase/useInventorySearch";
@@ -21,11 +22,11 @@ export function useSuitcaseDetails(
 ) {
   // Utilizando hooks específicos
   const { activeTab, setActiveTab } = useTabNavigation();
-  const { searchTerm, setSearchTerm, searchResults, isSearching, isAdding, handleSearch, handleAddItem } = useInventorySearch();
-  const { processingItems, handleToggleSold, handleUpdateSaleInfo, handleReturnToInventory, calculateTotalValue } = useSuitcaseItems();
+  const { searchTerm, setSearchTerm, searchResults, isSearching, isAdding, handleSearch, handleAddItem, resetSearchState } = useInventorySearch();
+  const { processingItems, handleToggleSold, handleUpdateSaleInfo, handleReturnToInventory, calculateTotalValue, resetItemsState } = useSuitcaseItems();
   const { isPrintingPdf, handleViewReceipt, handlePrint } = usePrintOperations();
   const { nextSettlementDate, setNextSettlementDate, handleUpdateNextSettlementDate } = useSettlementDates();
-  const { showDeleteDialog, setShowDeleteDialog, isDeleting, handleDeleteSuitcase } = useSuitcaseDeletion();
+  const { showDeleteDialog, setShowDeleteDialog, isDeleting, handleDeleteSuitcase, resetDeletionState } = useSuitcaseDeletion();
   
   // Utilizando o hook de queries
   const {
@@ -38,7 +39,8 @@ export function useSuitcaseDetails(
     isLoadingSuitcaseItems,
     refetchSuitcaseItems,
     acertosHistorico,
-    isLoadingAcertos
+    isLoadingAcertos,
+    resetQueryState
   } = useSuitcaseQueries(suitcaseId, open);
 
   // Atualizar a data do próximo acerto na primeira carga
@@ -110,12 +112,26 @@ export function useSuitcaseDetails(
     return calculateTotalValue(activeItems);
   };
 
-  // Função para resetar os estados
-  const resetStates = () => {
+  // Função para resetar todos os estados - implementada corretamente agora
+  const resetStates = useCallback(() => {
     setActiveTab("informacoes");
     setSearchTerm("");
     setShowDeleteDialog(false);
-  };
+    
+    // Chamar as funções de reset de cada hook específico
+    if (resetSearchState) resetSearchState();
+    if (resetItemsState) resetItemsState();
+    if (resetDeletionState) resetDeletionState();
+    if (resetQueryState) resetQueryState();
+  }, [
+    setActiveTab, 
+    setSearchTerm, 
+    setShowDeleteDialog, 
+    resetSearchState, 
+    resetItemsState, 
+    resetDeletionState,
+    resetQueryState
+  ]);
 
   return {
     activeTab,

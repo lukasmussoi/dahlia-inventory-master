@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { CombinedSuitcaseController } from "@/controllers/suitcase";
 import { toast } from "sonner";
 
@@ -9,37 +9,38 @@ export function useInventorySearch() {
   const [isSearching, setIsSearching] = useState(false);
   const [isAdding, setIsAdding] = useState<{ [key: string]: boolean }>({});
 
-  // Função para buscar itens no inventário
   const handleSearch = async (e?: React.KeyboardEvent) => {
     if (e && e.key !== "Enter") return;
-    if (!searchTerm.trim()) return;
+    
+    if (!searchTerm || searchTerm.trim().length < 3) {
+      toast.warning("Digite pelo menos 3 caracteres para buscar");
+      return;
+    }
 
     setIsSearching(true);
     try {
       const results = await CombinedSuitcaseController.searchInventoryItems(searchTerm);
       setSearchResults(results);
+      if (results.length === 0) {
+        toast.info("Nenhum item encontrado");
+      }
     } catch (error) {
       console.error("Erro ao buscar itens:", error);
-      toast.error("Erro ao buscar itens no inventário");
+      toast.error("Erro ao buscar itens");
     } finally {
       setIsSearching(false);
     }
   };
 
-  // Função para adicionar item à maleta
   const handleAddItem = async (suitcaseId: string, inventoryId: string) => {
-    if (!suitcaseId) return;
-    
     setIsAdding(prev => ({ ...prev, [inventoryId]: true }));
     try {
       await CombinedSuitcaseController.addItemToSuitcase(suitcaseId, inventoryId);
-      toast.success("Item adicionado à maleta com sucesso");
+      toast.success("Item adicionado à maleta");
       
-      // Limpar resultados da busca
-      setSearchResults([]);
-      setSearchTerm("");
-      
-      return true; // Retornar true para indicar sucesso
+      // Remover o item adicionado dos resultados de busca
+      setSearchResults(prev => prev.filter(item => item.id !== inventoryId));
+      return true;
     } catch (error: any) {
       console.error("Erro ao adicionar item:", error);
       toast.error(error.message || "Erro ao adicionar item à maleta");
@@ -49,14 +50,22 @@ export function useInventorySearch() {
     }
   };
 
+  // Função para resetar os estados
+  const resetSearchState = useCallback(() => {
+    setSearchTerm("");
+    setSearchResults([]);
+    setIsSearching(false);
+    setIsAdding({});
+  }, []);
+
   return {
     searchTerm,
     setSearchTerm,
     searchResults,
-    setSearchResults,
     isSearching,
     isAdding,
     handleSearch,
-    handleAddItem
+    handleAddItem,
+    resetSearchState
   };
 }

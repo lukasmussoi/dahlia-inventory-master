@@ -1,5 +1,6 @@
 
-import { useQuery } from "@tanstack/react-query";
+import { useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CombinedSuitcaseController } from "@/controllers/suitcase";
 
 /**
@@ -8,6 +9,8 @@ import { CombinedSuitcaseController } from "@/controllers/suitcase";
  * @param open Status do diálogo (aberto/fechado)
  */
 export function useSuitcaseQueries(suitcaseId: string | null, open: boolean) {
+  const queryClient = useQueryClient();
+
   // Buscar detalhes da maleta
   const {
     data: suitcase,
@@ -50,6 +53,20 @@ export function useSuitcaseQueries(suitcaseId: string | null, open: boolean) {
     enabled: open && !!suitcaseId,
   });
 
+  // Função para resetar o estado das queries
+  const resetQueryState = useCallback(() => {
+    // Remover dados do cache para forçar nova requisição na próxima abertura
+    if (suitcaseId) {
+      queryClient.removeQueries({ queryKey: ["suitcase", suitcaseId] });
+      queryClient.removeQueries({ queryKey: ["suitcase-items", suitcaseId] });
+      queryClient.removeQueries({ queryKey: ["acertos-historico", suitcaseId] });
+      
+      if (suitcase?.seller_id) {
+        queryClient.removeQueries({ queryKey: ["promoter-for-reseller", suitcase.seller_id] });
+      }
+    }
+  }, [queryClient, suitcaseId, suitcase?.seller_id]);
+
   return {
     suitcase,
     isLoadingSuitcase,
@@ -60,6 +77,7 @@ export function useSuitcaseQueries(suitcaseId: string | null, open: boolean) {
     isLoadingSuitcaseItems,
     refetchSuitcaseItems,
     acertosHistorico,
-    isLoadingAcertos
+    isLoadingAcertos,
+    resetQueryState
   };
 }

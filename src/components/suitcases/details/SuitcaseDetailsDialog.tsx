@@ -80,9 +80,22 @@ export function SuitcaseDetailsDialog({
     }
   }, [suitcase, handleUpdateNextSettlementDate]);
 
+  // Manipulador de mudança de diálogo que garante limpeza de estados
+  const handleDialogChange = (newOpen: boolean) => {
+    if (!newOpen) {
+      // Primeiro resetamos os estados e só depois notificamos o componente pai
+      resetStates();
+      setTimeout(() => {
+        onOpenChange(newOpen);
+      }, 10);
+    } else {
+      onOpenChange(newOpen);
+    }
+  };
+
   if (isLoadingSuitcase || !suitcase) {
     return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={handleDialogChange}>
         <DialogContent>
           <DialogTitle>Detalhes da Maleta</DialogTitle>
           <div className="flex justify-center items-center p-8">
@@ -95,7 +108,7 @@ export function SuitcaseDetailsDialog({
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={handleDialogChange}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogTitle>Detalhes da Maleta {suitcase.code}</DialogTitle>
           <SuitcaseDetailsTabs

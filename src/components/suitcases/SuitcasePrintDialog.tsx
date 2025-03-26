@@ -1,11 +1,12 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { CombinedSuitcaseController } from "@/controllers/suitcase";
 import { Suitcase, SuitcaseItem, SupplyItem } from "@/types/suitcase";
 import { toast } from "sonner";
 import { Printer, FileText } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { SupplyPdfController } from "@/controllers/suitcase/pdf/supplyPdfController";
 import { openPdfInNewTab } from "@/utils/pdfUtils";
 
@@ -17,6 +18,7 @@ interface SuitcasePrintDialogProps {
 
 export function SuitcasePrintDialog({ open, onOpenChange, suitcase }: SuitcasePrintDialogProps) {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const queryClient = useQueryClient();
 
   // Buscar itens da maleta
   const { data: suitcaseItems = [] } = useQuery({
@@ -31,6 +33,21 @@ export function SuitcasePrintDialog({ open, onOpenChange, suitcase }: SuitcasePr
     queryFn: () => CombinedSuitcaseController.getPromoterForReseller(suitcase?.seller_id || ""),
     enabled: !!suitcase?.seller_id && open,
   });
+
+  // Limpar cache de consultas ao fechar o diálogo
+  useEffect(() => {
+    if (!open && suitcase?.id) {
+      // Pequeno atraso para garantir que todos os recursos sejam liberados
+      const timer = setTimeout(() => {
+        queryClient.removeQueries({ queryKey: ["suitcase-items", suitcase.id] });
+        if (suitcase.seller_id) {
+          queryClient.removeQueries({ queryKey: ["promoter-for-reseller", suitcase.seller_id] });
+        }
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [open, suitcase, queryClient]);
 
   // Converter itens de maleta para formato de abastecimento
   const convertToSupplyItems = (items: SuitcaseItem[]): SupplyItem[] => {
@@ -66,8 +83,19 @@ export function SuitcasePrintDialog({ open, onOpenChange, suitcase }: SuitcasePr
     }
   };
 
+  // Manipulador de mudança de diálogo que garante limpeza de recursos
+  const handleDialogChange = (newOpen: boolean) => {
+    if (!newOpen && isGeneratingPdf) {
+      // Se estiver gerando PDF, aguarde a conclusão
+      toast.info("Aguarde a geração do PDF ser concluída");
+      return;
+    }
+    
+    onOpenChange(newOpen);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleDialogChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Imprimir Maleta</DialogTitle>
