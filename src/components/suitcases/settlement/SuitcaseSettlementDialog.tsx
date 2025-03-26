@@ -4,7 +4,7 @@
  * @file Exibe formulário para realizar acerto de maleta
  * @relacionamento Utilizado pelo componente SuitcaseCard
  */
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Suitcase } from "@/types/suitcase";
 import { useState, useEffect } from "react";
 
@@ -47,6 +47,9 @@ export function SuitcaseSettlementDialog({
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Acerto da Maleta: {suitcase.code}</DialogTitle>
+          <DialogDescription>
+            Registro de acertos da maleta para controle financeiro.
+          </DialogDescription>
         </DialogHeader>
         
         <div className="py-4">

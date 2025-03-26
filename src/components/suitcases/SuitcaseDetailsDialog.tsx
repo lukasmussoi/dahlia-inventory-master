@@ -1,6 +1,11 @@
 
+/**
+ * Componente de Diálogo de Detalhes da Maleta
+ * @file Exibe e gerencia os detalhes completos de uma maleta
+ * @relacionamento Utiliza hooks específicos para gerenciar estados e operações da maleta
+ */
 import { useEffect } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { SuitcaseDetailsTabs } from "./details/SuitcaseDetailsTabs";
 import { LoadingIndicator } from "@/components/shared/LoadingIndicator";
 import { DeleteSuitcaseDialog } from "./details/DeleteSuitcaseDialog";
@@ -72,16 +77,14 @@ export function SuitcaseDetailsDialog({
       const futureDate = addDays(new Date(), 30);
       handleUpdateNextSettlementDate(futureDate);
     }
-  }, [suitcase]);
+  }, [suitcase, handleUpdateNextSettlementDate]);
 
   // Manipulador de mudança de diálogo que garante limpeza de estados
   const handleDialogChange = (newOpen: boolean) => {
     if (!newOpen) {
       // Primeiro resetamos os estados e só depois notificamos o componente pai
       resetStates();
-      setTimeout(() => {
-        onOpenChange(newOpen);
-      }, 10);
+      onOpenChange(newOpen);
     } else {
       onOpenChange(newOpen);
     }
@@ -90,7 +93,8 @@ export function SuitcaseDetailsDialog({
   if (isLoadingSuitcase || !suitcase) {
     return (
       <Dialog open={open} onOpenChange={handleDialogChange}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogContent>
+          <DialogTitle>Detalhes da Maleta</DialogTitle>
           <div className="flex justify-center items-center p-8">
             <LoadingIndicator />
           </div>
@@ -101,11 +105,9 @@ export function SuitcaseDetailsDialog({
 
   return (
     <>
-      <Dialog 
-        open={open} 
-        onOpenChange={handleDialogChange}
-      >
+      <Dialog open={open} onOpenChange={handleDialogChange}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+          <DialogTitle>Detalhes da Maleta {suitcase.code}</DialogTitle>
           <SuitcaseDetailsTabs
             activeTab={activeTab}
             setActiveTab={setActiveTab}
