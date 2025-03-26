@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import { InventoryFilters as Filters, InventoryCategory } from "@/models/inventory";
 
-interface InventoryFiltersProps {
+export interface InventoryFiltersProps {
   categories: InventoryCategory[];
   onFilter: (filters: Filters) => void;
 }

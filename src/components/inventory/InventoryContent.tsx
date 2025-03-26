@@ -6,10 +6,9 @@ import { InventoryFilters } from "./InventoryFilters";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { PlusIcon, FileText, ArrowLeft, ExternalLink, Archive, RotateCcw } from "lucide-react";
+import { PlusIcon, FileText, ArrowLeft, ExternalLink, Archive, RotateCcw, Printer, ArrowRight } from "lucide-react";
 import { inventoryController } from "@/controllers/inventoryController";
 import { toast } from "sonner";
-import { useInView } from "react-intersection-observer";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CategoryForm } from "./CategoryForm";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -38,8 +37,6 @@ export function InventoryContent({ isAdmin, onItemModified }: InventoryContentPr
   const [pageSize, setPageSize] = useState(20);
   const queryClient = useQueryClient();
 
-  const { ref, inView } = useInView();
-
   // Buscar categorias
   const { data: categories, isLoading: isLoadingCategories } = useQuery({
     queryKey: ["inventory-categories"],
@@ -63,7 +60,7 @@ export function InventoryContent({ isAdmin, onItemModified }: InventoryContentPr
     setPage(1); // Resetar a página ao alterar os filtros
   }, [showArchived, categoryFilter, supplierFilter, searchTerm]);
 
-  // Buscar itens do inventário
+  // Buscar itens do inventário - Removido keepPreviousData pois não é compatível com a versão atual do React Query
   const {
     data: items,
     isLoading,
@@ -72,7 +69,6 @@ export function InventoryContent({ isAdmin, onItemModified }: InventoryContentPr
   } = useQuery({
     queryKey: ["inventory-items", filters, sortField, sortOrder, page, pageSize],
     queryFn: () => inventoryController.getAllItems({ ...filters, sortField, sortOrder, page, pageSize }),
-    keepPreviousData: true,
   });
 
   // Função para preparar os dados do item antes de salvar
@@ -206,15 +202,18 @@ export function InventoryContent({ isAdmin, onItemModified }: InventoryContentPr
     switch (activeForm) {
       case "jewelry":
         return <JewelryForm
-          onCancel={() => { setIsFormOpen(false); setEditingItem(null); }}
-          onSubmit={onSaveItem}
-          editingItem={editingItem}
+          isOpen={isFormOpen}
+          onClose={() => { setIsFormOpen(false); setEditingItem(null); }}
+          item={editingItem}
+          onSuccess={() => refetch()}
         />;
       default:
         return <InventoryForm
-          onCancel={() => { setIsFormOpen(false); setEditingItem(null); }}
-          onSubmit={onSaveItem}
-          editingItem={editingItem}
+          isOpen={isFormOpen}
+          onClose={() => { setIsFormOpen(false); setEditingItem(null); }}
+          item={editingItem}
+          categories={categories || []}
+          onSuccess={() => refetch()}
         />;
     }
   };
@@ -245,18 +244,14 @@ export function InventoryContent({ isAdmin, onItemModified }: InventoryContentPr
       </div>
 
       <InventoryFilters
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-        showArchived={showArchived}
-        setShowArchived={setShowArchived}
-        categoryFilter={categoryFilter}
-        setCategoryFilter={setCategoryFilter}
-        supplierFilter={supplierFilter}
-        setSupplierFilter={setSupplierFilter}
-        sortField={sortField}
-        setSortField={setSortField}
-        sortOrder={sortOrder}
-        setSortOrder={setSortOrder}
+        categories={categories || []}
+        onFilter={(newFilters) => {
+          if (newFilters.search) setSearchTerm(newFilters.search);
+          if (newFilters.showArchived !== undefined) setShowArchived(newFilters.showArchived);
+          if (newFilters.category) setCategoryFilter(newFilters.category);
+          if (newFilters.category_id) setCategoryFilter(newFilters.category_id);
+          if (newFilters.supplier) setSupplierFilter(newFilters.supplier);
+        }}
       />
 
       {isLoading ? (
@@ -298,17 +293,7 @@ export function InventoryContent({ isAdmin, onItemModified }: InventoryContentPr
       </div>
 
       {/* Formulário de edição/criação de item */}
-      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingItem ? "Editar Item" : "Novo Item"}</DialogTitle>
-            <DialogDescription>
-              Preencha os campos abaixo para {editingItem ? "editar" : "criar"} um item no inventário.
-            </DialogDescription>
-          </DialogHeader>
-          {renderForm()}
-        </DialogContent>
-      </Dialog>
+      {renderForm()}
 
       {/* Formulário de criação de categoria */}
       <Dialog open={isCategoryFormOpen} onOpenChange={setIsCategoryFormOpen}>
@@ -319,7 +304,7 @@ export function InventoryContent({ isAdmin, onItemModified }: InventoryContentPr
               Preencha os campos abaixo para criar uma nova categoria.
             </DialogDescription>
           </DialogHeader>
-          <CategoryForm onCancel={() => setIsCategoryFormOpen(false)} />
+          <CategoryForm />
         </DialogContent>
       </Dialog>
 
