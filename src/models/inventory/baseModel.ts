@@ -1,3 +1,4 @@
+
 /**
  * Modelo Base de Inventário
  * @file Este arquivo contém funções básicas para gerenciamento do inventário
@@ -198,7 +199,7 @@ export class BaseInventoryModel {
   }
 
   // Verificar se um item está em uma maleta
-  static async checkItemInSuitcase(inventoryId: string) {
+  static async checkItemInSuitcase(inventoryId: string): Promise<any> {
     try {
       // Consulta ajustada para retornar os dados corretamente
       const { data, error } = await supabase

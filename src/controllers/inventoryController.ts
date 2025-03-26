@@ -182,24 +182,22 @@ export const InventoryController = {
           return suitcaseInfo;
         }
         
-        // Definir explicitamente o tipo e propriedades para evitar erros de tipo "never"
-        const suitcaseData = {
+        // Definir objeto de retorno com valores padrão para evitar erros de tipo
+        return {
           inSuitcase: true,
-          isActiveCase: typeof suitcaseInfo === 'object' && 'status' in suitcaseInfo ? 
-            (suitcaseInfo.status === 'in_use' || suitcaseInfo.status === 'in_replenishment') : 
-            false,
+          isActiveCase: typeof suitcaseInfo === 'object' && 
+                        'status' in suitcaseInfo && 
+                        (suitcaseInfo.status === 'in_use' || suitcaseInfo.status === 'in_replenishment'),
           hasError: false,
           suitcase_id: typeof suitcaseInfo === 'object' && 'suitcase_id' in suitcaseInfo ? 
-            suitcaseInfo.suitcase_id : null,
+                      suitcaseInfo.suitcase_id : null,
           suitcase_code: typeof suitcaseInfo === 'object' && 'suitcase_code' in suitcaseInfo ? 
-            suitcaseInfo.suitcase_code : 'Desconhecido',
+                        suitcaseInfo.suitcase_code : 'Desconhecido',
           status: typeof suitcaseInfo === 'object' && 'status' in suitcaseInfo ? 
-            suitcaseInfo.status : 'unknown',
+                suitcaseInfo.status : 'unknown',
           seller_name: typeof suitcaseInfo === 'object' && 'seller_name' in suitcaseInfo ? 
-            suitcaseInfo.seller_name : 'Desconhecido'
+                      suitcaseInfo.seller_name : 'Desconhecido'
         };
-        
-        return suitcaseData;
       }
       
       // Se não há informações da maleta, o item não está em nenhuma maleta
