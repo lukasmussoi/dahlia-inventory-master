@@ -16,6 +16,7 @@ import { InventoryModel } from "@/models/inventoryModel";
 import { Badge } from "@/components/ui/badge";
 import { CombinedSuitcaseController } from "@/controllers/suitcase";
 import { PrintLabelButton } from "./PrintLabelButton";
+import { ItemImage } from "@/components/suitcases/supply/ItemImage";
 
 interface InventoryTableProps {
   items: InventoryItem[];
@@ -80,10 +81,10 @@ export function InventoryTable({
         <TableCell>
           <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
             {primaryPhoto ? (
-              <img 
-                src={primaryPhoto.photo_url} 
+              <ItemImage 
+                photoUrl={primaryPhoto.photo_url} 
                 alt={item.name}
-                className="w-full h-full object-cover"
+                className="w-full h-full"
               />
             ) : (
               <ImageIcon className="w-6 h-6 text-gray-400" />
@@ -154,7 +155,7 @@ export function InventoryTable({
         {(onEdit || onDelete || onArchive || onRestore) && (
           <TableCell className="text-right">
             <div className="flex justify-end space-x-2">
-              {/* Botão de impressão de etiqueta (novo) */}
+              {/* Botão de impressão de etiqueta */}
               <PrintLabelButton item={item} />
               
               {onEdit && !showArchivedControls && (
