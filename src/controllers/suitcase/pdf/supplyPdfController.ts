@@ -129,33 +129,40 @@ export class SupplyPdfController {
             if (imageData && typeof imageData === 'string' && imageData.length > 0) {
               try {
                 const imgProps = doc.getImageProperties(imageData);
-                const imgHeight = 10;
-                const imgWidth = (imgProps.width * imgHeight) / imgProps.height;
                 
-                // Desenhar a imagem na célula
+                // Definir tamanho máximo para a imagem (40px como solicitado)
+                const maxImgWidth = 12; // 12mm é aproximadamente 40px
+                const imgHeight = 10;
+                const imgWidth = Math.min(maxImgWidth, (imgProps.width * imgHeight) / imgProps.height);
+                
+                // Desenhar a imagem no início da célula
+                const imgX = data.cell.x + 2;
+                const imgY = data.cell.y + 2;
+                
                 doc.addImage(
                   imageData, 
                   'JPEG', 
-                  data.cell.x + 2, 
-                  data.cell.y + 2, 
+                  imgX, 
+                  imgY, 
                   imgWidth, 
                   imgHeight
                 );
 
+                // Mover o texto para a direita da imagem (com espaçamento)
+                const textPadding = imgWidth + 4; // 4mm de espaço entre imagem e texto
+                
                 // Verificações de segurança para texto
                 if (data.cell.text && Array.isArray(data.cell.text) && data.cell.text.length > 0) {
-                  const firstText = data.cell.text[0];
-                  
-                  // Verificação robusta para evitar erros de tipo
-                  if (firstText && typeof firstText === 'object') {
-                    // Usar type assertion para acessar a propriedade x de forma segura
-                    const textObject = firstText as { x?: number };
-                    
-                    // Verificar explicitamente se x existe e é um número
-                    if (textObject && textObject.x !== undefined && typeof textObject.x === 'number') {
-                      textObject.x = textObject.x + imgWidth + 4;
+                  // Percorrer todas as linhas de texto na célula
+                  data.cell.text.forEach((textLine) => {
+                    if (textLine && typeof textLine === 'object') {
+                      // Verificar explicitamente se x existe e é um número
+                      if ('x' in textLine && typeof textLine.x === 'number') {
+                        // Deslocar o texto para a direita da imagem
+                        textLine.x = imgX + textPadding;
+                      }
                     }
-                  }
+                  });
                 }
               } catch (error) {
                 console.error("Erro ao adicionar imagem ao PDF:", error);
