@@ -1,53 +1,57 @@
 
 /**
- * Controlador Combinado de Acertos de Maleta
- * @file Este arquivo exporta todas as funcionalidades relacionadas aos acertos de maleta
- * para manter uma interface consistente para os componentes que utilizam o controlador
+ * Controlador principal para operações de acerto de maletas
+ * @file Este arquivo exporta funcionalidades relacionadas aos acertos de maletas
+ * @relacionamento Integra controladores específicos de operações, listagem e detalhes
  */
-import { AcertoListController } from './acertoListController';
-import { AcertoDetailsController } from './acertoDetailsController';
-import { AcertoOperationsController } from './acertoOperationsController';
-import { AcertoReportController } from './acertoReportController';
-import { AcertoAnalyticsController } from './acertoAnalyticsController';
-import { AcertoFormattingUtils } from './acertoFormattingUtils';
 
-// Exportar um controlador combinado com todas as funcionalidades
-export const acertoMaletaController = {
-  // AcertoListController - Listagem e filtragem
-  getAllAcertos: AcertoListController.getAllAcertos,
-  getAcertosBySuitcase: AcertoListController.getAcertosBySuitcase,
-  
-  // AcertoDetailsController - Detalhes e busca de um acerto específico
-  getAcertoById: AcertoDetailsController.getAcertoById,
-  
-  // AcertoOperationsController - Criar, atualizar, excluir
-  createAcerto: AcertoOperationsController.createAcerto,
-  deleteAcerto: AcertoOperationsController.deleteAcerto,
-  updateAcertoStatus: AcertoOperationsController.updateAcertoStatus,
-  
-  // AcertoReportController - Geração de relatórios
-  generateReceiptPDF: AcertoReportController.generateReceiptPDF,
-  
-  // AcertoAnalyticsController - Análises e estatísticas
-  getItemSalesFrequency: AcertoAnalyticsController.getItemSalesFrequency,
-  getPopularItems: AcertoAnalyticsController.getPopularItems,
-  
-  // Utilidades de formatação
-  formatCurrency: AcertoFormattingUtils.formatCurrency
-};
+import { AcertoListController } from "./acertoListController";
+import { AcertoOperationsController } from "./acertoOperationsController";
+import { AcertoDetailsController } from "./acertoDetailsController";
+import { AcertoReportController } from "./acertoReportController";
+import { formatCurrency } from "@/lib/utils";
 
-// Exportar funções individuais para manter compatibilidade
-export { 
-  AcertoListController,
-  AcertoDetailsController,
-  AcertoOperationsController,
-  AcertoReportController,
-  AcertoAnalyticsController,
-  AcertoFormattingUtils
-};
+export class AcertoMaletaController {
+  // Operações de listagem
+  static async getAllAcertos(filters?: any) {
+    return AcertoListController.getAllAcertos(filters);
+  }
 
-// Export com primeira letra maiúscula para manter compatibilidade
-export const AcertoMaletaController = acertoMaletaController;
+  static async getAcertosBySuitcase(suitcaseId: string) {
+    return AcertoListController.getAcertosBySuitcase(suitcaseId);
+  }
 
-// Export default para casos onde é importado via import default
-export default acertoMaletaController;
+  // Operações de criação e gerenciamento
+  static async createAcerto(data: any) {
+    return AcertoOperationsController.createAcerto(data);
+  }
+
+  static async deleteAcerto(acertoId: string) {
+    return AcertoOperationsController.deleteAcerto(acertoId);
+  }
+
+  static async updateAcertoStatus(acertoId: string, newStatus: 'pendente' | 'concluido') {
+    return AcertoOperationsController.updateAcertoStatus(acertoId, newStatus);
+  }
+
+  // Operações de detalhes
+  static async getAcertoById(acertoId: string) {
+    return AcertoDetailsController.getAcertoById(acertoId);
+  }
+
+  static async getAcertoDetails(acertoId: string) {
+    return AcertoDetailsController.getAcertoDetails(acertoId);
+  }
+
+  // Operações de relatórios
+  static async generateReceiptPDF(acertoId: string) {
+    return AcertoReportController.generateReceiptPDF(acertoId);
+  }
+
+  // Utilitários
+  static formatCurrency(value?: number) {
+    return formatCurrency(value || 0);
+  }
+}
+
+export default AcertoMaletaController;

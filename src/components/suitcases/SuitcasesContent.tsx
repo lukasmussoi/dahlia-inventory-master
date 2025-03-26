@@ -19,6 +19,9 @@ import { toast } from "sonner";
 import { AcertoMaletaDialog } from "./settlement/AcertoMaletaDialog";
 import { CombinedSuitcaseController } from "@/controllers/suitcase";
 import { SuitcaseSupplyDialog } from "./supply/SuitcaseSupplyDialog";
+import { AcertosList } from "./settlement/AcertosList";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { AcertoMaletaController } from "@/controllers/acertoMaletaController";
 
 interface SuitcasesContentProps {
   isAdmin?: boolean;
@@ -35,6 +38,8 @@ export function SuitcasesContent({ isAdmin = false, userProfile, summary }: Suit
   const [selectedSuitcase, setSelectedSuitcase] = useState<any>(null);
   const [showAcertoDialog, setShowAcertoDialog] = useState(false);
   const [showSupplyDialog, setShowSupplyDialog] = useState(false);
+  const [activeTab, setActiveTab] = useState("maletas");
+  const [selectedAcerto, setSelectedAcerto] = useState<any>(null);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -94,6 +99,18 @@ export function SuitcasesContent({ isAdmin = false, userProfile, summary }: Suit
     refetch();
   };
 
+  // Função para visualizar acerto
+  const handleViewAcerto = (acerto: any) => {
+    setSelectedAcerto(acerto);
+    // Implementar a visualização do acerto conforme necessário
+    console.log("Visualizando acerto:", acerto);
+  };
+
+  // Função para atualizar a lista de acertos
+  const handleRefreshAcertos = () => {
+    queryClient.invalidateQueries(['acertos']);
+  };
+
   // Buscar contagem de itens para todas as maletas
   useEffect(() => {
     if (suitcases && suitcases.length > 0) {
@@ -138,24 +155,49 @@ export function SuitcasesContent({ isAdmin = false, userProfile, summary }: Suit
 
         <SuitcaseSummary summary={summary} />
 
-        <SuitcaseFiltersComponent 
-          filters={filters} 
-          onFiltersChange={handleApplyFilters} 
-        />
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid grid-cols-2 w-full mb-4">
+            <TabsTrigger value="maletas" className="text-center">
+              <span className="flex items-center justify-center">
+                Maletas
+              </span>
+            </TabsTrigger>
+            <TabsTrigger value="acertos" className="text-center">
+              <span className="flex items-center justify-center">
+                Acertos
+              </span>
+            </TabsTrigger>
+          </TabsList>
 
-        {isLoading ? (
-          <div className="flex justify-center p-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-pink-500"></div>
-          </div>
-        ) : (
-          <SuitcaseGrid 
-            suitcases={suitcases} 
-            isAdmin={isAdmin} 
-            onRefresh={refetch}
-            onOpenAcertoDialog={handleOpenAcertoDialog}
-            onOpenSupplyDialog={handleOpenSupplyDialog}
-          />
-        )}
+          <TabsContent value="maletas" className="mt-0">
+            <SuitcaseFiltersComponent 
+              filters={filters} 
+              onFiltersChange={handleApplyFilters} 
+            />
+
+            {isLoading ? (
+              <div className="flex justify-center p-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-pink-500"></div>
+              </div>
+            ) : (
+              <SuitcaseGrid 
+                suitcases={suitcases} 
+                isAdmin={isAdmin} 
+                onRefresh={refetch}
+                onOpenAcertoDialog={handleOpenAcertoDialog}
+                onOpenSupplyDialog={handleOpenSupplyDialog}
+              />
+            )}
+          </TabsContent>
+
+          <TabsContent value="acertos" className="mt-0">
+            <AcertosList 
+              onViewAcerto={handleViewAcerto} 
+              onRefresh={handleRefreshAcertos}
+              isAdmin={isAdmin}
+            />
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Formulário de nova maleta */}

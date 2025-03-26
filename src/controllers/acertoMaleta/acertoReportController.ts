@@ -1,306 +1,221 @@
 
 /**
  * Controlador de Relatórios de Acerto
- * @file Este arquivo contém operações para gerar relatórios e documentos de acertos.
- * @relacionamento Utiliza jsPDF para gerar documentos e AcertoDetailsController para buscar dados.
+ * @file Este arquivo contém funções para gerar relatórios e PDF de acertos
+ * @relacionamento Utiliza o AcertoDetailsController para obter dados dos acertos
  */
-import { supabase } from "@/integrations/supabase/client";
 import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { AcertoDetailsController } from "./acertoDetailsController";
-import { AcertoFormattingUtils } from "./acertoFormattingUtils";
+import { formatCurrency } from "@/lib/utils";
+import { getProductPhotoUrl } from "@/utils/photoUtils";
 
 export class AcertoReportController {
   /**
-   * Gera um PDF de recibo para um acerto
+   * Gera um PDF com recibo de acerto da maleta
    * @param acertoId ID do acerto
-   * @returns URL do PDF em formato base64
+   * @returns URL do PDF gerado
    */
   static async generateReceiptPDF(acertoId: string): Promise<string> {
     try {
-      console.log(`Iniciando geração de PDF para acerto ${acertoId}`);
+      console.log(`Gerando PDF do recibo para acerto ${acertoId}`);
       
-      const acerto = await AcertoDetailsController.getAcertoById(acertoId);
+      // Buscar detalhes completos do acerto
+      const acerto = await AcertoDetailsController.getAcertoDetails(acertoId);
+      
       if (!acerto) {
-        console.error("Erro: Acerto não encontrado");
         throw new Error("Acerto não encontrado");
       }
       
-      console.log(`Dados do acerto recuperados: ${acerto.id}, itens: ${acerto.items_vendidos?.length || 0}`);
-      console.log('Detalhes do acerto:', JSON.stringify({
-        maleta: acerto.suitcase?.code,
-        revendedora: acerto.seller?.name,
-        valor_total: acerto.total_sales,
-        data: acerto.settlement_date
-      }));
-      
-      // Buscar informações da promotora, se existir
-      let promotora = null;
-      if (acerto.seller) {
-        const { data: promoterData, error: promoterError } = await supabase
-          .from('promoters')
-          .select('*')
-          .eq('id', acerto.seller.id)
-          .maybeSingle();
-        
-        if (!promoterError && promoterData) {
-          promotora = promoterData;
-        }
-      }
-      
-      console.log("Criando documento PDF...");
-      const doc = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-      });
-      
-      const titleFontSize = 16;
-      const subtitleFontSize = 12;
-      const normalFontSize = 10;
-      const smallFontSize = 8;
-      
+      // Criar o documento PDF
+      const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      const margin = 20;
-      const contentWidth = pageWidth - 2 * margin;
       
-      console.log(`Dimensões do PDF: ${pageWidth}x${pageHeight}mm, margens: ${margin}mm`);
+      // Título
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.text("Recibo de Acerto de Maleta", pageWidth / 2, 20, { align: "center" });
       
-      doc.setFontSize(titleFontSize);
-      doc.setFont('helvetica', 'bold');
-      doc.text("RECIBO DE ACERTO DE MALETA", pageWidth / 2, margin, { align: 'center' });
+      // Informações do acerto
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
       
-      doc.setFontSize(subtitleFontSize);
-      doc.text("INFORMAÇÕES DO ACERTO", margin, margin + 10);
+      const acertoDate = acerto.settlement_date 
+        ? format(new Date(acerto.settlement_date), "dd/MM/yyyy", { locale: ptBR })
+        : "N/A";
       
-      doc.setDrawColor(200, 200, 200);
-      doc.line(margin, margin + 12, pageWidth - margin, margin + 12);
+      const nextAcertoDate = acerto.next_settlement_date 
+        ? format(new Date(acerto.next_settlement_date), "dd/MM/yyyy", { locale: ptBR })
+        : "N/A";
       
-      doc.setFontSize(normalFontSize);
-      doc.setFont('helvetica', 'normal');
+      doc.text(`Código da Maleta: ${acerto.suitcase?.code || 'N/A'}`, 14, 30);
+      doc.text(`Revendedora: ${acerto.seller?.name || 'N/A'}`, 14, 35);
+      doc.text(`Data do Acerto: ${acertoDate}`, 14, 40);
+      doc.text(`Próximo Acerto: ${nextAcertoDate}`, 14, 45);
       
-      let y = margin + 20;
-      const lineHeight = 7;
+      // Tabela de itens vendidos
+      let tableData: any = [];
+      let currentY = 55;
       
-      doc.text(`Maleta: ${acerto.suitcase?.code || 'N/A'}`, margin, y);
-      doc.text(`Data do Acerto: ${format(new Date(acerto.settlement_date), 'dd/MM/yyyy')}`, pageWidth - margin, y, { align: 'right' });
-      y += lineHeight;
-      
-      doc.text(`Revendedora: ${acerto.seller?.name || 'N/A'}`, margin, y);
-      if (promotora) {
-        doc.text(`Promotora: ${promotora.name || 'N/A'}`, pageWidth - margin, y, { align: 'right' });
-      }
-      y += lineHeight;
-
-      const suitcaseCity = acerto.suitcase?.city || '';
-      const suitcaseNeighborhood = acerto.suitcase?.neighborhood || '';
-      
-      if (suitcaseCity || suitcaseNeighborhood) {
-        doc.text(`Cidade: ${suitcaseCity}${suitcaseNeighborhood ? `, ${suitcaseNeighborhood}` : ''}`, margin, y);
-        y += lineHeight;
-      }
-      
-      if (acerto.next_settlement_date) {
-        doc.text(`Próximo Acerto: ${format(new Date(acerto.next_settlement_date), 'dd/MM/yyyy')}`, margin, y);
-        y += lineHeight;
-      }
-      
-      y += lineHeight;
-      
-      doc.setFontSize(subtitleFontSize);
-      doc.setFont('helvetica', 'bold');
-      doc.text("RESUMO FINANCEIRO", margin, y);
-      y += lineHeight;
-      
-      doc.setDrawColor(200, 200, 200);
-      doc.line(margin, y, pageWidth - margin, y);
-      y += lineHeight;
-      
-      doc.setFontSize(normalFontSize);
-      doc.setFont('helvetica', 'normal');
-      
-      const formatCurrency = AcertoFormattingUtils.formatCurrency;
-      
-      doc.text(`Total em Vendas:`, margin, y);
-      doc.text(`${formatCurrency(acerto.total_sales)}`, pageWidth - margin, y, { align: 'right' });
-      y += lineHeight;
-      
-      const commissionRate = acerto.seller?.commission_rate || 0.3;
-      doc.text(`Comissão (${(commissionRate * 100).toFixed(0)}%):`, margin, y);
-      doc.text(`${formatCurrency(acerto.commission_amount)}`, pageWidth - margin, y, { align: 'right' });
-      y += lineHeight * 2;
-      
-      // Verificamos se existem itens vendidos antes de tentar processá-los
       if (acerto.items_vendidos && acerto.items_vendidos.length > 0) {
-        doc.setFontSize(subtitleFontSize);
-        doc.setFont('helvetica', 'bold');
-        doc.text(`ITENS VENDIDOS (${acerto.items_vendidos.length})`, margin, y);
-        y += lineHeight;
-        
-        doc.setDrawColor(200, 200, 200);
-        doc.line(margin, y, pageWidth - margin, y);
-        y += lineHeight;
-        
-        const col1Width = contentWidth * 0.15;
-        const col2Width = contentWidth * 0.45;
-        const col3Width = contentWidth * 0.2;
-        const col4Width = contentWidth * 0.2;
-        
-        doc.text("SKU", margin, y);
-        doc.text("Produto", margin + col1Width, y);
-        doc.text("Cliente", margin + col1Width + col2Width, y);
-        doc.text("Preço", pageWidth - margin, y, { align: 'right' });
-        y += lineHeight;
-        
-        doc.setDrawColor(200, 200, 200);
-        doc.line(margin, y - 2, pageWidth - margin, y - 2);
-        
-        doc.setFontSize(smallFontSize);
-        doc.setFont('helvetica', 'normal');
-        
-        const itemsPerPage = Math.floor((pageHeight - y - margin) / (lineHeight * 1.5));
-        let itemsOnCurrentPage = 0;
-        
-        for (let i = 0; i < acerto.items_vendidos.length; i++) {
-          const item = acerto.items_vendidos[i];
+        // Preparar dados para a tabela
+        tableData = await Promise.all(acerto.items_vendidos.map(async (item) => {
+          const photoUrl = item.product?.photo_url 
+            ? getProductPhotoUrl(item.product.photo_url) 
+            : null;
           
-          if (itemsOnCurrentPage >= itemsPerPage || y + lineHeight > pageHeight - margin) {
-            doc.addPage();
-            y = margin;
-            itemsOnCurrentPage = 0;
-            
-            doc.setFontSize(smallFontSize);
-            doc.setFont('helvetica', 'bold');
-            
-            doc.text("SKU", margin, y);
-            doc.text("Produto", margin + col1Width, y);
-            doc.text("Cliente", margin + col1Width + col2Width, y);
-            doc.text("Preço", pageWidth - margin, y, { align: 'right' });
-            y += lineHeight;
-            
-            doc.setDrawColor(200, 200, 200);
-            doc.line(margin, y - 2, pageWidth - margin, y - 2);
-            
-            doc.setFontSize(smallFontSize);
-            doc.setFont('helvetica', 'normal');
+          let base64Image = '';
+          if (photoUrl) {
+            try {
+              const response = await fetch(photoUrl);
+              if (response.ok) {
+                const blob = await response.blob();
+                base64Image = await this.blobToBase64(blob);
+              }
+            } catch (error) {
+              console.error("Erro ao carregar imagem:", error);
+            }
           }
           
-          const sku = item.product?.sku || "-";
-          const prodName = item.product?.name || "Produto não encontrado";
-          const custName = item.customer_name || "-";
-          const price = formatCurrency(item.price || 0);
-          
-          try {
-            doc.text(sku, margin, y);
-            doc.text(prodName, margin + col1Width, y);
-            doc.text(custName, margin + col1Width + col2Width, y);
-            doc.text(price, pageWidth - margin, y, { align: 'right' });
-          } catch (textError) {
-            console.error("Erro ao adicionar texto do item:", textError);
-          }
-          
-          y += lineHeight;
-          itemsOnCurrentPage++;
-          
-          if (i < acerto.items_vendidos.length - 1) {
-            doc.setDrawColor(240, 240, 240);
-            doc.line(margin, y - 1, pageWidth - margin, y - 1);
-          }
-        }
-      } else {
-        doc.setFontSize(normalFontSize);
-        doc.setFont('helvetica', 'italic');
-        doc.text("Nenhum item vendido neste acerto.", margin, y);
-        y += lineHeight * 2;
-      }
-      
-      y += lineHeight * 3;
-      
-      if (y + lineHeight * 6 > pageHeight) {
-        doc.addPage();
-        y = margin;
-      }
-      
-      doc.setFontSize(normalFontSize);
-      
-      const signatureWidth = contentWidth / 2 - 10;
-      
-      try {
-        doc.line(margin, y + lineHeight, margin + signatureWidth, y + lineHeight);
-        doc.line(margin + contentWidth - signatureWidth, y + lineHeight, pageWidth - margin, y + lineHeight);
+          return [
+            item.product?.name || 'Produto sem nome',
+            item.product?.sku || 'N/A',
+            formatCurrency(item.price || 0),
+            base64Image // Esta coluna será usada para a imagem, não será mostrada como texto
+          ];
+        }));
         
-        doc.setFontSize(smallFontSize);
-        doc.text("Revendedora", margin + signatureWidth / 2, y + lineHeight + 5, { align: 'center' });
-        doc.text("Empresa", margin + contentWidth - signatureWidth / 2, y + lineHeight + 5, { align: 'center' });
-      } catch (signatureError) {
-        console.error("Erro ao adicionar linhas de assinatura:", signatureError);
-      }
-      
-      y += lineHeight * 5;
-      
-      if (y + lineHeight * 6 > pageHeight) {
-        doc.addPage();
-        y = margin;
-      }
-      
-      doc.setFontSize(subtitleFontSize);
-      doc.setFont('helvetica', 'bold');
-      doc.text("OBSERVAÇÕES:", margin, y);
-      y += lineHeight;
-      
-      for (let i = 0; i < 3; i++) {
-        doc.line(margin, y, pageWidth - margin, y);
-        y += lineHeight;
-      }
-      
-      const footerY = pageHeight - margin;
-      doc.setFontSize(smallFontSize);
-      doc.setFont('helvetica', 'normal');
-      doc.text("Dalia Manager - Recibo de Acerto de Maleta", pageWidth / 2, footerY, { align: 'center' });
-      
-      console.log("Renderização do PDF concluída com sucesso");
-      
-      try {
-        console.log("Gerando Blob do PDF...");
-        const pdfBlob = doc.output('blob');
+        // Adicionar cabeçalho "Itens Vendidos"
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.text("Itens Vendidos", 14, currentY);
+        currentY += 5;
         
-        // Criar URL do Blob para retornar
-        const blobUrl = URL.createObjectURL(pdfBlob);
-        console.log("URL do Blob do PDF gerada:", blobUrl);
-        
-        // Também vamos salvar como base64 para armazenamento no banco
-        const reader = new FileReader();
-        reader.readAsDataURL(pdfBlob);
-        
-        reader.onload = async () => {
-          try {
-            const pdfBase64 = reader.result as string;
-            if (pdfBase64) {
-              const { error: updateError } = await supabase
-                .from('acertos_maleta')
-                .update({ receipt_url: pdfBase64 })
-                .eq('id', acertoId);
-              
-              if (updateError) {
-                console.error("Erro ao salvar URL do recibo no banco:", updateError);
-              } else {
-                console.log("PDF base64 salvo no banco de dados com sucesso");
+        // Gerar tabela de itens vendidos
+        autoTable(doc, {
+          head: [['Produto', 'Código', 'Preço', '']],
+          body: tableData,
+          startY: currentY,
+          theme: 'striped',
+          headStyles: { fillColor: [233, 30, 99], textColor: 255 },
+          columnStyles: {
+            0: { cellWidth: 80 }, // Nome do produto com imagem
+            1: { cellWidth: 40 }, // Código
+            2: { cellWidth: 30 }  // Preço
+          },
+          didDrawCell: (data) => {
+            // Se for a primeira coluna e não for cabeçalho
+            if (data.column.index === 0 && data.row.index >= 0 && data.row.raw) {
+              // Verificar se há uma imagem para desenhar
+              const imageData = data.row.raw[3]; // A quarta coluna contém a URL da imagem
+              if (imageData && typeof imageData === 'string' && imageData.length > 0) {
+                try {
+                  const imgProps = doc.getImageProperties(imageData);
+                  const imgHeight = 10;
+                  const imgWidth = (imgProps.width * imgHeight) / imgProps.height;
+                  
+                  // Desenhar a imagem na célula
+                  doc.addImage(
+                    imageData, 
+                    'JPEG', 
+                    data.cell.x + 2, 
+                    data.cell.y + 2, 
+                    imgWidth, 
+                    imgHeight
+                  );
+                  
+                  // Ajustar o posicionamento do texto para dar espaço à imagem
+                  if (data.cell.text && Array.isArray(data.cell.text) && data.cell.text.length > 0) {
+                    const firstText = data.cell.text[0];
+                    
+                    if (firstText && typeof firstText === 'object') {
+                      const textObject = firstText as { x?: number };
+                      
+                      if (textObject && textObject.x !== undefined && typeof textObject.x === 'number') {
+                        textObject.x = textObject.x + imgWidth + 4;
+                      }
+                    }
+                  }
+                } catch (error) {
+                  console.error("Erro ao adicionar imagem ao PDF:", error);
+                }
               }
             }
-          } catch (e) {
-            console.error("Erro ao salvar base64 no banco:", e);
           }
-        };
+        });
         
-        return blobUrl;
-      } catch (uriError) {
-        console.error("Erro ao gerar URL do PDF:", uriError);
-        throw new Error("Erro ao gerar URL do PDF");
+        currentY = (doc as any).lastAutoTable.finalY + 10;
+      } else {
+        doc.text("Nenhum item vendido neste acerto.", 14, currentY);
+        currentY += 10;
       }
+      
+      // Resumo financeiro
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text("Resumo Financeiro", 14, currentY);
+      currentY += 8;
+      
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Total de Vendas: ${formatCurrency(acerto.total_sales || 0)}`, 14, currentY);
+      currentY += 5;
+      
+      const commissionRate = acerto.seller?.commission_rate 
+        ? `${(acerto.seller.commission_rate * 100).toFixed(0)}%` 
+        : '30%';
+      
+      doc.text(`Comissão (${commissionRate}): ${formatCurrency(acerto.commission_amount || 0)}`, 14, currentY);
+      currentY += 5;
+      
+      if (acerto.total_cost !== undefined && acerto.total_cost !== null) {
+        doc.text(`Custo Total: ${formatCurrency(acerto.total_cost)}`, 14, currentY);
+        currentY += 5;
+      }
+      
+      if (acerto.net_profit !== undefined && acerto.net_profit !== null) {
+        doc.text(`Lucro Líquido: ${formatCurrency(acerto.net_profit)}`, 14, currentY);
+        currentY += 5;
+      }
+      
+      // Assinaturas
+      currentY += 20;
+      doc.line(20, currentY, 90, currentY);
+      doc.line(120, currentY, 190, currentY);
+      currentY += 5;
+      
+      doc.setFontSize(8);
+      doc.text("Assinatura da Revendedora", 55, currentY, { align: "center" });
+      doc.text("Assinatura da Empresa", 155, currentY, { align: "center" });
+      
+      // Rodapé
+      const currentDate = format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR });
+      doc.setFontSize(8);
+      doc.text(`Gerado em: ${currentDate}`, pageWidth - 15, doc.internal.pageSize.getHeight() - 10, { align: "right" });
+      
+      // Gerar PDF como URL de Blob
+      console.log("Gerando URL do blob do PDF...");
+      const pdfBlob = doc.output('blob');
+      const blobUrl = URL.createObjectURL(pdfBlob);
+      
+      return blobUrl;
     } catch (error) {
-      console.error("Erro ao gerar PDF:", error);
-      throw new Error("Erro ao gerar recibo PDF");
+      console.error("Erro ao gerar PDF do recibo de acerto:", error);
+      throw new Error("Falha ao gerar PDF de recibo");
     }
+  }
+  
+  /**
+   * Converte um Blob para Base64
+   */
+  private static blobToBase64(blob: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
   }
 }
