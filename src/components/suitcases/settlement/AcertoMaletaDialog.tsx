@@ -259,7 +259,6 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
         }
       }
       
-      const commissionRate = suitcase.seller?.commission_rate || 0.3;
       const commissionAmount = totalSales * commissionRate;
       const commissionPercentFormatted = (commissionRate * 100).toFixed(0);
       
@@ -460,7 +459,6 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
   const soldItems = suitcaseItems.filter(item => !scannedItemsIds.includes(item.id));
   const totalSaleValue = soldItems.reduce((sum, item) => sum + (item.product?.price || 0), 0);
   
-  const commissionRate = suitcase?.seller?.commission_rate || 0.3;
   const commissionAmount = totalSaleValue * commissionRate;
   const commissionPercentFormatted = (commissionRate * 100).toFixed(0);
   const solvedPieces = soldItems.length;
@@ -817,7 +815,7 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
                   
                   <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200 text-sm text-yellow-800 mt-2">
                     <p className="flex items-start">
-                      <span className="mr-2">���️</span>
+                      <span className="mr-2">⚠️</span>
                       <span>
                         Os itens não verificados serão marcados como <strong>vendidos</strong>. 
                         Certifique-se de verificar todos os itens presentes na maleta antes de finalizar o acerto.
