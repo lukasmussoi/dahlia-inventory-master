@@ -97,7 +97,8 @@ export class BaseInventoryModel {
       // Converter para o formato de InventoryItem, garantindo que raw_cost esteja presente
       const processedItem: InventoryItem = {
         ...item,
-        raw_cost: item.raw_cost ?? 0, // Usar operador de coalescência nula
+        // Usar uma asserção de tipo para acessar raw_cost e usar operador de coalescência nula
+        raw_cost: (item as any).raw_cost ?? 0,
         photos: processedPhotos,
         inventory_photos: processedPhotos,
         category_name: item.category_name?.name || '',
@@ -139,7 +140,8 @@ export class BaseInventoryModel {
     // Converter para o formato de InventoryItem, garantindo que raw_cost esteja presente
     const processedItem: InventoryItem = {
       ...data,
-      raw_cost: data.raw_cost ?? 0, // Usar operador de coalescência nula
+      // Usar uma asserção de tipo para acessar raw_cost e usar operador de coalescência nula
+      raw_cost: (data as any).raw_cost ?? 0,
       photos: processedPhotos,
       inventory_photos: processedPhotos,
       category_name: data.category_name?.name || '',

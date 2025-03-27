@@ -46,7 +46,7 @@ export interface InventoryItem {
   quantity: number;
   price: number;
   unit_cost: number;
-  raw_cost: number;
+  raw_cost: number;  // Garantindo que raw_cost está declarado como obrigatório
   suggested_price: number;
   weight?: number;
   width?: number;
