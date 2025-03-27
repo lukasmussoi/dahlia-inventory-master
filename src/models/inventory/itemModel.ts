@@ -67,13 +67,13 @@ export class InventoryItemModel {
     // Log para verificar valores salvos
     console.log("[ItemModel] Valores salvos no banco:", {
       unit_cost: data.unit_cost,
-      raw_cost: data.raw_cost || 0
+      raw_cost: data.raw_cost ?? 0
     });
     
     // Garantir que o objeto retornado tenha a propriedade raw_cost
     return {
       ...data,
-      raw_cost: data.raw_cost || 0
+      raw_cost: data.raw_cost ?? 0
     };
   }
 
@@ -118,13 +118,13 @@ export class InventoryItemModel {
     // Log para verificar valores atualizados
     console.log("[ItemModel] Valores atualizados no banco:", {
       unit_cost: data.unit_cost,
-      raw_cost: data.raw_cost || 0
+      raw_cost: data.raw_cost ?? 0
     });
     
     // Garantir que o objeto retornado tenha a propriedade raw_cost
     return {
       ...data,
-      raw_cost: data.raw_cost || 0
+      raw_cost: data.raw_cost ?? 0
     };
   }
 

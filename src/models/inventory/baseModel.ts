@@ -94,9 +94,10 @@ export class BaseInventoryModel {
         is_primary: photo.is_primary || false
       }));
       
+      // Converter para o formato de InventoryItem, garantindo que raw_cost esteja presente
       const processedItem: InventoryItem = {
         ...item,
-        raw_cost: item.raw_cost || 0, // Garantir que raw_cost esteja presente
+        raw_cost: item.raw_cost ?? 0, // Usar operador de coalescência nula
         photos: processedPhotos,
         inventory_photos: processedPhotos,
         category_name: item.category_name?.name || '',
@@ -135,9 +136,10 @@ export class BaseInventoryModel {
       is_primary: photo.is_primary || false
     }));
     
+    // Converter para o formato de InventoryItem, garantindo que raw_cost esteja presente
     const processedItem: InventoryItem = {
       ...data,
-      raw_cost: data.raw_cost || 0, // Garantir que raw_cost esteja presente
+      raw_cost: data.raw_cost ?? 0, // Usar operador de coalescência nula
       photos: processedPhotos,
       inventory_photos: processedPhotos,
       category_name: data.category_name?.name || '',
