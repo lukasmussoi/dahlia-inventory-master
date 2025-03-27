@@ -194,8 +194,9 @@ export class AcertoReportController {
                   // Obter as propriedades da imagem
                   const imgProps = (doc as any).getImageProperties(imageData);
                   
-                  // Calcular dimensões mantendo proporção e respeitando o limite de 50px
-                  const maxSize = 50;
+                  // Calcular dimensões mantendo proporção e respeitando o limite máximo de 50px
+                  // e adicionando padding de 5px em todos os lados
+                  const maxSize = 40; // 50px - 5px de padding em cada lado = 40px
                   let imgWidth, imgHeight;
                   
                   if (imgProps.width >= imgProps.height) {
@@ -208,11 +209,11 @@ export class AcertoReportController {
                     imgWidth = (imgProps.width * imgHeight) / imgProps.height;
                   }
                   
-                  // Calcular posição para centralizar na célula
-                  const cellX = data.cell.x;
-                  const cellY = data.cell.y;
-                  const cellWidth = data.cell.width;
-                  const cellHeight = data.cell.height;
+                  // Calcular posição para centralizar na célula com padding de 5px
+                  const cellX = data.cell.x + 5; // Adiciona 5px de padding à esquerda
+                  const cellY = data.cell.y + 5; // Adiciona 5px de padding no topo
+                  const cellWidth = data.cell.width - 10; // Subtrai 10px de padding (5px de cada lado)
+                  const cellHeight = data.cell.height - 10; // Subtrai 10px de padding (5px de cada lado)
                   
                   const posX = cellX + (cellWidth - imgWidth) / 2;
                   const posY = cellY + (cellHeight - imgHeight) / 2;
