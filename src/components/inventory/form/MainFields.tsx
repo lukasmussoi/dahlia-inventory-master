@@ -32,8 +32,10 @@ export function MainFields({ form, categories, suppliers }: MainFieldsProps) {
     const unitCost = form.getValues("unit_cost");
     
     console.log("[MainFields] Valores do formulário após renderização:", {
-      raw_cost: rawCost,
-      unit_cost: unitCost
+      raw_cost: rawCost, // Preço do Bruto (matéria-prima)
+      unit_cost: unitCost, // Custo Total (calculado)
+      raw_cost_tipo: typeof rawCost,
+      unit_cost_tipo: typeof unitCost
     });
   }, [form]);
 
@@ -147,6 +149,7 @@ export function MainFields({ form, categories, suppliers }: MainFieldsProps) {
         )}
       />
 
+      {/* IMPORTANTE: Aqui está o campo PREÇO DO BRUTO - corresponde ao campo raw_cost no banco */}
       <FormField
         control={form.control}
         name="raw_cost"
@@ -159,7 +162,10 @@ export function MainFields({ form, categories, suppliers }: MainFieldsProps) {
                 step="0.01"
                 {...field}
                 value={field.value || 0}
-                onChange={(e) => field.onChange(Number(e.target.value))}
+                onChange={(e) => {
+                  console.log(`[MainFields] Campo raw_cost sendo alterado para: ${e.target.value}`);
+                  field.onChange(Number(e.target.value));
+                }}
               />
             </FormControl>
             <FormMessage />
@@ -167,6 +173,7 @@ export function MainFields({ form, categories, suppliers }: MainFieldsProps) {
         )}
       />
 
+      {/* IMPORTANTE: Aqui está o campo CUSTO TOTAL - corresponde ao campo unit_cost no banco */}
       <FormField
         control={form.control}
         name="unit_cost"
@@ -179,7 +186,10 @@ export function MainFields({ form, categories, suppliers }: MainFieldsProps) {
                 step="0.01"
                 {...field}
                 value={field.value || 0}
-                onChange={(e) => field.onChange(Number(e.target.value))}
+                onChange={(e) => {
+                  console.log(`[MainFields] Campo unit_cost sendo alterado para: ${e.target.value}`);
+                  field.onChange(Number(e.target.value));
+                }}
               />
             </FormControl>
             <FormMessage />

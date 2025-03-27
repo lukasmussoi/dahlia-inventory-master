@@ -1,4 +1,3 @@
-
 /**
  * Modelo de Item de Inventário
  * @file Este arquivo contém operações específicas para itens do inventário
@@ -17,9 +16,9 @@ export class InventoryItemModel {
     
     // Log para verificar valores antes de inserir
     console.log("[ItemModel] Valores antes de salvar no banco:", {
-      unit_cost: itemData.unit_cost, 
+      unit_cost: itemData.unit_cost, // Custo Total (calculado)
+      raw_cost: itemData.raw_cost,   // Preço do Bruto (matéria-prima)
       tipo_unit_cost: typeof itemData.unit_cost,
-      raw_cost: itemData.raw_cost,
       tipo_raw_cost: typeof itemData.raw_cost
     });
     
@@ -41,8 +40,8 @@ export class InventoryItemModel {
         category_id: itemData.category_id,
         quantity: itemData.quantity || 0,
         price: itemData.price,
-        unit_cost: unitCost,
-        raw_cost: rawCost,
+        unit_cost: unitCost,      // Custo Total (calculado)
+        raw_cost: rawCost,        // Preço do Bruto (matéria-prima)
         suggested_price: itemData.suggested_price || 0,
         weight: itemData.weight,
         width: itemData.width,
@@ -67,8 +66,8 @@ export class InventoryItemModel {
     
     // Log para verificar valores salvos
     console.log("[ItemModel] Valores salvos no banco:", {
-      unit_cost: data.unit_cost,
-      raw_cost: data.raw_cost
+      unit_cost: data.unit_cost,  // Custo Total (calculado)
+      raw_cost: data.raw_cost     // Preço do Bruto (matéria-prima)
     });
     
     return data;
@@ -80,9 +79,9 @@ export class InventoryItemModel {
     
     // Log para verificar valores antes de atualizar
     console.log("[ItemModel] Valores antes de atualizar no banco:", {
-      unit_cost: cleanUpdates.unit_cost, 
+      unit_cost: cleanUpdates.unit_cost,  // Custo Total (calculado)
+      raw_cost: cleanUpdates.raw_cost,    // Preço do Bruto (matéria-prima)
       tipo_unit_cost: typeof cleanUpdates.unit_cost,
-      raw_cost: cleanUpdates.raw_cost,
       tipo_raw_cost: typeof cleanUpdates.raw_cost
     });
     
@@ -111,8 +110,8 @@ export class InventoryItemModel {
     
     // Log para verificar valores atualizados
     console.log("[ItemModel] Valores atualizados no banco:", {
-      unit_cost: data.unit_cost,
-      raw_cost: data.raw_cost
+      unit_cost: data.unit_cost,  // Custo Total (calculado)
+      raw_cost: data.raw_cost     // Preço do Bruto (matéria-prima)
     });
     
     return data;

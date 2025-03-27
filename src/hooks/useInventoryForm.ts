@@ -59,17 +59,14 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
   const [uploadProgress, setUploadProgress] = useState(0);
   const [photosModified, setPhotosModified] = useState(false);
   const [originalPhotos, setOriginalPhotos] = useState<PhotoItem[]>([]);
-  // Flag para controlar se é modo de edição
   const [isEditMode, setIsEditMode] = useState(false);
   
-  // Referências para os valores originais
   const originalUnitCostRef = useRef<number | undefined>(undefined);
   const originalRawCostRef = useRef<number | undefined>(undefined);
   const formInitializedRef = useRef(false);
   const userChangedUnitCostRef = useRef(false);
   const userChangedRawCostRef = useRef(false);
 
-  // Inicializa o formulário com valores padrão
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -90,10 +87,8 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
     },
   });
 
-  // Inicializar o formulário apenas uma vez
   useEffect(() => {
     if (!formInitializedRef.current && item) {
-      // CORREÇÃO: Registro mais explícito dos valores para identificar o problema
       console.log("[useInventoryForm] Inicializando formulário com valores do item:", {
         id: item.id,
         nome: item.name,
@@ -103,15 +98,21 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
         unit_cost_tipo: typeof item.unit_cost
       });
       
-      // Armazenar os valores originais em refs para que não sejam afetados por re-renders
       originalUnitCostRef.current = item.unit_cost;
       originalRawCostRef.current = item.raw_cost;
       
-      // CORREÇÃO: Verificar se os valores são numéricos antes de inicializar
-      const rawCost = typeof item.raw_cost === 'string' ? parseFloat(item.raw_cost) : (item.raw_cost || 0);
-      const unitCost = typeof item.unit_cost === 'string' ? parseFloat(item.unit_cost) : (item.unit_cost || 0);
+      const rawCost = typeof item.raw_cost === 'number' 
+                     ? item.raw_cost 
+                     : (typeof item.raw_cost === 'string' 
+                        ? parseFloat(item.raw_cost) 
+                        : 0);
+                        
+      const unitCost = typeof item.unit_cost === 'number'
+                      ? item.unit_cost
+                      : (typeof item.unit_cost === 'string'
+                         ? parseFloat(item.unit_cost)
+                         : 0);
       
-      // Definir todos os valores do formulário de uma vez
       form.reset({
         name: item.name || "",
         sku: item.sku || "",
@@ -121,7 +122,7 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
         quantity: item.quantity || 0,
         min_stock: item.min_stock || 0,
         unit_cost: unitCost,
-        raw_cost: rawCost,  // CORREÇÃO: Usar o valor correto de raw_cost e não unit_cost
+        raw_cost: rawCost,
         price: item.price || 0,
         width: item.width || undefined,
         height: item.height || undefined,
@@ -129,17 +130,16 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
         weight: item.weight || undefined,
       });
       
-      // Log após a inicialização para verificar se os valores foram definidos corretamente
-      console.log("[useInventoryForm] Valores definidos no formulário:", {
+      console.log("[useInventoryForm] Valores definidos no formulário após reset:", {
         raw_cost: form.getValues("raw_cost"),
-        unit_cost: form.getValues("unit_cost")
+        unit_cost: form.getValues("unit_cost"),
+        original_raw_cost: originalRawCostRef.current,
+        original_unit_cost: originalUnitCostRef.current
       });
       
-      // Marcar como inicializado para não repetir esta operação
       formInitializedRef.current = true;
       setIsEditMode(true);
     } else if (!item) {
-      // Para novos itens, resetar o formulário e as refs
       form.reset();
       originalUnitCostRef.current = undefined;
       originalRawCostRef.current = undefined;
@@ -150,16 +150,13 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
     }
   }, [item, form]);
 
-  // Monitorar alterações nos campos para detectar edições do usuário
   useEffect(() => {
     const subscription = form.watch((value, { name }) => {
       if (name === 'unit_cost' && formInitializedRef.current) {
-        // Se o usuário modificou o campo, marcar como alterado pelo usuário
         userChangedUnitCostRef.current = true;
         console.log("Usuário modificou o custo total para:", value.unit_cost);
       }
       if (name === 'raw_cost' && formInitializedRef.current) {
-        // Se o usuário modificou o campo, marcar como alterado pelo usuário
         userChangedRawCostRef.current = true;
         console.log("Usuário modificou o preço do bruto para:", value.raw_cost);
       }
@@ -168,13 +165,11 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
     return () => subscription.unsubscribe();
   }, [form]);
 
-  // Carregar fotos existentes se estiver editando um item
   useEffect(() => {
     if (item && item.photos && item.photos.length > 0) {
       console.log("Carregando fotos existentes do item:", item.id);
       
       try {
-        // Converter fotos existentes para o novo formato PhotoItem
         const existingPhotos: PhotoItem[] = item.photos.map(photo => ({
           id: photo.id,
           photo_url: photo.photo_url,
@@ -184,38 +179,31 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
         
         console.log(`${existingPhotos.length} fotos existentes carregadas com sucesso`);
         
-        // Armazenar as fotos existentes
         setPhotos(existingPhotos);
-        setOriginalPhotos([...existingPhotos]); // Cópia para comparação posterior
+        setOriginalPhotos([...existingPhotos]);
         setPhotosModified(false);
       } catch (error) {
         console.error('Erro ao carregar fotos existentes:', error);
         toast.error("Não foi possível carregar as fotos existentes");
       }
     } else {
-      // Reset do estado para quando não há fotos existentes
-      console.log("Item sem fotos ou novo item");
       setPhotosModified(false);
       setPhotos([]);
       setOriginalPhotos([]);
     }
   }, [item]);
 
-  // Função para adicionar novas fotos
   const addNewPhotos = (files: File[]) => {
     console.log(`Adicionando ${files.length} novas fotos`);
     
-    // Converter Files para PhotoItems do tipo 'new'
     const newPhotoItems: PhotoItem[] = files.map(file => ({
       file,
-      is_primary: false, // Por padrão, não é primária
+      is_primary: false,
       type: 'new'
     }));
     
-    // Atualizar o estado
     const updatedPhotos = [...photos, ...newPhotoItems];
     
-    // Se não há foto primária e estamos adicionando fotos, definir a primeira como primária
     if (!updatedPhotos.some(p => p.is_primary) && updatedPhotos.length > 0) {
       updatedPhotos[0].is_primary = true;
     }
@@ -226,7 +214,6 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
     console.log("Estado de fotos atualizado:", updatedPhotos);
   };
 
-  // Função para definir uma foto como primária
   const setPrimaryPhoto = (index: number) => {
     console.log(`Definindo foto ${index} como primária`);
     
@@ -239,17 +226,13 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
     setPhotosModified(true);
   };
 
-  // Função para remover uma foto
   const removePhoto = (index: number) => {
     console.log(`Removendo foto no índice ${index}`);
     
-    // Verificar se a foto é primária
     const isPrimary = photos[index].is_primary;
     
-    // Remover a foto
     const updatedPhotos = photos.filter((_, i) => i !== index);
     
-    // Se a foto removida era primária e ainda temos fotos, definir a primeira como primária
     if (isPrimary && updatedPhotos.length > 0) {
       updatedPhotos[0].is_primary = true;
     }
@@ -260,7 +243,6 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
     console.log("Estado de fotos após remoção:", updatedPhotos);
   };
 
-  // Função para salvar somente as fotos, sem submeter o formulário
   const handleSavePhotosOnly = async () => {
     try {
       if (!item) {
@@ -268,7 +250,6 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
         return;
       }
       
-      // Se as fotos não foram modificadas, não precisamos fazer nada
       if (!photosModified) {
         toast.info("Nenhuma alteração nas fotos para salvar.");
         return;
@@ -277,7 +258,6 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
       console.log("Iniciando salvamento de fotos para o item:", item.id);
       setIsSubmitting(true);
       
-      // Identificar fotos removidas comparando com as originais
       const removedPhotos = originalPhotos.filter(originalPhoto => 
         !photos.some(currentPhoto => 
           currentPhoto.type === 'existing' && currentPhoto.photo_url === originalPhoto.photo_url
@@ -286,7 +266,6 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
       
       console.log(`Detectadas ${removedPhotos.length} fotos removidas`);
       
-      // Excluir fotos removidas do storage
       for (const photo of removedPhotos) {
         if (photo.photo_url) {
           console.log(`Excluindo foto removida: ${photo.photo_url}`);
@@ -294,13 +273,11 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
         }
       }
       
-      // Processar uploads se necessário
       const photoUpdates = await processPhotoUpdates(item.id);
       
       if (photoUpdates) {
-        // Atualizar o estado
         setPhotosModified(false);
-        setOriginalPhotos([...photos]); // Atualizar fotos originais
+        setOriginalPhotos([...photos]);
         toast.success("Fotos atualizadas com sucesso!");
       }
     } catch (error) {
@@ -312,20 +289,16 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
     }
   };
 
-  // Função para processar as atualizações de fotos
   const processPhotoUpdates = async (itemId: string): Promise<boolean> => {
     try {
       console.log("Processando atualizações de fotos para o item:", itemId);
       
-      // Identificar fotos novas que precisam de upload
       const newPhotos = photos.filter(photo => photo.type === 'new' && photo.file);
       console.log(`${newPhotos.length} novas fotos para fazer upload`);
       
-      // Fotos existentes que serão mantidas
       const existingPhotos = photos.filter(photo => photo.type === 'existing' && photo.photo_url);
       console.log(`${existingPhotos.length} fotos existentes serão mantidas`);
       
-      // Identificar fotos removidas comparando com as originais
       const removedPhotos = originalPhotos.filter(originalPhoto => 
         !photos.some(currentPhoto => 
           currentPhoto.type === 'existing' && currentPhoto.photo_url === originalPhoto.photo_url
@@ -333,13 +306,11 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
       );
       console.log(`${removedPhotos.length} fotos serão excluídas`);
       
-      // Se não há atualizações, não precisamos fazer nada
       if (newPhotos.length === 0 && removedPhotos.length === 0 && !photos.some((p, i) => p.is_primary !== originalPhotos[i]?.is_primary)) {
         console.log("Nenhuma alteração nas fotos detectada");
         return false;
       }
       
-      // Excluir fotos removidas do storage
       for (const photo of removedPhotos) {
         if (photo.photo_url) {
           console.log(`Excluindo foto removida: ${photo.photo_url}`);
@@ -347,14 +318,12 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
         }
       }
       
-      // Preparar array para o upload de novas fotos
       const filesToUpload: File[] = newPhotos
         .filter(photo => photo.file instanceof File)
         .map(photo => photo.file as File);
       
       let uploadResults: { photo_url: string; is_primary: boolean }[] = [];
       
-      // Fazer upload das novas fotos
       if (filesToUpload.length > 0) {
         console.log(`Iniciando upload de ${filesToUpload.length} novas fotos`);
         setUploadProgress(0);
@@ -366,7 +335,6 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
           itemId
         );
         
-        // Converter resultados de upload para o formato esperado
         uploadResults = results
           .filter(r => r.success && r.url)
           .map((result, index) => ({
@@ -377,15 +345,12 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
         console.log(`${uploadResults.length} novas fotos enviadas com sucesso`);
       }
       
-      // Combinar fotos existentes e novas fotos para salvar no banco
       const allPhotoRecords = [
-        // Fotos existentes com is_primary atualizado
         ...existingPhotos.map(photo => ({
           inventory_id: itemId,
           photo_url: photo.photo_url as string,
           is_primary: photo.is_primary
         })),
-        // Novas fotos enviadas
         ...uploadResults.map(result => ({
           inventory_id: itemId,
           photo_url: result.photo_url,
@@ -393,7 +358,6 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
         }))
       ];
       
-      // Garantir que apenas uma foto seja primária
       let primaryFound = false;
       for (let i = 0; i < allPhotoRecords.length; i++) {
         if (allPhotoRecords[i].is_primary) {
@@ -405,15 +369,12 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
         }
       }
       
-      // Se nenhuma foto está marcada como primária, definir a primeira
       if (!primaryFound && allPhotoRecords.length > 0) {
         allPhotoRecords[0].is_primary = true;
       }
       
-      // Salvar no banco de dados
       console.log(`Salvando ${allPhotoRecords.length} registros de fotos no banco`);
       
-      // Remover registros antigos
       const { error: deleteError } = await supabase
         .from('inventory_photos')
         .delete()
@@ -424,39 +385,31 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
         throw new Error("Erro ao atualizar fotos antigas");
       }
       
-      // Inserir novos registros
-      if (allPhotoRecords.length > 0) {
-        const { data, error } = await supabase
-          .from('inventory_photos')
-          .insert(allPhotoRecords)
-          .select();
-          
-        if (error) {
-          console.error("Erro ao salvar registros das fotos:", error);
-          throw new Error("Erro ao salvar informações das fotos");
-        }
+      const { data, error } = await supabase
+        .from('inventory_photos')
+        .insert(allPhotoRecords)
+        .select();
         
-        console.log(`${data.length} registros de fotos salvos com sucesso`);
-        
-        // Atualizar o estado das fotos
-        setPhotos(data.map(photo => ({
-          id: photo.id,
-          photo_url: photo.photo_url,
-          is_primary: photo.is_primary,
-          type: 'existing'
-        })));
-        
-        setOriginalPhotos(data.map(photo => ({
-          id: photo.id,
-          photo_url: photo.photo_url,
-          is_primary: photo.is_primary,
-          type: 'existing'
-        })));
-      } else {
-        // Se não há fotos, limpar o estado
-        setPhotos([]);
-        setOriginalPhotos([]);
+      if (error) {
+        console.error("Erro ao salvar registros das fotos:", error);
+        throw new Error("Erro ao salvar informações das fotos");
       }
+      
+      console.log(`${data.length} registros de fotos salvos com sucesso`);
+      
+      setPhotos(data.map(photo => ({
+        id: photo.id,
+        photo_url: photo.photo_url,
+        is_primary: photo.is_primary,
+        type: 'existing'
+      })));
+      
+      setOriginalPhotos(data.map(photo => ({
+        id: photo.id,
+        photo_url: photo.photo_url,
+        is_primary: photo.is_primary,
+        type: 'existing'
+      })));
       
       return true;
     } catch (error) {
@@ -465,7 +418,6 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
     }
   };
 
-  // Função para envio do formulário
   const onSubmit = async (values: FormValues) => {
     try {
       console.log("[useInventoryForm] Iniciando submissão do formulário", {
@@ -474,7 +426,6 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
       });
       setIsSubmitting(true);
 
-      // Preparar dados para salvar
       const itemData = {
         name: values.name,
         sku: values.sku || "",
@@ -492,22 +443,18 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
         weight: values.weight || null,
       };
 
-      // Registrar claramente o que estamos enviando
       console.log("[useInventoryForm] VALORES FINAIS QUE SERÃO ENVIADOS:", {
-        custo_total: itemData.unit_cost,
-        preco_do_bruto: itemData.raw_cost
+        preco_do_bruto: itemData.raw_cost,
+        custo_total: itemData.unit_cost
       });
 
       let savedItem: InventoryItem | null = null;
 
-      // Primeiro, salvar os dados do item sem as fotos
       if (item) {
-        // Modo de edição
-        console.log("[useInventoryForm] Atualizando item existente com unit_cost =", itemData.unit_cost, "e raw_cost =", itemData.raw_cost);
+        console.log("[useInventoryForm] Atualizando item existente com raw_cost =", itemData.raw_cost, "e unit_cost =", itemData.unit_cost);
         savedItem = await InventoryModel.updateItem(item.id, itemData);
       } else {
-        // Modo de criação
-        console.log("[useInventoryForm] Criando novo item com unit_cost =", itemData.unit_cost, "e raw_cost =", itemData.raw_cost);
+        console.log("[useInventoryForm] Criando novo item com raw_cost =", itemData.raw_cost, "e unit_cost =", itemData.unit_cost);
         savedItem = await InventoryModel.createItem(itemData);
       }
       
@@ -516,17 +463,15 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
       }
       
       console.log("[useInventoryForm] Item salvo com sucesso. Valores no banco:", {
-        unit_cost: savedItem.unit_cost,
-        raw_cost: savedItem.raw_cost
+        raw_cost: savedItem.raw_cost,
+        unit_cost: savedItem.unit_cost
       });
       
-      // Atualizar as referências para a próxima edição
       originalUnitCostRef.current = savedItem.unit_cost;
       originalRawCostRef.current = savedItem.raw_cost;
       userChangedUnitCostRef.current = false;
       userChangedRawCostRef.current = false;
       
-      // Em seguida, processar as fotos
       if (photosModified || !item) {
         console.log("Processando fotos - modificadas ou novo item");
         await processPhotoUpdates(savedItem.id);
@@ -534,17 +479,14 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
         console.log("Fotos não foram modificadas, mantendo as existentes");
       }
 
-      // Exibir mensagem de sucesso
       if (item) {
         toast.success("Item atualizado com sucesso!");
       } else {
         toast.success("Item criado com sucesso!");
-        // Resetar o formulário após criar um novo item
         form.reset();
         formInitializedRef.current = false;
       }
 
-      // Chamar callback de sucesso ou fechar o formulário
       if (onSuccess && savedItem) {
         onSuccess(savedItem);
       } else {

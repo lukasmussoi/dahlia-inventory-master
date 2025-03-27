@@ -62,7 +62,7 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
       supplier_id: item?.supplier_id || "",
       material_weight: item?.material_weight || 0,
       packaging_cost: item?.packaging_cost || 0,
-      raw_cost: item?.unit_cost || 0,
+      raw_cost: item?.raw_cost || 0,
       quantity: item?.quantity || 0,
       min_stock: item?.min_stock || 0,
       markup_percentage: item?.markup_percentage || 30,
@@ -254,12 +254,12 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
           const photoRecords = [
             ...existingPhotos.map(photo => ({
               inventory_id: currentItemId,
-              photo_url: photo.photo_url as string,
+              photo_url: photo.photo_url,
               is_primary: photo.is_primary
             })),
             ...successfulUploads.map((result, index) => ({
               inventory_id: currentItemId,
-              photo_url: result.url as string,
+              photo_url: result.url,
               is_primary: newPhotoFiles[index]?.is_primary || false
             }))
           ];
@@ -315,7 +315,7 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
       } else if (existingPhotos.length > 0) {
         const photoRecords = existingPhotos.map(photo => ({
           inventory_id: currentItemId,
-          photo_url: photo.photo_url as string,
+          photo_url: photo.photo_url,
           is_primary: photo.is_primary
         }));
         
@@ -387,6 +387,7 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
         material_weight: values.material_weight,
         packaging_cost: values.packaging_cost,
         unit_cost: calculatedValues.totalCost,
+        raw_cost: values.raw_cost,
         price: values.price,
         quantity: values.quantity,
         min_stock: values.min_stock,
@@ -394,7 +395,11 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
         suggested_price: calculatedValues.suggestedPrice,
       };
 
-      console.log("Dados preparados para salvamento:", itemData);
+      console.log("Dados preparados para salvamento:", {
+        ...itemData,
+        raw_cost_tipo: typeof itemData.raw_cost,
+        unit_cost_tipo: typeof itemData.unit_cost
+      });
 
       let createdOrUpdatedItem: InventoryItem | null = null;
       
@@ -440,12 +445,12 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
               const photoRecords = [
                 ...existingPhotos.map(photo => ({
                   inventory_id: createdOrUpdatedItem!.id,
-                  photo_url: photo.photo_url as string,
+                  photo_url: photo.photo_url,
                   is_primary: photo.is_primary
                 })),
                 ...successfulUploads.map((result, index) => ({
                   inventory_id: createdOrUpdatedItem!.id,
-                  photo_url: result.url as string,
+                  photo_url: result.url,
                   is_primary: newPhotoFiles[index]?.is_primary || false
                 }))
               ];
@@ -489,7 +494,7 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
           } else if (existingPhotos.length > 0) {
             const photoRecords = existingPhotos.map(photo => ({
               inventory_id: createdOrUpdatedItem!.id,
-              photo_url: photo.photo_url as string,
+              photo_url: photo.photo_url,
               is_primary: photo.is_primary
             }));
             
