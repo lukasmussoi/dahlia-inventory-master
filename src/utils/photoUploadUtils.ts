@@ -1,3 +1,4 @@
+
 /**
  * Utilitários para upload de fotos no Supabase Storage
  * @file Este arquivo contém funções para fazer upload de fotos para o Supabase Storage

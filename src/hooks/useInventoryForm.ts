@@ -1,4 +1,3 @@
-
 /**
  * Hook para gerenciar o formulário de inventário
  * 
@@ -16,7 +15,7 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { InventoryItem, InventoryModel } from "@/models/inventory";
 import { supabase } from "@/integrations/supabase/client";
-import { uploadMultiplePhotos } from "@/utils/photoUploadUtils";
+import { uploadMultiplePhotos, deletePhoto } from "@/utils/photoUploadUtils";
 
 // Esquema de validação do formulário
 const formSchema = z.object({
@@ -53,6 +52,7 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
   const [uploadProgress, setUploadProgress] = useState(0);
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [photosModified, setPhotosModified] = useState(false);
+  const [originalPhotoUrls, setOriginalPhotoUrls] = useState<string[]>([]);
 
   // Inicializa o formulário com valores padrão
   const form = useForm<FormValues>({
@@ -84,8 +84,9 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
           const existingUrls = item.photos.map(photo => photo.photo_url);
           setUploadedPhotoUrls(existingUrls);
           setPhotoUrls(existingUrls);
+          setOriginalPhotoUrls(existingUrls);
           setPhotosUploaded(true);
-          setPhotosModified(false); // Inicialmente, as fotos não foram modificadas
+          setPhotosModified(false);
           
           const photoFiles: File[] = [];
           let primaryIndex = null;
@@ -133,6 +134,7 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
       setPhotosModified(false);
       setPhotos([]);
       setPhotoUrls([]);
+      setOriginalPhotoUrls([]);
       setPrimaryPhotoIndex(null);
     }
   }, [item]);
@@ -160,6 +162,38 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
       
       // Se as fotos foram modificadas, precisamos processar corretamente
       console.log(`Preparando ${photos.length} fotos para upload/atualização`);
+      
+      // Importante: identificar as fotos que foram removidas para excluí-las
+      if (item && item.id === itemId && photosModified) {
+        console.log("Verificando fotos removidas para excluir do storage...");
+        
+        // Comparar URLs originais com URLs atuais para identificar fotos removidas
+        const currentUrls = new Set(photoUrls);
+        const removedUrls = originalPhotoUrls.filter(url => !currentUrls.has(url));
+        
+        if (removedUrls.length > 0) {
+          console.log(`Detectadas ${removedUrls.length} fotos removidas pelo usuário:`, removedUrls);
+          
+          // Excluir cada foto removida do storage
+          for (const url of removedUrls) {
+            try {
+              console.log(`Excluindo foto removida do storage: ${url}`);
+              const result = await deletePhoto(url, 'inventory_images');
+              
+              if (result.success) {
+                console.log(`Foto ${url} excluída com sucesso do storage`);
+              } else {
+                console.error(`Erro ao excluir foto ${url} do storage:`, result.error);
+              }
+            } catch (error) {
+              console.error(`Erro ao tentar excluir foto ${url}:`, error);
+            }
+          }
+        } else {
+          console.log("Nenhuma foto foi removida pelo usuário");
+        }
+      }
+      
       setUploadProgress(0);
       
       // Usar a função uploadMultiplePhotos para processar fotos
@@ -170,11 +204,14 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
         // Verificar se já temos uma URL para esta foto (existente)
         if (i < photoUrls.length && photoUrls[i]) {
           filesToUpload.push(photoUrls[i]);
+          console.log(`Foto ${i+1}: Usando URL existente para evitar duplicação - ${photoUrls[i]}`);
         } else {
           filesToUpload.push(photos[i]);
+          console.log(`Foto ${i+1}: Novo arquivo detectado - será enviado para o storage`);
         }
       }
       
+      console.log("Iniciando upload das fotos com uploadMultiplePhotos");
       const results = await uploadMultiplePhotos(
         filesToUpload,
         'inventory_images',
@@ -195,6 +232,7 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
       
       // Armazenar URLs para uso posterior
       setUploadedPhotoUrls(photoResults.map(p => p.photo_url));
+      setOriginalPhotoUrls(photoResults.map(p => p.photo_url));
       setPhotosUploaded(true);
       
       return photoResults;
@@ -259,9 +297,9 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
           // Atualizar o objeto item com as novas fotos
           if (item) {
             item.photos = data;
-            // Atualizar as URLs para corresponder às fotos salvas
             setPhotoUrls(data.map(p => p.photo_url));
-            setPhotosModified(false); // Reset após salvar
+            setOriginalPhotoUrls(data.map(p => p.photo_url));
+            setPhotosModified(false);
           }
         }
       }
@@ -356,10 +394,11 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
             
             // Atualizar o objeto savedItem com as fotos
             savedItem.photos = data;
-            setPhotosModified(false); // Reset após salvar
+            setPhotosModified(false);
             
             // Atualizar as URLs para corresponder às fotos salvas
             setPhotoUrls(data.map(p => p.photo_url));
+            setOriginalPhotoUrls(data.map(p => p.photo_url));
           }
         }
       } else if (item && !photosModified) {
@@ -396,22 +435,29 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
     photos,
     setPhotos: (newPhotos: File[]) => {
       setPhotos(newPhotos);
-      setPhotosModified(true); // Marcar que houve alteração nas fotos
+      setPhotosModified(true);
     },
     primaryPhotoIndex,
     setPrimaryPhotoIndex: (index: number | null) => {
       setPrimaryPhotoIndex(index);
-      setPhotosModified(true); // Marcar que houve alteração nas fotos
+      setPhotosModified(true);
     },
     uploadProgress,
     setUploadProgress,
     savePhotosOnly: handleSavePhotosOnly,
     photoUrls,
     setPhotoUrls: (urls: string[]) => {
+      if (urls.length < photoUrls.length) {
+        console.log("Detectada remoção de foto pelo usuário");
+        const removedUrls = photoUrls.filter(url => !urls.includes(url));
+        console.log("URLs removidas:", removedUrls);
+      }
+      
       setPhotoUrls(urls);
-      setPhotosModified(true); // Marcar que houve alteração nas fotos
+      setPhotosModified(true);
     },
     photosModified,
-    setPhotosModified
+    setPhotosModified,
+    originalPhotoUrls
   };
 }

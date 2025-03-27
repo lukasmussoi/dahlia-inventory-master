@@ -25,6 +25,7 @@ interface PhotoFieldsProps {
   photoUrls?: string[]; // Adicionar URLs das fotos existentes
   setPhotoUrls?: React.Dispatch<React.SetStateAction<string[]>>; // Para atualizar URLs
   setPhotosModified?: React.Dispatch<React.SetStateAction<boolean>>; // Adicionar controle de modificação
+  originalPhotoUrls?: string[]; // Para comparação com fotos originais
 }
 
 export function PhotoFields({
@@ -40,7 +41,8 @@ export function PhotoFields({
   disabled = false,
   photoUrls = [],
   setPhotoUrls,
-  setPhotosModified
+  setPhotosModified,
+  originalPhotoUrls = []
 }: PhotoFieldsProps) {
   // Adicionar estado para controlar submissão
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -51,6 +53,8 @@ export function PhotoFields({
       'image/*': ['.jpeg', '.jpg', '.png', '.gif', '.webp']
     },
     onDrop: (acceptedFiles) => {
+      console.log("Arquivos aceitos no drop:", acceptedFiles.length);
+      
       // Importante: precisamos gerar um novo array de fotos, não apenas adicionar
       const newPhotos = [...photos, ...acceptedFiles];
       setPhotos(newPhotos);
@@ -61,6 +65,7 @@ export function PhotoFields({
         const currentUrls = [...photoUrls];
         const newUrls = [...currentUrls, ...Array(acceptedFiles.length).fill(undefined)];
         setPhotoUrls(newUrls);
+        console.log("URLs atualizadas após drop:", newUrls.length);
       }
       
       // Se não houver foto primária definida, define a primeira
@@ -71,6 +76,7 @@ export function PhotoFields({
       // Marcar que houve modificação nas fotos
       if (setPhotosModified) {
         setPhotosModified(true);
+        console.log("Fotos marcadas como modificadas após upload via drop");
       }
     }
   });
@@ -82,11 +88,20 @@ export function PhotoFields({
     // Marcar que houve modificação nas fotos
     if (setPhotosModified) {
       setPhotosModified(true);
+      console.log("Fotos marcadas como modificadas - alteração de foto principal");
     }
   };
 
   // Função para remover uma foto da lista
   const handleRemovePhoto = (index: number) => {
+    console.log(`Removendo foto no índice ${index}`);
+    
+    // Se temos URLs, podemos verificar se estamos removendo uma foto existente para log
+    if (photoUrls && index < photoUrls.length && photoUrls[index]) {
+      console.log(`A foto removida tem URL: ${photoUrls[index]}`);
+      console.log(`Esta URL está nas fotos originais: ${originalPhotoUrls?.includes(photoUrls[index]) ? 'SIM' : 'NÃO'}`);
+    }
+    
     // Criar novos arrays (importante para garantir reatividade)
     const newPhotos = photos.filter((_, i) => i !== index);
     setPhotos(newPhotos);
@@ -96,6 +111,7 @@ export function PhotoFields({
       const newUrls = [...photoUrls];
       newUrls.splice(index, 1); // Remover pelo índice
       setPhotoUrls(newUrls);
+      console.log("URLs após remoção de foto:", newUrls);
     }
     
     // Ajustar o índice da foto primária se necessário
@@ -108,12 +124,13 @@ export function PhotoFields({
     // Marcar que houve modificação nas fotos
     if (setPhotosModified) {
       setPhotosModified(true);
+      console.log("Fotos marcadas como modificadas - após remoção de foto");
     }
   };
 
   // Função para adicionar fotos da webcam
   const handleWebcamCapture = (capturedPhotos: File[]) => {
-    console.log("Fotos capturadas pela webcam:", capturedPhotos);
+    console.log("Fotos capturadas pela webcam:", capturedPhotos.length);
     
     // Importante: criar um novo array
     const newPhotos = [...photos, ...capturedPhotos];
@@ -124,6 +141,7 @@ export function PhotoFields({
       const currentUrls = [...photoUrls];
       const newUrls = [...currentUrls, ...Array(capturedPhotos.length).fill(undefined)];
       setPhotoUrls(newUrls);
+      console.log("URLs atualizadas após captura de webcam:", newUrls.length);
     }
     
     // Se não houver foto primária definida, define a primeira nova foto
@@ -134,6 +152,7 @@ export function PhotoFields({
     // Marcar que houve modificação nas fotos
     if (setPhotosModified) {
       setPhotosModified(true);
+      console.log("Fotos marcadas como modificadas após captura de webcam");
     }
   };
 
