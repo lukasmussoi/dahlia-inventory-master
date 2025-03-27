@@ -129,24 +129,32 @@ export class AcertoReportController {
           if (!imageUrl) return null;
           
           try {
-            return new Promise<HTMLImageElement>((resolve) => {
+            return new Promise<{ img: HTMLImageElement; index: number }>((resolve, reject) => {
               const img = new Image();
               img.crossOrigin = "Anonymous";
-              img.onload = () => resolve(img);
+              img.onload = () => resolve({ img, index: limitedItems.indexOf(item) });
               img.onerror = () => {
                 console.error(`Erro ao carregar imagem: ${imageUrl}`);
-                resolve(null);
+                resolve({ img: null, index: limitedItems.indexOf(item) });
               };
               img.src = imageUrl;
             });
           } catch (error) {
             console.error(`Erro ao processar imagem: ${error}`);
-            return null;
+            return { img: null, index: limitedItems.indexOf(item) };
           }
         });
         
         const loadedImages = await Promise.all(imagePromises);
-        console.log(`Carregadas ${loadedImages.filter(img => img !== null).length} imagens de ${limitedItems.length} produtos`);
+        console.log(`Carregadas ${loadedImages.filter(result => result?.img !== null).length} imagens de ${limitedItems.length} produtos`);
+        
+        // Criar um mapa de índice -> imagem para fácil acesso durante a renderização
+        const imageMap = new Map();
+        loadedImages.forEach(result => {
+          if (result && result.img) {
+            imageMap.set(result.index, result.img);
+          }
+        });
         
         // Calcular o total de vendas corretamente somando todos os itens vendidos
         const totalSales = acerto.items_vendidos.reduce((total, item) => total + (item.price || 0), 0);
@@ -154,7 +162,7 @@ export class AcertoReportController {
         // Preparar dados para a tabela
         const itemsData = limitedItems.map((item, index) => {
           return [
-            index, // Índice para associar com a imagem carregada
+            index, // Será substituído pela imagem
             item.product?.name || 'Produto sem nome',
             item.product?.sku || 'N/A',
             formatCurrency(item.price || 0)
@@ -177,35 +185,32 @@ export class AcertoReportController {
           willDrawCell: (data) => {
             // Se for a primeira coluna e não for cabeçalho
             if (data.column.index === 0 && data.section === 'body') {
-              // Usamos o valor da célula como índice para acessar a imagem carregada
-              const rowIndex = data.cell.raw as number;
-              const img = loadedImages[rowIndex];
+              // Obter o índice do item e a imagem correspondente
+              const rowIndex = data.row.index;
+              const img = imageMap.get(rowIndex);
               
               if (img) {
                 try {
-                  // Calcular posição central da célula
+                  // Calcular posição e dimensões da célula
                   const cellX = data.cell.x;
                   const cellY = data.cell.y;
                   const cellWidth = data.cell.width;
                   const cellHeight = data.cell.height;
                   
-                  // Dimensões máximas para a imagem (80% da célula para ter margem)
-                  const maxWidth = cellWidth * 0.8;
-                  const maxHeight = cellHeight * 0.8;
+                  // Definir tamanho máximo da imagem (não ultrapassar 50px e manter margem na célula)
+                  const maxDimension = Math.min(cellWidth * 0.8, cellHeight * 0.8, 50);
                   
-                  // Calcular dimensões preservando a proporção original
+                  // Calcular dimensões preservando a proporção
+                  let imgWidth, imgHeight;
                   const imgRatio = img.width / img.height;
                   
-                  // Determinar se a altura ou largura será o fator limitante
-                  let imgWidth, imgHeight;
-                  
-                  if (maxWidth / imgRatio <= maxHeight) {
-                    // Largura é o fator limitante
-                    imgWidth = maxWidth;
+                  if (imgRatio >= 1) {
+                    // Imagem mais larga que alta
+                    imgWidth = maxDimension;
                     imgHeight = imgWidth / imgRatio;
                   } else {
-                    // Altura é o fator limitante
-                    imgHeight = maxHeight;
+                    // Imagem mais alta que larga
+                    imgHeight = maxDimension;
                     imgWidth = imgHeight * imgRatio;
                   }
                   
@@ -213,7 +218,7 @@ export class AcertoReportController {
                   const imgX = cellX + (cellWidth - imgWidth) / 2;
                   const imgY = cellY + (cellHeight - imgHeight) / 2;
                   
-                  // Adicionar a imagem
+                  // Adicionar a imagem ao PDF
                   doc.addImage(
                     img,
                     'JPEG',
@@ -223,14 +228,14 @@ export class AcertoReportController {
                     imgHeight
                   );
                   
-                  // Limpar o conteúdo de texto da célula para não mostrar o índice
+                  // Limpar o conteúdo de texto da célula
                   data.cell.text = [];
                 } catch (e) {
                   console.error("Erro ao desenhar imagem:", e);
-                  data.cell.text = ['Sem\nimagem'];
+                  data.cell.text = ['Sem imagem'];
                 }
               } else {
-                data.cell.text = ['Sem\nimagem'];
+                data.cell.text = ['Sem imagem'];
               }
             }
           }
