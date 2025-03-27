@@ -11,6 +11,8 @@ import { ptBR } from "date-fns/locale";
 import { AcertoDetailsController } from "./acertoDetailsController";
 import { formatCurrency } from "@/lib/utils";
 import { getProductPhotoUrl } from "@/utils/photoUtils";
+import { PromoterModel } from "@/models/promoterModel";
+import { supabase } from "@/integrations/supabase/client";
 
 export class AcertoReportController {
   /**
@@ -27,6 +29,37 @@ export class AcertoReportController {
       
       if (!acerto) {
         throw new Error("Acerto não encontrado");
+      }
+      
+      // Buscar informações da promotora se houver reseller_id
+      let promoterInfo = null;
+      if (acerto.seller?.id) {
+        try {
+          // Buscar informações da promotora associada à revendedora
+          const { data, error } = await supabase
+            .from('resellers')
+            .select('promoter_id')
+            .eq('id', acerto.seller.id)
+            .single();
+          
+          if (!error && data?.promoter_id) {
+            const { data: promoter, error: promoterError } = await supabase
+              .from('promoters')
+              .select('*')
+              .eq('id', data.promoter_id)
+              .single();
+              
+            if (!promoterError && promoter) {
+              promoterInfo = {
+                name: promoter.name,
+                phone: promoter.phone || 'Não informado'
+              };
+            }
+          }
+        } catch (err) {
+          console.error("Erro ao buscar informações da promotora:", err);
+          // Continuar sem as informações da promotora
+        }
       }
       
       // Criar o documento PDF
@@ -50,14 +83,31 @@ export class AcertoReportController {
         ? format(new Date(acerto.next_settlement_date), "dd/MM/yyyy", { locale: ptBR })
         : "N/A";
       
-      doc.text(`Código da Maleta: ${acerto.suitcase?.code || 'N/A'}`, 14, 30);
-      doc.text(`Revendedora: ${acerto.seller?.name || 'N/A'}`, 14, 35);
-      doc.text(`Data do Acerto: ${acertoDate}`, 14, 40);
-      doc.text(`Próximo Acerto: ${nextAcertoDate}`, 14, 45);
+      let currentY = 30;
+      
+      doc.text(`Código da Maleta: ${acerto.suitcase?.code || 'N/A'}`, 14, currentY);
+      currentY += 5;
+      
+      doc.text(`Revendedora: ${acerto.seller?.name || 'N/A'}`, 14, currentY);
+      currentY += 5;
+      
+      // Adicionar informações da promotora
+      if (promoterInfo) {
+        doc.text(`Promotora: ${promoterInfo.name}`, 14, currentY);
+        currentY += 5;
+        
+        doc.text(`Telefone da Promotora: ${promoterInfo.phone}`, 14, currentY);
+        currentY += 5;
+      }
+      
+      doc.text(`Data do Acerto: ${acertoDate}`, 14, currentY);
+      currentY += 5;
+      
+      doc.text(`Próximo Acerto: ${nextAcertoDate}`, 14, currentY);
+      currentY += 10;
       
       // Tabela de itens vendidos
       let tableData: any = [];
-      let currentY = 55;
       
       if (acerto.items_vendidos && acerto.items_vendidos.length > 0) {
         // Limitar a quantidade de itens por página para evitar PDFs enormes
@@ -71,7 +121,7 @@ export class AcertoReportController {
         // Preparar dados para a tabela com foto separada
         tableData = await Promise.all(limitedItems.map(async (item) => {
           // Obter URL da imagem
-          let imageUrl = null;
+          let imageUrl = '';
           if (item.product?.photo_url) {
             imageUrl = getProductPhotoUrl(item.product.photo_url);
           }
@@ -171,14 +221,22 @@ export class AcertoReportController {
       
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
-      doc.text(`Total de Vendas: ${formatCurrency(acerto.total_sales || 0)}`, 14, currentY);
-      currentY += 5;
+      
+      // CORREÇÃO: Calcular o total de vendas corretamente somando todos os itens vendidos
+      const totalSales = acerto.items_vendidos && acerto.items_vendidos.length > 0
+        ? acerto.items_vendidos.reduce((total, item) => total + (item.price || 0), 0)
+        : 0;
       
       const commissionRate = acerto.seller?.commission_rate 
         ? `${(acerto.seller.commission_rate * 100).toFixed(0)}%` 
         : '30%';
       
-      doc.text(`Comissão (${commissionRate}): ${formatCurrency(acerto.commission_amount || 0)}`, 14, currentY);
+      const commissionAmount = totalSales * (acerto.seller?.commission_rate || 0.3);
+      
+      doc.text(`Total de Vendas: ${formatCurrency(totalSales)}`, 14, currentY);
+      currentY += 5;
+      
+      doc.text(`Comissão (${commissionRate}): ${formatCurrency(commissionAmount)}`, 14, currentY);
       currentY += 5;
       
       // Assinaturas
