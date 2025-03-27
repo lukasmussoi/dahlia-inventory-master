@@ -122,7 +122,7 @@ export class AcertoReportController {
         doc.text("Itens Vendidos", 14, currentY);
         currentY += 5;
         
-        // Modificação principal: Pré-carregar todas as imagens antes de gerar a tabela
+        // Pré-carregar todas as imagens antes de gerar a tabela
         console.log("Pré-carregando imagens dos produtos...");
         const imagePromises = limitedItems.map(async (item) => {
           const imageUrl = item.product?.photo_url ? getProductPhotoUrl(item.product.photo_url) : '';
@@ -148,6 +148,9 @@ export class AcertoReportController {
         const loadedImages = await Promise.all(imagePromises);
         console.log(`Carregadas ${loadedImages.filter(img => img !== null).length} imagens de ${limitedItems.length} produtos`);
         
+        // Calcular o total de vendas corretamente somando todos os itens vendidos
+        const totalSales = acerto.items_vendidos.reduce((total, item) => total + (item.price || 0), 0);
+      
         // Preparar dados para a tabela
         const itemsData = limitedItems.map((item, index) => {
           return [
@@ -174,27 +177,48 @@ export class AcertoReportController {
           willDrawCell: (data) => {
             // Se for a primeira coluna e não for cabeçalho
             if (data.column.index === 0 && data.section === 'body') {
-              // Importante: Usamos o valor da célula como índice para acessar a imagem carregada
+              // Usamos o valor da célula como índice para acessar a imagem carregada
               const rowIndex = data.cell.raw as number;
               const img = loadedImages[rowIndex];
               
               if (img) {
                 try {
-                  // Calcular dimensões proporcionais
-                  const aspectRatio = img.width / img.height;
-                  const imgHeight = 10;
-                  const imgWidth = imgHeight * aspectRatio;
+                  // Calcular posição central da célula
+                  const cellX = data.cell.x;
+                  const cellY = data.cell.y;
+                  const cellWidth = data.cell.width;
+                  const cellHeight = data.cell.height;
+                  
+                  // Dimensões máximas para a imagem (80% da célula para ter margem)
+                  const maxWidth = cellWidth * 0.8;
+                  const maxHeight = cellHeight * 0.8;
+                  
+                  // Calcular dimensões preservando a proporção original
+                  const imgRatio = img.width / img.height;
+                  
+                  // Determinar se a altura ou largura será o fator limitante
+                  let imgWidth, imgHeight;
+                  
+                  if (maxWidth / imgRatio <= maxHeight) {
+                    // Largura é o fator limitante
+                    imgWidth = maxWidth;
+                    imgHeight = imgWidth / imgRatio;
+                  } else {
+                    // Altura é o fator limitante
+                    imgHeight = maxHeight;
+                    imgWidth = imgHeight * imgRatio;
+                  }
                   
                   // Centralizar na célula
-                  const cellCenterX = data.cell.x + (data.cell.width / 2) - (imgWidth / 2);
-                  const cellCenterY = data.cell.y + (data.cell.height / 2) - (imgHeight / 2);
+                  const imgX = cellX + (cellWidth - imgWidth) / 2;
+                  const imgY = cellY + (cellHeight - imgHeight) / 2;
                   
                   // Adicionar a imagem
                   doc.addImage(
                     img,
                     'JPEG',
-                    cellCenterX,
-                    cellCenterY,
+                    imgX,
+                    imgY,
                     imgWidth,
                     imgHeight
                   );
@@ -221,36 +245,31 @@ export class AcertoReportController {
           doc.text(`* Exibindo ${maxItemsPerPage} de ${acerto.items_vendidos.length} itens vendidos.`, 14, currentY);
           currentY += 5;
         }
+        
+        // Resumo financeiro
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.text("Resumo Financeiro", 14, currentY);
+        currentY += 8;
+        
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        
+        const commissionRate = acerto.seller?.commission_rate 
+          ? `${(acerto.seller.commission_rate * 100).toFixed(0)}%` 
+          : '30%';
+        
+        const commissionAmount = totalSales * (acerto.seller?.commission_rate || 0.3);
+        
+        doc.text(`Total de Vendas: ${formatCurrency(totalSales)}`, 14, currentY);
+        currentY += 5;
+        
+        doc.text(`Comissão (${commissionRate}): ${formatCurrency(commissionAmount)}`, 14, currentY);
+        currentY += 5;
       } else {
         doc.text("Nenhum item vendido neste acerto.", 14, currentY);
         currentY += 10;
       }
-      
-      // Resumo financeiro
-      doc.setFontSize(12);
-      doc.setFont("helvetica", "bold");
-      doc.text("Resumo Financeiro", 14, currentY);
-      currentY += 8;
-      
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "normal");
-      
-      // Calcular o total de vendas corretamente somando todos os itens vendidos
-      const totalSales = acerto.items_vendidos && acerto.items_vendidos.length > 0
-        ? acerto.items_vendidos.reduce((total, item) => total + (item.price || 0), 0)
-        : 0;
-      
-      const commissionRate = acerto.seller?.commission_rate 
-        ? `${(acerto.seller.commission_rate * 100).toFixed(0)}%` 
-        : '30%';
-      
-      const commissionAmount = totalSales * (acerto.seller?.commission_rate || 0.3);
-      
-      doc.text(`Total de Vendas: ${formatCurrency(totalSales)}`, 14, currentY);
-      currentY += 5;
-      
-      doc.text(`Comissão (${commissionRate}): ${formatCurrency(commissionAmount)}`, 14, currentY);
-      currentY += 5;
       
       // Assinaturas
       currentY += 20;
