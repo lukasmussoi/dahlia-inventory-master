@@ -68,14 +68,21 @@ export class AcertoReportController {
           console.warn(`Limitando a exibição para ${maxItemsPerPage} de ${acerto.items_vendidos.length} itens vendidos para evitar PDFs muito grandes`);
         }
         
-        // Preparar dados para a tabela
+        // Preparar dados para a tabela com foto separada
         tableData = await Promise.all(limitedItems.map(async (item) => {
-          // Simplificação: Não carregar imagens para o PDF para evitar problemas
-          // Apenas usar texto com as informações dos produtos
+          // Obter URL da imagem
+          let imageUrl = null;
+          if (item.product?.photo_url) {
+            imageUrl = getProductPhotoUrl(item.product.photo_url);
+          }
+          
+          // Não carregar a imagem para a tabela de texto
           return [
+            '', // Coluna de foto (vazia, preenchida no didDrawCell)
             item.product?.name || 'Produto sem nome',
             item.product?.sku || 'N/A',
-            formatCurrency(item.price || 0)
+            formatCurrency(item.price || 0),
+            imageUrl // Esta coluna será usada para a imagem, não será mostrada como texto
           ];
         }));
         
@@ -85,17 +92,60 @@ export class AcertoReportController {
         doc.text("Itens Vendidos", 14, currentY);
         currentY += 5;
         
-        // Gerar tabela de itens vendidos sem imagens
+        // Gerar tabela de itens vendidos com fotos separadas
         autoTable(doc, {
-          head: [['Produto', 'Código', 'Preço']],
+          head: [['Foto', 'Produto', 'Código', 'Preço']],
           body: tableData,
           startY: currentY,
           theme: 'striped',
           headStyles: { fillColor: [233, 30, 99], textColor: 255 },
           columnStyles: {
-            0: { cellWidth: 90 }, // Nome do produto
-            1: { cellWidth: 50 }, // Código
-            2: { cellWidth: 40 }  // Preço
+            0: { cellWidth: 20 },  // Foto
+            1: { cellWidth: 70 },  // Nome do produto
+            2: { cellWidth: 40 },  // Código
+            3: { cellWidth: 40 }   // Preço
+          },
+          didDrawCell: (data) => {
+            // Se for a primeira coluna e não for cabeçalho
+            if (data.column.index === 0 && data.row.index >= 0 && data.row.raw) {
+              // Verificar se há uma imagem para desenhar
+              const imageUrl = data.row.raw[4]; // A quinta coluna contém a URL da imagem
+              if (imageUrl && typeof imageUrl === 'string') {
+                try {
+                  // Carregar imagem e adicionar na célula
+                  const img = new Image();
+                  img.src = imageUrl;
+                  
+                  // Quando a imagem carregar, adicionar ao PDF
+                  img.onload = () => {
+                    try {
+                      // Calcular dimensões proporcionais
+                      const aspectRatio = img.width / img.height;
+                      const imgHeight = 10;
+                      const imgWidth = imgHeight * aspectRatio;
+                      
+                      // Centralizar na célula
+                      const cellCenterX = data.cell.x + (data.cell.width / 2) - (imgWidth / 2);
+                      const cellCenterY = data.cell.y + (data.cell.height / 2) - (imgHeight / 2);
+                      
+                      // Adicionar a imagem
+                      doc.addImage(
+                        imageUrl,
+                        'JPEG',
+                        cellCenterX,
+                        cellCenterY,
+                        imgWidth,
+                        imgHeight
+                      );
+                    } catch (e) {
+                      console.error("Erro ao desenhar imagem:", e);
+                    }
+                  };
+                } catch (error) {
+                  console.error("Erro ao adicionar imagem ao PDF:", error);
+                }
+              }
+            }
           }
         });
         
@@ -130,9 +180,6 @@ export class AcertoReportController {
       
       doc.text(`Comissão (${commissionRate}): ${formatCurrency(acerto.commission_amount || 0)}`, 14, currentY);
       currentY += 5;
-      
-      // Removido: Informações de custo total
-      // Removido: Informações de lucro líquido
       
       // Assinaturas
       currentY += 20;

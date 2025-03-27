@@ -104,59 +104,49 @@ export class SupplyPdfController {
       doc.text(`Data do próximo acerto: ${nextSettlementDate}`, 14, currentY);
       currentY += 10;
 
-      // Tabela de itens com imagens
+      // Tabela de itens com imagens separadas do texto
       const tableData = await this.generateTableData(groupedItems);
       
       autoTable(doc, {
         startY: currentY,
-        head: [['Produto', 'Código', 'Qtd', 'Preço', 'Total']],
+        // Modificado: Adicionada coluna "Foto" separada da coluna "Produto"
+        head: [['Foto', 'Produto', 'Código', 'Qtd', 'Preço', 'Total']],
         body: tableData,
         theme: 'striped',
         headStyles: { fillColor: [233, 30, 99], textColor: 255 },
         margin: { top: currentY },
         columnStyles: {
-          0: { cellWidth: 80 }, // Produto com imagem
-          1: { cellWidth: 25 }, // Código
-          2: { cellWidth: 15 }, // Quantidade
-          3: { cellWidth: 25 }, // Preço
-          4: { cellWidth: 25 }  // Total
+          0: { cellWidth: 20 },  // Coluna de foto
+          1: { cellWidth: 60 },  // Coluna de produto (nome)
+          2: { cellWidth: 25 },  // Código
+          3: { cellWidth: 15 },  // Quantidade
+          4: { cellWidth: 25 },  // Preço
+          5: { cellWidth: 25 }   // Total
         },
         didDrawCell: (data) => {
           // Se for a primeira coluna e não for cabeçalho
           if (data.column.index === 0 && data.row.index >= 0 && data.row.raw) {
             // Verificar se há uma imagem para desenhar
-            const imageData = data.row.raw[5]; // A sexta coluna contém a URL da imagem
+            const imageData = data.row.raw[6]; // A sétima coluna (índice 6) contém a URL da imagem
             if (imageData && typeof imageData === 'string' && imageData.length > 0) {
               try {
                 const imgProps = doc.getImageProperties(imageData);
                 const imgHeight = 10;
                 const imgWidth = (imgProps.width * imgHeight) / imgProps.height;
                 
-                // Desenhar a imagem na célula
+                // Centralizar a imagem na célula
+                const cellCenterX = data.cell.x + (data.cell.width / 2) - (imgWidth / 2);
+                const cellCenterY = data.cell.y + (data.cell.height / 2) - (imgHeight / 2);
+                
+                // Desenhar a imagem centralizada na célula de foto
                 doc.addImage(
                   imageData, 
                   'JPEG', 
-                  data.cell.x + 2, 
-                  data.cell.y + 2, 
+                  cellCenterX, 
+                  cellCenterY, 
                   imgWidth, 
                   imgHeight
                 );
-
-                // Verificações de segurança para texto
-                if (data.cell.text && Array.isArray(data.cell.text) && data.cell.text.length > 0) {
-                  const firstText = data.cell.text[0];
-                  
-                  // Verificação robusta para evitar erros de tipo
-                  if (firstText && typeof firstText === 'object') {
-                    // Usar type assertion para acessar a propriedade x de forma segura
-                    const textObject = firstText as { x?: number };
-                    
-                    // Verificar explicitamente se x existe e é um número
-                    if (textObject && textObject.x !== undefined && typeof textObject.x === 'number') {
-                      textObject.x = textObject.x + imgWidth + 4;
-                    }
-                  }
-                }
               } catch (error) {
                 console.error("Erro ao adicionar imagem ao PDF:", error);
               }
@@ -248,8 +238,10 @@ export class SupplyPdfController {
         }
       }
       
+      // Modificado: Separar nome do produto da imagem (agora a primeira coluna é vazia, usada apenas para imagem)
       tableData.push([
-        product.name || 'Sem nome',
+        '', // Célula vazia para a imagem (será preenchida no didDrawCell)
+        product.name || 'Sem nome', // Nome do produto em coluna separada
         product.sku || 'N/A',
         quantity.toString(),
         formatCurrency(price),
