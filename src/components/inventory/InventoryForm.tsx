@@ -36,7 +36,11 @@ export function InventoryForm({ item, categories, isOpen, onClose, onSuccess }: 
     setPrimaryPhotoIndex,
     uploadProgress,
     setUploadProgress,
-    savePhotosOnly
+    savePhotosOnly,
+    photoUrls,
+    setPhotoUrls,
+    photosModified,
+    setPhotosModified
   } = useInventoryForm({ 
     item, 
     onSuccess, 
@@ -62,11 +66,11 @@ export function InventoryForm({ item, categories, isOpen, onClose, onSuccess }: 
   // Função para gerenciar o fechamento seguro
   const handleCloseForm = () => {
     // Verificar se há fotos não enviadas
-    if (photos.length > 0 && !isSubmitting) {
+    if (photosModified && photos.length > 0 && !isSubmitting) {
       // Perguntar ao usuário se ele quer fechar sem salvar (usando Toast interativo)
       toast.custom((toastId) => (
         <div className="bg-white rounded-lg p-4 shadow-lg border">
-          <p className="mb-3">Você tem fotos não salvas. Deseja salvar antes de fechar?</p>
+          <p className="mb-3">Você tem alterações nas fotos não salvas. Deseja salvar antes de fechar?</p>
           <div className="flex justify-end gap-2">
             <Button 
               size="sm" 
@@ -127,6 +131,9 @@ export function InventoryForm({ item, categories, isOpen, onClose, onSuccess }: 
                 uploadProgress={uploadProgress}
                 setUploadProgress={setUploadProgress}
                 onSavePhotos={savePhotosOnly}
+                photoUrls={photoUrls}
+                setPhotoUrls={setPhotoUrls}
+                setPhotosModified={setPhotosModified}
               />
             </form>
           </Form>

@@ -1,4 +1,3 @@
-
 /**
  * Hook para gerenciar o formulário de inventário
  * 
@@ -52,6 +51,7 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
   const [primaryPhotoIndex, setPrimaryPhotoIndex] = useState<number | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
+  const [photosModified, setPhotosModified] = useState(false);
 
   // Inicializa o formulário com valores padrão
   const form = useForm<FormValues>({
@@ -84,6 +84,7 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
           setUploadedPhotoUrls(existingUrls);
           setPhotoUrls(existingUrls);
           setPhotosUploaded(true);
+          setPhotosModified(false); // Inicialmente, as fotos não foram modificadas
           
           const photoFiles: File[] = [];
           let primaryIndex = null;
@@ -126,6 +127,12 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
       };
       
       loadExistingPhotos();
+    } else {
+      // Reset do estado para quando não há fotos existentes
+      setPhotosModified(false);
+      setPhotos([]);
+      setPhotoUrls([]);
+      setPrimaryPhotoIndex(null);
     }
   }, [item]);
 
@@ -137,6 +144,17 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
       if (photos.length === 0) {
         console.log("Nenhuma foto para processar");
         return [];
+      }
+      
+      // Verificar se estamos editando e as fotos não foram modificadas
+      if (item && item.id === itemId && !photosModified && item.photos && item.photos.length > 0) {
+        console.log("Fotos não foram modificadas, retornando fotos existentes sem re-upload");
+        
+        // Retornar as fotos existentes sem fazer re-upload
+        return item.photos.map(photo => ({
+          photo_url: photo.photo_url,
+          is_primary: photo.is_primary || false
+        }));
       }
       
       // Diferenciando entre novas fotos e fotos existentes
@@ -209,6 +227,12 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
         return;
       }
       
+      // Se as fotos não foram modificadas, não precisamos fazer nada
+      if (!photosModified) {
+        toast.info("Nenhuma alteração nas fotos para salvar.");
+        return;
+      }
+      
       setIsSubmitting(true);
       
       // Fazer upload das fotos para o item existente
@@ -249,6 +273,7 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
           // Atualizar o objeto item com as novas fotos
           if (item) {
             item.photos = data;
+            setPhotosModified(false); // Reset após salvar
           }
         }
       }
@@ -302,9 +327,9 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
         throw new Error("Erro ao salvar dados do item");
       }
       
-      // Em seguida, fazer upload das fotos
-      if (photos.length > 0) {
-        console.log("Iniciando upload das fotos");
+      // Em seguida, fazer upload das fotos apenas se houve modificação ou é um novo item
+      if ((item && photosModified && photos.length > 0) || (!item && photos.length > 0)) {
+        console.log("Iniciando upload das fotos - foram modificadas ou é um item novo");
         const uploadedPhotos = await handleUploadPhotos(savedItem.id);
         
         if (uploadedPhotos.length > 0) {
@@ -343,8 +368,13 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
             
             // Atualizar o objeto savedItem com as fotos
             savedItem.photos = data;
+            setPhotosModified(false); // Reset após salvar
           }
         }
+      } else if (item && !photosModified) {
+        console.log("Fotos não foram modificadas, mantendo as existentes");
+        // Manter as fotos existentes
+        savedItem.photos = item.photos;
       }
 
       if (item) {
@@ -373,13 +403,24 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
     onSubmit,
     handleSubmit: form.handleSubmit(onSubmit),
     photos,
-    setPhotos,
+    setPhotos: (newPhotos: File[]) => {
+      setPhotos(newPhotos);
+      setPhotosModified(true); // Marcar que houve alteração nas fotos
+    },
     primaryPhotoIndex,
-    setPrimaryPhotoIndex,
+    setPrimaryPhotoIndex: (index: number | null) => {
+      setPrimaryPhotoIndex(index);
+      setPhotosModified(true); // Marcar que houve alteração nas fotos
+    },
     uploadProgress,
     setUploadProgress,
     savePhotosOnly: handleSavePhotosOnly,
     photoUrls,
-    setPhotoUrls
+    setPhotoUrls: (urls: string[]) => {
+      setPhotoUrls(urls);
+      setPhotosModified(true); // Marcar que houve alteração nas fotos
+    },
+    photosModified,
+    setPhotosModified
   };
 }

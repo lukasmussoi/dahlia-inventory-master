@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { UseFormReturn } from "react-hook-form";
 import { WebcamButton } from "@/components/ui/webcam-button";
@@ -23,6 +24,7 @@ interface PhotoFieldsProps {
   disabled?: boolean; // Adicionar disabled para controlar quando os botões devem estar desativados
   photoUrls?: string[]; // Adicionar URLs das fotos existentes
   setPhotoUrls?: React.Dispatch<React.SetStateAction<string[]>>; // Para atualizar URLs
+  setPhotosModified?: React.Dispatch<React.SetStateAction<boolean>>; // Adicionar controle de modificação
 }
 
 export function PhotoFields({
@@ -37,10 +39,11 @@ export function PhotoFields({
   itemId,
   disabled = false,
   photoUrls = [],
-  setPhotoUrls
+  setPhotoUrls,
+  setPhotosModified
 }: PhotoFieldsProps) {
   // Adicionar estado para controlar submissão
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   // Configurar o dropzone para upload de arquivos
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -59,12 +62,22 @@ export function PhotoFields({
       if (primaryPhotoIndex === null && acceptedFiles.length > 0) {
         setPrimaryPhotoIndex(photos.length);
       }
+      
+      // Marcar que houve modificação nas fotos
+      if (setPhotosModified) {
+        setPhotosModified(true);
+      }
     }
   });
 
   // Função para marcar uma foto como principal
   const handleSetPrimary = (index: number) => {
     setPrimaryPhotoIndex(index);
+    
+    // Marcar que houve modificação nas fotos
+    if (setPhotosModified) {
+      setPhotosModified(true);
+    }
   };
 
   // Função para remover uma foto da lista
@@ -82,6 +95,11 @@ export function PhotoFields({
     } else if (primaryPhotoIndex !== null && primaryPhotoIndex > index) {
       setPrimaryPhotoIndex(primaryPhotoIndex - 1);
     }
+    
+    // Marcar que houve modificação nas fotos
+    if (setPhotosModified) {
+      setPhotosModified(true);
+    }
   };
 
   // Função para adicionar fotos da webcam
@@ -97,6 +115,11 @@ export function PhotoFields({
     // Se não houver foto primária definida, define a primeira nova foto
     if (primaryPhotoIndex === null && capturedPhotos.length > 0) {
       setPrimaryPhotoIndex(photos.length);
+    }
+    
+    // Marcar que houve modificação nas fotos
+    if (setPhotosModified) {
+      setPhotosModified(true);
     }
   };
 
@@ -175,6 +198,11 @@ export function PhotoFields({
           // Atualizar as URLs das fotos para evitar re-upload em edições futuras
           if (setPhotoUrls) {
             setPhotoUrls(successfulUploads.map(result => result.url as string));
+          }
+          
+          // Resetar o flag de modificação
+          if (setPhotosModified) {
+            setPhotosModified(false);
           }
         }
       } else {
