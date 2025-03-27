@@ -1,3 +1,4 @@
+
 /**
  * Modelo de Item de Inventário
  * @file Este arquivo contém operações específicas para itens do inventário
@@ -117,116 +118,134 @@ export class InventoryItemModel {
     return data;
   }
 
-  // Excluir item
+  // Excluir item completo com todas as dependências
   static async deleteItem(id: string): Promise<void> {
     try {
-      console.log("Iniciando processo de exclusão do item:", id);
+      console.log("[ItemModel] Iniciando processo completo de exclusão do item:", id);
       
       // 1. Excluir histórico de etiquetas relacionadas
-      console.log("Excluindo histórico de etiquetas relacionadas ao item:", id);
-      await LabelModel.deleteLabelHistory(id);
-      
-      // 2. Excluir movimentações relacionadas
-      console.log("Excluindo movimentações de estoque relacionadas ao item:", id);
-      const { error: movementsError } = await supabase
-        .from('inventory_movements')
+      console.log("[ItemModel] Excluindo histórico de etiquetas relacionadas ao item:", id);
+      const { error: labelHistoryError } = await supabase
+        .from('inventory_label_history')
         .delete()
         .eq('inventory_id', id);
       
-      if (movementsError) {
-        console.error("Erro ao excluir movimentações:", movementsError);
-        throw movementsError;
+      if (labelHistoryError) {
+        console.error("[ItemModel] Erro ao excluir histórico de etiquetas:", labelHistoryError);
+        // Não interromper o processo, continuar com outras exclusões
+      } else {
+        console.log("[ItemModel] Histórico de etiquetas excluído com sucesso");
       }
       
-      // 3. Excluir fotos relacionadas
-      console.log("Excluindo fotos relacionadas ao item:", id);
-      const { error: photoError } = await supabase
-        .from('inventory_photos')
-        .delete()
-        .eq('inventory_id', id);
-      
-      if (photoError) {
-        console.error("Erro ao excluir fotos:", photoError);
-        throw photoError;
-      }
-      
-      // 4. Verificar se o item tem relação com vendas em acertos
-      const { data: salesData, error: salesCheckError } = await supabase
-        .from('acerto_itens_vendidos')
-        .select('id')
-        .eq('inventory_id', id);
-        
-      if (salesCheckError) {
-        console.error("Erro ao verificar vendas relacionadas:", salesCheckError);
-        throw salesCheckError;
-      }
-      
-      // 5. Se houver vendas relacionadas, excluí-las
-      if (salesData && salesData.length > 0) {
-        console.log(`Excluindo ${salesData.length} registros de vendas relacionados ao item:`, id);
-        const { error: salesDeleteError } = await supabase
-          .from('acerto_itens_vendidos')
-          .delete()
-          .eq('inventory_id', id);
-          
-        if (salesDeleteError) {
-          console.error("Erro ao excluir vendas relacionadas:", salesDeleteError);
-          throw salesDeleteError;
-        }
-      }
-      
-      // 6. Verificar se o item está em alguma maleta
-      const { data: suitcaseItemsData, error: suitcaseItemsCheckError } = await supabase
+      // 2. Buscar itens de maleta relacionados à peça
+      const { data: suitcaseItemsData, error: suitcaseItemsError } = await supabase
         .from('suitcase_items')
         .select('id')
         .eq('inventory_id', id);
-        
-      if (suitcaseItemsCheckError) {
-        console.error("Erro ao verificar itens de maleta relacionados:", suitcaseItemsCheckError);
-        throw suitcaseItemsCheckError;
-      }
       
-      // 7. Se o item estiver em maletas, excluir essas relações
-      if (suitcaseItemsData && suitcaseItemsData.length > 0) {
-        console.log(`Excluindo ${suitcaseItemsData.length} registros de itens de maleta relacionados ao item:`, id);
+      if (suitcaseItemsError) {
+        console.error("[ItemModel] Erro ao buscar itens de maleta:", suitcaseItemsError);
+      } else if (suitcaseItemsData?.length > 0) {
+        console.log(`[ItemModel] Encontrados ${suitcaseItemsData.length} itens de maleta para excluir`);
+        
+        // 3. Para cada item de maleta, excluir suas vendas relacionadas
+        for (const suitcaseItem of suitcaseItemsData) {
+          console.log(`[ItemModel] Excluindo vendas do item de maleta ${suitcaseItem.id}`);
+          const { error: salesError } = await supabase
+            .from('suitcase_item_sales')
+            .delete()
+            .eq('suitcase_item_id', suitcaseItem.id);
+          
+          if (salesError) {
+            console.error(`[ItemModel] Erro ao excluir vendas do item de maleta ${suitcaseItem.id}:`, salesError);
+          } else {
+            console.log(`[ItemModel] Vendas do item de maleta ${suitcaseItem.id} excluídas com sucesso`);
+          }
+        }
+        
+        // 4. Agora excluir todos os itens de maleta relacionados
+        console.log(`[ItemModel] Excluindo ${suitcaseItemsData.length} itens de maleta relacionados ao item:`, id);
         const { error: suitcaseItemsDeleteError } = await supabase
           .from('suitcase_items')
           .delete()
           .eq('inventory_id', id);
           
         if (suitcaseItemsDeleteError) {
-          console.error("Erro ao excluir itens de maleta relacionados:", suitcaseItemsDeleteError);
-          throw suitcaseItemsDeleteError;
+          console.error("[ItemModel] Erro ao excluir itens de maleta:", suitcaseItemsDeleteError);
+        } else {
+          console.log("[ItemModel] Itens de maleta excluídos com sucesso");
         }
+      } else {
+        console.log("[ItemModel] Nenhum item de maleta encontrado para excluir");
+      }
+      
+      // 5. Verificar e excluir registros em acerto_itens_vendidos
+      console.log("[ItemModel] Verificando itens vendidos em acertos para o item:", id);
+      const { error: acertoItensError } = await supabase
+        .from('acerto_itens_vendidos')
+        .delete()
+        .eq('inventory_id', id);
+      
+      if (acertoItensError) {
+        console.error("[ItemModel] Erro ao excluir itens vendidos em acertos:", acertoItensError);
+      } else {
+        console.log("[ItemModel] Itens vendidos em acertos excluídos com sucesso (se houverem)");
+      }
+      
+      // 6. Excluir movimentações de estoque
+      console.log("[ItemModel] Excluindo movimentações de estoque do item:", id);
+      const { error: movementsError } = await supabase
+        .from('inventory_movements')
+        .delete()
+        .eq('inventory_id', id);
+      
+      if (movementsError) {
+        console.error("[ItemModel] Erro ao excluir movimentações:", movementsError);
+      } else {
+        console.log("[ItemModel] Movimentações de estoque excluídas com sucesso");
+      }
+      
+      // 7. Excluir fotos relacionadas
+      console.log("[ItemModel] Excluindo fotos relacionadas ao item:", id);
+      const { error: photoError } = await supabase
+        .from('inventory_photos')
+        .delete()
+        .eq('inventory_id', id);
+      
+      if (photoError) {
+        console.error("[ItemModel] Erro ao excluir fotos:", photoError);
+      } else {
+        console.log("[ItemModel] Fotos excluídas com sucesso");
       }
       
       // 8. Verificar e excluir registros de itens danificados
-      console.log("Verificando e excluindo registros de itens danificados para o item:", id);
+      console.log("[ItemModel] Excluindo registros de itens danificados para o item:", id);
       const { error: damagedItemsError } = await supabase
         .from('inventory_damaged_items')
         .delete()
         .eq('inventory_id', id);
       
       if (damagedItemsError) {
-        console.error("Erro ao excluir registros de itens danificados:", damagedItemsError);
-        throw damagedItemsError;
+        console.error("[ItemModel] Erro ao excluir registros de itens danificados:", damagedItemsError);
+      } else {
+        console.log("[ItemModel] Registros de itens danificados excluídos com sucesso (se houverem)");
       }
       
       // 9. Finalmente, excluir o item do inventário
-      console.log("Excluindo o item do inventário:", id);
+      console.log("[ItemModel] Excluindo o item do inventário:", id);
       const { error } = await supabase
         .from('inventory')
         .delete()
         .eq('id', id);
       
       if (error) {
-        console.error("Erro ao excluir item do inventário:", error);
+        console.error("[ItemModel] Erro ao excluir item do inventário:", error);
         throw error;
       }
       
-      console.log("Item excluído com sucesso:", id);
+      console.log("[ItemModel] Item excluído com sucesso:", id);
     } catch (error) {
-      console.error("Erro durante o processo de exclusão do item:", error);
+      console.error("[ItemModel] Erro durante o processo de exclusão do item:", error);
       throw error;
     }
   }
