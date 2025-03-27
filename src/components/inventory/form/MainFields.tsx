@@ -135,10 +135,29 @@ export function MainFields({ form, categories, suppliers }: MainFieldsProps) {
 
       <FormField
         control={form.control}
+        name="raw_cost"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Preço do Bruto (R$)</FormLabel>
+            <FormControl>
+              <Input
+                type="number"
+                step="0.01"
+                {...field}
+                onChange={(e) => field.onChange(Number(e.target.value))}
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      <FormField
+        control={form.control}
         name="unit_cost"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Custo Unitário</FormLabel>
+            <FormLabel>Custo Total (R$)</FormLabel>
             <FormControl>
               <Input
                 type="number"
@@ -157,7 +176,7 @@ export function MainFields({ form, categories, suppliers }: MainFieldsProps) {
         name="price"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Preço de Venda</FormLabel>
+            <FormLabel>Preço de Venda (R$)</FormLabel>
             <FormControl>
               <Input
                 type="number"

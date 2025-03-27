@@ -1,4 +1,3 @@
-
 /**
  * Modelo de Item de Inventário
  * @file Este arquivo contém operações específicas para itens do inventário
@@ -15,15 +14,22 @@ export class InventoryItemModel {
     if (!itemData.category_id) throw new Error("Categoria é obrigatória");
     if (itemData.price === undefined) throw new Error("Preço é obrigatório");
     
-    // CORREÇÃO DEFINITIVA DO BUG: Log para verificar o valor exato do unit_cost
-    console.log("[ItemModel] Valor exato do preço bruto antes de salvar no banco:", 
-      itemData.unit_cost, 
-      typeof itemData.unit_cost);
+    // Log para verificar valores antes de inserir
+    console.log("[ItemModel] Valores antes de salvar no banco:", {
+      unit_cost: itemData.unit_cost, 
+      tipo_unit_cost: typeof itemData.unit_cost,
+      raw_cost: itemData.raw_cost,
+      tipo_raw_cost: typeof itemData.raw_cost
+    });
     
-    // CORREÇÃO DEFINITIVA DO BUG: Converter para número caso seja string
+    // Converter para número caso seja string
     const unitCost = typeof itemData.unit_cost === 'string' 
       ? parseFloat(itemData.unit_cost) 
       : itemData.unit_cost;
+      
+    const rawCost = typeof itemData.raw_cost === 'string'
+      ? parseFloat(itemData.raw_cost)
+      : itemData.raw_cost;
     
     const { data, error } = await supabase
       .from('inventory')
@@ -34,8 +40,8 @@ export class InventoryItemModel {
         category_id: itemData.category_id,
         quantity: itemData.quantity || 0,
         price: itemData.price,
-        // CORREÇÃO DEFINITIVA DO BUG: Usar o valor direto, sem manipulação
         unit_cost: unitCost,
+        raw_cost: rawCost,
         suggested_price: itemData.suggested_price || 0,
         weight: itemData.weight,
         width: itemData.width,
@@ -58,8 +64,11 @@ export class InventoryItemModel {
     if (error) throw error;
     if (!data) throw new Error("Erro ao criar item: nenhum dado retornado");
     
-    // CORREÇÃO DEFINITIVA DO BUG: Log para verificar o valor salvo
-    console.log("[ItemModel] Preço bruto salvo no banco:", data.unit_cost);
+    // Log para verificar valores salvos
+    console.log("[ItemModel] Valores salvos no banco:", {
+      unit_cost: data.unit_cost,
+      raw_cost: data.raw_cost
+    });
     
     return data;
   }
@@ -68,16 +77,25 @@ export class InventoryItemModel {
   static async updateItem(id: string, updates: Partial<InventoryItem>): Promise<InventoryItem> {
     const { photos, category_name, supplier_name, plating_type_name, inventory_photos, ...cleanUpdates } = updates;
     
-    // CORREÇÃO DEFINITIVA DO BUG: Log para verificar o valor exato do unit_cost
-    console.log("[ItemModel] Valor exato do preço bruto antes de atualizar no banco:", 
-      cleanUpdates.unit_cost, 
-      typeof cleanUpdates.unit_cost);
+    // Log para verificar valores antes de atualizar
+    console.log("[ItemModel] Valores antes de atualizar no banco:", {
+      unit_cost: cleanUpdates.unit_cost, 
+      tipo_unit_cost: typeof cleanUpdates.unit_cost,
+      raw_cost: cleanUpdates.raw_cost,
+      tipo_raw_cost: typeof cleanUpdates.raw_cost
+    });
     
-    // CORREÇÃO DEFINITIVA DO BUG: Converter para número caso seja string
+    // Converter para número caso seja string
     if (cleanUpdates.unit_cost !== undefined) {
       cleanUpdates.unit_cost = typeof cleanUpdates.unit_cost === 'string' 
         ? parseFloat(cleanUpdates.unit_cost)
         : cleanUpdates.unit_cost;
+    }
+    
+    if (cleanUpdates.raw_cost !== undefined) {
+      cleanUpdates.raw_cost = typeof cleanUpdates.raw_cost === 'string'
+        ? parseFloat(cleanUpdates.raw_cost)
+        : cleanUpdates.raw_cost;
     }
     
     const { data, error } = await supabase
@@ -90,8 +108,11 @@ export class InventoryItemModel {
     if (error) throw error;
     if (!data) throw new Error("Erro ao atualizar item: nenhum dado retornado");
     
-    // CORREÇÃO DEFINITIVA DO BUG: Log para verificar o valor atualizado
-    console.log("[ItemModel] Preço bruto atualizado no banco:", data.unit_cost);
+    // Log para verificar valores atualizados
+    console.log("[ItemModel] Valores atualizados no banco:", {
+      unit_cost: data.unit_cost,
+      raw_cost: data.raw_cost
+    });
     
     return data;
   }

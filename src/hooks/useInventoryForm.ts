@@ -36,6 +36,7 @@ const formSchema = z.object({
   quantity: z.number().int().min(0, "Quantidade não pode ser negativa"),
   min_stock: z.number().int().min(0, "Estoque mínimo não pode ser negativo"),
   unit_cost: z.number().min(0, "Custo não pode ser negativo"),
+  raw_cost: z.number().min(0, "Preço do bruto não pode ser negativo"),
   price: z.number().min(0, "Preço não pode ser negativo"),
   width: z.number().optional(),
   height: z.number().optional(),
@@ -61,10 +62,12 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
   // Flag para controlar se é modo de edição
   const [isEditMode, setIsEditMode] = useState(false);
   
-  // CORREÇÃO DEFINITIVA DO BUG: Usar uma referência para garantir que o valor não mude
+  // Referências para os valores originais
   const originalUnitCostRef = useRef<number | undefined>(undefined);
+  const originalRawCostRef = useRef<number | undefined>(undefined);
   const formInitializedRef = useRef(false);
   const userChangedUnitCostRef = useRef(false);
+  const userChangedRawCostRef = useRef(false);
 
   // Inicializa o formulário com valores padrão
   const form = useForm<FormValues>({
@@ -78,6 +81,7 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
       quantity: 0,
       min_stock: 0,
       unit_cost: 0,
+      raw_cost: 0,
       price: 0,
       width: undefined,
       height: undefined,
@@ -86,15 +90,17 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
     },
   });
 
-  // CORREÇÃO DEFINITIVA DO BUG: Inicializar o formulário apenas uma vez
+  // Inicializar o formulário apenas uma vez
   useEffect(() => {
     if (!formInitializedRef.current && item) {
       // Registra qual valor estamos definindo inicialmente
       console.log("Inicializando formulário com valores do item:");
-      console.log("Preço bruto original:", item.unit_cost);
+      console.log("Preço bruto original:", item.raw_cost);
+      console.log("Custo total original:", item.unit_cost);
       
-      // Armazenar o valor original em uma ref para que não seja afetado por re-renders
+      // Armazenar os valores originais em refs para que não sejam afetados por re-renders
       originalUnitCostRef.current = item.unit_cost;
+      originalRawCostRef.current = item.raw_cost;
       
       // Definir todos os valores do formulário de uma vez
       form.reset({
@@ -106,6 +112,7 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
         quantity: item.quantity || 0,
         min_stock: item.min_stock || 0,
         unit_cost: item.unit_cost,
+        raw_cost: item.raw_cost || 0,
         price: item.price || 0,
         width: item.width || undefined,
         height: item.height || undefined,
@@ -120,19 +127,26 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
       // Para novos itens, resetar o formulário e as refs
       form.reset();
       originalUnitCostRef.current = undefined;
+      originalRawCostRef.current = undefined;
       formInitializedRef.current = false;
       userChangedUnitCostRef.current = false;
+      userChangedRawCostRef.current = false;
       setIsEditMode(false);
     }
   }, [item, form]);
 
-  // Monitorar alterações no campo unit_cost para detectar edições do usuário
+  // Monitorar alterações nos campos para detectar edições do usuário
   useEffect(() => {
     const subscription = form.watch((value, { name }) => {
       if (name === 'unit_cost' && formInitializedRef.current) {
         // Se o usuário modificou o campo, marcar como alterado pelo usuário
         userChangedUnitCostRef.current = true;
-        console.log("Usuário modificou o preço bruto para:", value.unit_cost);
+        console.log("Usuário modificou o custo total para:", value.unit_cost);
+      }
+      if (name === 'raw_cost' && formInitializedRef.current) {
+        // Se o usuário modificou o campo, marcar como alterado pelo usuário
+        userChangedRawCostRef.current = true;
+        console.log("Usuário modificou o preço do bruto para:", value.raw_cost);
       }
     });
     
@@ -436,38 +450,58 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
     }
   };
 
-  // CORREÇÃO DEFINITIVA DO BUG: Função para envio do formulário completamente reescrita
+  // Função para envio do formulário completamente reescrita
   const onSubmit = async (values: FormValues) => {
     try {
       console.log("Iniciando submissão do formulário", values);
       setIsSubmitting(true);
 
-      // CORREÇÃO DEFINITIVA DO BUG: Validação rigorosa para o unit_cost
       // Determinar qual valor de unit_cost usar
       let finalUnitCost: number;
+      let finalRawCost: number;
       
       if (isEditMode) {
+        // Custo Total (unit_cost)
         if (userChangedUnitCostRef.current) {
           // Se o usuário modificou o campo, usar o valor do formulário
           finalUnitCost = values.unit_cost;
-          console.log("Usando valor modificado pelo usuário:", finalUnitCost);
+          console.log("Usando valor de custo total modificado pelo usuário:", finalUnitCost);
         } else if (originalUnitCostRef.current !== undefined) {
           // Se não modificou e temos o valor original, usar o valor original
           finalUnitCost = originalUnitCostRef.current;
-          console.log("Mantendo valor original sem modificações:", finalUnitCost);
+          console.log("Mantendo valor de custo total original sem modificações:", finalUnitCost);
         } else {
           // Caso de segurança - usar o valor do formulário
           finalUnitCost = values.unit_cost;
-          console.log("Usando valor do formulário (fallback):", finalUnitCost);
+          console.log("Usando valor de custo total do formulário (fallback):", finalUnitCost);
+        }
+        
+        // Preço do Bruto (raw_cost)
+        if (userChangedRawCostRef.current) {
+          // Se o usuário modificou o campo, usar o valor do formulário
+          finalRawCost = values.raw_cost;
+          console.log("Usando valor de preço do bruto modificado pelo usuário:", finalRawCost);
+        } else if (originalRawCostRef.current !== undefined) {
+          // Se não modificou e temos o valor original, usar o valor original
+          finalRawCost = originalRawCostRef.current;
+          console.log("Mantendo valor de preço do bruto original sem modificações:", finalRawCost);
+        } else {
+          // Caso de segurança - usar o valor do formulário
+          finalRawCost = values.raw_cost;
+          console.log("Usando valor de preço do bruto do formulário (fallback):", finalRawCost);
         }
       } else {
-        // Para novos itens, usar o valor inserido no formulário
+        // Para novos itens, usar os valores inseridos no formulário
         finalUnitCost = values.unit_cost;
-        console.log("Novo item - usando valor do formulário:", finalUnitCost);
+        finalRawCost = values.raw_cost;
+        console.log("Novo item - usando valores do formulário:", {unitCost: finalUnitCost, rawCost: finalRawCost});
       }
 
       // Registrar claramente o que estamos enviando
-      console.log("VALOR FINAL DO PREÇO BRUTO QUE SERÁ ENVIADO:", finalUnitCost);
+      console.log("VALORES FINAIS QUE SERÃO ENVIADOS:", {
+        custo_total: finalUnitCost,
+        preco_do_bruto: finalRawCost
+      });
       
       // Preparar dados para salvar
       const itemData = {
@@ -478,7 +512,8 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
         barcode: values.barcode || "",
         quantity: values.quantity,
         min_stock: values.min_stock,
-        unit_cost: finalUnitCost, // Usar o valor determinado acima
+        unit_cost: finalUnitCost,
+        raw_cost: finalRawCost,
         price: values.price,
         width: values.width || null,
         height: values.height || null,
@@ -491,11 +526,11 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
       // Primeiro, salvar os dados do item sem as fotos
       if (item) {
         // Modo de edição
-        console.log("Atualizando item existente com unit_cost =", finalUnitCost);
+        console.log("Atualizando item existente com unit_cost =", finalUnitCost, "e raw_cost =", finalRawCost);
         savedItem = await InventoryModel.updateItem(item.id, itemData);
       } else {
         // Modo de criação
-        console.log("Criando novo item com unit_cost =", finalUnitCost);
+        console.log("Criando novo item com unit_cost =", finalUnitCost, "e raw_cost =", finalRawCost);
         savedItem = await InventoryModel.createItem(itemData);
       }
       
@@ -503,11 +538,16 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
         throw new Error("Erro ao salvar dados do item");
       }
       
-      console.log("Item salvo com sucesso. Valor unit_cost no banco:", savedItem.unit_cost);
+      console.log("Item salvo com sucesso. Valores no banco:", {
+        unit_cost: savedItem.unit_cost,
+        raw_cost: savedItem.raw_cost
+      });
       
       // Atualizar as referências para a próxima edição
       originalUnitCostRef.current = savedItem.unit_cost;
+      originalRawCostRef.current = savedItem.raw_cost;
       userChangedUnitCostRef.current = false;
+      userChangedRawCostRef.current = false;
       
       // Em seguida, processar as fotos
       if (photosModified || !item) {
