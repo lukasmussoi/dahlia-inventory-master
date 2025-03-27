@@ -231,14 +231,13 @@ export class AcertoReportController {
             }
           },
           styles: {
-            cellPadding: 5
+            cellPadding: 5,
+            minCellHeight: 25
           },
-          // Definir altura mínima da célula para acomodar as imagens
-          // Usando a sintaxe correta da biblioteca jspdf-autotable
+          // Definir configurações adicionais da tabela
           margin: { top: 10 },
           tableLineWidth: 0.1,
-          tableLineColor: [128, 128, 128],
-          cellHeight: 25
+          tableLineColor: [128, 128, 128]
         });
         
         currentY = (doc as any).lastAutoTable.finalY + 10;
