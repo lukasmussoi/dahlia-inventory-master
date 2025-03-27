@@ -132,8 +132,9 @@ export function InventoryForm({ item, categories, isOpen, onClose, onSuccess }: 
     }
   };
 
-  // CORREÇÃO DO BUG: Log antes de submeter o formulário
-  const handleFormSubmit = form.handleSubmit((values) => {
+  // CORREÇÃO DO BUG: Corrigindo a função que manipula o envio do formulário
+  // O problema está nesta função, não podemos passar os valores diretamente para handleSubmit
+  const onFormSubmit = form.handleSubmit((values) => {
     console.log("Valor do preço bruto antes de submeter:", values.unit_cost);
     return handleSubmit(values);
   });
@@ -152,7 +153,7 @@ export function InventoryForm({ item, categories, isOpen, onClose, onSuccess }: 
         
         <div className="flex-1 overflow-y-auto px-1 pb-4">
           <Form {...form}>
-            <form id="inventory-form" onSubmit={handleFormSubmit} className="space-y-4">
+            <form id="inventory-form" onSubmit={onFormSubmit} className="space-y-4">
               <MainFields 
                 form={form}
                 categories={categories}
