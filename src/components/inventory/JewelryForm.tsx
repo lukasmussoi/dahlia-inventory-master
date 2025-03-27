@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
-import { InventoryModel, PlatingType, Supplier, InventoryItem, InventoryCategory } from "@/models/inventoryModel";
+import { InventoryModel, PlatingType, Supplier, InventoryItem, InventoryCategory } from "@/models/inventory";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -21,6 +21,7 @@ import { PriceSummary } from "./form/PriceSummary";
 import { PhotoFields } from "./form/PhotoFields";
 import { uploadMultiplePhotos } from "@/utils/photoUploadUtils";
 import { supabase } from "@/integrations/supabase/client";
+import { PhotoItem } from "@/hooks/useInventoryForm";
 
 const formSchema = z.object({
   name: z.string().min(3, "Nome deve ter pelo menos 3 caracteres"),
@@ -47,11 +48,9 @@ interface JewelryFormProps {
 
 export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [photos, setPhotos] = useState<File[]>([]);
-  const [primaryPhotoIndex, setPrimaryPhotoIndex] = useState<number | null>(null);
+  const [photos, setPhotos] = useState<PhotoItem[]>([]);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [savedItem, setSavedItem] = useState<InventoryItem | null>(null);
-  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [photosModified, setPhotosModified] = useState(false);
 
   const form = useForm<FormValues>({
@@ -92,39 +91,23 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
     if (item && item.photos && item.photos.length > 0) {
       const loadExistingPhotos = async () => {
         try {
-          const photoFiles: File[] = [];
-          let primaryIndex = null;
-          const urls: string[] = [];
+          const existingPhotos: PhotoItem[] = [];
           
           for (let i = 0; i < item.photos.length; i++) {
             const photo = item.photos[i];
             try {
-              urls.push(photo.photo_url);
-              
-              const response = await fetch(photo.photo_url);
-              const blob = await response.blob();
-              
-              const urlParts = photo.photo_url.split('/');
-              const fileName = urlParts[urlParts.length - 1] || `photo_${i}.jpg`;
-              
-              const file = new File([blob], fileName, { 
-                type: blob.type || 'image/jpeg',
-                lastModified: new Date().getTime()
+              existingPhotos.push({
+                id: photo.id,
+                photo_url: photo.photo_url,
+                is_primary: photo.is_primary || false,
+                type: 'existing'
               });
-              
-              photoFiles.push(file);
-              
-              if (photo.is_primary) {
-                primaryIndex = i;
-              }
             } catch (error) {
               console.error(`Erro ao carregar foto ${photo.photo_url}:`, error);
             }
           }
           
-          setPhotos(photoFiles);
-          setPhotoUrls(urls);
-          setPrimaryPhotoIndex(primaryIndex !== null ? primaryIndex : (photoFiles.length > 0 ? 0 : null));
+          setPhotos(existingPhotos);
           setPhotosModified(false);
         } catch (error) {
           console.error('Erro ao carregar fotos existentes:', error);
@@ -135,8 +118,6 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
       loadExistingPhotos();
     } else {
       setPhotos([]);
-      setPhotoUrls([]);
-      setPrimaryPhotoIndex(null);
       setPhotosModified(false);
     }
   }, [item]);
@@ -170,6 +151,63 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
     platingTypes
   ]);
 
+  const addPhoto = (file: File) => {
+    const newPhoto: PhotoItem = {
+      file,
+      is_primary: photos.length === 0,
+      type: 'new'
+    };
+    
+    setPhotos(prevPhotos => [...prevPhotos, newPhoto]);
+    setPhotosModified(true);
+  };
+
+  const addPhotos = (files: File[]) => {
+    const newPhotos = files.map(file => ({
+      file,
+      is_primary: false,
+      type: 'new' as const
+    }));
+    
+    setPhotos(prevPhotos => {
+      const updatedPhotos = [...prevPhotos, ...newPhotos];
+      
+      if (!updatedPhotos.some(p => p.is_primary) && updatedPhotos.length > 0) {
+        updatedPhotos[0].is_primary = true;
+      }
+      
+      return updatedPhotos;
+    });
+    
+    setPhotosModified(true);
+  };
+
+  const setPrimaryPhoto = (index: number) => {
+    setPhotos(prevPhotos => 
+      prevPhotos.map((photo, i) => ({
+        ...photo,
+        is_primary: i === index
+      }))
+    );
+    setPhotosModified(true);
+  };
+
+  const removePhoto = (index: number) => {
+    const isPrimary = photos[index].is_primary;
+    
+    setPhotos(prevPhotos => {
+      const updatedPhotos = prevPhotos.filter((_, i) => i !== index);
+      
+      if (isPrimary && updatedPhotos.length > 0) {
+        updatedPhotos[0].is_primary = true;
+      }
+      
+      return updatedPhotos;
+    });
+    
+    setPhotosModified(true);
+  };
+
   const handleSavePhotosOnly = async () => {
     if (!currentItemId) {
       toast.error("É necessário salvar o item primeiro para anexar fotos.");
@@ -190,30 +228,95 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
       setIsSubmitting(true);
       setUploadProgress(0);
       
-      const filesToUpload: (File | string)[] = [];
+      const existingPhotos = photos.filter(photo => photo.type === 'existing');
+      const newPhotoFiles = photos
+        .filter(photo => photo.type === 'new' && photo.file instanceof File)
+        .map(photo => ({
+          file: photo.file as File,
+          is_primary: photo.is_primary
+        }));
       
-      for (let i = 0; i < photos.length; i++) {
-        if (photoUrls[i]) {
-          filesToUpload.push(photoUrls[i]);
+      console.log(`Fotos para salvar: ${existingPhotos.length} existentes, ${newPhotoFiles.length} novas`);
+      
+      const filesToUpload = newPhotoFiles.map(item => item.file);
+      
+      if (filesToUpload.length > 0) {
+        const results = await uploadMultiplePhotos(
+          filesToUpload,
+          'inventory_images',
+          (progress) => setUploadProgress(progress),
+          currentItemId
+        );
+        
+        const successfulUploads = results.filter(r => r.success && r.url);
+        
+        if (successfulUploads.length > 0) {
+          const photoRecords = [
+            ...existingPhotos.map(photo => ({
+              inventory_id: currentItemId,
+              photo_url: photo.photo_url as string,
+              is_primary: photo.is_primary
+            })),
+            ...successfulUploads.map((result, index) => ({
+              inventory_id: currentItemId,
+              photo_url: result.url as string,
+              is_primary: newPhotoFiles[index]?.is_primary || false
+            }))
+          ];
+          
+          let primaryFound = false;
+          for (let i = 0; i < photoRecords.length; i++) {
+            if (photoRecords[i].is_primary) {
+              if (primaryFound) {
+                photoRecords[i].is_primary = false;
+              } else {
+                primaryFound = true;
+              }
+            }
+          }
+          
+          if (!primaryFound && photoRecords.length > 0) {
+            photoRecords[0].is_primary = true;
+          }
+          
+          const { error: deleteError } = await supabase
+            .from('inventory_photos')
+            .delete()
+            .eq('inventory_id', currentItemId);
+            
+          if (deleteError) {
+            console.error("Erro ao excluir fotos antigas:", deleteError);
+            toast.error("Erro ao atualizar fotos antigas");
+          }
+          
+          const { data, error } = await supabase
+            .from('inventory_photos')
+            .insert(photoRecords)
+            .select();
+            
+          if (error) {
+            console.error("Erro ao salvar registros das fotos:", error);
+            toast.error("Erro ao salvar informações das fotos");
+          } else {
+            toast.success(`${successfulUploads.length} foto(s) salva(s) com sucesso!`);
+            
+            setPhotos(data.map(photo => ({
+              id: photo.id,
+              photo_url: photo.photo_url,
+              is_primary: photo.is_primary,
+              type: 'existing' as const
+            })));
+            
+            setPhotosModified(false);
+          }
         } else {
-          filesToUpload.push(photos[i]);
+          toast.error("Não foi possível fazer upload das fotos. Tente novamente.");
         }
-      }
-      
-      const results = await uploadMultiplePhotos(
-        filesToUpload,
-        'inventory_images',
-        (progress) => setUploadProgress(progress),
-        currentItemId
-      );
-      
-      const successfulUploads = results.filter(r => r.success && r.url);
-      
-      if (successfulUploads.length > 0) {
-        const photoRecords = successfulUploads.map((result, index) => ({
+      } else if (existingPhotos.length > 0) {
+        const photoRecords = existingPhotos.map(photo => ({
           inventory_id: currentItemId,
-          photo_url: result.url as string,
-          is_primary: index === primaryPhotoIndex
+          photo_url: photo.photo_url as string,
+          is_primary: photo.is_primary
         }));
         
         const { error: deleteError } = await supabase
@@ -235,13 +338,22 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
           console.error("Erro ao salvar registros das fotos:", error);
           toast.error("Erro ao salvar informações das fotos");
         } else {
-          toast.success(`${successfulUploads.length} foto(s) salva(s) com sucesso!`);
-          
-          setPhotoUrls(successfulUploads.map(result => result.url as string));
+          toast.success("Fotos atualizadas com sucesso!");
           setPhotosModified(false);
         }
       } else {
-        toast.error("Não foi possível fazer upload das fotos. Tente novamente.");
+        const { error: deleteError } = await supabase
+          .from('inventory_photos')
+          .delete()
+          .eq('inventory_id', currentItemId);
+          
+        if (deleteError) {
+          console.error("Erro ao excluir fotos:", deleteError);
+          toast.error("Erro ao excluir fotos");
+        } else {
+          toast.success("Fotos removidas com sucesso");
+          setPhotosModified(false);
+        }
       }
     } catch (error) {
       console.error('Erro ao salvar fotos:', error);
@@ -304,31 +416,91 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
       
       if (photos.length > 0 && createdOrUpdatedItem) {
         if (photosModified || !item) {
-          const filesToUpload: (File | string)[] = [];
-          
-          for (let i = 0; i < photos.length; i++) {
-            if (photoUrls[i]) {
-              filesToUpload.push(photoUrls[i]);
-            } else {
-              filesToUpload.push(photos[i]);
-            }
-          }
-          
-          const uploadResults = await uploadMultiplePhotos(
-            filesToUpload,
-            'inventory_images',
-            (progress) => setUploadProgress(progress),
-            createdOrUpdatedItem.id
-          );
-          
-          const successfulUploads = uploadResults.filter(r => r.success && r.url);
-          
-          if (successfulUploads.length > 0) {
-            const photoRecords = successfulUploads.map((result, index) => ({
-              inventory_id: createdOrUpdatedItem!.id,
-              photo_url: result.url as string,
-              is_primary: index === primaryPhotoIndex
+          const existingPhotos = photos.filter(photo => photo.type === 'existing');
+          const newPhotoFiles = photos
+            .filter(photo => photo.type === 'new' && photo.file instanceof File)
+            .map(photo => ({
+              file: photo.file as File,
+              is_primary: photo.is_primary
             }));
+          
+          const filesToUpload = newPhotoFiles.map(item => item.file);
+          
+          if (filesToUpload.length > 0) {
+            const results = await uploadMultiplePhotos(
+              filesToUpload,
+              'inventory_images',
+              (progress) => setUploadProgress(progress),
+              createdOrUpdatedItem.id
+            );
+            
+            const successfulUploads = results.filter(r => r.success && r.url);
+            
+            if (successfulUploads.length > 0) {
+              const photoRecords = [
+                ...existingPhotos.map(photo => ({
+                  inventory_id: createdOrUpdatedItem!.id,
+                  photo_url: photo.photo_url as string,
+                  is_primary: photo.is_primary
+                })),
+                ...successfulUploads.map((result, index) => ({
+                  inventory_id: createdOrUpdatedItem!.id,
+                  photo_url: result.url as string,
+                  is_primary: newPhotoFiles[index]?.is_primary || false
+                }))
+              ];
+              
+              let primaryFound = false;
+              for (let i = 0; i < photoRecords.length; i++) {
+                if (photoRecords[i].is_primary) {
+                  if (primaryFound) {
+                    photoRecords[i].is_primary = false;
+                  } else {
+                    primaryFound = true;
+                  }
+                }
+              }
+              
+              if (!primaryFound && photoRecords.length > 0) {
+                photoRecords[0].is_primary = true;
+              }
+              
+              const { error: deleteError } = await supabase
+                .from('inventory_photos')
+                .delete()
+                .eq('inventory_id', createdOrUpdatedItem.id);
+                
+              if (deleteError) {
+                console.error("Erro ao excluir fotos antigas:", deleteError);
+              }
+              
+              const { data, error } = await supabase
+                .from('inventory_photos')
+                .insert(photoRecords)
+                .select();
+                
+              if (error) {
+                console.error("Erro ao salvar registros das fotos:", error);
+              } else {
+                console.log("Fotos salvas com sucesso:", data);
+                createdOrUpdatedItem.photos = data;
+              }
+            }
+          } else if (existingPhotos.length > 0) {
+            const photoRecords = existingPhotos.map(photo => ({
+              inventory_id: createdOrUpdatedItem!.id,
+              photo_url: photo.photo_url as string,
+              is_primary: photo.is_primary
+            }));
+            
+            const { error: deleteError } = await supabase
+              .from('inventory_photos')
+              .delete()
+              .eq('inventory_id', createdOrUpdatedItem.id);
+              
+            if (deleteError) {
+              console.error("Erro ao excluir fotos antigas:", deleteError);
+            }
             
             const { data, error } = await supabase
               .from('inventory_photos')
@@ -338,11 +510,18 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
             if (error) {
               console.error("Erro ao salvar registros das fotos:", error);
             } else {
-              console.log("Fotos salvas com sucesso:", data);
               createdOrUpdatedItem.photos = data;
+            }
+          } else {
+            const { error: deleteError } = await supabase
+              .from('inventory_photos')
+              .delete()
+              .eq('inventory_id', createdOrUpdatedItem.id);
               
-              setPhotoUrls(successfulUploads.map(result => result.url as string));
-              setPhotosModified(false);
+            if (deleteError) {
+              console.error("Erro ao excluir fotos:", deleteError);
+            } else {
+              createdOrUpdatedItem.photos = [];
             }
           }
         } else {
@@ -597,25 +776,17 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
             <div className="bg-white rounded-lg p-6 shadow-sm border border-zinc-200">
               <PhotoFields 
                 photos={photos}
-                setPhotos={(newPhotos) => {
-                  setPhotos(newPhotos);
-                  setPhotosModified(true);
-                }}
-                primaryPhotoIndex={primaryPhotoIndex}
-                setPrimaryPhotoIndex={(index) => {
-                  setPrimaryPhotoIndex(index);
-                  setPhotosModified(true);
-                }}
+                setPhotos={setPhotos}
+                setPrimaryPhoto={setPrimaryPhoto}
+                removePhoto={removePhoto}
+                addPhoto={addPhoto}
+                addPhotos={addPhotos}
                 uploadProgress={uploadProgress}
                 setUploadProgress={setUploadProgress}
                 onSavePhotos={handleSavePhotosOnly}
                 itemId={currentItemId}
                 disabled={isSubmitting}
-                photoUrls={photoUrls}
-                setPhotoUrls={(urls) => {
-                  setPhotoUrls(urls);
-                  setPhotosModified(true);
-                }}
+                photosModified={photosModified}
                 setPhotosModified={setPhotosModified}
               />
             </div>

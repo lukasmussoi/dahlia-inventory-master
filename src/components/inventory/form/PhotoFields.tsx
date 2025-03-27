@@ -7,7 +7,7 @@ import { Camera, Trash2, Upload } from "lucide-react";
 import { useDropzone } from "react-dropzone";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { FormValues, PhotoItem } from "@/hooks/useInventoryForm";
+import { PhotoItem } from "@/hooks/useInventoryForm";
 
 interface PhotoFieldsProps {
   form?: UseFormReturn<any>; // Tornar form opcional
