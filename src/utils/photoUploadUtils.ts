@@ -162,6 +162,8 @@ export const deletePhoto = async (
   bucket: 'inventory_images' | 'inventory_photos' = 'inventory_images'
 ): Promise<{ success: boolean; error?: string }> => {
   try {
+    console.log(`Iniciando exclusão da foto: ${url}`);
+    
     // Extrair o caminho completo da URL
     const urlObj = new URL(url);
     const pathParts = urlObj.pathname.split('/');
@@ -178,13 +180,16 @@ export const deletePhoto = async (
       // Determinar o bucket correto com base na URL
       const actualBucket = pathParts[bucketIndex];
       bucket = actualBucket as 'inventory_images' | 'inventory_photos';
+      console.log(`Bucket detectado na URL: ${bucket}, caminho do arquivo: ${filePath}`);
     } else {
       // Fallback para o método antigo
       filePath = pathParts[pathParts.length - 1];
+      console.log(`Não foi possível detectar bucket na URL, usando método fallback. Caminho: ${filePath}`);
     }
 
     // Verificar se o caminho é válido
     if (!filePath) {
+      console.error('Caminho de arquivo inválido na URL:', url);
       return { success: false, error: 'Caminho de arquivo inválido' };
     }
 

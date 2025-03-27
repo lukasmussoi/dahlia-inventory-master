@@ -1,3 +1,4 @@
+
 /**
  * Hook para gerenciar o formulário de inventário
  * 
@@ -16,6 +17,15 @@ import { toast } from "sonner";
 import { InventoryItem, InventoryModel } from "@/models/inventory";
 import { supabase } from "@/integrations/supabase/client";
 import { uploadMultiplePhotos, deletePhoto } from "@/utils/photoUploadUtils";
+
+// Tipo para fotos existentes vs. novas
+export type PhotoItem = {
+  file?: File;
+  photo_url?: string;
+  is_primary: boolean;
+  id?: string;
+  type: 'existing' | 'new';
+};
 
 // Esquema de validação do formulário
 const formSchema = z.object({
@@ -45,14 +55,10 @@ interface UseInventoryFormProps {
 
 export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [photos, setPhotos] = useState<File[]>([]);
-  const [photosUploaded, setPhotosUploaded] = useState<boolean>(false);
-  const [uploadedPhotoUrls, setUploadedPhotoUrls] = useState<string[]>([]);
-  const [primaryPhotoIndex, setPrimaryPhotoIndex] = useState<number | null>(null);
+  const [photos, setPhotos] = useState<PhotoItem[]>([]);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [photosModified, setPhotosModified] = useState(false);
-  const [originalPhotoUrls, setOriginalPhotoUrls] = useState<string[]>([]);
+  const [originalPhotos, setOriginalPhotos] = useState<PhotoItem[]>([]);
 
   // Inicializa o formulário com valores padrão
   const form = useForm<FormValues>({
@@ -77,170 +83,93 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
   // Carregar fotos existentes se estiver editando um item
   useEffect(() => {
     if (item && item.photos && item.photos.length > 0) {
-      // Convertemos as URLs das fotos existentes para objetos File usando fetch
-      const loadExistingPhotos = async () => {
-        try {
-          // Armazenar as URLs das fotos existentes
-          const existingUrls = item.photos.map(photo => photo.photo_url);
-          setUploadedPhotoUrls(existingUrls);
-          setPhotoUrls(existingUrls);
-          setOriginalPhotoUrls(existingUrls);
-          setPhotosUploaded(true);
-          setPhotosModified(false);
-          
-          const photoFiles: File[] = [];
-          let primaryIndex = null;
-          
-          for (let i = 0; i < item.photos.length; i++) {
-            const photo = item.photos[i];
-            try {
-              // Fetch da imagem para converter para blob
-              const response = await fetch(photo.photo_url);
-              const blob = await response.blob();
-              
-              // Extrair nome do arquivo da URL
-              const urlParts = photo.photo_url.split('/');
-              const fileName = urlParts[urlParts.length - 1] || `photo_${i}.jpg`;
-              
-              // Criar objeto File
-              const file = new File([blob], fileName, { 
-                type: blob.type || 'image/jpeg',
-                lastModified: new Date().getTime()
-              });
-              
-              photoFiles.push(file);
-              
-              // Verificar se é a foto primária
-              if (photo.is_primary) {
-                primaryIndex = i;
-              }
-            } catch (error) {
-              console.error(`Erro ao carregar foto ${photo.photo_url}:`, error);
-            }
-          }
-          
-          setPhotos(photoFiles);
-          setPrimaryPhotoIndex(primaryIndex !== null ? primaryIndex : (photoFiles.length > 0 ? 0 : null));
-          
-        } catch (error) {
-          console.error('Erro ao carregar fotos existentes:', error);
-          toast.error("Não foi possível carregar as fotos existentes");
-        }
-      };
+      console.log("Carregando fotos existentes do item:", item.id);
       
-      loadExistingPhotos();
+      try {
+        // Converter fotos existentes para o novo formato PhotoItem
+        const existingPhotos: PhotoItem[] = item.photos.map(photo => ({
+          id: photo.id,
+          photo_url: photo.photo_url,
+          is_primary: photo.is_primary || false,
+          type: 'existing'
+        }));
+        
+        console.log(`${existingPhotos.length} fotos existentes carregadas com sucesso`);
+        
+        // Armazenar as fotos existentes
+        setPhotos(existingPhotos);
+        setOriginalPhotos([...existingPhotos]); // Cópia para comparação posterior
+        setPhotosModified(false);
+      } catch (error) {
+        console.error('Erro ao carregar fotos existentes:', error);
+        toast.error("Não foi possível carregar as fotos existentes");
+      }
     } else {
       // Reset do estado para quando não há fotos existentes
+      console.log("Item sem fotos ou novo item");
       setPhotosModified(false);
       setPhotos([]);
-      setPhotoUrls([]);
-      setOriginalPhotoUrls([]);
-      setPrimaryPhotoIndex(null);
+      setOriginalPhotos([]);
     }
   }, [item]);
 
-  // Função para fazer upload diretamente das fotos para o Storage 
-  const handleUploadPhotos = async (itemId: string): Promise<Array<{photo_url: string; is_primary: boolean}>> => {
-    try {
-      console.log("handleUploadPhotos: Iniciando processamento de fotos para upload");
-      
-      if (photos.length === 0) {
-        console.log("Nenhuma foto para processar");
-        return [];
-      }
-      
-      // Verificar se estamos editando e as fotos não foram modificadas
-      if (item && item.id === itemId && !photosModified && item.photos && item.photos.length > 0) {
-        console.log("Fotos não foram modificadas, retornando fotos existentes sem re-upload");
-        
-        // Retornar as fotos existentes sem fazer re-upload
-        return item.photos.map(photo => ({
-          photo_url: photo.photo_url,
-          is_primary: photo.is_primary || false
-        }));
-      }
-      
-      // Se as fotos foram modificadas, precisamos processar corretamente
-      console.log(`Preparando ${photos.length} fotos para upload/atualização`);
-      
-      // Importante: identificar as fotos que foram removidas para excluí-las
-      if (item && item.id === itemId && photosModified) {
-        console.log("Verificando fotos removidas para excluir do storage...");
-        
-        // Comparar URLs originais com URLs atuais para identificar fotos removidas
-        const currentUrls = new Set(photoUrls);
-        const removedUrls = originalPhotoUrls.filter(url => !currentUrls.has(url));
-        
-        if (removedUrls.length > 0) {
-          console.log(`Detectadas ${removedUrls.length} fotos removidas pelo usuário:`, removedUrls);
-          
-          // Excluir cada foto removida do storage
-          for (const url of removedUrls) {
-            try {
-              console.log(`Excluindo foto removida do storage: ${url}`);
-              const result = await deletePhoto(url, 'inventory_images');
-              
-              if (result.success) {
-                console.log(`Foto ${url} excluída com sucesso do storage`);
-              } else {
-                console.error(`Erro ao excluir foto ${url} do storage:`, result.error);
-              }
-            } catch (error) {
-              console.error(`Erro ao tentar excluir foto ${url}:`, error);
-            }
-          }
-        } else {
-          console.log("Nenhuma foto foi removida pelo usuário");
-        }
-      }
-      
-      setUploadProgress(0);
-      
-      // Usar a função uploadMultiplePhotos para processar fotos
-      const filesToUpload: (File | string)[] = [];
-      
-      // Determinar quais são novas fotos e quais são existentes
-      for (let i = 0; i < photos.length; i++) {
-        // Verificar se já temos uma URL para esta foto (existente)
-        if (i < photoUrls.length && photoUrls[i]) {
-          filesToUpload.push(photoUrls[i]);
-          console.log(`Foto ${i+1}: Usando URL existente para evitar duplicação - ${photoUrls[i]}`);
-        } else {
-          filesToUpload.push(photos[i]);
-          console.log(`Foto ${i+1}: Novo arquivo detectado - será enviado para o storage`);
-        }
-      }
-      
-      console.log("Iniciando upload das fotos com uploadMultiplePhotos");
-      const results = await uploadMultiplePhotos(
-        filesToUpload,
-        'inventory_images',
-        (progress) => setUploadProgress(progress),
-        itemId
-      );
-      
-      // Filtrar apenas os resultados bem-sucedidos
-      const successfulUploads = results.filter(r => r.success && r.url);
-      
-      // Criar o array de resultados no formato esperado pelo modelo
-      const photoResults = successfulUploads.map((result, index) => ({
-        photo_url: result.url as string,
-        is_primary: index === primaryPhotoIndex
-      }));
-      
-      console.log(`Upload finalizado. ${photoResults.length} fotos processadas com sucesso.`);
-      
-      // Armazenar URLs para uso posterior
-      setUploadedPhotoUrls(photoResults.map(p => p.photo_url));
-      setOriginalPhotoUrls(photoResults.map(p => p.photo_url));
-      setPhotosUploaded(true);
-      
-      return photoResults;
-    } catch (error) {
-      console.error('Erro ao fazer upload das fotos:', error);
-      toast.error("Erro ao enviar as fotos. Tente novamente.");
-      return [];
+  // Função para adicionar novas fotos
+  const addNewPhotos = (files: File[]) => {
+    console.log(`Adicionando ${files.length} novas fotos`);
+    
+    // Converter Files para PhotoItems do tipo 'new'
+    const newPhotoItems: PhotoItem[] = files.map(file => ({
+      file,
+      is_primary: false, // Por padrão, não é primária
+      type: 'new'
+    }));
+    
+    // Atualizar o estado
+    const updatedPhotos = [...photos, ...newPhotoItems];
+    
+    // Se não há foto primária e estamos adicionando fotos, definir a primeira como primária
+    if (!updatedPhotos.some(p => p.is_primary) && updatedPhotos.length > 0) {
+      updatedPhotos[0].is_primary = true;
     }
+    
+    setPhotos(updatedPhotos);
+    setPhotosModified(true);
+    
+    console.log("Estado de fotos atualizado:", updatedPhotos);
+  };
+
+  // Função para definir uma foto como primária
+  const setPrimaryPhoto = (index: number) => {
+    console.log(`Definindo foto ${index} como primária`);
+    
+    const updatedPhotos = photos.map((photo, i) => ({
+      ...photo,
+      is_primary: i === index
+    }));
+    
+    setPhotos(updatedPhotos);
+    setPhotosModified(true);
+  };
+
+  // Função para remover uma foto
+  const removePhoto = (index: number) => {
+    console.log(`Removendo foto no índice ${index}`);
+    
+    // Verificar se a foto é primária
+    const isPrimary = photos[index].is_primary;
+    
+    // Remover a foto
+    const updatedPhotos = photos.filter((_, i) => i !== index);
+    
+    // Se a foto removida era primária e ainda temos fotos, definir a primeira como primária
+    if (isPrimary && updatedPhotos.length > 0) {
+      updatedPhotos[0].is_primary = true;
+    }
+    
+    setPhotos(updatedPhotos);
+    setPhotosModified(true);
+    
+    console.log("Estado de fotos após remoção:", updatedPhotos);
   };
 
   // Função para salvar somente as fotos, sem submeter o formulário
@@ -257,51 +186,34 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
         return;
       }
       
+      console.log("Iniciando salvamento de fotos para o item:", item.id);
       setIsSubmitting(true);
       
-      // Fazer upload das fotos para o item existente
-      const uploadedPhotos = await handleUploadPhotos(item.id);
+      // Identificar fotos removidas comparando com as originais
+      const removedPhotos = originalPhotos.filter(originalPhoto => 
+        !photos.some(currentPhoto => 
+          currentPhoto.type === 'existing' && currentPhoto.photo_url === originalPhoto.photo_url
+        )
+      );
       
-      if (uploadedPhotos.length > 0) {
-        // Salvar registros das fotos no banco
-        const photoRecords = uploadedPhotos.map(photo => ({
-          inventory_id: item.id,
-          photo_url: photo.photo_url,
-          is_primary: photo.is_primary
-        }));
-        
-        // Remover fotos antigas
-        const { error: deleteError } = await supabase
-          .from('inventory_photos')
-          .delete()
-          .eq('inventory_id', item.id);
-          
-        if (deleteError) {
-          console.error("Erro ao excluir fotos antigas:", deleteError);
-          toast.error("Erro ao atualizar fotos antigas");
+      console.log(`Detectadas ${removedPhotos.length} fotos removidas`);
+      
+      // Excluir fotos removidas do storage
+      for (const photo of removedPhotos) {
+        if (photo.photo_url) {
+          console.log(`Excluindo foto removida: ${photo.photo_url}`);
+          await deletePhoto(photo.photo_url, 'inventory_images');
         }
-        
-        // Inserir novas fotos
-        const { data, error } = await supabase
-          .from('inventory_photos')
-          .insert(photoRecords)
-          .select();
-          
-        if (error) {
-          console.error("Erro ao salvar registros das fotos:", error);
-          toast.error("Erro ao salvar informações das fotos");
-        } else {
-          console.log("Fotos salvas com sucesso:", data);
-          toast.success(`${data.length} foto(s) salva(s) com sucesso!`);
-          
-          // Atualizar o objeto item com as novas fotos
-          if (item) {
-            item.photos = data;
-            setPhotoUrls(data.map(p => p.photo_url));
-            setOriginalPhotoUrls(data.map(p => p.photo_url));
-            setPhotosModified(false);
-          }
-        }
+      }
+      
+      // Processar uploads se necessário
+      const photoUpdates = await processPhotoUpdates(item.id);
+      
+      if (photoUpdates) {
+        // Atualizar o estado
+        setPhotosModified(false);
+        setOriginalPhotos([...photos]); // Atualizar fotos originais
+        toast.success("Fotos atualizadas com sucesso!");
       }
     } catch (error) {
       console.error('Erro ao salvar fotos:', error);
@@ -309,6 +221,159 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
     } finally {
       setIsSubmitting(false);
       setUploadProgress(0);
+    }
+  };
+
+  // Função para processar as atualizações de fotos
+  const processPhotoUpdates = async (itemId: string): Promise<boolean> => {
+    try {
+      console.log("Processando atualizações de fotos para o item:", itemId);
+      
+      // Identificar fotos novas que precisam de upload
+      const newPhotos = photos.filter(photo => photo.type === 'new' && photo.file);
+      console.log(`${newPhotos.length} novas fotos para fazer upload`);
+      
+      // Fotos existentes que serão mantidas
+      const existingPhotos = photos.filter(photo => photo.type === 'existing' && photo.photo_url);
+      console.log(`${existingPhotos.length} fotos existentes serão mantidas`);
+      
+      // Identificar fotos removidas comparando com as originais
+      const removedPhotos = originalPhotos.filter(originalPhoto => 
+        !photos.some(currentPhoto => 
+          currentPhoto.type === 'existing' && currentPhoto.photo_url === originalPhoto.photo_url
+        )
+      );
+      console.log(`${removedPhotos.length} fotos serão excluídas`);
+      
+      // Se não há atualizações, não precisamos fazer nada
+      if (newPhotos.length === 0 && removedPhotos.length === 0 && !photos.some((p, i) => p.is_primary !== originalPhotos[i]?.is_primary)) {
+        console.log("Nenhuma alteração nas fotos detectada");
+        return false;
+      }
+      
+      // Excluir fotos removidas do storage
+      for (const photo of removedPhotos) {
+        if (photo.photo_url) {
+          console.log(`Excluindo foto removida: ${photo.photo_url}`);
+          await deletePhoto(photo.photo_url, 'inventory_images');
+        }
+      }
+      
+      // Preparar array para o upload de novas fotos
+      const filesToUpload: File[] = newPhotos
+        .filter(photo => photo.file instanceof File)
+        .map(photo => photo.file as File);
+      
+      let uploadResults: { photo_url: string; is_primary: boolean }[] = [];
+      
+      // Fazer upload das novas fotos
+      if (filesToUpload.length > 0) {
+        console.log(`Iniciando upload de ${filesToUpload.length} novas fotos`);
+        setUploadProgress(0);
+        
+        const results = await uploadMultiplePhotos(
+          filesToUpload,
+          'inventory_images',
+          (progress) => setUploadProgress(progress),
+          itemId
+        );
+        
+        // Converter resultados de upload para o formato esperado
+        uploadResults = results
+          .filter(r => r.success && r.url)
+          .map((result, index) => ({
+            photo_url: result.url as string,
+            is_primary: newPhotos[index].is_primary
+          }));
+        
+        console.log(`${uploadResults.length} novas fotos enviadas com sucesso`);
+      }
+      
+      // Combinar fotos existentes e novas fotos para salvar no banco
+      const allPhotoRecords = [
+        // Fotos existentes com is_primary atualizado
+        ...existingPhotos.map(photo => ({
+          inventory_id: itemId,
+          photo_url: photo.photo_url as string,
+          is_primary: photo.is_primary
+        })),
+        // Novas fotos enviadas
+        ...uploadResults.map(result => ({
+          inventory_id: itemId,
+          photo_url: result.photo_url,
+          is_primary: result.is_primary
+        }))
+      ];
+      
+      // Garantir que apenas uma foto seja primária
+      let primaryFound = false;
+      for (let i = 0; i < allPhotoRecords.length; i++) {
+        if (allPhotoRecords[i].is_primary) {
+          if (primaryFound) {
+            allPhotoRecords[i].is_primary = false;
+          } else {
+            primaryFound = true;
+          }
+        }
+      }
+      
+      // Se nenhuma foto está marcada como primária, definir a primeira
+      if (!primaryFound && allPhotoRecords.length > 0) {
+        allPhotoRecords[0].is_primary = true;
+      }
+      
+      // Salvar no banco de dados
+      console.log(`Salvando ${allPhotoRecords.length} registros de fotos no banco`);
+      
+      // Remover registros antigos
+      const { error: deleteError } = await supabase
+        .from('inventory_photos')
+        .delete()
+        .eq('inventory_id', itemId);
+        
+      if (deleteError) {
+        console.error("Erro ao excluir fotos antigas do banco:", deleteError);
+        throw new Error("Erro ao atualizar fotos antigas");
+      }
+      
+      // Inserir novos registros
+      if (allPhotoRecords.length > 0) {
+        const { data, error } = await supabase
+          .from('inventory_photos')
+          .insert(allPhotoRecords)
+          .select();
+          
+        if (error) {
+          console.error("Erro ao salvar registros das fotos:", error);
+          throw new Error("Erro ao salvar informações das fotos");
+        }
+        
+        console.log(`${data.length} registros de fotos salvos com sucesso`);
+        
+        // Atualizar o estado das fotos
+        setPhotos(data.map(photo => ({
+          id: photo.id,
+          photo_url: photo.photo_url,
+          is_primary: photo.is_primary,
+          type: 'existing'
+        })));
+        
+        setOriginalPhotos(data.map(photo => ({
+          id: photo.id,
+          photo_url: photo.photo_url,
+          is_primary: photo.is_primary,
+          type: 'existing'
+        })));
+      } else {
+        // Se não há fotos, limpar o estado
+        setPhotos([]);
+        setOriginalPhotos([]);
+      }
+      
+      return true;
+    } catch (error) {
+      console.error("Erro ao processar atualizações de fotos:", error);
+      throw error;
     }
   };
 
@@ -353,66 +418,22 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
         throw new Error("Erro ao salvar dados do item");
       }
       
-      // Em seguida, fazer upload das fotos apenas se houve modificação ou é um novo item
-      if ((item && photosModified && photos.length > 0) || (!item && photos.length > 0)) {
-        console.log("Iniciando upload das fotos - foram modificadas ou é um item novo");
-        const uploadedPhotos = await handleUploadPhotos(savedItem.id);
-        
-        if (uploadedPhotos.length > 0) {
-          // Após o upload, inserir os registros na tabela inventory_photos
-          console.log("Salvando registros das fotos no banco de dados");
-          const photoRecords = uploadedPhotos.map(photo => ({
-            inventory_id: savedItem!.id,
-            photo_url: photo.photo_url,
-            is_primary: photo.is_primary
-          }));
-          
-          // Remover fotos antigas primeiro (se estiver editando)
-          if (item) {
-            const { error: deleteError } = await supabase
-              .from('inventory_photos')
-              .delete()
-              .eq('inventory_id', savedItem.id);
-              
-            if (deleteError) {
-              console.error("Erro ao excluir fotos antigas:", deleteError);
-              toast.error("Erro ao atualizar fotos antigas");
-            }
-          }
-          
-          // Inserir novas fotos
-          const { data, error } = await supabase
-            .from('inventory_photos')
-            .insert(photoRecords)
-            .select();
-            
-          if (error) {
-            console.error("Erro ao salvar registros das fotos:", error);
-            toast.error("Erro ao salvar informações das fotos");
-          } else {
-            console.log("Fotos salvas com sucesso:", data);
-            
-            // Atualizar o objeto savedItem com as fotos
-            savedItem.photos = data;
-            setPhotosModified(false);
-            
-            // Atualizar as URLs para corresponder às fotos salvas
-            setPhotoUrls(data.map(p => p.photo_url));
-            setOriginalPhotoUrls(data.map(p => p.photo_url));
-          }
-        }
-      } else if (item && !photosModified) {
+      // Em seguida, processar as fotos
+      if (photosModified || !item) {
+        console.log("Processando fotos - modificadas ou novo item");
+        await processPhotoUpdates(savedItem.id);
+      } else {
         console.log("Fotos não foram modificadas, mantendo as existentes");
-        // Manter as fotos existentes
-        savedItem.photos = item.photos;
       }
 
+      // Exibir mensagem de sucesso
       if (item) {
         toast.success("Item atualizado com sucesso!");
       } else {
         toast.success("Item criado com sucesso!");
       }
 
+      // Chamar callback de sucesso ou fechar o formulário
       if (onSuccess && savedItem) {
         onSuccess(savedItem);
       } else {
@@ -433,31 +454,21 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
     onSubmit,
     handleSubmit: form.handleSubmit(onSubmit),
     photos,
-    setPhotos: (newPhotos: File[]) => {
-      setPhotos(newPhotos);
+    setPhotos,
+    addPhoto: (file: File) => {
+      addNewPhotos([file]);
       setPhotosModified(true);
     },
-    primaryPhotoIndex,
-    setPrimaryPhotoIndex: (index: number | null) => {
-      setPrimaryPhotoIndex(index);
+    addPhotos: (files: File[]) => {
+      addNewPhotos(files);
       setPhotosModified(true);
     },
+    setPrimaryPhoto,
+    removePhoto,
     uploadProgress,
     setUploadProgress,
     savePhotosOnly: handleSavePhotosOnly,
-    photoUrls,
-    setPhotoUrls: (urls: string[]) => {
-      if (urls.length < photoUrls.length) {
-        console.log("Detectada remoção de foto pelo usuário");
-        const removedUrls = photoUrls.filter(url => !urls.includes(url));
-        console.log("URLs removidas:", removedUrls);
-      }
-      
-      setPhotoUrls(urls);
-      setPhotosModified(true);
-    },
     photosModified,
-    setPhotosModified,
-    originalPhotoUrls
+    setPhotosModified
   };
 }

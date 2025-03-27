@@ -149,11 +149,13 @@ export class BaseInventoryModel {
     itemId: string, 
     photos: Array<File | string | { 
       file: File; 
-      is_primary?: boolean 
+      is_primary?: boolean;
+      type?: 'new' | 'existing';
     } | { 
       id?: string; 
       photo_url: string; 
-      is_primary?: boolean 
+      is_primary?: boolean;
+      type?: 'new' | 'existing';
     }>
   ): Promise<InventoryPhoto[]> {
     if (!photos || photos.length === 0) return [];
@@ -181,282 +183,235 @@ export class BaseInventoryModel {
             type: photo.file.type,
             size: photo.file.size,
             lastModified: photo.file.lastModified,
-            is_primary: photo.is_primary
+            is_primary: photo.is_primary,
+            type: photo.type || 'new'
           });
         } else if (photo && typeof photo === 'object' && 'photo_url' in photo) {
           console.log(`Foto ${index + 1}: Objeto com photo_url`, {
             url: photo.photo_url,
-            is_primary: photo.is_primary
+            is_primary: photo.is_primary,
+            type: photo.type || 'existing'
           });
         } else {
           console.error(`Foto ${index + 1}: Formato desconhecido`, photo);
         }
       });
 
-      // Primeiro vamos excluir as fotos existentes
-      console.log("Excluindo fotos antigas do item...");
-      
-      // 1. Buscar registros existentes para obter URLs
-      const { data: existingPhotos, error: fetchError } = await supabase
+      // Separar fotos por tipo
+      const existingPhotos: { photo_url: string; is_primary?: boolean }[] = [];
+      const photosToUpload: { file: File; is_primary?: boolean }[] = [];
+      const urlsToKeep = new Set<string>();
+
+      // Classificar as fotos recebidas
+      photos.forEach(photo => {
+        if (typeof photo === 'string') {
+          // É uma URL que deve ser mantida
+          existingPhotos.push({ photo_url: photo, is_primary: false });
+          urlsToKeep.add(photo);
+        } 
+        else if (photo instanceof File) {
+          // É um novo arquivo para upload
+          photosToUpload.push({ file: photo, is_primary: false });
+        }
+        else if (typeof photo === 'object') {
+          if ('photo_url' in photo) {
+            // É uma foto existente
+            const isExisting = photo.type === 'existing' || photo.type === undefined;
+            if (isExisting) {
+              existingPhotos.push({
+                photo_url: photo.photo_url,
+                is_primary: photo.is_primary
+              });
+              urlsToKeep.add(photo.photo_url);
+            }
+          } 
+          else if ('file' in photo && photo.file instanceof File) {
+            // É uma nova foto
+            photosToUpload.push({
+              file: photo.file,
+              is_primary: photo.is_primary
+            });
+          }
+        }
+      });
+
+      console.log(`Classificação das fotos: ${existingPhotos.length} existentes, ${photosToUpload.length} novas`);
+
+      // Primeiro, buscar fotos existentes para identificar quais precisam ser excluídas
+      const { data: currentPhotos, error: fetchError } = await supabase
         .from('inventory_photos')
         .select('*')
         .eq('inventory_id', itemId);
         
       if (fetchError) {
         console.error("Erro ao buscar fotos existentes:", fetchError);
-      } else if (existingPhotos && existingPhotos.length > 0) {
-        console.log(`Encontradas ${existingPhotos.length} fotos existentes para excluir`);
-        
-        // Criar mapa de URLs existentes para detectar duplicidades
-        const existingUrls = new Set(existingPhotos.map(photo => photo.photo_url));
-        
-        // 2. Excluir arquivos do storage que não estão sendo reusados
-        for (const photo of existingPhotos) {
-          try {
-            // Verificar se a URL está sendo reusada na lista atual
-            let isReused = false;
-            for (const newPhoto of photos) {
-              if (typeof newPhoto === 'string' && newPhoto === photo.photo_url) {
-                isReused = true;
-                break;
-              } else if (typeof newPhoto === 'object' && 'photo_url' in newPhoto && newPhoto.photo_url === photo.photo_url) {
-                isReused = true;
-                break;
-              }
-            }
+        throw fetchError;
+      }
+
+      // Identificar fotos para excluir (as que não estão em urlsToKeep)
+      const photosToDelete = currentPhotos?.filter(photo => !urlsToKeep.has(photo.photo_url)) || [];
+      
+      console.log(`${photosToDelete.length} fotos identificadas para exclusão`);
+
+      // Excluir fotos que não serão mantidas
+      for (const photo of photosToDelete) {
+        try {
+          console.log(`Excluindo foto: ${photo.photo_url}`);
+          
+          // Extrair o caminho do arquivo da URL
+          const urlObj = new URL(photo.photo_url);
+          const pathParts = urlObj.pathname.split('/');
+          
+          // Encontrar o índice do nome do bucket na URL
+          const bucketIndex = pathParts.findIndex(part => 
+            part === 'inventory_images' || part === 'inventory_photos'
+          );
+          
+          if (bucketIndex !== -1 && bucketIndex < pathParts.length - 1) {
+            const bucketName = pathParts[bucketIndex];
+            const storagePath = pathParts.slice(bucketIndex + 1).join('/');
             
-            // Se a URL está sendo reusada, não excluir o arquivo
-            if (isReused) {
-              console.log(`Mantendo arquivo para URL reutilizada: ${photo.photo_url}`);
-              continue;
-            }
+            console.log(`Removendo arquivo ${storagePath} do bucket ${bucketName}`);
             
-            // Extrair o caminho relativo da URL completa
-            const fullUrl = photo.photo_url;
-            const urlParts = fullUrl.split('/');
-            const bucketName = urlParts.includes('inventory_photos') ? 'inventory_photos' : 'inventory_images';
-            
-            // O caminho no storage geralmente começa após o nome do bucket na URL
-            const bucketIndex = urlParts.indexOf(bucketName);
-            if (bucketIndex !== -1 && bucketIndex < urlParts.length - 1) {
-              const storagePath = urlParts.slice(bucketIndex + 1).join('/');
-              console.log(`Removendo arquivo ${storagePath} do bucket ${bucketName}`);
+            const { error: deleteError } = await supabase.storage
+              .from(bucketName)
+              .remove([storagePath]);
               
-              const { error: deleteStorageError } = await supabase.storage
-                .from(bucketName)
-                .remove([storagePath]);
-                
-              if (deleteStorageError) {
-                console.error(`Erro ao excluir arquivo do storage: ${storagePath}`, deleteStorageError);
-              }
+            if (deleteError) {
+              console.error(`Erro ao excluir arquivo do storage: ${storagePath}`, deleteError);
             }
-          } catch (error) {
-            console.error("Erro ao processar exclusão de arquivo:", error);
           }
+        } catch (error) {
+          console.error(`Erro ao processar exclusão do arquivo: ${photo.photo_url}`, error);
         }
       }
-      
-      // 3. Excluir registros da tabela
-      const { error: deleteError } = await supabase
+
+      // Excluir todos os registros existentes do banco
+      const { error: deleteDbError } = await supabase
         .from('inventory_photos')
         .delete()
         .eq('inventory_id', itemId);
       
-      if (deleteError) {
-        console.error("Erro ao excluir registros de fotos antigas:", deleteError);
-        throw deleteError;
+      if (deleteDbError) {
+        console.error("Erro ao excluir registros antigos de fotos:", deleteDbError);
+        throw deleteDbError;
       }
+
+      // Array para armazenar os novos registros
+      const newPhotoRecords: { inventory_id: string; photo_url: string; is_primary: boolean }[] = [];
       
-      // Preparar o array para armazenar os registros processados
-      const processedPhotoRecords: { inventory_id: string; photo_url: string; is_primary: boolean }[] = [];
+      // Adicionar URLs existentes que devem ser mantidas
+      existingPhotos.forEach(photo => {
+        newPhotoRecords.push({
+          inventory_id: itemId,
+          photo_url: photo.photo_url,
+          is_primary: photo.is_primary || false
+        });
+      });
       
-      // Processar cada foto com maior clareza e robustez
-      for (let i = 0; i < photos.length; i++) {
-        const photo = photos[i];
-        let photoUrl = '';
-        let isPrimary = false;
-        let fileToUpload: File | null = null;
-        let skipUpload = false;
+      // Processar uploads de novas fotos
+      for (let i = 0; i < photosToUpload.length; i++) {
+        const { file, is_primary } = photosToUpload[i];
         
-        console.log(`Processando foto ${i + 1}/${photos.length}...`);
-        
-        // Determinar o tipo de objeto para processamento adequado
-        if (typeof photo === 'string') {
-          // É uma URL existente, usar diretamente
-          photoUrl = photo;
-          isPrimary = i === 0; // Primeira foto como primária por padrão
-          skipUpload = true; // Não precisamos fazer upload novamente
-          console.log(`Foto ${i + 1} é URL existente, não será reenviada:`, photoUrl);
-        }
-        else if (typeof photo === 'object' && photo !== null && 'photo_url' in photo && typeof photo.photo_url === 'string') {
-          // É um objeto com URL, usar diretamente
-          photoUrl = photo.photo_url;
-          isPrimary = photo.is_primary || false;
-          skipUpload = true; // Não precisamos fazer upload novamente
-          console.log(`Foto ${i + 1} já possui URL:`, photoUrl);
-        } 
-        else if (typeof photo === 'object' && photo !== null && 'file' in photo && photo.file instanceof File) {
-          // É um objeto com File e possivelmente is_primary
-          fileToUpload = photo.file;
-          isPrimary = photo.is_primary || false;
-          console.log(`Foto ${i + 1} é objeto com file e is_primary:`, {
-            filename: photo.file.name,
-            isPrimary: isPrimary
-          });
-        }
-        else if (photo instanceof File) {
-          // É um arquivo File direto (upload tradicional ou webcam)
-          fileToUpload = photo;
-          // Verificar se está usando a forma antiga (sem informação de primária)
-          isPrimary = i === 0; // Primeira foto como primária por padrão no método antigo
-          console.log(`Foto ${i + 1} é File direto:`, {
-            filename: photo.name,
-            isPrimary: isPrimary
-          });
-        }
-        else {
-          // Se chegou aqui, o objeto não é compatível
-          console.error(`Foto ${i + 1} tem formato incompatível:`, photo);
-          continue;
-        }
-        
-        // Se for uma URL existente, não precisamos fazer upload
-        if (skipUpload && photoUrl) {
-          console.log(`Usando URL existente sem reenvio para a foto ${i + 1}:`, photoUrl);
-          processedPhotoRecords.push({
-            inventory_id: itemId,
-            photo_url: photoUrl,
-            is_primary: isPrimary
-          });
-          continue;
-        }
-        
-        // Se temos um arquivo para upload, processá-lo
-        if (fileToUpload) {
-          console.log(`Iniciando upload do arquivo ${i + 1}/${photos.length}: ${fileToUpload.name} (${fileToUpload.type})`);
+        try {
+          console.log(`Fazendo upload da foto ${i+1}/${photosToUpload.length}: ${file.name}`);
           
-          try {
-            // Verificar tipo de arquivo e formato
-            if (!fileToUpload.type.startsWith('image/')) {
-              console.error(`Arquivo ${fileToUpload.name} não é uma imagem válida (tipo: ${fileToUpload.type})`);
-              continue;
-            }
-            
-            // Definir o caminho de armazenamento usando o NOVO BUCKET
-            const timestamp = new Date().getTime();
-            // Garantir que o nome do arquivo seja seguro para URLs
-            const safeFileName = fileToUpload.name
-              .replace(/[^a-zA-Z0-9_\-.]/g, '_')
-              .toLowerCase();
-              
-            // Determinar a extensão correta com base no tipo MIME
-            let fileExtension = '.jpg'; // Padrão
-            if (fileToUpload.type === 'image/png') fileExtension = '.png';
-            if (fileToUpload.type === 'image/jpeg') fileExtension = '.jpg';
-            if (fileToUpload.type === 'image/gif') fileExtension = '.gif';
-            if (fileToUpload.type === 'image/webp') fileExtension = '.webp';
-            
-            // Garantir que o nome do arquivo tenha a extensão correta
-            const fileNameWithoutExt = safeFileName.replace(/\.[^/.]+$/, "");
-            const finalFileName = `${fileNameWithoutExt}${fileExtension}`;
-            
-            // Caminho no formato: inventory/item_id/timestamp_filename.ext
-            const filePath = `inventory/${itemId}/${timestamp}_${finalFileName}`;
-            
-            console.log(`Enviando arquivo para o NOVO BUCKET 'inventory_images' no caminho: ${filePath}`);
-            
-            // USANDO O NOVO BUCKET 'inventory_images'
-            const { data: uploadData, error: uploadError } = await supabase.storage
-              .from('inventory_images')
-              .upload(filePath, fileToUpload, {
-                cacheControl: '3600',
-                upsert: true
-              });
-            
-            if (uploadError) {
-              console.error(`Erro ao fazer upload da foto ${i + 1} para o novo bucket:`, uploadError);
-              throw uploadError;
-            }
-            
-            // USANDO O NOVO BUCKET 'inventory_images' na obtenção da URL pública
-            const { data: urlData } = supabase.storage
-              .from('inventory_images')
-              .getPublicUrl(filePath);
-              
-            photoUrl = urlData.publicUrl;
-            console.log(`Foto ${i + 1} enviada com sucesso para o novo bucket. URL:`, photoUrl);
-            
-            // Adicionar ao array de registros
-            processedPhotoRecords.push({
-              inventory_id: itemId,
-              photo_url: photoUrl,
-              is_primary: isPrimary
-            });
-          } catch (error) {
-            console.error(`Erro ao processar arquivo ${i + 1}:`, error);
-            // Continuar para o pr��ximo arquivo em caso de erro
+          // Verificar tipo de arquivo
+          if (!file.type.startsWith('image/')) {
+            console.error(`Arquivo ${file.name} não é uma imagem válida`);
+            continue;
           }
-        } 
-        else if (photoUrl) {
-          // URL direta - adicionar ao array de registros
-          processedPhotoRecords.push({
+          
+          // Determinar a extensão correta
+          let fileExtension = '.jpg';
+          if (file.type === 'image/png') fileExtension = '.png';
+          if (file.type === 'image/jpeg') fileExtension = '.jpg';
+          if (file.type === 'image/gif') fileExtension = '.gif';
+          if (file.type === 'image/webp') fileExtension = '.webp';
+          
+          // Preparar nome de arquivo seguro
+          const timestamp = new Date().getTime();
+          const safeFileName = file.name
+            .replace(/[^a-zA-Z0-9_\-.]/g, '_')
+            .toLowerCase()
+            .replace(/\.[^/.]+$/, "");
+          
+          const finalFileName = `${safeFileName}${fileExtension}`;
+          const filePath = `inventory/${itemId}/${timestamp}_${finalFileName}`;
+          
+          console.log(`Enviando para inventory_images em: ${filePath}`);
+          
+          // Fazer upload do arquivo
+          const { data, error } = await supabase.storage
+            .from('inventory_images')
+            .upload(filePath, file, {
+              cacheControl: '3600',
+              upsert: true
+            });
+          
+          if (error) {
+            console.error(`Erro ao fazer upload: ${error.message}`);
+            continue;
+          }
+          
+          // Obter URL pública
+          const { data: urlData } = supabase.storage
+            .from('inventory_images')
+            .getPublicUrl(filePath);
+          
+          console.log(`Upload bem-sucedido. URL: ${urlData.publicUrl}`);
+          
+          // Adicionar ao array de registros
+          newPhotoRecords.push({
             inventory_id: itemId,
-            photo_url: photoUrl,
-            is_primary: isPrimary
+            photo_url: urlData.publicUrl,
+            is_primary: !!is_primary
           });
+        } catch (error) {
+          console.error(`Erro ao processar upload da foto ${i+1}:`, error);
         }
-      }
-      
-      // Se não houver fotos processadas, retornar array vazio
-      if (processedPhotoRecords.length === 0) {
-        console.log("Nenhuma foto válida para inserir no banco.");
-        return [];
       }
       
       // Garantir que apenas uma foto seja marcada como primária
-      let hasPrimary = false;
-      for (let i = 0; i < processedPhotoRecords.length; i++) {
-        if (processedPhotoRecords[i].is_primary) {
-          if (hasPrimary) {
-            // Se já temos uma foto primária, desmarcar as demais
-            processedPhotoRecords[i].is_primary = false;
+      let primaryFound = false;
+      for (let i = 0; i < newPhotoRecords.length; i++) {
+        if (newPhotoRecords[i].is_primary) {
+          if (primaryFound) {
+            newPhotoRecords[i].is_primary = false;
           } else {
-            hasPrimary = true;
+            primaryFound = true;
           }
         }
       }
       
       // Se nenhuma foto foi marcada como primária, marcar a primeira
-      if (!hasPrimary && processedPhotoRecords.length > 0) {
-        processedPhotoRecords[0].is_primary = true;
+      if (!primaryFound && newPhotoRecords.length > 0) {
+        newPhotoRecords[0].is_primary = true;
       }
       
-      // Inserir os registros no banco de dados
-      console.log("Inserindo registros de fotos no banco:", processedPhotoRecords.length, "registros");
+      // Se não há registros, retornar array vazio
+      if (newPhotoRecords.length === 0) {
+        console.log("Nenhuma foto válida para inserir no banco.");
+        return [];
+      }
       
-      // Mostrar detalhes dos registros para depuração
-      processedPhotoRecords.forEach((record, idx) => {
-        console.log(`Registro ${idx + 1}:`, {
-          inventory_id: record.inventory_id,
-          photo_url: record.photo_url,
-          is_primary: record.is_primary
-        });
-      });
+      // Inserir novos registros
+      console.log(`Inserindo ${newPhotoRecords.length} registros de fotos no banco de dados`);
       
-      const { data, error } = await supabase
+      const { data: insertedPhotos, error: insertError } = await supabase
         .from('inventory_photos')
-        .insert(processedPhotoRecords)
+        .insert(newPhotoRecords)
         .select();
       
-      if (error) {
-        console.error("Erro ao inserir fotos no banco:", error);
-        throw error;
+      if (insertError) {
+        console.error("Erro ao inserir fotos no banco:", insertError);
+        throw insertError;
       }
       
-      console.log("Fotos atualizadas com sucesso:", data?.length);
-      console.log("=== FIM: updateItemPhotos com NOVO BUCKET ===");
+      console.log(`${insertedPhotos?.length || 0} fotos atualizadas com sucesso`);
+      console.log("=== FIM: updateItemPhotos ===");
       
-      return data || [];
+      return insertedPhotos || [];
     } catch (error) {
       console.error("Erro geral ao atualizar fotos:", error);
       throw error;

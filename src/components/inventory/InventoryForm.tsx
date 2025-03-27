@@ -32,13 +32,13 @@ export function InventoryForm({ item, categories, isOpen, onClose, onSuccess }: 
     handleSubmit,
     photos,
     setPhotos,
-    primaryPhotoIndex,
-    setPrimaryPhotoIndex,
+    addPhoto,
+    addPhotos,
+    setPrimaryPhoto,
+    removePhoto,
     uploadProgress,
     setUploadProgress,
     savePhotosOnly,
-    photoUrls,
-    setPhotoUrls,
     photosModified,
     setPhotosModified
   } = useInventoryForm({ 
@@ -126,13 +126,15 @@ export function InventoryForm({ item, categories, isOpen, onClose, onSuccess }: 
                 form={form}
                 photos={photos}
                 setPhotos={setPhotos}
-                primaryPhotoIndex={primaryPhotoIndex}
-                setPrimaryPhotoIndex={setPrimaryPhotoIndex}
+                addPhoto={addPhoto}
+                addPhotos={addPhotos}
+                setPrimaryPhoto={setPrimaryPhoto}
+                removePhoto={removePhoto}
                 uploadProgress={uploadProgress}
                 setUploadProgress={setUploadProgress}
                 onSavePhotos={savePhotosOnly}
-                photoUrls={photoUrls}
-                setPhotoUrls={setPhotoUrls}
+                itemId={item?.id}
+                photosModified={photosModified}
                 setPhotosModified={setPhotosModified}
               />
             </form>
