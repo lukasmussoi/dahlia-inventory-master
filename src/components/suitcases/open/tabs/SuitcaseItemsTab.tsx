@@ -1,4 +1,3 @@
-
 /**
  * Aba de Itens da Maleta
  * @file Exibe os itens dentro da maleta e permite devolver ao estoque ou marcar como danificado
@@ -12,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Undo2, AlertTriangle, Phone, MapPin, User } from "lucide-react";
-import { formatCurrency } from "@/utils/formatUtils";
+import { formatMoney } from "@/utils/formatUtils";
 
 interface SuitcaseItemsTabProps {
   suitcase: Suitcase;
@@ -179,7 +178,7 @@ export function SuitcaseItemsTab({
                     <TableCell>{item.product?.name}</TableCell>
                     <TableCell>
                       {item.product?.price 
-                        ? formatCurrency(item.product.price) 
+                        ? formatMoney(item.product.price) 
                         : 'R$ 0,00'}
                     </TableCell>
                     <TableCell>{item.quantity || 1}</TableCell>

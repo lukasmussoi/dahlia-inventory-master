@@ -1,4 +1,3 @@
-
 /**
  * Aba de Histórico da Maleta
  * @file Exibe os acertos passados e estatísticas de vendas da maleta
@@ -11,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { formatCurrency } from "@/utils/formatUtils";
+import { formatMoney } from "@/utils/formatUtils";
 import { 
   BarChart, 
   Bar, 
@@ -106,7 +105,7 @@ export function SuitcaseHistoryTab({
                 <XAxis dataKey="date" />
                 <YAxis />
                 <Tooltip 
-                  formatter={(value) => [formatCurrency(Number(value)), ""]} 
+                  formatter={(value) => [formatMoney(Number(value)), ""]} 
                   labelFormatter={(label) => `Data: ${label}`}
                 />
                 <Legend />
@@ -161,9 +160,9 @@ export function SuitcaseHistoryTab({
                       {acerto.status === 'concluido' ? 'Concluído' : 'Pendente'}
                     </Badge>
                   </TableCell>
-                  <TableCell>{formatCurrency(Number(acerto.total_sales || 0))}</TableCell>
-                  <TableCell>{formatCurrency(Number(acerto.commission_amount || 0))}</TableCell>
-                  <TableCell>{formatCurrency(Number(acerto.net_profit || 0))}</TableCell>
+                  <TableCell>{formatMoney(Number(acerto.total_sales || 0))}</TableCell>
+                  <TableCell>{formatMoney(Number(acerto.commission_amount || 0))}</TableCell>
+                  <TableCell>{formatMoney(Number(acerto.net_profit || 0))}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

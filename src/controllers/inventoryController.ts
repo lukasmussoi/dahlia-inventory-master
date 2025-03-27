@@ -4,7 +4,7 @@
  */
 import { InventoryModel } from "@/models/inventory";
 import { LabelModel } from "@/models/labelModel";
-import { supabase } from "@/utils/supabase";
+import { supabase } from "@/integrations/supabase/client";
 
 export const InventoryController = {
   // Buscar todos os itens do inventário
