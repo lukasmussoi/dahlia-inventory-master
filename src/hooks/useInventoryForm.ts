@@ -1,4 +1,3 @@
-
 /**
  * Hook para gerenciar o formulário de inventário
  * 
@@ -512,7 +511,7 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
     form,
     isSubmitting,
     onSubmit,
-    handleSubmit: form.handleSubmit(onSubmit),
+    handleSubmit: onSubmit,
     photos,
     setPhotos,
     addPhoto: (file: File) => {

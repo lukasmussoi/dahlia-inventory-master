@@ -132,12 +132,10 @@ export function InventoryForm({ item, categories, isOpen, onClose, onSuccess }: 
     }
   };
 
-  // CORREÇÃO DO BUG: Corrigindo a função que manipula o envio do formulário
-  // O problema está nesta função, não podemos passar os valores diretamente para handleSubmit
-  const onFormSubmit = form.handleSubmit((values) => {
-    console.log("Valor do preço bruto antes de submeter:", values.unit_cost);
-    return handleSubmit(values);
-  });
+  // CORREÇÃO DO BUG: Utilizando corretamente o handleSubmit do react-hook-form
+  // Ao invés de passar diretamente os valores para nossa função handleSubmit,
+  // usamos form.handleSubmit para envolver nossa função
+  const onFormSubmit = form.handleSubmit(handleSubmit);
 
   return (
     <Dialog open={isOpen} onOpenChange={handleCloseForm}>
