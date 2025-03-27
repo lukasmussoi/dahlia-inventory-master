@@ -108,13 +108,12 @@ export class AcertoReportController {
       
       // Tabela de itens vendidos
       if (acerto.items_vendidos && acerto.items_vendidos.length > 0) {
-        // Limitar a quantidade de itens por página para evitar PDFs enormes
-        const maxItemsPerPage = 20;
-        const limitedItems = acerto.items_vendidos.slice(0, maxItemsPerPage);
+        // Remover a limitação de itens por página para mostrar todos os itens
+        // const maxItemsPerPage = 20; - Linha removida
+        // const limitedItems = acerto.items_vendidos.slice(0, maxItemsPerPage); - Linha removida
         
-        if (acerto.items_vendidos.length > maxItemsPerPage) {
-          console.warn(`Limitando a exibição para ${maxItemsPerPage} de ${acerto.items_vendidos.length} itens vendidos para evitar PDFs muito grandes`);
-        }
+        // Usando todos os itens vendidos, sem limitação
+        const allItems = acerto.items_vendidos;
         
         // Adicionar cabeçalho "Itens Vendidos"
         doc.setFontSize(12);
@@ -126,7 +125,7 @@ export class AcertoReportController {
         const totalSales = acerto.items_vendidos.reduce((total, item) => total + (item.price || 0), 0);
         
         // Preparar dados para a tabela
-        const itemsData = limitedItems.map((item, index) => {
+        const itemsData = allItems.map((item, index) => {
           return [
             '', // Célula para a imagem que será preenchida no willDrawCell
             item.product?.name || 'Produto sem nome',
@@ -138,7 +137,7 @@ export class AcertoReportController {
         // Preparar imagens dos produtos antes de renderizar a tabela
         // Armazenar as URLs das imagens para cada item
         const productImages = await Promise.all(
-          limitedItems.map(async (item, index) => {
+          allItems.map(async (item, index) => {
             const imageUrl = item.product?.photo_url ? getProductPhotoUrl(item.product.photo_url) : '';
             if (!imageUrl) return null;
             
@@ -178,7 +177,7 @@ export class AcertoReportController {
           theme: 'striped',
           headStyles: { fillColor: [233, 30, 99], textColor: 255 },
           columnStyles: {
-            0: { cellWidth: 20 },  // Foto
+            0: { cellWidth: 20 },  // Foto - mantendo a largura da coluna
             1: { cellWidth: 70 },  // Nome do produto
             2: { cellWidth: 40 },  // Código
             3: { cellWidth: 40 }   // Preço
@@ -194,9 +193,9 @@ export class AcertoReportController {
                   // Obter as propriedades da imagem
                   const imgProps = (doc as any).getImageProperties(imageData);
                   
-                  // Calcular dimensões mantendo proporção e respeitando o limite máximo de 50px
-                  // e adicionando padding de 5px em todos os lados
-                  const maxSize = 40; // 50px - 5px de padding em cada lado = 40px
+                  // Corrigindo e reduzindo o tamanho da imagem - Usando valores menores
+                  // Definindo o tamanho máximo para 25px para evitar sobreposição
+                  const maxSize = 25;
                   let imgWidth, imgHeight;
                   
                   if (imgProps.width >= imgProps.height) {
@@ -209,11 +208,14 @@ export class AcertoReportController {
                     imgWidth = (imgProps.width * imgHeight) / imgProps.height;
                   }
                   
-                  // Calcular posição para centralizar na célula com padding de 5px
-                  const cellX = data.cell.x + 5; // Adiciona 5px de padding à esquerda
-                  const cellY = data.cell.y + 5; // Adiciona 5px de padding no topo
-                  const cellWidth = data.cell.width - 10; // Subtrai 10px de padding (5px de cada lado)
-                  const cellHeight = data.cell.height - 10; // Subtrai 10px de padding (5px de cada lado)
+                  // Adicionar padding consistente de 5px
+                  const cellPadding = 5;
+                  
+                  // Calcular posição para centralizar na célula com padding
+                  const cellX = data.cell.x + cellPadding;
+                  const cellY = data.cell.y + cellPadding;
+                  const cellWidth = data.cell.width - (cellPadding * 2);
+                  const cellHeight = data.cell.height - (cellPadding * 2);
                   
                   const posX = cellX + (cellWidth - imgWidth) / 2;
                   const posY = cellY + (cellHeight - imgHeight) / 2;
@@ -237,13 +239,14 @@ export class AcertoReportController {
         
         currentY = (doc as any).lastAutoTable.finalY + 10;
         
-        // Se tivermos muitos itens, adicionar nota sobre itens não exibidos
-        if (acerto.items_vendidos.length > maxItemsPerPage) {
-          doc.setFont("helvetica", "italic");
-          doc.setFontSize(8);
-          doc.text(`* Exibindo ${maxItemsPerPage} de ${acerto.items_vendidos.length} itens vendidos.`, 14, currentY);
-          currentY += 5;
-        }
+        // Remover nota sobre itens não exibidos, pois agora exibimos todos
+        // Se tivermos muitos itens, adicionar nota sobre itens não exibidos - Seção removida
+        
+        // Adicionar mensagem informando o total de itens vendidos
+        doc.setFont("helvetica", "italic");
+        doc.setFontSize(8);
+        doc.text(`* Exibindo todos os ${acerto.items_vendidos.length} itens vendidos.`, 14, currentY);
+        currentY += 5;
         
         // Resumo financeiro
         doc.setFontSize(12);
