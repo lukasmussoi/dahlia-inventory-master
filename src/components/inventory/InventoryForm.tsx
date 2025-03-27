@@ -47,6 +47,18 @@ export function InventoryForm({ item, categories, isOpen, onClose, onSuccess }: 
     onClose
   });
 
+  // Adicionar log para monitorar os valores do item
+  useEffect(() => {
+    if (item) {
+      console.log("Item carregado para edição:", {
+        id: item.id,
+        nome: item.name,
+        preco_bruto: item.unit_cost,
+        preco_venda: item.price
+      });
+    }
+  }, [item]);
+
   useEffect(() => {
     if (isOpen) {
       const loadSuppliers = async () => {

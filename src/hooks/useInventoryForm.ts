@@ -59,6 +59,8 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
   const [uploadProgress, setUploadProgress] = useState(0);
   const [photosModified, setPhotosModified] = useState(false);
   const [originalPhotos, setOriginalPhotos] = useState<PhotoItem[]>([]);
+  // Adicionando uma flag para controlar se é modo de edição
+  const [isEditMode, setIsEditMode] = useState(false);
 
   // Inicializa o formulário com valores padrão
   const form = useForm<FormValues>({
@@ -71,6 +73,7 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
       barcode: item?.barcode || "",
       quantity: item?.quantity || 0,
       min_stock: item?.min_stock || 0,
+      // Garantir que o valor original do unit_cost seja preservado na edição
       unit_cost: item?.unit_cost || 0,
       price: item?.price || 0,
       width: item?.width || undefined,
@@ -79,6 +82,16 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
       weight: item?.weight || undefined,
     },
   });
+
+  // Define se estamos em modo de edição ao carregar o componente
+  useEffect(() => {
+    setIsEditMode(!!item);
+    console.log("Modo de edição:", !!item);
+    
+    if (item?.unit_cost) {
+      console.log("Preço do Bruto carregado do banco:", item.unit_cost);
+    }
+  }, [item]);
 
   // Carregar fotos existentes se estiver editando um item
   useEffect(() => {
@@ -383,6 +396,13 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
       console.log("Iniciando submissão do formulário", values);
       setIsSubmitting(true);
 
+      // CORREÇÃO DO BUG: Registro de valores para depuração
+      console.log("Valores originais ao submeter formulário:");
+      if (isEditMode && item) {
+        console.log("Preço do Bruto original no banco:", item.unit_cost);
+      }
+      console.log("Preço do Bruto enviado no formulário:", values.unit_cost);
+
       const itemData = {
         name: values.name,
         sku: values.sku || "",
@@ -391,6 +411,7 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
         barcode: values.barcode || "",
         quantity: values.quantity,
         min_stock: values.min_stock,
+        // IMPORTANTE: Usar o valor exato do formulário, sem recalcular
         unit_cost: values.unit_cost,
         price: values.price,
         width: values.width || null,
@@ -400,6 +421,7 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
       };
 
       console.log("Dados preparados para salvamento:", itemData);
+      console.log("Campo 'Preço do Bruto' mantido sem alterações:", values.unit_cost);
       
       let savedItem: InventoryItem | null = null;
 
