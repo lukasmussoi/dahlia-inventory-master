@@ -143,10 +143,18 @@ export const SettlementController = {
       }
       
       // 3. Buscar taxa de comissão do vendedor
+      // Primeiro, precisamos buscar a maleta para ter o ID do vendedor
+      const suitcase = await SuitcaseModel.getSuitcaseById(suitcaseId);
+      
+      if (!suitcase) {
+        throw new Error("Maleta não encontrada");
+      }
+      
+      // Agora sim podemos buscar a taxa de comissão da revendedora
       const { data: resellerData, error: resellerError } = await supabase
         .from("resellers")
         .select("commission_rate")
-        .eq("id", suitcase?.seller_id)
+        .eq("id", suitcase.seller_id)
         .single();
         
       if (resellerError) {
