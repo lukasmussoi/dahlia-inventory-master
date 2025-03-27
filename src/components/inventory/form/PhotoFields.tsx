@@ -51,11 +51,16 @@ export function PhotoFields({
       'image/*': ['.jpeg', '.jpg', '.png', '.gif', '.webp']
     },
     onDrop: (acceptedFiles) => {
-      setPhotos((prev) => [...prev, ...acceptedFiles]);
+      // Importante: precisamos gerar um novo array de fotos, não apenas adicionar
+      const newPhotos = [...photos, ...acceptedFiles];
+      setPhotos(newPhotos);
       
       // Também ajustar as URLs - adicionamos undefined para cada nova foto
       if (setPhotoUrls) {
-        setPhotoUrls(prev => [...prev, ...Array(acceptedFiles.length).fill(undefined)]);
+        // Garantir que os tamanhos estejam consistentes
+        const currentUrls = [...photoUrls];
+        const newUrls = [...currentUrls, ...Array(acceptedFiles.length).fill(undefined)];
+        setPhotoUrls(newUrls);
       }
       
       // Se não houver foto primária definida, define a primeira
@@ -82,16 +87,20 @@ export function PhotoFields({
 
   // Função para remover uma foto da lista
   const handleRemovePhoto = (index: number) => {
-    setPhotos((prev) => prev.filter((_, i) => i !== index));
+    // Criar novos arrays (importante para garantir reatividade)
+    const newPhotos = photos.filter((_, i) => i !== index);
+    setPhotos(newPhotos);
     
     // Também remover da lista de URLs
     if (setPhotoUrls) {
-      setPhotoUrls(prev => prev.filter((_, i) => i !== index));
+      const newUrls = [...photoUrls];
+      newUrls.splice(index, 1); // Remover pelo índice
+      setPhotoUrls(newUrls);
     }
     
     // Ajustar o índice da foto primária se necessário
     if (primaryPhotoIndex === index) {
-      setPrimaryPhotoIndex(photos.length > 1 ? 0 : null);
+      setPrimaryPhotoIndex(newPhotos.length > 0 ? 0 : null);
     } else if (primaryPhotoIndex !== null && primaryPhotoIndex > index) {
       setPrimaryPhotoIndex(primaryPhotoIndex - 1);
     }
@@ -105,11 +114,16 @@ export function PhotoFields({
   // Função para adicionar fotos da webcam
   const handleWebcamCapture = (capturedPhotos: File[]) => {
     console.log("Fotos capturadas pela webcam:", capturedPhotos);
-    setPhotos((prev) => [...prev, ...capturedPhotos]);
+    
+    // Importante: criar um novo array
+    const newPhotos = [...photos, ...capturedPhotos];
+    setPhotos(newPhotos);
     
     // Também ajustar as URLs - adicionamos undefined para cada nova foto da webcam
     if (setPhotoUrls) {
-      setPhotoUrls(prev => [...prev, ...Array(capturedPhotos.length).fill(undefined)]);
+      const currentUrls = [...photoUrls];
+      const newUrls = [...currentUrls, ...Array(capturedPhotos.length).fill(undefined)];
+      setPhotoUrls(newUrls);
     }
     
     // Se não houver foto primária definida, define a primeira nova foto
@@ -144,7 +158,7 @@ export function PhotoFields({
       
       for (let i = 0; i < photos.length; i++) {
         // Se temos uma URL existente para este índice, usamos ela
-        if (photoUrls[i]) {
+        if (i < photoUrls.length && photoUrls[i]) {
           filesToUpload.push(photoUrls[i]);
         } else {
           // Caso contrário, é um novo arquivo
@@ -279,7 +293,12 @@ export function PhotoFields({
               }`}
             >
               <img 
-                src={URL.createObjectURL(photo)} 
+                src={
+                  // Se temos uma URL para este índice, usamos ela. Caso contrário, criamos uma URL para o arquivo
+                  (index < photoUrls.length && photoUrls[index]) 
+                    ? photoUrls[index] 
+                    : URL.createObjectURL(photo)
+                }
                 alt={`Foto ${index + 1}`} 
                 className="w-full h-32 object-cover"
               />
@@ -292,7 +311,7 @@ export function PhotoFields({
               )}
               
               {/* Indicador de foto já existente */}
-              {photoUrls && photoUrls[index] && (
+              {photoUrls && index < photoUrls.length && photoUrls[index] && (
                 <div className="absolute top-1 right-1 bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full">
                   Existente
                 </div>

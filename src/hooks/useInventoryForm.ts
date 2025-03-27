@@ -1,3 +1,4 @@
+
 /**
  * Hook para gerenciar o formulário de inventário
  * 
@@ -157,38 +158,23 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
         }));
       }
       
-      // Diferenciando entre novas fotos e fotos existentes
-      const existingPhotoUrls = photoUrls;
-      const filesToUpload: (File | string)[] = [];
-
-      // Se for uma edição e já tivermos URLs, usamos elas diretamente para evitar re-upload
-      if (item && item.id === itemId && existingPhotoUrls.length > 0) {
-        console.log("Item existente com fotos:", existingPhotoUrls);
-        
-        // Para cada foto, verificamos se ela já tem URL (existente) ou se é um novo arquivo
-        for (let i = 0; i < photos.length; i++) {
-          const photo = photos[i];
-          // Verificar se esta é uma foto que já tem URL no banco
-          const existingIndex = i < existingPhotoUrls.length ? i : -1;
-          
-          if (existingIndex >= 0 && existingPhotoUrls[existingIndex]) {
-            console.log(`Foto ${i}: Usando URL existente`, existingPhotoUrls[existingIndex]);
-            filesToUpload.push(existingPhotoUrls[existingIndex]);
-          } else {
-            console.log(`Foto ${i}: Novo arquivo a ser enviado`, photo.name);
-            filesToUpload.push(photo);
-          }
-        }
-      } else {
-        // Caso não tenhamos URLs existentes, enviamos todos os arquivos como novos
-        console.log("Nenhuma URL existente ou novo item, enviando todas as fotos como novas");
-        filesToUpload.push(...photos);
-      }
-      
-      console.log(`Preparando ${filesToUpload.length} fotos para upload (novas e existentes)`);
+      // Se as fotos foram modificadas, precisamos processar corretamente
+      console.log(`Preparando ${photos.length} fotos para upload/atualização`);
       setUploadProgress(0);
       
-      // Usar a função uploadMultiplePhotos para processar fotos (novas e existentes)
+      // Usar a função uploadMultiplePhotos para processar fotos
+      const filesToUpload: (File | string)[] = [];
+      
+      // Determinar quais são novas fotos e quais são existentes
+      for (let i = 0; i < photos.length; i++) {
+        // Verificar se já temos uma URL para esta foto (existente)
+        if (i < photoUrls.length && photoUrls[i]) {
+          filesToUpload.push(photoUrls[i]);
+        } else {
+          filesToUpload.push(photos[i]);
+        }
+      }
+      
       const results = await uploadMultiplePhotos(
         filesToUpload,
         'inventory_images',
@@ -273,6 +259,8 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
           // Atualizar o objeto item com as novas fotos
           if (item) {
             item.photos = data;
+            // Atualizar as URLs para corresponder às fotos salvas
+            setPhotoUrls(data.map(p => p.photo_url));
             setPhotosModified(false); // Reset após salvar
           }
         }
@@ -369,6 +357,9 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
             // Atualizar o objeto savedItem com as fotos
             savedItem.photos = data;
             setPhotosModified(false); // Reset após salvar
+            
+            // Atualizar as URLs para corresponder às fotos salvas
+            setPhotoUrls(data.map(p => p.photo_url));
           }
         }
       } else if (item && !photosModified) {
