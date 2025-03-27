@@ -119,22 +119,16 @@ export class AcertoReportController {
         }
         
         // Preparar dados para a tabela com foto separada
-        tableData = await Promise.all(limitedItems.map(async (item) => {
-          // Obter URL da imagem
-          let imageUrl = '';
-          if (item.product?.photo_url) {
-            imageUrl = getProductPhotoUrl(item.product.photo_url);
-          }
+        const itemsData = limitedItems.map(item => {
+          const imageUrl = item.product?.photo_url ? getProductPhotoUrl(item.product.photo_url) : '';
           
-          // Não carregar a imagem para a tabela de texto
           return [
-            '', // Coluna de foto (vazia, preenchida no didDrawCell)
+            imageUrl, // Esta coluna será usada para a imagem
             item.product?.name || 'Produto sem nome',
             item.product?.sku || 'N/A',
-            formatCurrency(item.price || 0),
-            imageUrl // Esta coluna será usada para a imagem, não será mostrada como texto
+            formatCurrency(item.price || 0)
           ];
-        }));
+        });
         
         // Adicionar cabeçalho "Itens Vendidos"
         doc.setFontSize(12);
@@ -142,10 +136,35 @@ export class AcertoReportController {
         doc.text("Itens Vendidos", 14, currentY);
         currentY += 5;
         
-        // Gerar tabela de itens vendidos com fotos separadas
+        // Carregar todas as imagens em paralelo
+        const imagePromises = itemsData.map(async (row) => {
+          const imageUrl = row[0];
+          if (imageUrl && typeof imageUrl === 'string' && imageUrl.trim() !== '') {
+            try {
+              return new Promise<HTMLImageElement>((resolve) => {
+                const img = new Image();
+                img.crossOrigin = "Anonymous";
+                img.onload = () => resolve(img);
+                img.onerror = () => {
+                  console.error(`Erro ao carregar imagem: ${imageUrl}`);
+                  resolve(null);
+                };
+                img.src = imageUrl;
+              });
+            } catch (error) {
+              console.error(`Erro ao processar imagem: ${error}`);
+              return null;
+            }
+          }
+          return null;
+        });
+        
+        const loadedImages = await Promise.all(imagePromises);
+        
+        // Gerar tabela de itens vendidos
         autoTable(doc, {
           head: [['Foto', 'Produto', 'Código', 'Preço']],
-          body: tableData,
+          body: itemsData,
           startY: currentY,
           theme: 'striped',
           headStyles: { fillColor: [233, 30, 99], textColor: 255 },
@@ -155,44 +174,34 @@ export class AcertoReportController {
             2: { cellWidth: 40 },  // Código
             3: { cellWidth: 40 }   // Preço
           },
-          didDrawCell: (data) => {
+          willDrawCell: (data) => {
             // Se for a primeira coluna e não for cabeçalho
-            if (data.column.index === 0 && data.row.index >= 0 && data.row.raw) {
-              // Verificar se há uma imagem para desenhar
-              const imageUrl = data.row.raw[4]; // A quinta coluna contém a URL da imagem
-              if (imageUrl && typeof imageUrl === 'string') {
+            if (data.column.index === 0 && data.section === 'body') {
+              const rowIndex = data.row.index;
+              const img = loadedImages[rowIndex];
+              
+              if (img) {
                 try {
-                  // Carregar imagem e adicionar na célula
-                  const img = new Image();
-                  img.src = imageUrl;
+                  // Calcular dimensões proporcionais
+                  const aspectRatio = img.width / img.height;
+                  const imgHeight = 10;
+                  const imgWidth = imgHeight * aspectRatio;
                   
-                  // Quando a imagem carregar, adicionar ao PDF
-                  img.onload = () => {
-                    try {
-                      // Calcular dimensões proporcionais
-                      const aspectRatio = img.width / img.height;
-                      const imgHeight = 10;
-                      const imgWidth = imgHeight * aspectRatio;
-                      
-                      // Centralizar na célula
-                      const cellCenterX = data.cell.x + (data.cell.width / 2) - (imgWidth / 2);
-                      const cellCenterY = data.cell.y + (data.cell.height / 2) - (imgHeight / 2);
-                      
-                      // Adicionar a imagem
-                      doc.addImage(
-                        imageUrl,
-                        'JPEG',
-                        cellCenterX,
-                        cellCenterY,
-                        imgWidth,
-                        imgHeight
-                      );
-                    } catch (e) {
-                      console.error("Erro ao desenhar imagem:", e);
-                    }
-                  };
-                } catch (error) {
-                  console.error("Erro ao adicionar imagem ao PDF:", error);
+                  // Centralizar na célula
+                  const cellCenterX = data.cell.x + (data.cell.width / 2) - (imgWidth / 2);
+                  const cellCenterY = data.cell.y + (data.cell.height / 2) - (imgHeight / 2);
+                  
+                  // Adicionar a imagem
+                  doc.addImage(
+                    img,
+                    'JPEG',
+                    cellCenterX,
+                    cellCenterY,
+                    imgWidth,
+                    imgHeight
+                  );
+                } catch (e) {
+                  console.error("Erro ao desenhar imagem:", e);
                 }
               }
             }
