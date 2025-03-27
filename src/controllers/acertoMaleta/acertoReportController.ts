@@ -1,4 +1,3 @@
-
 /**
  * Controlador de Relatórios de Acerto
  * @file Este arquivo contém funções para gerar relatórios e PDF de acertos
@@ -166,7 +165,7 @@ export class AcertoReportController {
         });
         
         // Definir o tamanho da imagem e o tamanho da linha
-        const imageHeight = 15;
+        const imageHeight = 10; // Reduzido em 5px (era 15px)
         const rowPadding = 2;
         const rowHeight = imageHeight + (rowPadding * 2);
         
@@ -235,9 +234,11 @@ export class AcertoReportController {
           bodyStyles: {
             minCellHeight: rowHeight
           },
-          margin: { top: 10 },
+          margin: { top: 10, right: 0 }, // Remover margem direita para evitar espaço vazio
           tableLineWidth: 0.1,
-          tableLineColor: [128, 128, 128]
+          tableLineColor: [128, 128, 128],
+          // Ajustar a largura total da tabela para o tamanho da página menos as margens
+          tableWidth: pageWidth - 28 // 14px de margem de cada lado
         });
         
         currentY = (doc as any).lastAutoTable.finalY + 10;
