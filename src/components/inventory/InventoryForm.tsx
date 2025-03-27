@@ -47,7 +47,7 @@ export function InventoryForm({ item, categories, isOpen, onClose, onSuccess }: 
     onClose
   });
 
-  // Adicionar log para monitorar os valores do item
+  // CORREÇÃO DO BUG: Log mais detalhado para monitorar os valores do item
   useEffect(() => {
     if (item) {
       console.log("Item carregado para edição:", {
@@ -56,8 +56,20 @@ export function InventoryForm({ item, categories, isOpen, onClose, onSuccess }: 
         preco_bruto: item.unit_cost,
         preco_venda: item.price
       });
+      
+      // CORREÇÃO DO BUG: Verificar o valor no formulário após carregamento
+      setTimeout(() => {
+        const formValue = form.getValues("unit_cost");
+        console.log("Valor do preço bruto no formulário após carregamento:", formValue);
+        
+        // Verificar se o valor está correto
+        if (formValue !== item.unit_cost) {
+          console.warn("ATENÇÃO: Valor do preço bruto no formulário diferente do valor no banco!");
+          console.warn(`Valor no banco: ${item.unit_cost}, Valor no formulário: ${formValue}`);
+        }
+      }, 500); // Pequeno delay para garantir que o formulário foi atualizado
     }
-  }, [item]);
+  }, [item, form]);
 
   useEffect(() => {
     if (isOpen) {
@@ -77,6 +89,13 @@ export function InventoryForm({ item, categories, isOpen, onClose, onSuccess }: 
 
   // Função para gerenciar o fechamento seguro
   const handleCloseForm = () => {
+    // CORREÇÃO DO BUG: Log para verificar estado atual do formulário antes de fechar
+    if (item) {
+      const formValue = form.getValues("unit_cost");
+      console.log("Valor do preço bruto ao fechar formulário:", formValue);
+      console.log("Valor original do item:", item.unit_cost);
+    }
+    
     // Verificar se há fotos não enviadas
     if (photosModified && photos.length > 0 && !isSubmitting) {
       // Perguntar ao usuário se ele quer fechar sem salvar (usando Toast interativo)
@@ -113,6 +132,12 @@ export function InventoryForm({ item, categories, isOpen, onClose, onSuccess }: 
     }
   };
 
+  // CORREÇÃO DO BUG: Log antes de submeter o formulário
+  const handleFormSubmit = form.handleSubmit((values) => {
+    console.log("Valor do preço bruto antes de submeter:", values.unit_cost);
+    return handleSubmit(values);
+  });
+
   return (
     <Dialog open={isOpen} onOpenChange={handleCloseForm}>
       <DialogContent className="sm:max-w-[600px] h-[90vh] flex flex-col">
@@ -127,7 +152,7 @@ export function InventoryForm({ item, categories, isOpen, onClose, onSuccess }: 
         
         <div className="flex-1 overflow-y-auto px-1 pb-4">
           <Form {...form}>
-            <form id="inventory-form" onSubmit={handleSubmit} className="space-y-4">
+            <form id="inventory-form" onSubmit={handleFormSubmit} className="space-y-4">
               <MainFields 
                 form={form}
                 categories={categories}
