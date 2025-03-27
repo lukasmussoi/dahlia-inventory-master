@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -52,7 +51,6 @@ export function AcertoDetailsDialog({
     return methods[method] || method;
   };
 
-  // A versão mais recente do TanStack Query não suporta onSuccess diretamente nas opções
   const { data: acerto, isLoading } = useQuery({
     queryKey: ['acerto', acertoId],
     queryFn: async () => {
@@ -62,14 +60,12 @@ export function AcertoDetailsDialog({
     enabled: !!acertoId && open
   });
 
-  // Usar useEffect para setar o estado quando os dados chegarem
   useEffect(() => {
     if (acerto) {
       setCurrentAcerto(acerto);
     }
   }, [acerto]);
 
-  // Função para visualizar PDF do acerto
   const viewReceiptPdf = async () => {
     if (!acertoId) return;
     
@@ -146,11 +142,11 @@ export function AcertoDetailsDialog({
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">
-                        Comissão da revendedora ({acerto.seller?.commission_rate ? 
+                        Comissão da revendedora ({acerto?.seller?.commission_rate ? 
                           `${(acerto.seller.commission_rate * 100).toFixed(0)}%` : 
                           '30%'}):
                       </p>
-                      <p className="font-semibold text-lg text-green-600">{formatCurrency(acerto.commission_amount)}</p>
+                      <p className="font-semibold text-lg text-green-600">{formatCurrency(acerto?.commission_amount)}</p>
                     </div>
                   </div>
                   

@@ -24,6 +24,7 @@ import { openPdfInNewTab } from "@/utils/pdfUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { SuitcaseItemModel } from "@/models/suitcase/suitcaseItemModel";
 import { AcertoMaletaModel } from "@/models/acertoMaletaModel";
+import { SellerModel } from "@/models/suitcase/sellerModel";
 
 interface AcertoMaletaDialogProps {
   open: boolean;
@@ -45,6 +46,7 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [createdAcertoId, setCreatedAcertoId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [commissionRate, setCommissionRate] = useState<number>(0.3);
 
   useEffect(() => {
     if (open && suitcase) {
@@ -68,6 +70,12 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
       const items = await SuitcaseController.getSuitcaseItems(suitcase.id);
       const activeItems = items.filter(item => item.status === 'in_possession');
       setSuitcaseItems(activeItems);
+      
+      if (suitcase.seller_id) {
+        const rate = await SellerModel.getSellerCommissionRate(suitcase.seller_id);
+        setCommissionRate(rate);
+        console.log("Taxa de comissão carregada:", rate);
+      }
     } catch (error) {
       console.error("Erro ao carregar itens da maleta:", error);
       toast.error("Erro ao carregar itens da maleta");
@@ -253,6 +261,7 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
       
       const commissionRate = suitcase.seller?.commission_rate || 0.3;
       const commissionAmount = totalSales * commissionRate;
+      const commissionPercentFormatted = (commissionRate * 100).toFixed(0);
       
       const { data: updatedAcerto, error: updateError } = await supabase
         .from('acertos_maleta')
@@ -453,6 +462,7 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
   
   const commissionRate = suitcase?.seller?.commission_rate || 0.3;
   const commissionAmount = totalSaleValue * commissionRate;
+  const commissionPercentFormatted = (commissionRate * 100).toFixed(0);
   const solvedPieces = soldItems.length;
 
   return (
@@ -797,7 +807,7 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
                         </span>
                       </div>
                       <div className="flex justify-between border-t pt-2 mt-2">
-                        <span className="text-slate-600">Comissão da revendedora ({(commissionRate * 100).toFixed(0)}%):</span>
+                        <span className="text-slate-600">Comissão da revendedora ({commissionPercentFormatted}%):</span>
                         <span className="font-semibold text-green-600">
                           {AcertoMaletaController.formatCurrency(commissionAmount)}
                         </span>
