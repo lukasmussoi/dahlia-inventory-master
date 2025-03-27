@@ -107,10 +107,6 @@ export class AcertoReportController {
       
       // Tabela de itens vendidos
       if (acerto.items_vendidos && acerto.items_vendidos.length > 0) {
-        // Remover a limitação de itens por página para mostrar todos os itens
-        // const maxItemsPerPage = 20; - Linha removida
-        // const limitedItems = acerto.items_vendidos.slice(0, maxItemsPerPage); - Linha removida
-        
         // Usando todos os itens vendidos, sem limitação
         const allItems = acerto.items_vendidos;
         
@@ -234,15 +230,12 @@ export class AcertoReportController {
             }
           },
           styles: {
-            cellPadding: 5,
-            rowHeight: 25  // Aumentar altura da linha para 25px
-          }
+            cellPadding: 5
+          },
+          minCellHeight: 25
         });
         
         currentY = (doc as any).lastAutoTable.finalY + 10;
-        
-        // Remover nota sobre itens não exibidos, pois agora exibimos todos
-        // Se tivermos muitos itens, adicionar nota sobre itens não exibidos - Seção removida
         
         // Adicionar mensagem informando o total de itens vendidos
         doc.setFont("helvetica", "italic");
