@@ -1,4 +1,3 @@
-
 /**
  * Controlador de Relatórios de Acerto
  * @file Este arquivo contém funções para gerar relatórios e PDF de acertos
@@ -193,9 +192,8 @@ export class AcertoReportController {
                   // Obter as propriedades da imagem
                   const imgProps = (doc as any).getImageProperties(imageData);
                   
-                  // Corrigindo e reduzindo o tamanho da imagem - Usando valores menores
-                  // Definindo o tamanho máximo para 25px para evitar sobreposição
-                  const maxSize = 25;
+                  // Definindo o tamanho máximo para 15px
+                  const maxSize = 15;
                   let imgWidth, imgHeight;
                   
                   if (imgProps.width >= imgProps.height) {
@@ -234,6 +232,10 @@ export class AcertoReportController {
                 }
               }
             }
+          },
+          styles: {
+            cellPadding: 5,
+            rowHeight: 25  // Aumentar altura da linha para 25px
           }
         });
         
