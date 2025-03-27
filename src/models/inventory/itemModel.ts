@@ -41,7 +41,7 @@ export class InventoryItemModel {
         quantity: itemData.quantity || 0,
         price: itemData.price,
         unit_cost: unitCost,
-        raw_cost: rawCost,
+        raw_cost: rawCost || 0,
         suggested_price: itemData.suggested_price || 0,
         weight: itemData.weight,
         width: itemData.width,
@@ -67,10 +67,14 @@ export class InventoryItemModel {
     // Log para verificar valores salvos
     console.log("[ItemModel] Valores salvos no banco:", {
       unit_cost: data.unit_cost,
-      raw_cost: data.raw_cost
+      raw_cost: data.raw_cost || 0
     });
     
-    return data;
+    // Garantir que o objeto retornado tenha a propriedade raw_cost
+    return {
+      ...data,
+      raw_cost: data.raw_cost || 0
+    };
   }
 
   // Atualizar item existente
@@ -96,6 +100,9 @@ export class InventoryItemModel {
       cleanUpdates.raw_cost = typeof cleanUpdates.raw_cost === 'string'
         ? parseFloat(cleanUpdates.raw_cost)
         : cleanUpdates.raw_cost;
+    } else {
+      // Se não foi fornecido, manter como null/undefined para não alterar o valor existente
+      delete cleanUpdates.raw_cost;
     }
     
     const { data, error } = await supabase
@@ -111,10 +118,14 @@ export class InventoryItemModel {
     // Log para verificar valores atualizados
     console.log("[ItemModel] Valores atualizados no banco:", {
       unit_cost: data.unit_cost,
-      raw_cost: data.raw_cost
+      raw_cost: data.raw_cost || 0
     });
     
-    return data;
+    // Garantir que o objeto retornado tenha a propriedade raw_cost
+    return {
+      ...data,
+      raw_cost: data.raw_cost || 0
+    };
   }
 
   // Excluir item
