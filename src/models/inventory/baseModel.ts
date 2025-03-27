@@ -1,3 +1,4 @@
+
 /**
  * Modelo Base de Inventário
  * @file Este arquivo contém funções básicas para gerenciamento do inventário
@@ -184,13 +185,13 @@ export class BaseInventoryModel {
             size: photo.file.size,
             lastModified: photo.file.lastModified,
             is_primary: photo.is_primary,
-            type: photo.type || 'new'
+            tipo: photo.type || 'new' // Corrigido: 'tipo' em vez de 'type' duplicado
           });
         } else if (photo && typeof photo === 'object' && 'photo_url' in photo) {
           console.log(`Foto ${index + 1}: Objeto com photo_url`, {
             url: photo.photo_url,
             is_primary: photo.is_primary,
-            type: photo.type || 'existing'
+            tipo: photo.type || 'existing' // Corrigido: 'tipo' em vez de 'type' duplicado
           });
         } else {
           console.error(`Foto ${index + 1}: Formato desconhecido`, photo);
