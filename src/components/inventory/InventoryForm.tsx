@@ -47,27 +47,24 @@ export function InventoryForm({ item, categories, isOpen, onClose, onSuccess }: 
     onClose
   });
 
-  // CORREÇÃO DO BUG: Log mais detalhado para monitorar os valores do item
+  // CORREÇÃO DEFINITIVA DO BUG: Log mais detalhado com tipagem para depuração
   useEffect(() => {
     if (item) {
-      console.log("Item carregado para edição:", {
+      console.log("[InventoryForm] Item carregado para edição:", {
         id: item.id,
         nome: item.name,
         preco_bruto: item.unit_cost,
+        tipo_preco_bruto: typeof item.unit_cost,
         preco_venda: item.price
       });
       
-      // CORREÇÃO DO BUG: Verificar o valor no formulário após carregamento
+      // Verificar valor no formulário após carregamento
       setTimeout(() => {
         const formValue = form.getValues("unit_cost");
-        console.log("Valor do preço bruto no formulário após carregamento:", formValue);
-        
-        // Verificar se o valor está correto
-        if (formValue !== item.unit_cost) {
-          console.warn("ATENÇÃO: Valor do preço bruto no formulário diferente do valor no banco!");
-          console.warn(`Valor no banco: ${item.unit_cost}, Valor no formulário: ${formValue}`);
-        }
-      }, 500); // Pequeno delay para garantir que o formulário foi atualizado
+        console.log("[InventoryForm] Valor do preço bruto no formulário após carregamento:", 
+          formValue,
+          typeof formValue);
+      }, 500);
     }
   }, [item, form]);
 
@@ -89,12 +86,8 @@ export function InventoryForm({ item, categories, isOpen, onClose, onSuccess }: 
 
   // Função para gerenciar o fechamento seguro
   const handleCloseForm = () => {
-    // CORREÇÃO DO BUG: Log para verificar estado atual do formulário antes de fechar
-    if (item) {
-      const formValue = form.getValues("unit_cost");
-      console.log("Valor do preço bruto ao fechar formulário:", formValue);
-      console.log("Valor original do item:", item.unit_cost);
-    }
+    // CORREÇÃO DEFINITIVA DO BUG: Log para verificar estado atual antes de fechar
+    console.log("[InventoryForm] Fechando formulário...");
     
     // Verificar se há fotos não enviadas
     if (photosModified && photos.length > 0 && !isSubmitting) {
@@ -132,9 +125,8 @@ export function InventoryForm({ item, categories, isOpen, onClose, onSuccess }: 
     }
   };
 
-  // CORREÇÃO DO BUG: Utilizando corretamente o handleSubmit do react-hook-form
-  // Ao invés de passar diretamente os valores para nossa função handleSubmit,
-  // usamos form.handleSubmit para envolver nossa função
+  // CORREÇÃO DEFINITIVA DO BUG: Simplificando o envio do formulário
+  // Usar o handleSubmit diretamente do hook, que já está preparado para lidar com o valor corretamente
   const onFormSubmit = form.handleSubmit(handleSubmit);
 
   return (

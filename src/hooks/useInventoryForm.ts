@@ -11,7 +11,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { InventoryItem, InventoryModel } from "@/models/inventory";
 import { supabase } from "@/integrations/supabase/client";
@@ -60,60 +60,84 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
   const [originalPhotos, setOriginalPhotos] = useState<PhotoItem[]>([]);
   // Flag para controlar se é modo de edição
   const [isEditMode, setIsEditMode] = useState(false);
-  // CORREÇÃO DO BUG: Adicionando um estado para armazenar o valor original do preço bruto
-  const [originalUnitCost, setOriginalUnitCost] = useState<number | undefined>(undefined);
+  
+  // CORREÇÃO DEFINITIVA DO BUG: Usar uma referência para garantir que o valor não mude
+  const originalUnitCostRef = useRef<number | undefined>(undefined);
+  const formInitializedRef = useRef(false);
+  const userChangedUnitCostRef = useRef(false);
 
   // Inicializa o formulário com valores padrão
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: item?.name || "",
-      sku: item?.sku || "",
-      category_id: item?.category_id || "",
-      supplier_id: item?.supplier_id || "",
-      barcode: item?.barcode || "",
-      quantity: item?.quantity || 0,
-      min_stock: item?.min_stock || 0,
-      // CORREÇÃO DO BUG: Definir explicitamente o unit_cost sem nenhum cálculo
-      unit_cost: item?.unit_cost || 0,
-      price: item?.price || 0,
-      width: item?.width || undefined,
-      height: item?.height || undefined,
-      depth: item?.depth || undefined,
-      weight: item?.weight || undefined,
+      name: "",
+      sku: "",
+      category_id: "",
+      supplier_id: "",
+      barcode: "",
+      quantity: 0,
+      min_stock: 0,
+      unit_cost: 0,
+      price: 0,
+      width: undefined,
+      height: undefined,
+      depth: undefined,
+      weight: undefined,
     },
   });
 
-  // CORREÇÃO DO BUG: Capturar o valor original do preço bruto
+  // CORREÇÃO DEFINITIVA DO BUG: Inicializar o formulário apenas uma vez
   useEffect(() => {
-    // Define se estamos em modo de edição
-    setIsEditMode(!!item);
-    console.log("Modo de edição:", !!item);
-    
-    if (item?.unit_cost !== undefined) {
-      console.log("Preço do Bruto original carregado do banco:", item.unit_cost);
-      // Armazenar o valor original para garantir que não seja alterado automaticamente
-      setOriginalUnitCost(item.unit_cost);
+    if (!formInitializedRef.current && item) {
+      // Registra qual valor estamos definindo inicialmente
+      console.log("Inicializando formulário com valores do item:");
+      console.log("Preço bruto original:", item.unit_cost);
       
-      // IMPORTANTE: Forçar a atualização do valor no formulário para garantir que seja exato
-      form.setValue("unit_cost", item.unit_cost);
+      // Armazenar o valor original em uma ref para que não seja afetado por re-renders
+      originalUnitCostRef.current = item.unit_cost;
+      
+      // Definir todos os valores do formulário de uma vez
+      form.reset({
+        name: item.name || "",
+        sku: item.sku || "",
+        category_id: item.category_id || "",
+        supplier_id: item.supplier_id || "",
+        barcode: item.barcode || "",
+        quantity: item.quantity || 0,
+        min_stock: item.min_stock || 0,
+        unit_cost: item.unit_cost,
+        price: item.price || 0,
+        width: item.width || undefined,
+        height: item.height || undefined,
+        depth: item.depth || undefined,
+        weight: item.weight || undefined,
+      });
+      
+      // Marcar como inicializado para não repetir esta operação
+      formInitializedRef.current = true;
+      setIsEditMode(true);
+    } else if (!item) {
+      // Para novos itens, resetar o formulário e as refs
+      form.reset();
+      originalUnitCostRef.current = undefined;
+      formInitializedRef.current = false;
+      userChangedUnitCostRef.current = false;
+      setIsEditMode(false);
     }
   }, [item, form]);
 
-  // CORREÇÃO DO BUG: Garantir que o valor do preço bruto não seja alterado automaticamente
+  // Monitorar alterações no campo unit_cost para detectar edições do usuário
   useEffect(() => {
-    // Se estivermos em modo de edição e temos um valor original, garantir que ele seja mantido
-    if (isEditMode && originalUnitCost !== undefined) {
-      // Verificar se o valor atual do formulário é diferente do original
-      const currentValue = form.getValues("unit_cost");
-      
-      if (currentValue !== originalUnitCost) {
-        console.log("Detectada alteração automática no preço bruto. Restaurando valor original:", originalUnitCost);
-        // Restaurar o valor original
-        form.setValue("unit_cost", originalUnitCost);
+    const subscription = form.watch((value, { name }) => {
+      if (name === 'unit_cost' && formInitializedRef.current) {
+        // Se o usuário modificou o campo, marcar como alterado pelo usuário
+        userChangedUnitCostRef.current = true;
+        console.log("Usuário modificou o preço bruto para:", value.unit_cost);
       }
-    }
-  }, [isEditMode, originalUnitCost, form]);
+    });
+    
+    return () => subscription.unsubscribe();
+  }, [form]);
 
   // Carregar fotos existentes se estiver editando um item
   useEffect(() => {
@@ -412,29 +436,40 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
     }
   };
 
-  // Função para envio do formulário completo
+  // CORREÇÃO DEFINITIVA DO BUG: Função para envio do formulário completamente reescrita
   const onSubmit = async (values: FormValues) => {
     try {
       console.log("Iniciando submissão do formulário", values);
       setIsSubmitting(true);
 
-      // CORREÇÃO DO BUG: Registro de valores para depuração
-      console.log("Valores originais ao submeter formulário:");
-      if (isEditMode && item) {
-        console.log("Preço do Bruto original no banco:", item.unit_cost);
-        if (originalUnitCost !== undefined) {
-          console.log("Preço do Bruto original capturado:", originalUnitCost);
+      // CORREÇÃO DEFINITIVA DO BUG: Validação rigorosa para o unit_cost
+      // Determinar qual valor de unit_cost usar
+      let finalUnitCost: number;
+      
+      if (isEditMode) {
+        if (userChangedUnitCostRef.current) {
+          // Se o usuário modificou o campo, usar o valor do formulário
+          finalUnitCost = values.unit_cost;
+          console.log("Usando valor modificado pelo usuário:", finalUnitCost);
+        } else if (originalUnitCostRef.current !== undefined) {
+          // Se não modificou e temos o valor original, usar o valor original
+          finalUnitCost = originalUnitCostRef.current;
+          console.log("Mantendo valor original sem modificações:", finalUnitCost);
+        } else {
+          // Caso de segurança - usar o valor do formulário
+          finalUnitCost = values.unit_cost;
+          console.log("Usando valor do formulário (fallback):", finalUnitCost);
         }
-      }
-      console.log("Preço do Bruto enviado no formulário:", values.unit_cost);
-
-      // CORREÇÃO DO BUG: Usar o valor original se estamos em modo de edição e o usuário não alterou o campo
-      let finalUnitCost = values.unit_cost;
-      if (isEditMode && originalUnitCost !== undefined && values.unit_cost === originalUnitCost) {
-        console.log("Usando valor original do preço bruto sem recalcular");
-        finalUnitCost = originalUnitCost;
+      } else {
+        // Para novos itens, usar o valor inserido no formulário
+        finalUnitCost = values.unit_cost;
+        console.log("Novo item - usando valor do formulário:", finalUnitCost);
       }
 
+      // Registrar claramente o que estamos enviando
+      console.log("VALOR FINAL DO PREÇO BRUTO QUE SERÁ ENVIADO:", finalUnitCost);
+      
+      // Preparar dados para salvar
       const itemData = {
         name: values.name,
         sku: values.sku || "",
@@ -443,8 +478,7 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
         barcode: values.barcode || "",
         quantity: values.quantity,
         min_stock: values.min_stock,
-        // CORREÇÃO DO BUG: Usar o valor final determinado acima
-        unit_cost: finalUnitCost,
+        unit_cost: finalUnitCost, // Usar o valor determinado acima
         price: values.price,
         width: values.width || null,
         height: values.height || null,
@@ -452,25 +486,28 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
         weight: values.weight || null,
       };
 
-      console.log("Dados preparados para salvamento:", itemData);
-      console.log("Campo 'Preço do Bruto' mantido sem alterações:", finalUnitCost);
-      
       let savedItem: InventoryItem | null = null;
 
       // Primeiro, salvar os dados do item sem as fotos
       if (item) {
         // Modo de edição
-        console.log("Atualizando item existente");
+        console.log("Atualizando item existente com unit_cost =", finalUnitCost);
         savedItem = await InventoryModel.updateItem(item.id, itemData);
       } else {
         // Modo de criação
-        console.log("Criando novo item");
+        console.log("Criando novo item com unit_cost =", finalUnitCost);
         savedItem = await InventoryModel.createItem(itemData);
       }
       
       if (!savedItem) {
         throw new Error("Erro ao salvar dados do item");
       }
+      
+      console.log("Item salvo com sucesso. Valor unit_cost no banco:", savedItem.unit_cost);
+      
+      // Atualizar as referências para a próxima edição
+      originalUnitCostRef.current = savedItem.unit_cost;
+      userChangedUnitCostRef.current = false;
       
       // Em seguida, processar as fotos
       if (photosModified || !item) {
@@ -485,11 +522,9 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
         toast.success("Item atualizado com sucesso!");
       } else {
         toast.success("Item criado com sucesso!");
-      }
-
-      // CORREÇÃO DO BUG: Armazenar o novo preço como original para futuras referências
-      if (savedItem.unit_cost !== undefined) {
-        setOriginalUnitCost(savedItem.unit_cost);
+        // Resetar o formulário após criar um novo item
+        form.reset();
+        formInitializedRef.current = false;
       }
 
       // Chamar callback de sucesso ou fechar o formulário
