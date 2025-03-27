@@ -175,7 +175,7 @@ export class BaseInventoryModel {
           });
         } else if (typeof photo === 'string') {
           console.log(`Foto ${index + 1}: URL existente`, photo);
-        } else if ('file' in photo && photo.file instanceof File) {
+        } else if (photo && typeof photo === 'object' && 'file' in photo && photo.file instanceof File) {
           console.log(`Foto ${index + 1}: Objeto com File e is_primary`, {
             name: photo.file.name,
             type: photo.file.type,
@@ -183,7 +183,7 @@ export class BaseInventoryModel {
             lastModified: photo.file.lastModified,
             is_primary: photo.is_primary
           });
-        } else if ('photo_url' in photo) {
+        } else if (photo && typeof photo === 'object' && 'photo_url' in photo) {
           console.log(`Foto ${index + 1}: Objeto com photo_url`, {
             url: photo.photo_url,
             is_primary: photo.is_primary
