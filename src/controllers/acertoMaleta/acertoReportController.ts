@@ -165,6 +165,11 @@ export class AcertoReportController {
           }
         });
         
+        // Definir o tamanho da imagem e o tamanho da linha
+        const imageHeight = 15;
+        const rowPadding = 2;
+        const rowHeight = imageHeight + (rowPadding * 2);
+        
         // Gerar tabela de itens vendidos com as imagens
         autoTable(doc, {
           head: [['Foto', 'Produto', 'Código', 'Preço']],
@@ -173,7 +178,7 @@ export class AcertoReportController {
           theme: 'striped',
           headStyles: { fillColor: [233, 30, 99], textColor: 255 },
           columnStyles: {
-            0: { cellWidth: 20 },  // Foto - mantendo a largura da coluna
+            0: { cellWidth: 20 },  // Foto
             1: { cellWidth: 70 },  // Nome do produto
             2: { cellWidth: 40 },  // Código
             3: { cellWidth: 40 }   // Preço
@@ -189,40 +194,32 @@ export class AcertoReportController {
                   // Obter as propriedades da imagem
                   const imgProps = (doc as any).getImageProperties(imageData);
                   
-                  // Definindo o tamanho máximo para 15px
-                  const maxSize = 15;
-                  let imgWidth, imgHeight;
+                  // Definir tamanho da imagem proporcionalmente, com altura fixa
+                  let imgWidth = (imgProps.width * imageHeight) / imgProps.height;
                   
-                  if (imgProps.width >= imgProps.height) {
-                    // Imagem mais larga
-                    imgWidth = Math.min(maxSize, imgProps.width);
-                    imgHeight = (imgProps.height * imgWidth) / imgProps.width;
-                  } else {
-                    // Imagem mais alta
-                    imgHeight = Math.min(maxSize, imgProps.height);
-                    imgWidth = (imgProps.width * imgHeight) / imgProps.height;
+                  // Garantir que a largura não ultrapasse a célula
+                  const maxWidth = data.cell.width - (rowPadding * 2);
+                  if (imgWidth > maxWidth) {
+                    imgWidth = maxWidth;
+                    const adjustedHeight = (imgProps.height * imgWidth) / imgProps.width;
+                    // Se ainda assim a altura ajustada for maior que a permitida, usar a altura máxima
+                    if (adjustedHeight > imageHeight) {
+                      imgWidth = (imgProps.width * imageHeight) / imgProps.height;
+                    }
                   }
                   
-                  // Adicionar padding consistente de 5px
-                  const cellPadding = 5;
-                  
-                  // Calcular posição para centralizar na célula com padding
-                  const cellX = data.cell.x + cellPadding;
-                  const cellY = data.cell.y + cellPadding;
-                  const cellWidth = data.cell.width - (cellPadding * 2);
-                  const cellHeight = data.cell.height - (cellPadding * 2);
-                  
-                  const posX = cellX + (cellWidth - imgWidth) / 2;
-                  const posY = cellY + (cellHeight - imgHeight) / 2;
+                  // Calcular posição para centralizar na célula
+                  const cellX = data.cell.x + ((data.cell.width - imgWidth) / 2);
+                  const cellY = data.cell.y + ((data.cell.height - imageHeight) / 2);
                   
                   // Adicionar a imagem ao PDF
                   doc.addImage(
                     imageData,
-                    'PNG',  // Formato da imagem
-                    posX,   // Posição X
-                    posY,   // Posição Y
-                    imgWidth,  // Largura
-                    imgHeight  // Altura
+                    'PNG',
+                    cellX,
+                    cellY,
+                    imgWidth,
+                    imageHeight
                   );
                 } catch (err) {
                   console.error("Erro ao desenhar imagem:", err);
@@ -231,10 +228,13 @@ export class AcertoReportController {
             }
           },
           styles: {
-            cellPadding: 5,
-            minCellHeight: 25
+            cellPadding: rowPadding
           },
-          // Definir configurações adicionais da tabela
+          // Definir altura exata da linha
+          rowPageBreak: 'auto',
+          bodyStyles: {
+            minCellHeight: rowHeight
+          },
           margin: { top: 10 },
           tableLineWidth: 0.1,
           tableLineColor: [128, 128, 128]
