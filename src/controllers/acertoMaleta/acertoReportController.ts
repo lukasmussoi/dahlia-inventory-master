@@ -107,8 +107,6 @@ export class AcertoReportController {
       currentY += 10;
       
       // Tabela de itens vendidos
-      let tableData: any = [];
-      
       if (acerto.items_vendidos && acerto.items_vendidos.length > 0) {
         // Limitar a quantidade de itens por página para evitar PDFs enormes
         const maxItemsPerPage = 20;
@@ -118,50 +116,49 @@ export class AcertoReportController {
           console.warn(`Limitando a exibição para ${maxItemsPerPage} de ${acerto.items_vendidos.length} itens vendidos para evitar PDFs muito grandes`);
         }
         
-        // Preparar dados para a tabela com foto separada
-        const itemsData = limitedItems.map(item => {
-          const imageUrl = item.product?.photo_url ? getProductPhotoUrl(item.product.photo_url) : '';
-          
-          return [
-            imageUrl, // Esta coluna será usada para a imagem
-            item.product?.name || 'Produto sem nome',
-            item.product?.sku || 'N/A',
-            formatCurrency(item.price || 0)
-          ];
-        });
-        
         // Adicionar cabeçalho "Itens Vendidos"
         doc.setFontSize(12);
         doc.setFont("helvetica", "bold");
         doc.text("Itens Vendidos", 14, currentY);
         currentY += 5;
         
-        // Carregar todas as imagens em paralelo
-        const imagePromises = itemsData.map(async (row) => {
-          const imageUrl = row[0];
-          if (imageUrl && typeof imageUrl === 'string' && imageUrl.trim() !== '') {
-            try {
-              return new Promise<HTMLImageElement>((resolve) => {
-                const img = new Image();
-                img.crossOrigin = "Anonymous";
-                img.onload = () => resolve(img);
-                img.onerror = () => {
-                  console.error(`Erro ao carregar imagem: ${imageUrl}`);
-                  resolve(null);
-                };
-                img.src = imageUrl;
-              });
-            } catch (error) {
-              console.error(`Erro ao processar imagem: ${error}`);
-              return null;
-            }
+        // Modificação principal: Pré-carregar todas as imagens antes de gerar a tabela
+        console.log("Pré-carregando imagens dos produtos...");
+        const imagePromises = limitedItems.map(async (item) => {
+          const imageUrl = item.product?.photo_url ? getProductPhotoUrl(item.product.photo_url) : '';
+          if (!imageUrl) return null;
+          
+          try {
+            return new Promise<HTMLImageElement>((resolve) => {
+              const img = new Image();
+              img.crossOrigin = "Anonymous";
+              img.onload = () => resolve(img);
+              img.onerror = () => {
+                console.error(`Erro ao carregar imagem: ${imageUrl}`);
+                resolve(null);
+              };
+              img.src = imageUrl;
+            });
+          } catch (error) {
+            console.error(`Erro ao processar imagem: ${error}`);
+            return null;
           }
-          return null;
         });
         
         const loadedImages = await Promise.all(imagePromises);
+        console.log(`Carregadas ${loadedImages.filter(img => img !== null).length} imagens de ${limitedItems.length} produtos`);
         
-        // Gerar tabela de itens vendidos
+        // Preparar dados para a tabela
+        const itemsData = limitedItems.map((item, index) => {
+          return [
+            index, // Índice para associar com a imagem carregada
+            item.product?.name || 'Produto sem nome',
+            item.product?.sku || 'N/A',
+            formatCurrency(item.price || 0)
+          ];
+        });
+        
+        // Gerar tabela de itens vendidos com as imagens carregadas
         autoTable(doc, {
           head: [['Foto', 'Produto', 'Código', 'Preço']],
           body: itemsData,
@@ -177,7 +174,8 @@ export class AcertoReportController {
           willDrawCell: (data) => {
             // Se for a primeira coluna e não for cabeçalho
             if (data.column.index === 0 && data.section === 'body') {
-              const rowIndex = data.row.index;
+              // Importante: Usamos o valor da célula como índice para acessar a imagem carregada
+              const rowIndex = data.cell.raw as number;
               const img = loadedImages[rowIndex];
               
               if (img) {
@@ -200,9 +198,15 @@ export class AcertoReportController {
                     imgWidth,
                     imgHeight
                   );
+                  
+                  // Limpar o conteúdo de texto da célula para não mostrar o índice
+                  data.cell.text = [];
                 } catch (e) {
                   console.error("Erro ao desenhar imagem:", e);
+                  data.cell.text = ['Sem\nimagem'];
                 }
+              } else {
+                data.cell.text = ['Sem\nimagem'];
               }
             }
           }
@@ -231,7 +235,7 @@ export class AcertoReportController {
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
       
-      // CORREÇÃO: Calcular o total de vendas corretamente somando todos os itens vendidos
+      // Calcular o total de vendas corretamente somando todos os itens vendidos
       const totalSales = acerto.items_vendidos && acerto.items_vendidos.length > 0
         ? acerto.items_vendidos.reduce((total, item) => total + (item.price || 0), 0)
         : 0;
