@@ -22,6 +22,8 @@ interface PhotoFieldsProps {
   onSavePhotos: () => void;
   itemId?: string; // Adicionar itemId opcional para permitir salvamento direto
   disabled?: boolean; // Adicionar disabled para controlar quando os botões devem estar desativados
+  photoUrls?: string[]; // Adicionar URLs das fotos existentes
+  setPhotoUrls?: React.Dispatch<React.SetStateAction<string[]>>; // Para atualizar URLs
 }
 
 export function PhotoFields({
@@ -34,7 +36,9 @@ export function PhotoFields({
   setUploadProgress,
   onSavePhotos,
   itemId,
-  disabled = false
+  disabled = false,
+  photoUrls = [],
+  setPhotoUrls
 }: PhotoFieldsProps) {
   // Configurar o dropzone para upload de arquivos
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -43,6 +47,11 @@ export function PhotoFields({
     },
     onDrop: (acceptedFiles) => {
       setPhotos((prev) => [...prev, ...acceptedFiles]);
+      
+      // Também ajustar as URLs - adicionamos undefined para cada nova foto
+      if (setPhotoUrls) {
+        setPhotoUrls(prev => [...prev, ...Array(acceptedFiles.length).fill(undefined)]);
+      }
       
       // Se não houver foto primária definida, define a primeira
       if (primaryPhotoIndex === null && acceptedFiles.length > 0) {
@@ -60,6 +69,11 @@ export function PhotoFields({
   const handleRemovePhoto = (index: number) => {
     setPhotos((prev) => prev.filter((_, i) => i !== index));
     
+    // Também remover da lista de URLs
+    if (setPhotoUrls) {
+      setPhotoUrls(prev => prev.filter((_, i) => i !== index));
+    }
+    
     // Ajustar o índice da foto primária se necessário
     if (primaryPhotoIndex === index) {
       setPrimaryPhotoIndex(photos.length > 1 ? 0 : null);
@@ -72,6 +86,11 @@ export function PhotoFields({
   const handleWebcamCapture = (capturedPhotos: File[]) => {
     console.log("Fotos capturadas pela webcam:", capturedPhotos);
     setPhotos((prev) => [...prev, ...capturedPhotos]);
+    
+    // Também ajustar as URLs - adicionamos undefined para cada nova foto da webcam
+    if (setPhotoUrls) {
+      setPhotoUrls(prev => [...prev, ...Array(capturedPhotos.length).fill(undefined)]);
+    }
     
     // Se não houver foto primária definida, define a primeira nova foto
     if (primaryPhotoIndex === null && capturedPhotos.length > 0) {
@@ -92,11 +111,25 @@ export function PhotoFields({
     }
     
     try {
+      setIsSubmitting(true);
       setUploadProgress(0);
+      
+      // Preparar lista de fotos (combinando URLs existentes e novos arquivos)
+      const filesToUpload: (File | string)[] = [];
+      
+      for (let i = 0; i < photos.length; i++) {
+        // Se temos uma URL existente para este índice, usamos ela
+        if (photoUrls[i]) {
+          filesToUpload.push(photoUrls[i]);
+        } else {
+          // Caso contrário, é um novo arquivo
+          filesToUpload.push(photos[i]);
+        }
+      }
       
       // Fazer upload das fotos para o storage
       const results = await uploadMultiplePhotos(
-        photos,
+        filesToUpload,
         'inventory_images',
         (progress) => setUploadProgress(progress),
         itemId
@@ -136,6 +169,11 @@ export function PhotoFields({
           toast.error("Erro ao salvar informações das fotos");
         } else {
           toast.success(`${successfulUploads.length} foto(s) salva(s) com sucesso!`);
+          
+          // Atualizar as URLs das fotos para evitar re-upload em edições futuras
+          if (setPhotoUrls) {
+            setPhotoUrls(successfulUploads.map(result => result.url as string));
+          }
         }
       } else {
         toast.error("Não foi possível fazer upload das fotos. Tente novamente.");
@@ -144,6 +182,7 @@ export function PhotoFields({
       console.error('Erro ao salvar fotos:', error);
       toast.error("Erro ao salvar fotos. Verifique as permissões e tente novamente.");
     } finally {
+      setIsSubmitting(false);
       setUploadProgress(0);
     }
   };
@@ -219,6 +258,13 @@ export function PhotoFields({
               {primaryPhotoIndex === index && (
                 <div className="absolute top-1 left-1 bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full">
                   Principal
+                </div>
+              )}
+              
+              {/* Indicador de foto já existente */}
+              {photoUrls && photoUrls[index] && (
+                <div className="absolute top-1 right-1 bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full">
+                  Existente
                 </div>
               )}
               

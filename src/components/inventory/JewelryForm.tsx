@@ -53,6 +53,7 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
   const [primaryPhotoIndex, setPrimaryPhotoIndex] = useState<number | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [savedItem, setSavedItem] = useState<InventoryItem | null>(null);
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
 
   // Inicializar formulário com valores padrão
   const form = useForm<FormValues>({
@@ -98,10 +99,14 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
         try {
           const photoFiles: File[] = [];
           let primaryIndex = null;
+          const urls: string[] = [];
           
           for (let i = 0; i < item.photos.length; i++) {
             const photo = item.photos[i];
             try {
+              // Armazenar a URL original
+              urls.push(photo.photo_url);
+              
               // Fetch da imagem para converter para blob
               const response = await fetch(photo.photo_url);
               const blob = await response.blob();
@@ -128,6 +133,7 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
           }
           
           setPhotos(photoFiles);
+          setPhotoUrls(urls);
           setPrimaryPhotoIndex(primaryIndex !== null ? primaryIndex : (photoFiles.length > 0 ? 0 : null));
           
         } catch (error) {
@@ -186,9 +192,22 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
       setIsSubmitting(true);
       setUploadProgress(0);
       
+      // Preparar as fotos para upload (mistura de URLs existentes e novos arquivos)
+      const filesToUpload: (File | string)[] = [];
+      
+      for (let i = 0; i < photos.length; i++) {
+        // Se temos uma URL existente para este índice, usamos ela
+        if (photoUrls[i]) {
+          filesToUpload.push(photoUrls[i]);
+        } else {
+          // Caso contrário, é um novo arquivo
+          filesToUpload.push(photos[i]);
+        }
+      }
+      
       // Fazer upload das fotos para o storage
       const results = await uploadMultiplePhotos(
-        photos,
+        filesToUpload,
         'inventory_images',
         (progress) => setUploadProgress(progress),
         currentItemId
@@ -227,6 +246,9 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
           toast.error("Erro ao salvar informações das fotos");
         } else {
           toast.success(`${successfulUploads.length} foto(s) salva(s) com sucesso!`);
+          
+          // Atualizar as URLs das fotos no estado local para uso futuro
+          setPhotoUrls(successfulUploads.map(result => result.url as string));
         }
       } else {
         toast.error("Não foi possível fazer upload das fotos. Tente novamente.");
@@ -301,8 +323,21 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
       
       // Se temos fotos e um item criado/atualizado, fazer upload das fotos
       if (photos.length > 0 && createdOrUpdatedItem) {
+        // Preparar para upload combinando URLs existentes com novos arquivos
+        const filesToUpload: (File | string)[] = [];
+        
+        for (let i = 0; i < photos.length; i++) {
+          if (photoUrls[i]) {
+            // Se temos uma URL existente, reutilizamos ela
+            filesToUpload.push(photoUrls[i]);
+          } else {
+            // Caso contrário é um novo arquivo
+            filesToUpload.push(photos[i]);
+          }
+        }
+        
         const uploadResults = await uploadMultiplePhotos(
-          photos,
+          filesToUpload,
           'inventory_images',
           (progress) => setUploadProgress(progress),
           createdOrUpdatedItem.id
@@ -328,6 +363,9 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
           } else {
             console.log("Fotos salvas com sucesso:", data);
             createdOrUpdatedItem.photos = data;
+            
+            // Atualizar URLs para uso futuro
+            setPhotoUrls(successfulUploads.map(result => result.url as string));
           }
         }
       }
@@ -594,6 +632,8 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                 onSavePhotos={handleSavePhotosOnly}
                 itemId={currentItemId}
                 disabled={isSubmitting}
+                photoUrls={photoUrls}
+                setPhotoUrls={setPhotoUrls}
               />
             </div>
 

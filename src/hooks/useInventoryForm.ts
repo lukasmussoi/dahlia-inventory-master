@@ -51,6 +51,7 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
   const [uploadedPhotoUrls, setUploadedPhotoUrls] = useState<string[]>([]);
   const [primaryPhotoIndex, setPrimaryPhotoIndex] = useState<number | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
 
   // Inicializa o formulário com valores padrão
   const form = useForm<FormValues>({
@@ -81,6 +82,7 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
           // Armazenar as URLs das fotos existentes
           const existingUrls = item.photos.map(photo => photo.photo_url);
           setUploadedPhotoUrls(existingUrls);
+          setPhotoUrls(existingUrls);
           setPhotosUploaded(true);
           
           const photoFiles: File[] = [];
@@ -129,25 +131,49 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
 
   // Função para fazer upload diretamente das fotos para o Storage 
   const handleUploadPhotos = async (itemId: string): Promise<Array<{photo_url: string; is_primary: boolean}>> => {
-    // Se as fotos já foram enviadas previamente, retornar os resultados
-    if (photosUploaded && uploadedPhotoUrls.length > 0) {
-      console.log("Fotos já foram enviadas anteriormente:", uploadedPhotoUrls);
-      return uploadedPhotoUrls.map((url, index) => ({
-        photo_url: url,
-        is_primary: index === primaryPhotoIndex
-      }));
-    }
-    
-    if (photos.length === 0) return [];
-    
     try {
-      console.log(`Iniciando upload de ${photos.length} fotos para o item ${itemId}`);
+      console.log("handleUploadPhotos: Iniciando processamento de fotos para upload");
+      
+      if (photos.length === 0) {
+        console.log("Nenhuma foto para processar");
+        return [];
+      }
+      
+      // Diferenciando entre novas fotos e fotos existentes
+      const existingPhotoUrls = photoUrls;
+      const filesToUpload: (File | string)[] = [];
+
+      // Se for uma edição e já tivermos URLs, usamos elas diretamente para evitar re-upload
+      if (item && item.id === itemId && existingPhotoUrls.length > 0) {
+        console.log("Item existente com fotos:", existingPhotoUrls);
+        
+        // Para cada foto, verificamos se ela já tem URL (existente) ou se é um novo arquivo
+        for (let i = 0; i < photos.length; i++) {
+          const photo = photos[i];
+          // Verificar se esta é uma foto que já tem URL no banco
+          const existingIndex = i < existingPhotoUrls.length ? i : -1;
+          
+          if (existingIndex >= 0 && existingPhotoUrls[existingIndex]) {
+            console.log(`Foto ${i}: Usando URL existente`, existingPhotoUrls[existingIndex]);
+            filesToUpload.push(existingPhotoUrls[existingIndex]);
+          } else {
+            console.log(`Foto ${i}: Novo arquivo a ser enviado`, photo.name);
+            filesToUpload.push(photo);
+          }
+        }
+      } else {
+        // Caso não tenhamos URLs existentes, enviamos todos os arquivos como novos
+        console.log("Nenhuma URL existente ou novo item, enviando todas as fotos como novas");
+        filesToUpload.push(...photos);
+      }
+      
+      console.log(`Preparando ${filesToUpload.length} fotos para upload (novas e existentes)`);
       setUploadProgress(0);
       
-      // Usar a função uploadMultiplePhotos para processar todas as fotos
+      // Usar a função uploadMultiplePhotos para processar fotos (novas e existentes)
       const results = await uploadMultiplePhotos(
-        photos, 
-        'inventory_images', 
+        filesToUpload,
+        'inventory_images',
         (progress) => setUploadProgress(progress),
         itemId
       );
@@ -161,14 +187,13 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
         is_primary: index === primaryPhotoIndex
       }));
       
-      console.log(`Upload finalizado. ${photoResults.length} fotos enviadas com sucesso.`);
+      console.log(`Upload finalizado. ${photoResults.length} fotos processadas com sucesso.`);
       
       // Armazenar URLs para uso posterior
       setUploadedPhotoUrls(photoResults.map(p => p.photo_url));
       setPhotosUploaded(true);
       
       return photoResults;
-      
     } catch (error) {
       console.error('Erro ao fazer upload das fotos:', error);
       toast.error("Erro ao enviar as fotos. Tente novamente.");
@@ -353,6 +378,8 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
     setPrimaryPhotoIndex,
     uploadProgress,
     setUploadProgress,
-    savePhotosOnly: handleSavePhotosOnly
+    savePhotosOnly: handleSavePhotosOnly,
+    photoUrls,
+    setPhotoUrls
   };
 }

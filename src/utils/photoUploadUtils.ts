@@ -12,6 +12,7 @@ export interface UploadResult {
   success: boolean;
   url?: string;
   error?: string;
+  isExistingUrl?: boolean;
 }
 
 // Tipo para o callback de progresso
@@ -19,19 +20,25 @@ export type ProgressCallback = (progress: number) => void;
 
 /**
  * Faz upload de uma foto para o bucket do Supabase Storage
- * @param file Arquivo a ser enviado
+ * @param file Arquivo a ser enviado ou URL existente
  * @param bucket Nome do bucket ('inventory_images' ou 'inventory_photos')
  * @param onProgress Callback opcional para reportar progresso
  * @param itemId ID opcional do item ao qual a foto pertence
  * @returns Promise com resultado do upload
  */
 export const uploadPhoto = async (
-  file: File,
+  file: File | string,
   bucket: 'inventory_images' | 'inventory_photos' = 'inventory_images',
   onProgress?: ProgressCallback,
   itemId?: string
 ): Promise<UploadResult> => {
   try {
+    // Verificar se já é uma URL existente
+    if (typeof file === 'string') {
+      console.log('URL de foto existente detectada, não fazendo re-upload:', file);
+      return { success: true, url: file, isExistingUrl: true };
+    }
+
     if (!file) {
       return { success: false, error: 'Nenhum arquivo fornecido' };
     }
@@ -93,7 +100,8 @@ export const uploadPhoto = async (
     
     return { 
       success: true, 
-      url: urlData.publicUrl 
+      url: urlData.publicUrl,
+      isExistingUrl: false
     };
   } catch (error) {
     console.error('Erro durante upload de foto:', error);
@@ -106,14 +114,14 @@ export const uploadPhoto = async (
 
 /**
  * Faz upload de múltiplas fotos para o bucket do Supabase Storage
- * @param files Array de arquivos a serem enviados
+ * @param files Array de arquivos ou URLs existentes a serem enviados
  * @param bucket Nome do bucket ('inventory_images' ou 'inventory_photos')
  * @param onProgress Callback opcional para reportar progresso
  * @param itemId ID opcional do item ao qual as fotos pertencem
  * @returns Promise com resultados dos uploads
  */
 export const uploadMultiplePhotos = async (
-  files: File[],
+  files: (File | string)[],
   bucket: 'inventory_images' | 'inventory_photos' = 'inventory_images',
   onProgress?: ProgressCallback,
   itemId?: string
@@ -121,6 +129,9 @@ export const uploadMultiplePhotos = async (
   if (!files.length) {
     return [{ success: false, error: 'Nenhum arquivo fornecido' }];
   }
+
+  console.log(`Iniciando upload de ${files.length} fotos para o item ${itemId}`);
+  console.log('Tipos de arquivos recebidos:', files.map(f => typeof f === 'string' ? 'URL existente' : 'Novo arquivo'));
 
   const results: UploadResult[] = [];
   
@@ -134,6 +145,8 @@ export const uploadMultiplePhotos = async (
       onProgress(progress);
     }
   }
+
+  console.log('Resultados dos uploads:', results);
   
   return results;
 };

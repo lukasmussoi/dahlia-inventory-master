@@ -1,3 +1,4 @@
+
 /**
  * Modelo Base de Inventário
  * @file Este arquivo contém funções básicas para gerenciamento do inventário
@@ -147,7 +148,7 @@ export class BaseInventoryModel {
   // Atualizar fotos de um item - usando o novo bucket 'inventory_images'
   static async updateItemPhotos(
     itemId: string, 
-    photos: Array<File | { 
+    photos: Array<File | string | { 
       file: File; 
       is_primary?: boolean 
     } | { 
@@ -173,6 +174,8 @@ export class BaseInventoryModel {
             size: photo.size,
             lastModified: photo.lastModified
           });
+        } else if (typeof photo === 'string') {
+          console.log(`Foto ${index + 1}: URL existente`, photo);
         } else if ('file' in photo && photo.file instanceof File) {
           console.log(`Foto ${index + 1}: Objeto com File e is_primary`, {
             name: photo.file.name,
@@ -205,9 +208,30 @@ export class BaseInventoryModel {
       } else if (existingPhotos && existingPhotos.length > 0) {
         console.log(`Encontradas ${existingPhotos.length} fotos existentes para excluir`);
         
-        // 2. Excluir arquivos do storage
+        // Criar mapa de URLs existentes para detectar duplicidades
+        const existingUrls = new Set(existingPhotos.map(photo => photo.photo_url));
+        
+        // 2. Excluir arquivos do storage que não estão sendo reusados
         for (const photo of existingPhotos) {
           try {
+            // Verificar se a URL está sendo reusada na lista atual
+            let isReused = false;
+            for (const newPhoto of photos) {
+              if (typeof newPhoto === 'string' && newPhoto === photo.photo_url) {
+                isReused = true;
+                break;
+              } else if ('photo_url' in newPhoto && newPhoto.photo_url === photo.photo_url) {
+                isReused = true;
+                break;
+              }
+            }
+            
+            // Se a URL está sendo reusada, não excluir o arquivo
+            if (isReused) {
+              console.log(`Mantendo arquivo para URL reutilizada: ${photo.photo_url}`);
+              continue;
+            }
+            
             // Extrair o caminho relativo da URL completa
             const fullUrl = photo.photo_url;
             const urlParts = fullUrl.split('/');
@@ -253,14 +277,23 @@ export class BaseInventoryModel {
         let photoUrl = '';
         let isPrimary = false;
         let fileToUpload: File | null = null;
+        let skipUpload = false;
         
         console.log(`Processando foto ${i + 1}/${photos.length}...`);
         
         // Determinar o tipo de objeto para processamento adequado
-        if ('photo_url' in photo && typeof photo.photo_url === 'string') {
+        if (typeof photo === 'string') {
+          // É uma URL existente, usar diretamente
+          photoUrl = photo;
+          isPrimary = i === 0; // Primeira foto como primária por padrão
+          skipUpload = true; // Não precisamos fazer upload novamente
+          console.log(`Foto ${i + 1} é URL existente, não será reenviada:`, photoUrl);
+        }
+        else if ('photo_url' in photo && typeof photo.photo_url === 'string') {
           // É um objeto com URL, usar diretamente
           photoUrl = photo.photo_url;
           isPrimary = photo.is_primary || false;
+          skipUpload = true; // Não precisamos fazer upload novamente
           console.log(`Foto ${i + 1} já possui URL:`, photoUrl);
         } 
         else if ('file' in photo && photo.file instanceof File) {
@@ -285,6 +318,17 @@ export class BaseInventoryModel {
         else {
           // Se chegou aqui, o objeto não é compatível
           console.error(`Foto ${i + 1} tem formato incompatível:`, photo);
+          continue;
+        }
+        
+        // Se for uma URL existente, não precisamos fazer upload
+        if (skipUpload && photoUrl) {
+          console.log(`Usando URL existente sem reenvio para a foto ${i + 1}:`, photoUrl);
+          processedPhotoRecords.push({
+            inventory_id: itemId,
+            photo_url: photoUrl,
+            is_primary: isPrimary
+          });
           continue;
         }
         
