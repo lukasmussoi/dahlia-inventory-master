@@ -1,3 +1,4 @@
+
 /**
  * Modelo de Item de Inventário
  * @file Este arquivo contém operações específicas para itens do inventário
@@ -22,7 +23,7 @@ export class InventoryItemModel {
       tipo_raw_cost: typeof itemData.raw_cost
     });
     
-    // Converter para número caso seja string
+    // Garantir que ambos os campos estejam tratados como números
     const unitCost = typeof itemData.unit_cost === 'string' 
       ? parseFloat(itemData.unit_cost) 
       : itemData.unit_cost || 0;
@@ -85,7 +86,7 @@ export class InventoryItemModel {
       tipo_raw_cost: typeof cleanUpdates.raw_cost
     });
     
-    // Converter para número caso seja string
+    // Garantir que ambos os campos estejam tratados como números
     if (cleanUpdates.unit_cost !== undefined) {
       cleanUpdates.unit_cost = typeof cleanUpdates.unit_cost === 'string' 
         ? parseFloat(cleanUpdates.unit_cost)

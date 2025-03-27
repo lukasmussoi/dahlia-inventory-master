@@ -17,6 +17,7 @@ import {
 import { UseFormReturn } from "react-hook-form";
 import { FormValues } from "@/hooks/useInventoryForm";
 import { InventoryCategory, Supplier } from "@/models/inventoryModel";
+import { useEffect } from "react";
 
 interface MainFieldsProps {
   form: UseFormReturn<FormValues>;
@@ -25,6 +26,17 @@ interface MainFieldsProps {
 }
 
 export function MainFields({ form, categories, suppliers }: MainFieldsProps) {
+  // Verificação adicional para garantir que os valores estão corretos após renderização
+  useEffect(() => {
+    const rawCost = form.getValues("raw_cost");
+    const unitCost = form.getValues("unit_cost");
+    
+    console.log("[MainFields] Valores do formulário após renderização:", {
+      raw_cost: rawCost,
+      unit_cost: unitCost
+    });
+  }, [form]);
+
   return (
     <div className="grid grid-cols-2 gap-4">
       <FormField
@@ -50,6 +62,7 @@ export function MainFields({ form, categories, suppliers }: MainFieldsProps) {
             <Select 
               onValueChange={field.onChange} 
               defaultValue={field.value}
+              value={field.value}
             >
               <FormControl>
                 <SelectTrigger>
@@ -78,6 +91,7 @@ export function MainFields({ form, categories, suppliers }: MainFieldsProps) {
             <Select 
               onValueChange={field.onChange} 
               defaultValue={field.value}
+              value={field.value}
             >
               <FormControl>
                 <SelectTrigger>
@@ -144,6 +158,7 @@ export function MainFields({ form, categories, suppliers }: MainFieldsProps) {
                 type="number"
                 step="0.01"
                 {...field}
+                value={field.value || 0}
                 onChange={(e) => field.onChange(Number(e.target.value))}
               />
             </FormControl>
@@ -163,6 +178,7 @@ export function MainFields({ form, categories, suppliers }: MainFieldsProps) {
                 type="number"
                 step="0.01"
                 {...field}
+                value={field.value || 0}
                 onChange={(e) => field.onChange(Number(e.target.value))}
               />
             </FormControl>

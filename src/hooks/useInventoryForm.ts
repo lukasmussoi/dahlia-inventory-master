@@ -93,14 +93,23 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
   // Inicializar o formulário apenas uma vez
   useEffect(() => {
     if (!formInitializedRef.current && item) {
-      // Registra qual valor estamos definindo inicialmente
-      console.log("Inicializando formulário com valores do item:");
-      console.log("Preço bruto original:", item.raw_cost);
-      console.log("Custo total original:", item.unit_cost);
+      // CORREÇÃO: Registro mais explícito dos valores para identificar o problema
+      console.log("[useInventoryForm] Inicializando formulário com valores do item:", {
+        id: item.id,
+        nome: item.name,
+        raw_cost: item.raw_cost,
+        unit_cost: item.unit_cost,
+        raw_cost_tipo: typeof item.raw_cost,
+        unit_cost_tipo: typeof item.unit_cost
+      });
       
       // Armazenar os valores originais em refs para que não sejam afetados por re-renders
       originalUnitCostRef.current = item.unit_cost;
       originalRawCostRef.current = item.raw_cost;
+      
+      // CORREÇÃO: Verificar se os valores são numéricos antes de inicializar
+      const rawCost = typeof item.raw_cost === 'string' ? parseFloat(item.raw_cost) : (item.raw_cost || 0);
+      const unitCost = typeof item.unit_cost === 'string' ? parseFloat(item.unit_cost) : (item.unit_cost || 0);
       
       // Definir todos os valores do formulário de uma vez
       form.reset({
@@ -111,13 +120,19 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
         barcode: item.barcode || "",
         quantity: item.quantity || 0,
         min_stock: item.min_stock || 0,
-        unit_cost: item.unit_cost || 0,
-        raw_cost: item.raw_cost || 0,
+        unit_cost: unitCost,
+        raw_cost: rawCost,  // CORREÇÃO: Usar o valor correto de raw_cost e não unit_cost
         price: item.price || 0,
         width: item.width || undefined,
         height: item.height || undefined,
         depth: item.depth || undefined,
         weight: item.weight || undefined,
+      });
+      
+      // Log após a inicialização para verificar se os valores foram definidos corretamente
+      console.log("[useInventoryForm] Valores definidos no formulário:", {
+        raw_cost: form.getValues("raw_cost"),
+        unit_cost: form.getValues("unit_cost")
       });
       
       // Marcar como inicializado para não repetir esta operação
@@ -450,10 +465,13 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
     }
   };
 
-  // Função para envio do formulário completamente reescrita
+  // Função para envio do formulário
   const onSubmit = async (values: FormValues) => {
     try {
-      console.log("Iniciando submissão do formulário", values);
+      console.log("[useInventoryForm] Iniciando submissão do formulário", {
+        raw_cost: values.raw_cost,
+        unit_cost: values.unit_cost
+      });
       setIsSubmitting(true);
 
       // Preparar dados para salvar
@@ -475,7 +493,7 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
       };
 
       // Registrar claramente o que estamos enviando
-      console.log("VALORES FINAIS QUE SERÃO ENVIADOS:", {
+      console.log("[useInventoryForm] VALORES FINAIS QUE SERÃO ENVIADOS:", {
         custo_total: itemData.unit_cost,
         preco_do_bruto: itemData.raw_cost
       });
@@ -485,11 +503,11 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
       // Primeiro, salvar os dados do item sem as fotos
       if (item) {
         // Modo de edição
-        console.log("Atualizando item existente com unit_cost =", itemData.unit_cost, "e raw_cost =", itemData.raw_cost);
+        console.log("[useInventoryForm] Atualizando item existente com unit_cost =", itemData.unit_cost, "e raw_cost =", itemData.raw_cost);
         savedItem = await InventoryModel.updateItem(item.id, itemData);
       } else {
         // Modo de criação
-        console.log("Criando novo item com unit_cost =", itemData.unit_cost, "e raw_cost =", itemData.raw_cost);
+        console.log("[useInventoryForm] Criando novo item com unit_cost =", itemData.unit_cost, "e raw_cost =", itemData.raw_cost);
         savedItem = await InventoryModel.createItem(itemData);
       }
       
@@ -497,7 +515,7 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
         throw new Error("Erro ao salvar dados do item");
       }
       
-      console.log("Item salvo com sucesso. Valores no banco:", {
+      console.log("[useInventoryForm] Item salvo com sucesso. Valores no banco:", {
         unit_cost: savedItem.unit_cost,
         raw_cost: savedItem.raw_cost
       });
@@ -533,7 +551,7 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
         onClose();
       }
     } catch (error) {
-      console.error('Erro ao salvar item:', error);
+      console.error('[useInventoryForm] Erro ao salvar item:', error);
       toast.error("Erro ao salvar item. Verifique os dados e tente novamente.");
     } finally {
       setIsSubmitting(false);
