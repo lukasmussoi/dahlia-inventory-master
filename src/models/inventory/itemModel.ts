@@ -276,14 +276,13 @@ export class InventoryItemModel {
       // 10.1 Verificar se ainda existem etiquetas
       const { data: remainingLabels, error: labelsCheckError } = await supabase
         .from('inventory_label_history')
-        .select('count')
-        .eq('inventory_id', id)
-        .count();
+        .select('*')
+        .eq('inventory_id', id);
       
       if (labelsCheckError) {
         console.error("[ItemModel] Erro ao verificar etiquetas remanescentes:", labelsCheckError);
-      } else if (remainingLabels && remainingLabels.count > 0) {
-        console.error(`[ItemModel] ALERTA: Ainda existem ${remainingLabels.count} etiquetas relacionadas ao item!`);
+      } else if (remainingLabels && remainingLabels.length > 0) {
+        console.error(`[ItemModel] ALERTA: Ainda existem ${remainingLabels.length} etiquetas relacionadas ao item!`);
         // Tentar excluir novamente
         await supabase.from('inventory_label_history').delete().eq('inventory_id', id);
       }
@@ -291,14 +290,13 @@ export class InventoryItemModel {
       // 10.2 Verificar se ainda existem itens de maleta
       const { data: remainingSuitcaseItems, error: suitcaseItemsCheckError } = await supabase
         .from('suitcase_items')
-        .select('count')
-        .eq('inventory_id', id)
-        .count();
+        .select('*')
+        .eq('inventory_id', id);
       
       if (suitcaseItemsCheckError) {
         console.error("[ItemModel] Erro ao verificar itens de maleta remanescentes:", suitcaseItemsCheckError);
-      } else if (remainingSuitcaseItems && remainingSuitcaseItems.count > 0) {
-        console.error(`[ItemModel] ALERTA: Ainda existem ${remainingSuitcaseItems.count} itens de maleta relacionados ao item!`);
+      } else if (remainingSuitcaseItems && remainingSuitcaseItems.length > 0) {
+        console.error(`[ItemModel] ALERTA: Ainda existem ${remainingSuitcaseItems.length} itens de maleta relacionados ao item!`);
         // Tentar excluir novamente
         await supabase.from('suitcase_items').delete().eq('inventory_id', id);
       }
