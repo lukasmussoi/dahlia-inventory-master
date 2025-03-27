@@ -46,6 +46,7 @@ export interface InventoryItem {
   quantity: number;
   price: number;
   unit_cost: number;
+  raw_cost: number;
   suggested_price: number;
   weight?: number;
   width?: number;
