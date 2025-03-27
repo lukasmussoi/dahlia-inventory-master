@@ -23,7 +23,8 @@ import {
   MapPin, 
   User, 
   ArrowRightLeft,
-  MoreVertical
+  MoreVertical,
+  Box
 } from "lucide-react";
 import { 
   DropdownMenu,
@@ -35,6 +36,7 @@ import { Suitcase } from "@/types/suitcase";
 import { SuitcaseDetailsDialog } from "./SuitcaseDetailsDialog";
 import { SuitcaseSupplyDialog } from "./supply/SuitcaseSupplyDialog";
 import { SuitcaseSettlementDialog } from "./settlement/SuitcaseSettlementDialog";
+import { OpenSuitcaseDialog } from "./open/OpenSuitcaseDialog";
 import { formatStatus } from "@/utils/formatUtils";
 
 interface SuitcaseCardProps {
@@ -55,6 +57,7 @@ export function SuitcaseCard({
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [showSupplyDialog, setShowSupplyDialog] = useState(false);
   const [showSettlementDialog, setShowSettlementDialog] = useState(false);
+  const [showOpenDialog, setShowOpenDialog] = useState(false); // Novo estado para o dialog "Abrir Maleta"
 
   const hasLateSettlement = suitcase.next_settlement_date && 
     isPast(parseISO(suitcase.next_settlement_date));
@@ -111,6 +114,11 @@ export function SuitcaseCard({
     } else {
       setShowSettlementDialog(true);
     }
+  };
+
+  // Manipulador para "Abrir Maleta"
+  const handleOpenSuitcase = () => {
+    setShowOpenDialog(true);
   };
 
   return (
@@ -179,6 +187,14 @@ export function SuitcaseCard({
               <DropdownMenuItem onClick={() => setShowDetailsDialog(true)}>
                 Ver detalhes
               </DropdownMenuItem>
+              
+              {/* Botão "Abrir Maleta" - Apenas para administradores */}
+              {isAdmin && (
+                <DropdownMenuItem onClick={handleOpenSuitcase}>
+                  <Box className="h-4 w-4 mr-2" />
+                  Abrir Maleta
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </CardFooter>
@@ -207,6 +223,13 @@ export function SuitcaseCard({
         onOpenChange={setShowSettlementDialog}
         suitcase={suitcase}
         onRefresh={onRefresh}
+      />
+
+      {/* Novo: Diálogo "Abrir Maleta" */}
+      <OpenSuitcaseDialog
+        open={showOpenDialog}
+        onOpenChange={setShowOpenDialog}
+        suitcaseId={suitcase.id}
       />
     </>
   );

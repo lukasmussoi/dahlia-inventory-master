@@ -4,6 +4,7 @@
  */
 import { InventoryModel } from "@/models/inventory";
 import { LabelModel } from "@/models/labelModel";
+import { supabase } from "@/utils/supabase";
 
 export const InventoryController = {
   // Buscar todos os itens do inventário
@@ -203,6 +204,40 @@ export const InventoryController = {
       // Alteração: retornar explicitamente o estado para indicar que houve um erro
       // Isso evita que a aplicação tente excluir o item quando houver erro na verificação
       return { inSuitcase: false, isActiveCase: false, hasError: true };
+    }
+  },
+
+  // Criar um movimento de inventário
+  async createMovement(movementData: {
+    inventory_id: string;
+    quantity: number;
+    movement_type: string;
+    reason: string;
+  }) {
+    try {
+      console.log("[InventoryController] Criando movimento:", movementData);
+      
+      // Buscar informações do item para registrar o custo unitário
+      const itemData = await this.getItemById(movementData.inventory_id);
+      
+      const { error } = await supabase
+        .from('inventory_movements')
+        .insert({
+          inventory_id: movementData.inventory_id,
+          quantity: movementData.quantity,
+          movement_type: movementData.movement_type,
+          reason: movementData.reason,
+          user_id: (await supabase.auth.getUser()).data.user?.id,
+          unit_cost: itemData?.unit_cost || 0
+        });
+      
+      if (error) throw error;
+      console.log("[InventoryController] Movimento criado com sucesso");
+      
+      return true;
+    } catch (error) {
+      console.error("[InventoryController] Erro ao criar movimento:", error);
+      throw error;
     }
   }
 };
