@@ -111,7 +111,7 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
         barcode: item.barcode || "",
         quantity: item.quantity || 0,
         min_stock: item.min_stock || 0,
-        unit_cost: item.unit_cost,
+        unit_cost: item.unit_cost || 0,
         raw_cost: item.raw_cost || 0,
         price: item.price || 0,
         width: item.width || undefined,
@@ -456,53 +456,6 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
       console.log("Iniciando submissão do formulário", values);
       setIsSubmitting(true);
 
-      // Determinar qual valor de unit_cost usar
-      let finalUnitCost: number;
-      let finalRawCost: number;
-      
-      if (isEditMode) {
-        // Custo Total (unit_cost)
-        if (userChangedUnitCostRef.current) {
-          // Se o usuário modificou o campo, usar o valor do formulário
-          finalUnitCost = values.unit_cost;
-          console.log("Usando valor de custo total modificado pelo usuário:", finalUnitCost);
-        } else if (originalUnitCostRef.current !== undefined) {
-          // Se não modificou e temos o valor original, usar o valor original
-          finalUnitCost = originalUnitCostRef.current;
-          console.log("Mantendo valor de custo total original sem modificações:", finalUnitCost);
-        } else {
-          // Caso de segurança - usar o valor do formulário
-          finalUnitCost = values.unit_cost;
-          console.log("Usando valor de custo total do formulário (fallback):", finalUnitCost);
-        }
-        
-        // Preço do Bruto (raw_cost)
-        if (userChangedRawCostRef.current) {
-          // Se o usuário modificou o campo, usar o valor do formulário
-          finalRawCost = values.raw_cost;
-          console.log("Usando valor de preço do bruto modificado pelo usuário:", finalRawCost);
-        } else if (originalRawCostRef.current !== undefined) {
-          // Se não modificou e temos o valor original, usar o valor original
-          finalRawCost = originalRawCostRef.current;
-          console.log("Mantendo valor de preço do bruto original sem modificações:", finalRawCost);
-        } else {
-          // Caso de segurança - usar o valor do formulário
-          finalRawCost = values.raw_cost;
-          console.log("Usando valor de preço do bruto do formulário (fallback):", finalRawCost);
-        }
-      } else {
-        // Para novos itens, usar os valores inseridos no formulário
-        finalUnitCost = values.unit_cost;
-        finalRawCost = values.raw_cost;
-        console.log("Novo item - usando valores do formulário:", {unitCost: finalUnitCost, rawCost: finalRawCost});
-      }
-
-      // Registrar claramente o que estamos enviando
-      console.log("VALORES FINAIS QUE SERÃO ENVIADOS:", {
-        custo_total: finalUnitCost,
-        preco_do_bruto: finalRawCost
-      });
-      
       // Preparar dados para salvar
       const itemData = {
         name: values.name,
@@ -512,8 +465,8 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
         barcode: values.barcode || "",
         quantity: values.quantity,
         min_stock: values.min_stock,
-        unit_cost: finalUnitCost,
-        raw_cost: finalRawCost,
+        unit_cost: values.unit_cost,
+        raw_cost: values.raw_cost,
         price: values.price,
         width: values.width || null,
         height: values.height || null,
@@ -521,16 +474,22 @@ export function useInventoryForm({ item, onClose, onSuccess }: UseInventoryFormP
         weight: values.weight || null,
       };
 
+      // Registrar claramente o que estamos enviando
+      console.log("VALORES FINAIS QUE SERÃO ENVIADOS:", {
+        custo_total: itemData.unit_cost,
+        preco_do_bruto: itemData.raw_cost
+      });
+
       let savedItem: InventoryItem | null = null;
 
       // Primeiro, salvar os dados do item sem as fotos
       if (item) {
         // Modo de edição
-        console.log("Atualizando item existente com unit_cost =", finalUnitCost, "e raw_cost =", finalRawCost);
+        console.log("Atualizando item existente com unit_cost =", itemData.unit_cost, "e raw_cost =", itemData.raw_cost);
         savedItem = await InventoryModel.updateItem(item.id, itemData);
       } else {
         // Modo de criação
-        console.log("Criando novo item com unit_cost =", finalUnitCost, "e raw_cost =", finalRawCost);
+        console.log("Criando novo item com unit_cost =", itemData.unit_cost, "e raw_cost =", itemData.raw_cost);
         savedItem = await InventoryModel.createItem(itemData);
       }
       

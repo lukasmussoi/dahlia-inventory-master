@@ -25,11 +25,11 @@ export class InventoryItemModel {
     // Converter para número caso seja string
     const unitCost = typeof itemData.unit_cost === 'string' 
       ? parseFloat(itemData.unit_cost) 
-      : itemData.unit_cost;
+      : itemData.unit_cost || 0;
       
     const rawCost = typeof itemData.raw_cost === 'string'
       ? parseFloat(itemData.raw_cost)
-      : itemData.raw_cost;
+      : itemData.raw_cost || 0;
     
     const { data, error } = await supabase
       .from('inventory')
@@ -41,7 +41,7 @@ export class InventoryItemModel {
         quantity: itemData.quantity || 0,
         price: itemData.price,
         unit_cost: unitCost,
-        raw_cost: rawCost || 0,
+        raw_cost: rawCost,
         suggested_price: itemData.suggested_price || 0,
         weight: itemData.weight,
         width: itemData.width,
@@ -67,14 +67,10 @@ export class InventoryItemModel {
     // Log para verificar valores salvos
     console.log("[ItemModel] Valores salvos no banco:", {
       unit_cost: data.unit_cost,
-      raw_cost: data.raw_cost ?? 0 // Agora podemos acessar diretamente
+      raw_cost: data.raw_cost
     });
     
-    // Garantir que o objeto retornado tenha a propriedade raw_cost
-    return {
-      ...data,
-      raw_cost: data.raw_cost ?? 0 // Agora podemos acessar diretamente
-    };
+    return data;
   }
 
   // Atualizar item existente
@@ -100,9 +96,6 @@ export class InventoryItemModel {
       cleanUpdates.raw_cost = typeof cleanUpdates.raw_cost === 'string'
         ? parseFloat(cleanUpdates.raw_cost)
         : cleanUpdates.raw_cost;
-    } else {
-      // Se não foi fornecido, manter como null/undefined para não alterar o valor existente
-      delete cleanUpdates.raw_cost;
     }
     
     const { data, error } = await supabase
@@ -118,14 +111,10 @@ export class InventoryItemModel {
     // Log para verificar valores atualizados
     console.log("[ItemModel] Valores atualizados no banco:", {
       unit_cost: data.unit_cost,
-      raw_cost: data.raw_cost ?? 0 // Agora podemos acessar diretamente
+      raw_cost: data.raw_cost
     });
     
-    // Garantir que o objeto retornado tenha a propriedade raw_cost
-    return {
-      ...data,
-      raw_cost: data.raw_cost ?? 0 // Agora podemos acessar diretamente
-    };
+    return data;
   }
 
   // Excluir item
