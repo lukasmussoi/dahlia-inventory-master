@@ -1,4 +1,3 @@
-
 /**
  * Modelo Base de Inventário
  * @file Este arquivo contém funções básicas para gerenciamento do inventário
@@ -289,14 +288,14 @@ export class BaseInventoryModel {
           skipUpload = true; // Não precisamos fazer upload novamente
           console.log(`Foto ${i + 1} é URL existente, não será reenviada:`, photoUrl);
         }
-        else if ('photo_url' in photo && typeof photo.photo_url === 'string') {
+        else if (photo && typeof photo === 'object' && 'photo_url' in photo && typeof photo.photo_url === 'string') {
           // É um objeto com URL, usar diretamente
           photoUrl = photo.photo_url;
           isPrimary = photo.is_primary || false;
           skipUpload = true; // Não precisamos fazer upload novamente
           console.log(`Foto ${i + 1} já possui URL:`, photoUrl);
         } 
-        else if ('file' in photo && photo.file instanceof File) {
+        else if (photo && typeof photo === 'object' && 'file' in photo && photo.file instanceof File) {
           // É um objeto com File e possivelmente is_primary
           fileToUpload = photo.file;
           isPrimary = photo.is_primary || false;
@@ -395,7 +394,7 @@ export class BaseInventoryModel {
             });
           } catch (error) {
             console.error(`Erro ao processar arquivo ${i + 1}:`, error);
-            // Continuar para o próximo arquivo em caso de erro
+            // Continuar para o pr��ximo arquivo em caso de erro
           }
         } 
         else if (photoUrl) {

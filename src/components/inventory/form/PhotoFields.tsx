@@ -1,5 +1,4 @@
-
-import React from "react";
+import React, { useState } from "react";
 import { UseFormReturn } from "react-hook-form";
 import { WebcamButton } from "@/components/ui/webcam-button";
 import { Button } from "@/components/ui/button";
@@ -40,6 +39,9 @@ export function PhotoFields({
   photoUrls = [],
   setPhotoUrls
 }: PhotoFieldsProps) {
+  // Adicionar estado para controlar submissão
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   // Configurar o dropzone para upload de arquivos
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     accept: {
