@@ -241,6 +241,7 @@ export type Database = {
           price: number
           profit_margin: number | null
           quantity: number
+          raw_cost: number | null
           reseller_commission: number | null
           sku: string | null
           suggested_price: number
@@ -269,6 +270,7 @@ export type Database = {
           price: number
           profit_margin?: number | null
           quantity?: number
+          raw_cost?: number | null
           reseller_commission?: number | null
           sku?: string | null
           suggested_price?: number
@@ -297,6 +299,7 @@ export type Database = {
           price?: number
           profit_margin?: number | null
           quantity?: number
+          raw_cost?: number | null
           reseller_commission?: number | null
           sku?: string | null
           suggested_price?: number

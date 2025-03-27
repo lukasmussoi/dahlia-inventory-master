@@ -1,6 +1,27 @@
 
 # CHANGELOG DATABASE
 
+## [2025-03-29] - Adição da coluna raw_cost à tabela inventory
+**Desenvolvedor:** Equipe Dalia Manager
+
+### Alterações
+```sql
+-- Adicionar a coluna raw_cost à tabela inventory
+ALTER TABLE public.inventory 
+ADD COLUMN IF NOT EXISTS raw_cost numeric DEFAULT 0;
+
+-- Documentar a coluna
+COMMENT ON COLUMN public.inventory.raw_cost IS 'Preço do bruto do item, antes de processamento e acabamento';
+```
+
+### Justificativa
+Esta alteração foi necessária para implementar adequadamente o controle de preço do bruto dos itens de inventário, permitindo calcular corretamente os custos e margens de lucro. A coluna armazena o valor do material bruto antes de qualquer processamento ou acabamento.
+
+### Impacto
+- Melhoria no controle financeiro dos itens de estoque
+- Maior precisão no cálculo de custos e margens
+- Suporte adequado ao formulário de cadastro de joias que já utilizava este campo
+
 ## [2025-03-28] - Correção definitiva do processo de acerto de maletas
 **Desenvolvedor:** Equipe Dalia Manager
 

@@ -1,4 +1,3 @@
-
 /**
  * Modelo Base de Inventário
  * @file Este arquivo contém funções básicas para gerenciamento do inventário
@@ -94,11 +93,10 @@ export class BaseInventoryModel {
         is_primary: photo.is_primary || false
       }));
       
-      // Converter para o formato de InventoryItem, garantindo que raw_cost esteja presente
+      // Converter para o formato de InventoryItem, usando o campo raw_cost que agora existe no banco
       const processedItem: InventoryItem = {
         ...item,
-        // Usar uma asserção de tipo para acessar raw_cost e usar operador de coalescência nula
-        raw_cost: (item as any).raw_cost ?? 0,
+        raw_cost: item.raw_cost ?? 0, // Agora podemos acessar diretamente, sem type assertion
         photos: processedPhotos,
         inventory_photos: processedPhotos,
         category_name: item.category_name?.name || '',
@@ -137,11 +135,10 @@ export class BaseInventoryModel {
       is_primary: photo.is_primary || false
     }));
     
-    // Converter para o formato de InventoryItem, garantindo que raw_cost esteja presente
+    // Converter para o formato de InventoryItem, usando o campo raw_cost que agora existe no banco
     const processedItem: InventoryItem = {
       ...data,
-      // Usar uma asserção de tipo para acessar raw_cost e usar operador de coalescência nula
-      raw_cost: (data as any).raw_cost ?? 0,
+      raw_cost: data.raw_cost ?? 0, // Agora podemos acessar diretamente, sem type assertion
       photos: processedPhotos,
       inventory_photos: processedPhotos,
       category_name: data.category_name?.name || '',

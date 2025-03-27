@@ -46,7 +46,7 @@ export interface InventoryItem {
   quantity: number;
   price: number;
   unit_cost: number;
-  raw_cost: number;  // Garantindo que raw_cost está declarado como obrigatório
+  raw_cost: number;  // Agora a coluna existe fisicamente no banco de dados
   suggested_price: number;
   weight?: number;
   width?: number;
