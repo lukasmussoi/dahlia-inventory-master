@@ -1,3 +1,4 @@
+
 /**
  * Controlador de Relatórios de Acerto
  * @file Este arquivo contém funções para gerar relatórios e PDF de acertos
@@ -258,10 +259,12 @@ export class AcertoReportController {
         doc.setFontSize(10);
         doc.setFont("helvetica", "normal");
         
+        // Obter taxa de comissão da revendedora
         const commissionRate = acerto.seller?.commission_rate 
           ? `${(acerto.seller.commission_rate * 100).toFixed(0)}%` 
           : '30%';
         
+        // Calcular comissão usando a taxa personalizada da revendedora
         const commissionAmount = totalSales * (acerto.seller?.commission_rate || 0.3);
         
         doc.text(`Total de Vendas: ${formatCurrency(totalSales)}`, 14, currentY);

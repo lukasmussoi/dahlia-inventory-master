@@ -1,3 +1,4 @@
+
 /**
  * Controlador de Acertos de Maleta
  * @file Este arquivo controla as operações relacionadas aos acertos de maleta,
@@ -142,8 +143,18 @@ export const SettlementController = {
       }
       
       // 3. Buscar taxa de comissão do vendedor
-      const suitcase = await SuitcaseModel.getSuitcaseById(suitcaseId);
-      const commissionRate = suitcase?.seller?.commission_rate || 0.3;
+      const { data: resellerData, error: resellerError } = await supabase
+        .from("resellers")
+        .select("commission_rate")
+        .eq("id", suitcase?.seller_id)
+        .single();
+        
+      if (resellerError) {
+        console.error("Erro ao buscar taxa de comissão da revendedora:", resellerError);
+      }
+      
+      // Usar a taxa de comissão do vendedor se disponível, ou o valor padrão de 0.3 (30%)
+      const commissionRate = resellerData?.commission_rate || 0.3;
       const commissionAmount = totalSales * commissionRate;
       
       console.log(`Valor total das vendas: ${totalSales}, Comissão (${commissionRate * 100}%): ${commissionAmount}`);

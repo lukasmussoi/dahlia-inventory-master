@@ -145,7 +145,11 @@ export function AcertoDetailsDialog({
                       <p className="font-semibold text-lg">{formatCurrency(acerto.total_sales)}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Comissão da revendedora:</p>
+                      <p className="text-sm text-muted-foreground">
+                        Comissão da revendedora ({acerto.seller?.commission_rate ? 
+                          `${(acerto.seller.commission_rate * 100).toFixed(0)}%` : 
+                          '30%'}):
+                      </p>
                       <p className="font-semibold text-lg text-green-600">{formatCurrency(acerto.commission_amount)}</p>
                     </div>
                   </div>

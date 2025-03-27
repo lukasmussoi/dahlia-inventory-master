@@ -29,4 +29,25 @@ export class SellerModel {
     if (error) throw error;
     return data;
   }
+  
+  // Buscar taxa de comissão de um vendedor específico
+  static async getSellerCommissionRate(sellerId: string): Promise<number> {
+    try {
+      if (!sellerId) return 0.3; // Taxa padrão de 30%
+      
+      const { data, error } = await supabase
+        .from('resellers')
+        .select('commission_rate')
+        .eq('id', sellerId)
+        .maybeSingle();
+      
+      if (error) throw error;
+      
+      // Retornar a taxa de comissão do vendedor ou o valor padrão de 30%
+      return data?.commission_rate || 0.3;
+    } catch (error) {
+      console.error("Erro ao buscar taxa de comissão:", error);
+      return 0.3; // Taxa padrão em caso de erro
+    }
+  }
 }
