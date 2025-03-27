@@ -36,13 +36,13 @@ export function WebcamButton({ onCaptureComplete, disabled = false }: WebcamButt
         type="button"
         variant="outline" 
         size="sm" 
-        className="h-8 px-2" 
+        className="h-9 px-3 gap-1.5 rounded-md" 
         onClick={() => setIsOpen(true)}
         title="Capturar foto com webcam"
-        disabled={disabled} // Usando a propriedade disabled no botão
+        disabled={disabled}
       >
-        <Camera size={16} className="mr-1" />
-        <span className="text-xs">Webcam</span>
+        <Camera size={18} className="text-gray-600" />
+        <span>Webcam</span>
       </Button>
 
       <WebcamModal 

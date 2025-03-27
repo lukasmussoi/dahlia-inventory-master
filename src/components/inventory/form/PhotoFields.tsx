@@ -3,7 +3,7 @@ import React from "react";
 import { UseFormReturn } from "react-hook-form";
 import { WebcamButton } from "@/components/ui/webcam-button";
 import { Button } from "@/components/ui/button";
-import { Camera, Trash2, Upload, Save } from "lucide-react";
+import { Camera, Trash2, Upload } from "lucide-react";
 import { useDropzone } from "react-dropzone";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
@@ -150,54 +150,42 @@ export function PhotoFields({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="text-base font-medium">Fotos do Item</div>
-        <div className="flex gap-2">
-          <WebcamButton onCaptureComplete={handleWebcamCapture} disabled={disabled} />
-          
-          <Button
-            type="button"
-            variant="outline" 
-            size="sm" 
-            className="h-8 px-2" 
-            {...getRootProps()}
-            disabled={disabled}
-          >
-            <input {...getInputProps()} disabled={disabled} />
-            <Upload size={16} className="mr-1" />
-            <span className="text-xs">Upload</span>
-          </Button>
-          
-          <Button
-            type="button"
-            variant="default" 
-            size="sm" 
-            className="h-8 px-2 bg-green-600 hover:bg-green-700"
-            onClick={itemId ? handleSaveDirectly : onSavePhotos}
-            disabled={photos.length === 0 || disabled}
-          >
-            <Save size={16} className="mr-1" />
-            <span className="text-xs">Salvar Fotos</span>
-          </Button>
-        </div>
+      <div className="flex items-center gap-2">
+        <WebcamButton onCaptureComplete={handleWebcamCapture} disabled={disabled} />
+        
+        <Button
+          type="button"
+          variant="outline" 
+          size="sm" 
+          className="h-9 px-3 gap-1.5 rounded-md" 
+          {...getRootProps()}
+          disabled={disabled}
+        >
+          <input {...getInputProps()} disabled={disabled} />
+          <Upload size={18} className="text-gray-600" />
+          <span>Upload</span>
+        </Button>
       </div>
 
       {/* Área de soltar arquivos */}
       <div 
         {...getRootProps()} 
-        className={`border-2 border-dashed rounded-md p-4 text-center cursor-pointer transition-colors ${
-          isDragActive ? 'border-primary bg-primary/5' : 'border-muted-foreground/25'
+        className={`border-2 border-dashed rounded-md p-8 text-center cursor-pointer transition-colors flex flex-col items-center justify-center ${
+          isDragActive ? 'border-primary bg-primary/5' : 'border-zinc-200'
         } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
       >
         <input {...getInputProps()} disabled={disabled} />
-        <Camera className="mx-auto h-8 w-8 text-muted-foreground" />
-        <p className="mt-2 text-sm text-muted-foreground">
+        <Camera className="h-12 w-12 text-zinc-300 mb-2" />
+        <p className="text-sm text-zinc-500">
           {isDragActive
             ? 'Solte as imagens aqui...'
-            : 'Arraste e solte imagens aqui, ou clique para selecionar'}
+            : 'Arraste e solte as fotos aqui, ou clique para selecionar'}
         </p>
-        <p className="text-xs text-muted-foreground mt-1">
+        <p className="text-xs text-zinc-400 mt-1">
           Formatos aceitos: JPEG, PNG, GIF, WEBP
+        </p>
+        <p className="text-xs text-zinc-400 mt-1">
+          (Máximo 5 fotos)
         </p>
       </div>
 
@@ -213,7 +201,7 @@ export function PhotoFields({
 
       {/* Grid para exibição das fotos */}
       {photos.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-4">
           {photos.map((photo, index) => (
             <div 
               key={index} 

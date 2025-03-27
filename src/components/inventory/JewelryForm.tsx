@@ -383,16 +383,16 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
             <Form {...form}>
               <form id="jewelry-form" onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
                 {/* Formulário: seções de informações básicas, custos e precificação */}
-                <div className="bg-white rounded-lg p-6 shadow-sm border">
+                <div className="bg-white rounded-lg p-6 shadow-sm border border-zinc-200">
                   <h3 className="text-lg font-medium mb-4">Informações Básicas</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="name">Nome da Peça *</Label>
+                      <Label htmlFor="name" className="text-sm font-medium">Nome da Peça *</Label>
                       <Input 
                         id="name"
                         placeholder="Ex: Anel Solitário"
                         {...form.register('name')}
-                        className="h-12"
+                        className="h-11"
                       />
                       {form.formState.errors.name && (
                         <p className="text-red-500 text-sm">{form.formState.errors.name.message}</p>
@@ -400,12 +400,12 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="category">Categoria *</Label>
+                      <Label htmlFor="category" className="text-sm font-medium">Categoria *</Label>
                       <Select 
                         onValueChange={(value) => form.setValue('category_id', value)}
                         value={form.watch('category_id')}
                       >
-                        <SelectTrigger className="h-12">
+                        <SelectTrigger className="h-11">
                           <SelectValue placeholder="Selecione a categoria" />
                         </SelectTrigger>
                         <SelectContent>
@@ -422,12 +422,12 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="plating_type">Tipo de Banho *</Label>
+                      <Label htmlFor="plating_type" className="text-sm font-medium">Tipo de Banho *</Label>
                       <Select 
                         onValueChange={(value) => form.setValue('plating_type_id', value)}
                         value={form.watch('plating_type_id')}
                       >
-                        <SelectTrigger className="h-12">
+                        <SelectTrigger className="h-11">
                           <SelectValue placeholder="Selecione o tipo de banho" />
                         </SelectTrigger>
                         <SelectContent>
@@ -444,12 +444,12 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="supplier">Fornecedor</Label>
+                      <Label htmlFor="supplier" className="text-sm font-medium">Fornecedor</Label>
                       <Select
                         onValueChange={(value) => form.setValue('supplier_id', value)}
                         value={form.watch('supplier_id')}
                       >
-                        <SelectTrigger className="h-12">
+                        <SelectTrigger className="h-11">
                           <SelectValue placeholder="Selecione o fornecedor" />
                         </SelectTrigger>
                         <SelectContent>
@@ -464,17 +464,17 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                   </div>
                 </div>
 
-                <div className="bg-white rounded-lg p-6 shadow-sm border">
+                <div className="bg-white rounded-lg p-6 shadow-sm border border-zinc-200">
                   <h3 className="text-lg font-medium mb-4">Custos e Pesos</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="raw_cost">Preço do Bruto (R$) *</Label>
+                      <Label htmlFor="raw_cost" className="text-sm font-medium">Preço do Bruto (R$) *</Label>
                       <Input
                         id="raw_cost"
                         type="number"
                         step="0.01"
                         placeholder="0,00"
-                        className="h-12"
+                        className="h-11"
                         {...form.register('raw_cost', { valueAsNumber: true })}
                       />
                       {form.formState.errors.raw_cost && (
@@ -483,13 +483,13 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="material_weight">Peso (g) *</Label>
+                      <Label htmlFor="material_weight" className="text-sm font-medium">Peso (g) *</Label>
                       <Input
                         id="material_weight"
                         type="number"
                         step="0.01"
                         placeholder="0,00"
-                        className="h-12"
+                        className="h-11"
                         {...form.register('material_weight', { valueAsNumber: true })}
                       />
                       {form.formState.errors.material_weight && (
@@ -498,13 +498,13 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="packaging_cost">Custo da Embalagem (R$)</Label>
+                      <Label htmlFor="packaging_cost" className="text-sm font-medium">Custo da Embalagem (R$)</Label>
                       <Input
                         id="packaging_cost"
                         type="number"
                         step="0.01"
                         placeholder="0,00"
-                        className="h-12"
+                        className="h-11"
                         {...form.register('packaging_cost', { valueAsNumber: true })}
                       />
                     </div>
@@ -512,12 +512,12 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                     <div className="space-y-2">
-                      <Label htmlFor="quantity">Quantidade em Estoque *</Label>
+                      <Label htmlFor="quantity" className="text-sm font-medium">Quantidade em Estoque *</Label>
                       <Input
                         id="quantity"
                         type="number"
                         placeholder="0"
-                        className="h-12"
+                        className="h-11"
                         {...form.register('quantity', { valueAsNumber: true })}
                       />
                       {form.formState.errors.quantity && (
@@ -526,12 +526,12 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="min_stock">Estoque Mínimo *</Label>
+                      <Label htmlFor="min_stock" className="text-sm font-medium">Estoque Mínimo *</Label>
                       <Input
                         id="min_stock"
                         type="number"
                         placeholder="0"
-                        className="h-12"
+                        className="h-11"
                         {...form.register('min_stock', { valueAsNumber: true })}
                       />
                       {form.formState.errors.min_stock && (
@@ -541,17 +541,17 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                   </div>
                 </div>
 
-                <div className="bg-white rounded-lg p-6 shadow-sm border">
+                <div className="bg-white rounded-lg p-6 shadow-sm border border-zinc-200">
                   <h3 className="text-lg font-medium mb-4">Precificação</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="markup_percentage">Markup (%) *</Label>
+                      <Label htmlFor="markup_percentage" className="text-sm font-medium">Markup (%) *</Label>
                       <Input
                         id="markup_percentage"
                         type="number"
                         step="0.1"
                         placeholder="30.0"
-                        className="h-12"
+                        className="h-11"
                         {...form.register('markup_percentage', { valueAsNumber: true })}
                       />
                       {form.formState.errors.markup_percentage && (
@@ -560,13 +560,13 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="price">Preço Final (R$) *</Label>
+                      <Label htmlFor="price" className="text-sm font-medium">Preço Final (R$) *</Label>
                       <Input
                         id="price"
                         type="number"
                         step="0.01"
                         placeholder="0.00"
-                        className="h-12"
+                        className="h-11"
                         {...form.register('price', { valueAsNumber: true })}
                       />
                       {form.formState.errors.price && (
@@ -574,73 +574,16 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                       )}
                     </div>
                   </div>
-                  
-                  {/* Resumo calculado de preços */}
-                  <div className="mt-4 pt-4 border-t">
-                    <div className="flex flex-col gap-2">
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-500">Custo Total:</span>
-                        <span className="font-medium">
-                          {calculatedValues.totalCost.toLocaleString('pt-BR', { 
-                            style: 'currency', 
-                            currency: 'BRL' 
-                          })}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-500">Preço sugerido:</span>
-                        <span className="font-medium">
-                          {calculatedValues.suggestedPrice.toLocaleString('pt-BR', { 
-                            style: 'currency', 
-                            currency: 'BRL' 
-                          })}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-500">Lucro:</span>
-                        <span className={`font-medium ${calculatedValues.profit < 0 ? 'text-red-500' : 'text-green-500'}`}>
-                          {calculatedValues.profit.toLocaleString('pt-BR', { 
-                            style: 'currency', 
-                            currency: 'BRL' 
-                          })}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
                 </div>
 
-                <div className="flex justify-end gap-2">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={onClose}
-                    disabled={isSubmitting}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button 
-                    type="submit"
-                    className="min-w-[120px]"
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? (
-                      <div className="flex items-center">
-                        <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
-                        <span>Salvando...</span>
-                      </div>
-                    ) : (
-                      <span>{item ? "Atualizar" : "Salvar"}</span>
-                    )}
-                  </Button>
-                </div>
               </form>
             </Form>
           </div>
 
           {/* Coluna lateral - Fotos e sumário */}
           <div className="overflow-y-auto space-y-6">
-            {/* Componente para gerenciar as fotos */}
-            <div className="bg-white rounded-lg p-6 shadow-sm border">
+            {/* Seção de fotos */}
+            <div className="bg-white rounded-lg p-6 shadow-sm border border-zinc-200">
               <PhotoFields 
                 photos={photos}
                 setPhotos={setPhotos}
@@ -652,6 +595,41 @@ export function JewelryForm({ item, isOpen, onClose, onSuccess }: JewelryFormPro
                 itemId={currentItemId}
                 disabled={isSubmitting}
               />
+            </div>
+
+            {/* Resumo do produto */}
+            <PriceSummary 
+              totalCost={calculatedValues.totalCost}
+              finalPrice={form.watch('price') || 0}
+              finalProfit={calculatedValues.profit}
+              suggestedPrice={calculatedValues.suggestedPrice}
+            />
+
+            {/* Botões de ação */}
+            <div className="flex justify-end gap-2">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={onClose}
+                disabled={isSubmitting}
+              >
+                Cancelar
+              </Button>
+              <Button 
+                type="submit"
+                form="jewelry-form"
+                className="min-w-[120px] bg-orange-500 hover:bg-orange-600"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <div className="flex items-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
+                    <span>Salvando...</span>
+                  </div>
+                ) : (
+                  <span>{item ? "Atualizar" : "Salvar"}</span>
+                )}
+              </Button>
             </div>
           </div>
         </div>

@@ -17,8 +17,8 @@ export function PriceSummary({ totalCost, finalPrice, finalProfit, suggestedPric
   };
 
   return (
-    <div className="bg-[#1A1F2C] p-4 rounded-lg shadow-lg max-w-md">
-      <h3 className="text-lg font-semibold text-white mb-4">Resumo do Produto</h3>
+    <div className="bg-[#1A1F2C] p-6 rounded-lg shadow-lg">
+      <h3 className="text-lg font-medium text-white mb-4">Resumo do Produto</h3>
       <div className="space-y-3">
         <div className="flex items-center justify-between bg-white/10 p-3 rounded-lg">
           <span className="text-sm font-medium text-gray-300">Custo Total</span>
