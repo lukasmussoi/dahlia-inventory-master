@@ -219,7 +219,7 @@ export class BaseInventoryModel {
               if (typeof newPhoto === 'string' && newPhoto === photo.photo_url) {
                 isReused = true;
                 break;
-              } else if ('photo_url' in newPhoto && newPhoto.photo_url === photo.photo_url) {
+              } else if (typeof newPhoto === 'object' && 'photo_url' in newPhoto && newPhoto.photo_url === photo.photo_url) {
                 isReused = true;
                 break;
               }
@@ -288,14 +288,14 @@ export class BaseInventoryModel {
           skipUpload = true; // Não precisamos fazer upload novamente
           console.log(`Foto ${i + 1} é URL existente, não será reenviada:`, photoUrl);
         }
-        else if (photo && typeof photo === 'object' && 'photo_url' in photo && typeof photo.photo_url === 'string') {
+        else if (typeof photo === 'object' && photo !== null && 'photo_url' in photo && typeof photo.photo_url === 'string') {
           // É um objeto com URL, usar diretamente
           photoUrl = photo.photo_url;
           isPrimary = photo.is_primary || false;
           skipUpload = true; // Não precisamos fazer upload novamente
           console.log(`Foto ${i + 1} já possui URL:`, photoUrl);
         } 
-        else if (photo && typeof photo === 'object' && 'file' in photo && photo.file instanceof File) {
+        else if (typeof photo === 'object' && photo !== null && 'file' in photo && photo.file instanceof File) {
           // É um objeto com File e possivelmente is_primary
           fileToUpload = photo.file;
           isPrimary = photo.is_primary || false;
