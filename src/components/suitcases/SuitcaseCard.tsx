@@ -1,3 +1,4 @@
+
 /**
  * Componente de Card de Maleta
  * @file Exibe os dados de uma maleta em formato de card com ações
@@ -23,7 +24,8 @@ import {
   User, 
   ArrowRightLeft,
   MoreVertical,
-  PackageOpen
+  PackageOpen,
+  History
 } from "lucide-react";
 import { 
   DropdownMenu,
@@ -36,6 +38,7 @@ import { SuitcaseSupplyDialog } from "./supply/SuitcaseSupplyDialog";
 import { SuitcaseSettlementDialog } from "./settlement/SuitcaseSettlementDialog";
 import { OpenSuitcaseDialog } from "./open/OpenSuitcaseDialog";
 import { formatStatus } from "@/utils/formatUtils";
+import { SuitcaseHistoryDialog } from "./history/SuitcaseHistoryDialog";
 
 interface SuitcaseCardProps {
   suitcase: Suitcase;
@@ -55,6 +58,7 @@ export function SuitcaseCard({
   const [showSupplyDialog, setShowSupplyDialog] = useState(false);
   const [showSettlementDialog, setShowSettlementDialog] = useState(false);
   const [showOpenDialog, setShowOpenDialog] = useState(false);
+  const [showHistoryDialog, setShowHistoryDialog] = useState(false);
 
   const hasLateSettlement = suitcase.next_settlement_date && 
     isPast(parseISO(suitcase.next_settlement_date));
@@ -116,6 +120,11 @@ export function SuitcaseCard({
   // Manipulador para "Abrir Maleta"
   const handleOpenSuitcase = () => {
     setShowOpenDialog(true);
+  };
+
+  // Manipulador para "Histórico da Maleta" (nova funcionalidade)
+  const handleOpenHistory = () => {
+    setShowHistoryDialog(true);
   };
 
   return (
@@ -183,10 +192,18 @@ export function SuitcaseCard({
             <DropdownMenuContent align="end">
               {/* Botão "Abrir Maleta" - Apenas para administradores */}
               {isAdmin && (
-                <DropdownMenuItem onClick={handleOpenSuitcase}>
-                  <PackageOpen className="h-4 w-4 mr-2" />
-                  Abrir Maleta
-                </DropdownMenuItem>
+                <>
+                  <DropdownMenuItem onClick={handleOpenSuitcase}>
+                    <PackageOpen className="h-4 w-4 mr-2" />
+                    Abrir Maleta
+                  </DropdownMenuItem>
+                  
+                  {/* Botão "Histórico" - Nova opção apenas para administradores */}
+                  <DropdownMenuItem onClick={handleOpenHistory}>
+                    <History className="h-4 w-4 mr-2" />
+                    Histórico
+                  </DropdownMenuItem>
+                </>
               )}
             </DropdownMenuContent>
           </DropdownMenu>
@@ -214,6 +231,14 @@ export function SuitcaseCard({
         open={showOpenDialog}
         onOpenChange={setShowOpenDialog}
         suitcaseId={suitcase.id}
+      />
+
+      {/* Diálogo "Histórico da Maleta" - Novo componente */}
+      <SuitcaseHistoryDialog
+        open={showHistoryDialog}
+        onOpenChange={setShowHistoryDialog}
+        suitcaseId={suitcase.id}
+        suitcaseCode={suitcase.code || ""}
       />
     </>
   );
