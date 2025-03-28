@@ -241,6 +241,7 @@ export type Database = {
           price: number
           profit_margin: number | null
           quantity: number
+          quantity_reserved: number
           raw_cost: number | null
           reseller_commission: number | null
           sku: string | null
@@ -270,6 +271,7 @@ export type Database = {
           price: number
           profit_margin?: number | null
           quantity?: number
+          quantity_reserved?: number
           raw_cost?: number | null
           reseller_commission?: number | null
           sku?: string | null
@@ -299,6 +301,7 @@ export type Database = {
           price?: number
           profit_margin?: number | null
           quantity?: number
+          quantity_reserved?: number
           raw_cost?: number | null
           reseller_commission?: number | null
           sku?: string | null
@@ -876,11 +879,19 @@ export type Database = {
         }
         Returns: undefined
       }
+      begin_transaction: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       check_is_admin: {
         Args: {
           user_id: string
         }
         Returns: boolean
+      }
+      commit_transaction: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       count_item_sales: {
         Args: {
@@ -920,6 +931,10 @@ export type Database = {
             }
             Returns: boolean
           }
+      rollback_transaction: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       validate_cpf_cnpj: {
         Args: {
           cpf_cnpj: string

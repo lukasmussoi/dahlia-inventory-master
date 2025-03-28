@@ -1,4 +1,3 @@
-
 /**
  * Modelo de Operações com Itens de Maleta
  * @file Funções para gerenciar operações de inclusão, atualização e remoção de itens em maletas
@@ -34,8 +33,8 @@ export class ItemOperationsModel {
       }
       
       // Calcular quantidade disponível (total - reservada)
-      const quantity = inventoryItem.quantity || 0;
-      const quantity_reserved = inventoryItem.quantity_reserved || 0;
+      const quantity = inventoryItem?.quantity || 0;
+      const quantity_reserved = inventoryItem?.quantity_reserved || 0;
       const quantity_available = quantity - quantity_reserved;
       
       if (quantity_available <= 0) {
@@ -134,117 +133,110 @@ export class ItemOperationsModel {
       const existingItemCheck = await this.checkItemInSuitcase(inventory_id, suitcase_id);
       let suitcaseItem;
       
-      // Iniciar manualmente uma transação (sem usar RPC)
-      let transaction = null;
+      // 3. Atualizar a quantidade reservada no inventário
+      const newReservedQuantity = (availabilityInfo.quantity_reserved || 0) + quantity;
+      const { error: updateInventoryError } = await supabase
+        .from('inventory')
+        .update({ quantity_reserved: newReservedQuantity })
+        .eq('id', inventory_id);
       
-      try {
-        // 3. Atualizar a quantidade reservada no inventário
-        const newReservedQuantity = (availabilityInfo.quantity_reserved || 0) + quantity;
-        const { error: updateInventoryError } = await supabase
-          .from('inventory')
-          .update({ quantity_reserved: newReservedQuantity })
-          .eq('id', inventory_id);
-        
-        if (updateInventoryError) {
-          throw updateInventoryError;
-        }
-        
-        // 4. Adicionar ou atualizar o item na maleta
-        if (existingItemCheck.inSuitcase) {
-          // Se o item já existe na maleta, atualize a quantidade
-          const newQuantity = (existingItemCheck.item.quantity || 0) + quantity;
-          
-          const { data: updatedItem, error: updateItemError } = await supabase
-            .from('suitcase_items')
-            .update({ quantity: newQuantity })
-            .eq('id', existingItemCheck.item.id)
-            .select(`
-              *,
-              product:inventory_id (
-                id,
-                name,
-                price,
-                sku,
-                unit_cost,
-                photos:inventory_photos(photo_url)
-              )
-            `)
-            .single();
-          
-          if (updateItemError) {
-            throw updateItemError;
-          }
-          
-          suitcaseItem = updatedItem;
-        } else {
-          // Se o item não existe na maleta, crie um novo
-          const { data: newItem, error: insertItemError } = await supabase
-            .from('suitcase_items')
-            .insert({
-              suitcase_id,
-              inventory_id,
-              status: 'in_possession',
-              quantity
-            })
-            .select(`
-              *,
-              product:inventory_id (
-                id,
-                name,
-                price,
-                sku,
-                unit_cost,
-                photos:inventory_photos(photo_url)
-              )
-            `)
-            .single();
-          
-          if (insertItemError) {
-            throw insertItemError;
-          }
-          
-          suitcaseItem = newItem;
-        }
-        
-        // 5. Registrar o movimento de inventário
-        const { error: movementError } = await supabase
-          .from('inventory_movements')
-          .insert({
-            inventory_id,
-            quantity,
-            movement_type: 'reserva_maleta',
-            reason: `Reserva para maleta ${suitcase_id}`,
-            user_id: (await supabase.auth.getUser()).data.user?.id,
-            unit_cost: suitcaseItem.product?.unit_cost || 0
-          });
-        
-        if (movementError) {
-          throw movementError;
-        }
-        
-        console.log("Item reservado com sucesso:", suitcaseItem);
-        return suitcaseItem;
-        
-      } catch (transactionError) {
-        // Em caso de erro, tentar reverter manualmente
-        console.error("Erro na operação, tentando reverter:", transactionError);
-        
-        // Tentar reverter a quantidade reservada
-        if (availabilityInfo.quantity_reserved !== undefined) {
-          try {
-            await supabase
-              .from('inventory')
-              .update({ 
-                quantity_reserved: availabilityInfo.quantity_reserved 
-              })
-              .eq('id', inventory_id);
-          } catch (rollbackError) {
-            console.error("Erro ao tentar reverter quantidade reservada:", rollbackError);
-          }
-        }
-        
-        throw transactionError;
+      if (updateInventoryError) {
+        throw updateInventoryError;
       }
+      
+      // 4. Adicionar ou atualizar o item na maleta
+      if (existingItemCheck.inSuitcase) {
+        // Se o item já existe na maleta, atualize a quantidade
+        const newQuantity = (existingItemCheck.item.quantity || 0) + quantity;
+        
+        const { data: updatedItem, error: updateItemError } = await supabase
+          .from('suitcase_items')
+          .update({ quantity: newQuantity })
+          .eq('id', existingItemCheck.item.id)
+          .select(`
+            *,
+            product:inventory_id (
+              id,
+              name,
+              price,
+              sku,
+              unit_cost,
+              photos:inventory_photos(photo_url)
+            )
+          `)
+          .single();
+        
+        if (updateItemError) {
+          // Em caso de erro, reverter a reserva
+          await supabase
+            .from('inventory')
+            .update({ 
+              quantity_reserved: availabilityInfo.quantity_reserved 
+            })
+            .eq('id', inventory_id);
+            
+          throw updateItemError;
+        }
+        
+        suitcaseItem = updatedItem;
+      } else {
+        // Se o item não existe na maleta, crie um novo
+        const { data: newItem, error: insertItemError } = await supabase
+          .from('suitcase_items')
+          .insert({
+            suitcase_id,
+            inventory_id,
+            status: 'in_possession',
+            quantity
+          })
+          .select(`
+            *,
+            product:inventory_id (
+              id,
+              name,
+              price,
+              sku,
+              unit_cost,
+              photos:inventory_photos(photo_url)
+            )
+          `)
+          .single();
+        
+        if (insertItemError) {
+          // Em caso de erro, reverter a reserva
+          await supabase
+            .from('inventory')
+            .update({ 
+              quantity_reserved: availabilityInfo.quantity_reserved 
+            })
+            .eq('id', inventory_id);
+            
+          throw insertItemError;
+        }
+        
+        suitcaseItem = newItem;
+      }
+      
+      // 5. Registrar o movimento de inventário
+      const { error: movementError } = await supabase
+        .from('inventory_movements')
+        .insert({
+          inventory_id,
+          quantity,
+          movement_type: 'reserva_maleta',
+          reason: `Reserva para maleta ${suitcase_id}`,
+          user_id: (await supabase.auth.getUser()).data.user?.id,
+          unit_cost: suitcaseItem.product?.unit_cost || 0
+        });
+      
+      if (movementError) {
+        console.error("Erro ao registrar movimento de inventário:", movementError);
+        // Não reverter as operações anteriores, apenas registrar o erro
+      }
+      
+      console.log("Item reservado com sucesso:", suitcaseItem);
+      return suitcaseItem;
+      
     } catch (error) {
       console.error("Erro ao reservar item para maleta:", error);
       throw error;
