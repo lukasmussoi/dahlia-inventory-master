@@ -2,8 +2,7 @@
 /**
  * Hook para Abrir Maleta
  * @file Gerencia o estado e as operações de visualização, devolução e marcação de itens danificados
- * @relacionamento Utilizado pela página OpenSuitcasePage para gerenciar as abas e operações com itens
- * @modificação Adaptado para funcionar com a página dedicada em vez de modal
+ * @relacionamento Utilizado pela página OpenSuitcasePage e pelo modal OpenSuitcaseModal
  */
 import { useState, useCallback, useRef, useEffect } from "react";
 import { toast } from "sonner";

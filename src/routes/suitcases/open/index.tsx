@@ -1,15 +1,14 @@
 
 /**
  * Página de Abertura de Maleta
- * @file Exibe os itens e histórico da maleta para administradores em uma página dedicada
- * @relacionamento Acessada quando o admin clica em "Abrir Maleta" no card de maleta
+ * @file Exibe os itens e histórico da maleta para administradores 
+ * @relacionamento Acessada diretamente ou via modal quando o admin clica em "Abrir Maleta"
  */
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
 import { LoadingIndicator } from "@/components/shared/LoadingIndicator";
 import { SuitcaseItemsTab } from "@/components/suitcases/open/tabs/SuitcaseItemsTab";
 import { SuitcaseHistoryTab } from "@/components/suitcases/open/tabs/SuitcaseHistoryTab";
