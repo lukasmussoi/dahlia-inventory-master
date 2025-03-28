@@ -1,3 +1,4 @@
+
 /**
  * Controlador de Itens de Maleta
  * @file Este arquivo controla as operações relacionadas aos itens de maletas
@@ -30,24 +31,44 @@ export const SuitcaseItemController = {
       console.log("[SuitcaseItemController] Iniciando adição de item à maleta");
       console.log(`[SuitcaseItemController] Parâmetros: suitcaseId=${suitcaseId}, inventoryId=${inventoryId}, quantity=${quantity}`);
       
-      // Verificar se o item já está em outra maleta
+      // Verificar se o item já está em outra maleta (não na que estamos tentando adicionar)
       const itemInfo = await SuitcaseItemModel.getItemSuitcaseInfo(inventoryId);
+      
+      // Verificar se o item está em outra maleta diferente da atual
       if (itemInfo && itemInfo.suitcase_id && itemInfo.suitcase_id !== suitcaseId) {
         console.error(`[SuitcaseItemController] Item já está na maleta ${itemInfo.suitcase_code}`);
         throw new Error(`Este item já está na maleta ${itemInfo.suitcase_code}`);
       }
       
-      // Se chegarmos aqui, podemos adicionar o item com a quantidade especificada
-      console.log(`[SuitcaseItemController] Adicionando ${quantity} unidade(s) do item ${inventoryId} à maleta ${suitcaseId}`);
+      // Verificar se o item já está na maleta atual, e se estiver, atualizar a quantidade
+      const checkInCurrentSuitcase = await SuitcaseItemModel.checkItemInSuitcase(inventoryId, suitcaseId);
       
-      const result = await SuitcaseItemModel.addItemToSuitcase({
-        suitcase_id: suitcaseId,
-        inventory_id: inventoryId,
-        quantity
-      });
+      console.log(`[SuitcaseItemController] Verificação na maleta atual:`, checkInCurrentSuitcase);
       
-      console.log(`[SuitcaseItemController] Item adicionado com sucesso:`, result);
-      return result;
+      if (checkInCurrentSuitcase.inSuitcase) {
+        // Se o item já está na maleta atual, atualizamos a quantidade
+        console.log(`[SuitcaseItemController] Item já existe na maleta atual, atualizando quantidade`);
+        const currentQuantity = checkInCurrentSuitcase.item.quantity || 0;
+        const newQuantity = currentQuantity + quantity;
+        
+        console.log(`[SuitcaseItemController] Quantidade atual: ${currentQuantity}, Nova quantidade: ${newQuantity}`);
+        
+        const result = await SuitcaseItemModel.updateSuitcaseItemQuantity(checkInCurrentSuitcase.item.id, newQuantity);
+        console.log(`[SuitcaseItemController] Quantidade atualizada com sucesso:`, result);
+        return result;
+      } else {
+        // Se não estiver na maleta, adicionamos normalmente
+        console.log(`[SuitcaseItemController] Adicionando ${quantity} unidade(s) do item ${inventoryId} à maleta ${suitcaseId}`);
+        
+        const result = await SuitcaseItemModel.addItemToSuitcase({
+          suitcase_id: suitcaseId,
+          inventory_id: inventoryId,
+          quantity
+        });
+        
+        console.log(`[SuitcaseItemController] Item adicionado com sucesso:`, result);
+        return result;
+      }
     } catch (error) {
       console.error("[SuitcaseItemController] Erro ao adicionar item à maleta:", error);
       throw error;

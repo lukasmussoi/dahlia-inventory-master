@@ -93,23 +93,24 @@ export function SuitcaseInventorySearch({ suitcaseId, onItemAdded }: SuitcaseInv
       
       setIsAdding(prev => ({ ...prev, [inventoryId]: true }));
       
-      // Função de callback para atualizar a interface após operação de adição
-      const onSuccess = () => {
-        // Remover o item dos resultados da busca
-        setSearchResults(prevResults => prevResults.filter(item => item.id !== inventoryId));
+      try {
+        // Usar o controlador de maleta para adicionar o item com a quantidade especificada
+        console.log(`[SuitcaseInventorySearch] Chamando addItemToSuitcase com quantidade ${itemQuantity}`);
+        await CombinedSuitcaseController.addItemToSuitcase(suitcaseId, inventoryId, itemQuantity);
+        
+        // Remover o item dos resultados da busca após adição bem-sucedida
+        setSearchResults(prevResults => prevResults.filter(result => result.id !== inventoryId));
         
         // Notificar o componente pai
         if (onItemAdded) onItemAdded();
         
         toast.success(`${itemQuantity} unidade(s) do item adicionada(s) à maleta com sucesso`);
-      };
-      
-      // Verificar o tipo de item e fazer a adição correta para itens novos ou existentes
-      await CombinedSuitcaseController.addItemToSuitcase(suitcaseId, inventoryId, itemQuantity);
-      onSuccess();
-      
+      } catch (error: any) {
+        console.error("[SuitcaseInventorySearch] Erro durante addItemToSuitcase:", error);
+        toast.error(error.message || "Erro ao adicionar item à maleta");
+      }
     } catch (error: any) {
-      console.error("Erro ao adicionar item à maleta:", error);
+      console.error("[SuitcaseInventorySearch] Erro geral ao adicionar item à maleta:", error);
       toast.error(error.message || "Erro ao adicionar item à maleta");
     } finally {
       setIsAdding(prev => ({ ...prev, [inventoryId]: false }));
