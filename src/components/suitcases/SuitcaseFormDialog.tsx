@@ -151,7 +151,7 @@ export function SuitcaseFormDialog({
     if (sellerId) {
       fetchSellerInfo(sellerId);
     }
-  }, ["seller_id"]); // Corrigido: usando o nome do campo como string no array de dependências
+  }, [form]); // Corrigido: usando form como dependência
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
