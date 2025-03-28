@@ -45,17 +45,16 @@ export function OpenSuitcaseDialog({
     resetState
   } = useOpenSuitcase(open ? suitcaseId : null, open);
 
-  // Função para forçar recarga da página ao fechar
-  const handleForceReload = () => {
-    console.log("[OpenSuitcaseDialog] Forçando recarga da página para resolver problemas de travamento");
-    window.location.reload();
-  };
-
   // Manipulador seguro para fechamento da modal
   const handleCloseDialog = useCallback(() => {
-    console.log("[OpenSuitcaseDialog] Iniciando processo de fechamento forçado");
-    handleForceReload();
-  }, []);
+    console.log("[OpenSuitcaseDialog] Iniciando processo de fechamento controlado");
+    // Primeiro resetamos todos os estados
+    resetState();
+    // Depois fechamos o diálogo
+    setIsClosing(true);
+    // Notificamos o componente pai para fechar a modal
+    onOpenChange(false);
+  }, [resetState, onOpenChange]);
 
   // Função para tratar a mudança de abas com validação de tipo
   const handleTabChange = useCallback((value: string) => {
@@ -76,11 +75,11 @@ export function OpenSuitcaseDialog({
   // Renderização durante carregamento
   if (isLoading && open) {
     return (
-      <Dialog open={open} onOpenChange={handleForceReload}>
+      <Dialog open={open} onOpenChange={handleCloseDialog}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
           <button 
             className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none"
-            onClick={handleForceReload}
+            onClick={handleCloseDialog}
           >
             <X className="h-4 w-4" />
             <span className="sr-only">Fechar</span>
@@ -97,11 +96,11 @@ export function OpenSuitcaseDialog({
 
   // Renderização principal do conteúdo
   return (
-    <Dialog open={open} onOpenChange={handleForceReload}>
+    <Dialog open={open} onOpenChange={handleCloseDialog}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <button 
           className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none"
-          onClick={handleForceReload}
+          onClick={handleCloseDialog}
         >
           <X className="h-4 w-4" />
           <span className="sr-only">Fechar</span>
@@ -138,7 +137,7 @@ export function OpenSuitcaseDialog({
         )}
         
         <div className="flex justify-end mt-4">
-          <Button variant="outline" onClick={handleForceReload}>
+          <Button variant="outline" onClick={handleCloseDialog}>
             Fechar
           </Button>
         </div>
