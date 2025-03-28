@@ -4,7 +4,7 @@
  * @file Este arquivo contém operações básicas para itens de maleta
  */
 import { supabase } from "@/integrations/supabase/client";
-import { InventoryItemSuitcaseInfo } from "@/types/suitcase";
+import { InventoryItemSuitcaseInfo, SuitcaseItem } from "@/types/suitcase";
 
 export class BaseItemModel {
   static supabase = supabase;
@@ -20,13 +20,15 @@ export class BaseItemModel {
         .from('suitcase_items')
         .select(`
           *,
-          product:inventory(id, name, sku, price, photo_url)
+          product:inventory(id, name, sku, price, unit_cost, photo_url)
         `)
         .eq('id', itemId)
         .single();
 
       if (error) throw error;
-      return data;
+      
+      // Ensure product is properly formatted
+      return this.formatSuitcaseItemProduct(data);
     } catch (error) {
       console.error("Erro ao buscar item da maleta:", error);
       return null;
@@ -38,19 +40,21 @@ export class BaseItemModel {
    * @param suitcaseId ID da maleta
    * @returns Lista de itens
    */
-  static async getSuitcaseItems(suitcaseId: string) {
+  static async getSuitcaseItems(suitcaseId: string): Promise<SuitcaseItem[]> {
     try {
       const { data, error } = await supabase
         .from('suitcase_items')
         .select(`
           *,
-          product:inventory(id, name, sku, price, photo_url)
+          product:inventory(id, name, sku, price, unit_cost, photo_url)
         `)
         .eq('suitcase_id', suitcaseId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data || [];
+      
+      // Ensure all products are properly formatted
+      return (data || []).map(item => this.formatSuitcaseItemProduct(item));
     } catch (error) {
       console.error("Erro ao buscar itens da maleta:", error);
       return [];
@@ -89,5 +93,27 @@ export class BaseItemModel {
       console.error("Erro ao buscar informações do item na maleta:", error);
       return null;
     }
+  }
+
+  /**
+   * Formata os dados do produto para garantir compatibilidade com o tipo SuitcaseItem
+   * @param item Item da maleta com produto potencialmente inválido
+   * @returns Item da maleta com produto formatado corretamente
+   */
+  static formatSuitcaseItemProduct(item: any): SuitcaseItem {
+    // Se o produto for um erro de seleção ou não existir
+    if (!item.product || item.product.error) {
+      // Criar um produto vazio compatível com o tipo esperado
+      item.product = {
+        id: item.inventory_id || '',
+        name: 'Produto não encontrado',
+        sku: 'N/A',
+        price: 0,
+        unit_cost: 0,
+        photo_url: ''
+      };
+    }
+    
+    return item as SuitcaseItem;
   }
 }

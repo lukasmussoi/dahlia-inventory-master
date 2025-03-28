@@ -39,6 +39,24 @@ export class AcertoMaletaModel {
   }
 
   /**
+   * Helper function to format product data
+   */
+  private static formatProductData(product: any) {
+    // If product doesn't exist or has error, create a default product
+    if (!product || product.error) {
+      return {
+        id: '',
+        name: 'Produto não encontrado',
+        sku: 'N/A',
+        price: 0,
+        unit_cost: 0,
+        photo_url: ''
+      };
+    }
+    return product;
+  }
+
+  /**
    * Processa os itens de um acerto (presentes e vendidos)
    * @param acertoId ID do acerto
    * @param suitcaseId ID da maleta

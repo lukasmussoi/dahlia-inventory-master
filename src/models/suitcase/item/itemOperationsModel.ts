@@ -1,7 +1,6 @@
-
 /**
  * Modelo de Operações de Itens de Maleta
- * @file Este arquivo contém operações comuns para gerenciar itens de maleta
+ * @file Este arquivo contém operações para manipular itens dentro de maletas
  */
 import { supabase } from "@/integrations/supabase/client";
 import { SuitcaseItemStatus } from "@/types/suitcase";
@@ -165,59 +164,70 @@ export class ItemOperationsModel {
    * @param isDamaged Define se o item está danificado
    * @returns Resultado da operação
    */
-  static async returnItemToInventory(itemId: string, isDamaged: boolean = false) {
-    if (!itemId) {
-      throw new Error("ID do item é obrigatório");
-    }
-
+  static async returnItemToInventory(itemId: string, isDamaged: boolean = false): Promise<boolean> {
     try {
-      // Buscar informações do item
-      const { data: itemData, error: itemError } = await supabase
+      // 1. Buscar informações sobre o item
+      const { data: item, error: itemError } = await supabase
         .from('suitcase_items')
-        .select('inventory_id, suitcase_id, quantity, status')
+        .select(`
+          id,
+          inventory_id,
+          suitcase_id,
+          quantity,
+          status
+        `)
         .eq('id', itemId)
         .single();
-
+      
       if (itemError) throw itemError;
-
-      // Se o item já estiver com status "returned", ignorar
-      if (itemData.status === 'returned') {
-        return true;
+      if (!item) throw new Error(`Item de maleta não encontrado: ${itemId}`);
+      
+      // 2. Verificar se o item já foi devolvido/vendido
+      if (item.status !== 'in_possession') {
+        console.warn(`Item ${itemId} já está com status: ${item.status}`);
+        return false;
       }
-
-      // Liberar a quantidade reservada no inventário
-      await supabase.rpc('release_reserved_inventory', {
-        inventory_id: itemData.inventory_id,
-        release_quantity: itemData.quantity || 1
+      
+      // 3. Iniciar uma transação para garantir consistência
+      const { error: txnError } = await supabase.rpc('release_reserved_inventory', {
+        inventory_id: item.inventory_id,
+        release_quantity: item.quantity || 1
       });
-
-      // Se o item estiver danificado, registrar na tabela de itens danificados
+      
+      if (txnError) throw txnError;
+      
+      // 4. Atualizar o status do item para 'returned'
+      const { error: updateError } = await supabase
+        .from('suitcase_items')
+        .update({
+          status: 'returned'
+        })
+        .eq('id', item.id);
+      
+      if (updateError) throw updateError;
+      
+      // 5. Se o item está danificado, registrar no sistema
       if (isDamaged) {
-        // Registrar item como danificado
+        // Registrar como item danificado
         const { error: damageError } = await supabase
           .from('inventory_damaged_items')
           .insert({
-            inventory_id: itemData.inventory_id,
-            suitcase_id: itemData.suitcase_id,
-            quantity: itemData.quantity || 1,
-            reason: 'Devolução de maleta - item danificado',
-            damage_type: 'customer_damage' // Usando um valor válido do enum
+            inventory_id: item.inventory_id,
+            suitcase_id: item.suitcase_id,
+            quantity: item.quantity || 1,
+            reason: 'Item devolvido da maleta como danificado',
+            damage_type: 'other' // Usando um valor válido do enum damage_type
           });
-
-        if (damageError) throw damageError;
+        
+        if (damageError) {
+          console.error("Erro ao registrar item danificado:", damageError);
+          // Não impede o fluxo principal, apenas loga o erro
+        }
       }
-
-      // Atualizar o status do item para "returned"
-      const { error: updateError } = await supabase
-        .from('suitcase_items')
-        .update({ status: 'returned' as SuitcaseItemStatus })
-        .eq('id', itemId);
-
-      if (updateError) throw updateError;
-
+      
       return true;
     } catch (error) {
-      console.error("Erro ao devolver item para o inventário:", error);
+      console.error("Erro ao devolver item para o estoque:", error);
       return false;
     }
   }
