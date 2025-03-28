@@ -1,3 +1,4 @@
+
 /**
  * Componente de Diálogo de Formulário de Maleta
  * @file Este arquivo contém o formulário para criar e editar informações de uma maleta
@@ -127,6 +128,14 @@ export function SuitcaseFormDialog({
     fetchSellers();
   }, []);
 
+  // Monitorar mudanças no campo seller_id
+  useEffect(() => {
+    const sellerId = form.getValues("seller_id");
+    if (sellerId) {
+      fetchSellerInfo(sellerId);
+    }
+  }, [form]);
+
   // Quando buscar o vendedor
   const fetchSellerInfo = async (sellerId: string) => {
     try {
@@ -143,14 +152,6 @@ export function SuitcaseFormDialog({
       console.error("Erro ao buscar informações da revendedora:", error);
     }
   };
-
-  // Monitorar mudanças no campo seller_id e buscar informações quando ele mudar
-  useEffect(() => {
-    const sellerId = form.watch("seller_id");
-    if (sellerId) {
-      fetchSellerInfo(sellerId);
-    }
-  }, [form.watch("seller_id")]);
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
