@@ -1,4 +1,3 @@
-
 /**
  * Controlador de Acertos de Maleta
  * @file Este arquivo controla as operações relacionadas aos acertos de maleta,
@@ -34,7 +33,7 @@ export const SettlementController = {
       if (error) throw error;
       
       // Para cada acerto, buscar os itens vendidos
-      const acertosCompletos: Acerto[] = await Promise.all((acertos || []).map(async (acerto) => {
+      const acertosCompletos = await Promise.all((acertos || []).map(async (acerto) => {
         // Buscar itens vendidos para este acerto
         const { data: itensVendidos, error: itemsError } = await supabase
           .from('acerto_itens_vendidos')
@@ -50,7 +49,7 @@ export const SettlementController = {
         }
         
         // Agrupar itens vendidos pelo inventory_id para calcular corretamente itens vendidos múltiplas vezes
-        const itemsGroupedByInventoryId: Record<string, any> = {};
+        const itemsGroupedByInventoryId = {};
         (itensVendidos || []).forEach(item => {
           if (!itemsGroupedByInventoryId[item.inventory_id]) {
             itemsGroupedByInventoryId[item.inventory_id] = {
@@ -70,7 +69,7 @@ export const SettlementController = {
         
         // Calcular o custo total dos itens considerando múltiplas unidades do mesmo item
         const totalCost = itensProcessados.reduce((sum, item: any) => 
-          sum + Number(item.custo_total), 0);
+          sum + item.custo_total, 0);
         
         // Calcular o lucro líquido corretamente
         const netProfit = (acerto.total_sales || 0) - (acerto.commission_amount || 0) - totalCost;
@@ -189,7 +188,7 @@ export const SettlementController = {
           toast.error("Erro ao buscar detalhes dos itens vendidos, usando valores calculados alternativos");
         } else if (vendaRegistros && vendaRegistros.length > 0) {
           // Agrupar por inventory_id para calcular corretamente itens vendidos múltiplas vezes
-          const itensAgrupados: Record<string, any> = {};
+          const itensAgrupados = {};
           vendaRegistros.forEach(item => {
             if (!itensAgrupados[item.inventory_id]) {
               itensAgrupados[item.inventory_id] = {
@@ -206,8 +205,8 @@ export const SettlementController = {
           
           // Calcular totais corretamente considerando múltiplas unidades do mesmo item
           const itensProcessados = Object.values(itensAgrupados);
-          totalSales = itensProcessados.reduce((sum, item: any) => sum + Number(item.preco_total), 0);
-          totalCosts = itensProcessados.reduce((sum, item: any) => sum + Number(item.custo_total), 0);
+          totalSales = itensProcessados.reduce((sum, item: any) => sum + item.preco_total, 0);
+          totalCosts = itensProcessados.reduce((sum, item: any) => sum + item.custo_total, 0);
           
           console.log("Cálculo correto considerando múltiplas unidades:", 
             { totalSales, totalCosts, itensAgrupados });

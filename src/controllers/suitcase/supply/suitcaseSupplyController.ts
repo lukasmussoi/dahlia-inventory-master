@@ -1,103 +1,119 @@
 
 /**
- * Controlador de Abastecimento de Maletas
- * @file Este arquivo contém as funções para abastecimento e gestão de maletas
+ * Controlador de Suprimento de Maletas
+ * @file Funções para adicionar e remover itens de maletas
  */
-import { SuitcaseModel, SuitcaseItemModel } from "@/models/suitcase";
+import { SuitcaseItemModel } from "@/models/suitcase/suitcaseItemModel";
+import { SuitcaseModel } from "@/models/suitcaseModel";
 import { supabase } from "@/integrations/supabase/client";
-import { InventoryController } from "@/controllers/inventoryController";
-import { SupplyItemController } from "../inventory/supplyItemController";
+import { SupplyItem, SuitcaseItem } from "@/types/suitcase";
 
-export const SuitcaseSupplyController = {
+export class SuitcaseSupplyController {
   /**
-   * Abastece uma maleta com um item do inventário
+   * Busca itens disponíveis para adicionar na maleta
+   * @param searchTerm Termo de busca 
    * @param suitcaseId ID da maleta
-   * @param inventoryId ID do item do inventário
-   * @returns O item adicionado à maleta
+   * @returns Itens disponíveis para adicionar
    */
-  async supplySuitcase(suitcaseId: string, inventoryId: string) {
+  static async searchInventoryItems(searchTerm: string, suitcaseId: string): Promise<SupplyItem[]> {
     try {
-      console.log(`[SuitcaseSupplyController] Adicionando item ${inventoryId} à maleta ${suitcaseId}`);
+      console.log(`Buscando itens com termo "${searchTerm}" para a maleta ${suitcaseId}`);
       
-      // Verificar se a maleta existe
-      const suitcase = await SuitcaseModel.getSuitcaseById(suitcaseId);
-      if (!suitcase) {
-        throw new Error("Maleta não encontrada");
+      // Garantir que temos um termo de busca válido
+      if (!searchTerm || searchTerm.trim().length < 2) {
+        return [];
       }
-
-      // Verificar se o item já está na maleta
-      const existingItems = await SuitcaseItemModel.getSuitcaseItems(suitcaseId);
-      const existingItem = existingItems.find(item => item.inventory_id === inventoryId);
       
-      if (existingItem) {
-        // Se o item já está na maleta, incrementar a quantidade
-        console.log(`[SuitcaseSupplyController] Item ${inventoryId} já existe na maleta, incrementando quantidade`);
-        
-        const updatedItem = await SuitcaseItemModel.updateSuitcaseItemQuantity(
-          existingItem.id, 
-          (existingItem.quantity || 1) + 1
-        );
-        
-        // Registrar reserva adicional no inventário
-        await InventoryController.reserveItemForSuitcase(inventoryId, 1, suitcaseId);
-        
-        return updatedItem;
-      } else {
-        // Adicionar o item à maleta
-        console.log(`[SuitcaseSupplyController] Adicionando novo item ${inventoryId} à maleta`);
-        
-        // Criar o item na maleta com status 'in_possession'
-        const itemData = {
-          suitcase_id: suitcaseId,
-          inventory_id: inventoryId,
-          quantity: 1
-        };
-        
-        // A propriedade status é definida automaticamente no modelo como 'in_possession'
-        const newItem = await SuitcaseItemModel.addItemToSuitcase(itemData);
-        
-        // Registrar reserva no inventário
-        await InventoryController.reserveItemForSuitcase(inventoryId, 1, suitcaseId);
-        
-        return newItem;
+      // Buscar itens com base no termo (SKU, nome)
+      const { data, error } = await supabase
+        .from('inventory')
+        .select(`
+          id,
+          name,
+          sku,
+          price,
+          quantity, 
+          photo_url:inventory_photos (
+            photo_url
+          )
+        `)
+        .or(`name.ilike.%${searchTerm}%,sku.ilike.%${searchTerm}%`)
+        .gt('quantity', 0)
+        .limit(10);
+
+      if (error) {
+        console.error("Erro ao buscar itens do inventário:", error);
+        throw error;
       }
-    } catch (error) {
-      console.error("[SuitcaseSupplyController] Erro ao abastecer maleta:", error);
-      throw error;
-    }
-  },
-
-  /**
-   * Busca itens do inventário
-   * @param query Termo de busca
-   * @returns Array de itens correspondentes
-   */
-  async searchInventoryItems(query: string) {
-    try {
-      return await SupplyItemController.searchInventoryItems(query);
-    } catch (error) {
-      console.error("[SuitcaseSupplyController] Erro ao buscar itens:", error);
-      throw error;
-    }
-  },
-
-  /**
-   * Gera um PDF com os itens da maleta para abastecimento
-   * @param suitcaseId ID da maleta
-   * @param suitcase Dados da maleta
-   * @param allItems Array com itens para o PDF
-   * @returns URL do PDF gerado
-   */
-  async generateSupplyPDF(suitcaseId: string, suitcase: any, allItems: any[]) {
-    try {
-      // Usar o módulo de PDF adequado
-      const { PDFController } = await import("../pdfController");
       
-      // Esta função gera o PDF de abastecimento
-      return await PDFController.generateSuitcasePDF(suitcaseId, suitcase, allItems);
+      // Verificar disponibilidade de cada item
+      const availableItems: SupplyItem[] = [];
+      
+      for (const item of (data || [])) {
+        if (item.quantity <= 0) continue;
+        
+        // Verificar se o item já está em alguma maleta
+        const { available } = await SuitcaseItemModel.checkItemAvailability(item.id);
+        
+        if (available) {
+          // Formatar o item para a resposta
+          let photo_url = null;
+          if (item.photo_url && item.photo_url.length > 0) {
+            photo_url = item.photo_url[0]?.photo_url;
+          }
+          
+          availableItems.push({
+            inventory_id: item.id,
+            quantity: 1,
+            product: {
+              id: item.id,
+              name: item.name,
+              sku: item.sku,
+              price: item.price,
+              photo_url
+            }
+          });
+        }
+      }
+      
+      return availableItems;
     } catch (error) {
-      console.error("[SuitcaseSupplyController] Erro ao gerar PDF de abastecimento:", error);
+      console.error("Erro ao buscar itens para adicionar:", error);
       throw error;
     }
   }
-};
+  
+  /**
+   * Adiciona um item à maleta
+   * @param suitcaseId ID da maleta
+   * @param inventoryId ID do item no inventário
+   * @returns Item adicionado
+   */
+  static async addItemToSuitcase(suitcaseId: string, inventoryId: string): Promise<SuitcaseItem> {
+    try {
+      // Verificar disponibilidade do item
+      const { available, message } = await SuitcaseItemModel.checkItemAvailability(inventoryId);
+      
+      if (!available) {
+        throw new Error(message);
+      }
+      
+      // Adicionar item à maleta
+      const suitcaseItem = await SuitcaseItemModel.addItemToSuitcase({
+        suitcase_id: suitcaseId, 
+        inventory_id: inventoryId
+      });
+      
+      // Atualizar status da maleta se estiver vazia
+      const suitcase = await SuitcaseModel.getSuitcaseById(suitcaseId);
+      if (suitcase && suitcase.is_empty) {
+        await SuitcaseModel.updateSuitcase(suitcaseId, { is_empty: false });
+      }
+      
+      return suitcaseItem;
+    } catch (error) {
+      console.error("Erro ao adicionar item à maleta:", error);
+      throw error;
+    }
+  }
+}

@@ -1,4 +1,3 @@
-
 /**
  * Hook para Gerenciar o Diálogo de Abastecimento
  * @file Este hook centraliza a lógica do diálogo de abastecimento de maletas
@@ -6,11 +5,10 @@
  */
 import { useState, useEffect } from "react";
 import { CombinedSuitcaseController } from "@/controllers/suitcase";
-import { Suitcase, SupplyItem } from "@/types/suitcase";
+import { Suitcase } from "@/types/suitcase";
 import { toast } from "sonner";
 import { openPdfInNewTab } from "@/utils/pdfUtils";
 import { formatMoney } from "@/utils/formatUtils";
-import { getProductPhotoUrl } from "@/utils/photoUtils";
 
 interface SelectedItem {
   id: string;
@@ -37,28 +35,34 @@ export function useSupplyDialog(
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isLoadingCurrentItems, setIsLoadingCurrentItems] = useState(false);
 
+  // Limpar quando o diálogo for fechado
   useEffect(() => {
     if (!open) {
       setSearchTerm("");
       setSearchResults([]);
       setSelectedItems([]);
     } else if (suitcaseId) {
+      // Carregar itens existentes na maleta quando o diálogo abrir
       loadCurrentSuitcaseItems(suitcaseId);
     }
   }, [open, suitcaseId]);
 
+  // Função auxiliar para agrupar itens idênticos
   const groupIdenticalItems = (items: SelectedItem[]): SelectedItem[] => {
     const groupedMap = new Map<string, SelectedItem>();
     
     items.forEach(item => {
       if (groupedMap.has(item.id)) {
+        // Se o item já existe no map, apenas atualiza a quantidade
         const existingItem = groupedMap.get(item.id)!;
         existingItem.quantity += item.quantity;
         
+        // Se algum dos itens está na maleta, marcar o item agrupado como na maleta
         if (item.from_suitcase) {
           existingItem.from_suitcase = true;
         }
       } else {
+        // Se não existe, adiciona ao map
         groupedMap.set(item.id, { ...item });
       }
     });
@@ -66,13 +70,16 @@ export function useSupplyDialog(
     return Array.from(groupedMap.values());
   };
 
+  // Carregar itens existentes na maleta
   const loadCurrentSuitcaseItems = async (suitcaseId: string) => {
     try {
       setIsLoadingCurrentItems(true);
       const items = await CombinedSuitcaseController.getSuitcaseItems(suitcaseId);
       
+      // Filtrar apenas itens em posse (não vendidos, perdidos ou devolvidos)
       const inPossessionItems = items.filter(item => item.status === 'in_possession');
       
+      // Transformar para o formato de itens selecionados
       const currentItems: SelectedItem[] = inPossessionItems.map(item => ({
         id: item.inventory_id,
         name: item.product?.name || 'Item sem nome',
@@ -80,9 +87,10 @@ export function useSupplyDialog(
         price: item.product?.price || 0,
         quantity: item.quantity || 1,
         photo_url: item.product?.photo_url,
-        from_suitcase: true
+        from_suitcase: true // Marcar como item já existente na maleta
       }));
       
+      // Agrupar itens idênticos antes de definir no estado
       setSelectedItems(groupIdenticalItems(currentItems));
     } catch (error) {
       console.error("Erro ao carregar itens da maleta:", error);
@@ -92,6 +100,7 @@ export function useSupplyDialog(
     }
   };
 
+  // Buscar itens do inventário
   const handleSearch = async () => {
     if (!searchTerm || searchTerm.length < 2) {
       toast.warning("Digite pelo menos 2 caracteres para pesquisar");
@@ -100,10 +109,11 @@ export function useSupplyDialog(
 
     setIsSearching(true);
     try {
-      const results = await CombinedSuitcaseController.searchInventoryForSuitcase(searchTerm, suitcaseId || undefined);
+      const results = await CombinedSuitcaseController.searchInventoryForSuitcase(searchTerm);
       
+      // Filtrar resultados que já estão selecionados
       const filteredResults = results.filter(
-        result => !selectedItems.some(item => item.id === result.product.id)
+        result => !selectedItems.some(item => item.id === result.id)
       );
       
       setSearchResults(filteredResults);
@@ -115,22 +125,22 @@ export function useSupplyDialog(
     }
   };
 
+  // Lidar com tecla Enter na busca
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
       handleSearch();
     }
   };
 
-  const handleAddItem = (item: SupplyItem) => {
-    if (!item.product) return;
-    
-    const productId = item.product.id;
-    
+  // Adicionar item à lista de selecionados
+  const handleAddItem = (item: any) => {
+    // Verificar se o item já está na lista
     const existingItemIndex = selectedItems.findIndex(
-      (selectedItem) => selectedItem.id === productId
+      (selectedItem) => selectedItem.id === item.id
     );
 
     if (existingItemIndex !== -1) {
+      // Se já estiver na lista, incrementar a quantidade
       const updatedItems = [...selectedItems];
       updatedItems[existingItemIndex] = {
         ...updatedItems[existingItemIndex],
@@ -138,44 +148,48 @@ export function useSupplyDialog(
       };
       setSelectedItems(updatedItems);
     } else {
-      const newItem: SelectedItem = { 
-        id: productId,
-        name: item.product.name,
-        sku: item.product.sku,
-        price: item.product.price,
+      // Se não estiver na lista, adicionar com quantidade 1
+      const newItem = { 
+        id: item.id,
+        name: item.name,
+        sku: item.sku,
+        price: item.price,
         quantity: 1,
         max_quantity: item.quantity,
-        photo_url: item.product.photo_url
+        photo_url: item.photo_url
       };
       setSelectedItems(currentItems => groupIdenticalItems([...currentItems, newItem]));
     }
 
-    setSearchResults(searchResults.filter((resultItem) => resultItem.product.id !== productId));
+    // Remover dos resultados da busca
+    setSearchResults(searchResults.filter((resultItem) => resultItem.id !== item.id));
   };
 
+  // Remover item da lista de selecionados
   const handleRemoveItem = (itemId: string) => {
     const itemToRemove = selectedItems.find(item => item.id === itemId);
     
+    // Remover item da lista de selecionados
     setSelectedItems(selectedItems.filter((item) => item.id !== itemId));
 
+    // Adicionar de volta aos resultados da busca apenas se não for um item já existente na maleta
     if (itemToRemove && !itemToRemove.from_suitcase) {
       setSearchResults([...searchResults, { 
-        inventory_id: itemToRemove.id,
-        quantity: itemToRemove.max_quantity || 1,
-        product: { 
-          id: itemToRemove.id,
-          name: itemToRemove.name,
-          sku: itemToRemove.sku,
-          price: itemToRemove.price,
-          photo_url: itemToRemove.photo_url
-        }
+        id: itemToRemove.id,
+        name: itemToRemove.name,
+        sku: itemToRemove.sku,
+        price: itemToRemove.price,
+        quantity: itemToRemove.max_quantity,
+        photo_url: itemToRemove.photo_url
       }]);
     }
   };
 
+  // Incrementar quantidade do item
   const handleIncreaseQuantity = (itemId: string) => {
     const updatedItems = selectedItems.map((item) => {
       if (item.id === itemId) {
+        // Verificar limite de estoque para itens novos
         if (!item.from_suitcase) {
           const maxQuantity = item.max_quantity || Number.MAX_SAFE_INTEGER;
           if ((item.quantity || 1) < maxQuantity) {
@@ -184,6 +198,7 @@ export function useSupplyDialog(
           toast.warning(`Limite de estoque atingido: ${maxQuantity} unidades`);
           return item;
         }
+        // Para itens existentes, permitir aumentar sem limite (serão novos itens adicionados)
         return { ...item, quantity: (item.quantity || 1) + 1 };
       }
       return item;
@@ -191,6 +206,7 @@ export function useSupplyDialog(
     setSelectedItems(updatedItems);
   };
 
+  // Decrementar quantidade do item
   const handleDecreaseQuantity = (itemId: string) => {
     const updatedItems = selectedItems.map((item) => {
       if (item.id === itemId && item.quantity > 1) {
@@ -201,18 +217,21 @@ export function useSupplyDialog(
     setSelectedItems(updatedItems);
   };
 
+  // Calcular valor total
   const calculateTotalValue = () => {
     return selectedItems.reduce((total, item) => {
       return total + item.price * item.quantity;
     }, 0);
   };
 
+  // Calcular total de peças
   const calculateTotalItems = () => {
     return selectedItems.reduce((total, item) => {
       return total + item.quantity;
     }, 0);
   };
 
+  // Finalizar abastecimento
   const handleFinishSupply = async (suitcase: Suitcase | null) => {
     if (!suitcaseId || !suitcase) {
       toast.error("Maleta não encontrada");
@@ -226,38 +245,45 @@ export function useSupplyDialog(
 
     setIsSupplying(true);
     try {
+      // Separar itens novos e itens existentes com quantidades modificadas
       const existingItems = selectedItems.filter(item => item.from_suitcase);
       const newItems = selectedItems.filter(item => !item.from_suitcase);
       
-      let addedItems = [];
-      if (newItems.length > 0) {
-        for (const item of newItems) {
-          try {
-            const addedItem = await CombinedSuitcaseController.supplySuitcase(
-              suitcaseId,
-              item.id
-            );
-            
-            if (addedItem) {
-              addedItems.push(addedItem);
-            }
-          } catch (error) {
-            console.error(`Erro ao adicionar item ${item.id} à maleta:`, error);
-          }
+      // Preparar os itens para abastecimento
+      const itemsToSupply = newItems.map(item => ({
+        inventory_id: item.id,
+        quantity: item.quantity,
+        product: {
+          id: item.id,
+          name: item.name,
+          sku: item.sku,
+          price: item.price,
+          photo_url: item.photo_url
         }
-        
-        if (addedItems.length > 0) {
+      }));
+
+      // Abastecer a maleta com novos itens
+      let addedItems = [];
+      if (itemsToSupply.length > 0) {
+        try {
+          addedItems = await CombinedSuitcaseController.supplySuitcase(
+            suitcaseId,
+            itemsToSupply
+          );
           console.log("Itens adicionados com sucesso:", addedItems);
-        } else {
+        } catch (error) {
+          console.error("Erro ao adicionar itens à maleta:", error);
           toast.error("Não foi possível adicionar os itens à maleta");
           setIsSupplying(false);
           return;
         }
       }
       
+      // Gerar PDF após abastecimento com todos os itens (novos e existentes)
       setIsGeneratingPdf(true);
       
-      const allItemsForPdf = [
+      // Combinar todos os itens para o PDF
+      const allItems = [
         ...addedItems,
         ...existingItems.map(item => ({
           inventory_id: item.id,
@@ -272,25 +298,32 @@ export function useSupplyDialog(
         }))
       ];
       
-      // Corrigindo o tipo para o PDF
-      const pdfUrl = await CombinedSuitcaseController.generateSupplyPDF(
-        suitcaseId,
-        suitcase, // Passando a maleta como está, não como array
-        allItemsForPdf // Este é o array que precisamos
-      );
-      
-      if (!pdfUrl) {
-        throw new Error("Não foi possível gerar o PDF de abastecimento");
+      try {
+        const pdfUrl = await CombinedSuitcaseController.generateSupplyPDF(
+          suitcaseId,
+          allItems,
+          suitcase
+        );
+        
+        if (!pdfUrl) {
+          throw new Error("Não foi possível gerar o PDF de abastecimento");
+        }
+        
+        // Abrir PDF em nova aba
+        openPdfInNewTab(pdfUrl);
+      } catch (pdfError) {
+        console.error("Erro ao gerar PDF de abastecimento:", pdfError);
+        toast.error("Abastecimento realizado, mas não foi possível gerar o PDF");
       }
       
-      openPdfInNewTab(pdfUrl);
-      
+      // Mensagem de sucesso
       if (addedItems.length > 0) {
         toast.success(`Maleta abastecida com ${addedItems.length} novos itens`);
       } else {
         toast.success("Nenhum novo item adicionado à maleta");
       }
       
+      // Atualizar e fechar
       if (onRefresh) onRefresh();
       onOpenChange(false);
     } catch (error) {

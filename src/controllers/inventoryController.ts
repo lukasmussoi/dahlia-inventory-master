@@ -1,4 +1,3 @@
-
 /**
  * Controlador de Inventário
  * @file Este arquivo contém funcionalidades para gerenciar o inventário de produtos
@@ -6,7 +5,6 @@
 import { InventoryModel } from "@/models/inventory";
 import { LabelModel } from "@/models/labelModel";
 import { supabase } from "@/integrations/supabase/client";
-import { MovementType } from "@/types/inventory";
 
 export const InventoryController = {
   // Buscar todos os itens do inventário
@@ -213,117 +211,32 @@ export const InventoryController = {
   async createMovement(movementData: {
     inventory_id: string;
     quantity: number;
-    movement_type: MovementType;
+    movement_type: string;
     reason: string;
-    unit_cost?: number;
-    notes?: string;
   }) {
     try {
       console.log("[InventoryController] Criando movimento:", movementData);
       
-      const result = await InventoryModel.createMovement(movementData);
+      // Buscar informações do item para registrar o custo unitário
+      const itemData = await this.getItemById(movementData.inventory_id);
       
+      const { error } = await supabase
+        .from('inventory_movements')
+        .insert({
+          inventory_id: movementData.inventory_id,
+          quantity: movementData.quantity,
+          movement_type: movementData.movement_type,
+          reason: movementData.reason,
+          user_id: (await supabase.auth.getUser()).data.user?.id,
+          unit_cost: itemData?.unit_cost || 0
+        });
+      
+      if (error) throw error;
       console.log("[InventoryController] Movimento criado com sucesso");
       
-      return result;
+      return true;
     } catch (error) {
       console.error("[InventoryController] Erro ao criar movimento:", error);
-      throw error;
-    }
-  },
-  
-  /**
-   * Reserva um item para uma maleta
-   * @param inventoryId ID do item no inventário
-   * @param quantity Quantidade a reservar
-   * @param suitcaseId ID da maleta (opcional, para registro no histórico)
-   * @returns Resultado da operação
-   */
-  async reserveItemForSuitcase(inventoryId: string, quantity: number, suitcaseId?: string) {
-    try {
-      // 1. Reservar no estoque
-      const reserved = await InventoryModel.reserveForSuitcase(inventoryId, quantity);
-      
-      if (!reserved) {
-        throw new Error("Não foi possível reservar o item para a maleta");
-      }
-      
-      // 2. Registrar o movimento
-      await this.createMovement({
-        inventory_id: inventoryId,
-        quantity: quantity,
-        movement_type: 'reserva_maleta',
-        reason: `Reserva para maleta ${suitcaseId || 'desconhecida'}`,
-        notes: suitcaseId ? `Maleta ID: ${suitcaseId}` : undefined
-      });
-      
-      return true;
-    } catch (error) {
-      console.error("[InventoryController] Erro ao reservar item para maleta:", error);
-      throw error;
-    }
-  },
-  
-  /**
-   * Libera uma reserva de um item de uma maleta
-   * @param inventoryId ID do item no inventário
-   * @param quantity Quantidade a liberar
-   * @param suitcaseId ID da maleta (opcional, para registro no histórico)
-   * @returns Resultado da operação
-   */
-  async releaseReservedItem(inventoryId: string, quantity: number, suitcaseId?: string) {
-    try {
-      // 1. Liberar a reserva no estoque
-      const released = await InventoryModel.releaseReservation(inventoryId, quantity);
-      
-      if (!released) {
-        throw new Error("Não foi possível liberar a reserva do item");
-      }
-      
-      // 2. Registrar o movimento
-      await this.createMovement({
-        inventory_id: inventoryId,
-        quantity: quantity,
-        movement_type: 'retorno_maleta',
-        reason: `Retorno de maleta ${suitcaseId || 'desconhecida'} sem venda`,
-        notes: suitcaseId ? `Maleta ID: ${suitcaseId}` : undefined
-      });
-      
-      return true;
-    } catch (error) {
-      console.error("[InventoryController] Erro ao liberar reserva de item:", error);
-      throw error;
-    }
-  },
-  
-  /**
-   * Finaliza a venda de um item reservado, removendo-o definitivamente do estoque
-   * @param inventoryId ID do item no inventário
-   * @param quantity Quantidade vendida
-   * @param suitcaseId ID da maleta (opcional, para registro no histórico)
-   * @returns Resultado da operação
-   */
-  async finalizeItemSaleFromSuitcase(inventoryId: string, quantity: number, suitcaseId?: string) {
-    try {
-      // 1. Finalizar a venda no estoque
-      const finalized = await InventoryModel.finalizeSale(inventoryId, quantity);
-      
-      if (!finalized) {
-        throw new Error("Não foi possível finalizar a venda do item");
-      }
-      
-      // 2. Registrar o movimento
-      await this.createMovement({
-        inventory_id: inventoryId,
-        quantity: quantity,
-        movement_type: 'venda_maleta',
-        reason: `Venda em maleta ${suitcaseId || 'desconhecida'}`,
-        notes: suitcaseId ? `Maleta ID: ${suitcaseId}` : undefined
-      });
-      
-      return true;
-    } catch (error) {
-      console.error("[InventoryController] Erro ao finalizar venda de item:", error);
       throw error;
     }
   }
