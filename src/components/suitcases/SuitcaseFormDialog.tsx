@@ -1,3 +1,4 @@
+
 /**
  * Componente de Diálogo de Formulário de Maleta
  * @file Este arquivo contém o formulário para criar e editar informações de uma maleta
@@ -55,6 +56,8 @@ interface SuitcaseFormDialogProps {
   onOpenChange: (open: boolean) => void;
   suitcase?: Suitcase;
   onSuccess?: () => void;
+  mode?: string;
+  onSubmit?: (data: any) => Promise<void>;
 }
 
 export function SuitcaseFormDialog({
@@ -62,6 +65,8 @@ export function SuitcaseFormDialog({
   onOpenChange,
   suitcase,
   onSuccess,
+  mode = "create",
+  onSubmit: externalSubmit,
 }: SuitcaseFormDialogProps) {
   const [isEditMode, setIsEditMode] = useState(false);
   const [sellers, setSellers] = useState([]);
@@ -129,8 +134,11 @@ export function SuitcaseFormDialog({
       const seller = await CombinedSuitcaseController.getSellerById(sellerId);
       if (seller) {
         // Use a função utilitária para extrair valores do endereço
-        setCity(extractAddressValue(seller.address, 'city'));
-        setNeighborhood(extractAddressValue(seller.address, 'neighborhood'));
+        const cityValue = extractAddressValue(seller.address, 'city');
+        const neighborhoodValue = extractAddressValue(seller.address, 'neighborhood');
+        
+        setCity(cityValue);
+        setNeighborhood(neighborhoodValue);
       }
     } catch (error) {
       console.error("Erro ao buscar informações da revendedora:", error);
@@ -145,7 +153,9 @@ export function SuitcaseFormDialog({
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
-      if (isEditMode && suitcase) {
+      if (externalSubmit) {
+        await externalSubmit(values);
+      } else if (isEditMode && suitcase) {
         // Editar maleta existente
         await CombinedSuitcaseController.updateSuitcase({
           id: suitcase.id,

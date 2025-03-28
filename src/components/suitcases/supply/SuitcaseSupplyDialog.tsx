@@ -1,3 +1,4 @@
+
 /**
  * Diálogo de Abastecimento de Maleta
  * @file Este componente gerencia a interface para adicionar produtos a uma maleta
@@ -47,7 +48,12 @@ export function SuitcaseSupplyDialog({
     calculateTotalItems,
     handleFinishSupply,
     formatMoney
-  } = useSupplyDialog(suitcase?.id || null, open, onOpenChange, onRefresh);
+  } = useSupplyDialog({
+    suitcaseId: suitcase?.id || null,
+    open,
+    onOpenChange,
+    onSuccess: onRefresh
+  });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -78,7 +84,7 @@ export function SuitcaseSupplyDialog({
                 className="flex-1"
               />
               <Button
-                onClick={handleSearch}
+                onClick={() => handleSearch()}
                 disabled={isSearching}
                 className="shrink-0"
                 variant="outline"
@@ -140,8 +146,15 @@ export function SuitcaseSupplyDialog({
                 ) : selectedItems.length > 0 ? (
                   selectedItems.map((item) => (
                     <SelectedItemCard 
-                      key={item.id} 
-                      item={item}
+                      key={item.inventory_id} 
+                      item={{
+                        id: item.inventory_id,
+                        name: item.product?.name || "",
+                        sku: item.product?.sku || "",
+                        price: item.product?.price || 0,
+                        quantity: item.quantity || 1,
+                        photo_url: item.product?.photo_url
+                      }}
                       onRemove={handleRemoveItem}
                       onIncrease={handleIncreaseQuantity}
                       onDecrease={handleDecreaseQuantity}

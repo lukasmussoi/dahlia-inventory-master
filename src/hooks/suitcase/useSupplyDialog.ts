@@ -11,15 +11,17 @@ import { openPdfInNewTab } from "@/utils/pdfUtils";
 
 // Propriedades para o hook
 interface UseSupplyDialogProps {
-  suitcaseId: string;
-  onSuccess?: () => void;
+  suitcaseId: string | null;
+  open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  onSuccess?: () => void;
 }
 
 export function useSupplyDialog({ 
   suitcaseId, 
-  onSuccess, 
-  onOpenChange 
+  open,
+  onOpenChange,
+  onSuccess 
 }: UseSupplyDialogProps) {
   // Estados para controlar a busca e adição de itens
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -30,6 +32,17 @@ export function useSupplyDialog({
   const [isAdding, setIsAdding] = useState<boolean>(false);
   const [addingItem, setAddingItem] = useState<{ [key: string]: boolean }>({});
   const [isPrintingPdf, setIsPrintingPdf] = useState<boolean>(false);
+  const [isSupplying, setIsSupplying] = useState<boolean>(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState<boolean>(false);
+  const [isLoadingCurrentItems, setIsLoadingCurrentItems] = useState<boolean>(false);
+
+  // Função para formatar valores monetários
+  const formatMoney = (value: number): string => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
+  };
 
   // Função para buscar itens no inventário
   const handleSearch = useCallback(async (e?: React.KeyboardEvent) => {
@@ -62,8 +75,16 @@ export function useSupplyDialog({
     }
   }, [searchTerm, selectedItems]);
 
+  // Handler para eventos de teclado
+  const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleSearch(e);
+    }
+  }, [handleSearch]);
+
   // Função para adicionar um item à seleção
-  const handleSelectItem = useCallback((item: any) => {
+  const handleAddItem = useCallback((item: any) => {
     // Verificar se o item existe e tem os campos necessários
     if (!item || !item.id) return;
     
@@ -90,6 +111,30 @@ export function useSupplyDialog({
     setSearchTerm("");
   }, []);
 
+  // Função para aumentar a quantidade de um item
+  const handleIncreaseQuantity = useCallback((inventoryId: string) => {
+    setSelectedItems(prev => 
+      prev.map(item => 
+        item.inventory_id === inventoryId 
+          ? { ...item, quantity: (item.quantity || 1) + 1 } 
+          : item
+      )
+    );
+  }, []);
+
+  // Função para diminuir a quantidade de um item
+  const handleDecreaseQuantity = useCallback((inventoryId: string) => {
+    setSelectedItems(prev => 
+      prev.map(item => {
+        if (item.inventory_id === inventoryId) {
+          const newQuantity = Math.max(1, (item.quantity || 1) - 1);
+          return { ...item, quantity: newQuantity };
+        }
+        return item;
+      })
+    );
+  }, []);
+
   // Função para atualizar a quantidade de um item
   const handleUpdateQuantity = useCallback((inventoryId: string, quantity: number) => {
     if (quantity < 1) return;
@@ -108,7 +153,57 @@ export function useSupplyDialog({
     setSelectedItems(prev => prev.filter(item => item.inventory_id !== inventoryId));
   }, []);
 
-  // Função para abaster a maleta com os itens selecionados
+  // Função para calcular o valor total dos itens selecionados
+  const calculateTotalValue = useCallback(() => {
+    return selectedItems.reduce((sum, item) => {
+      const price = item.product?.price || 0;
+      const quantity = item.quantity || 1;
+      return sum + (price * quantity);
+    }, 0);
+  }, [selectedItems]);
+
+  // Função para calcular o total de itens
+  const calculateTotalItems = useCallback(() => {
+    return selectedItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
+  }, [selectedItems]);
+
+  // Função para concluir o abastecimento
+  const handleFinishSupply = useCallback(async (suitcaseInfo: any) => {
+    if (!suitcaseId) {
+      toast.error("ID da maleta não informado");
+      return;
+    }
+    
+    if (selectedItems.length === 0) {
+      toast.error("Nenhum item selecionado para abastecimento");
+      return;
+    }
+    
+    setIsSupplying(true);
+    
+    try {
+      // Adicionar itens à maleta
+      await CombinedSuitcaseController.supplySuitcase(suitcaseId, selectedItems);
+      
+      toast.success("Maleta abastecida com sucesso!");
+      
+      // Gerar PDF após abastecimento concluído
+      await handleGeneratePdf(suitcaseInfo);
+      
+      // Chamar callback de sucesso
+      if (onSuccess) onSuccess();
+      
+      // Fechar diálogo
+      if (onOpenChange) onOpenChange(false);
+    } catch (error) {
+      console.error("Erro ao abastecer maleta:", error);
+      toast.error("Erro ao abastecer maleta");
+    } finally {
+      setIsSupplying(false);
+    }
+  }, [suitcaseId, selectedItems, onSuccess, onOpenChange]);
+
+  // Função para abastecer a maleta com os itens selecionados
   const handleSupplySuitcase = useCallback(async () => {
     if (!suitcaseId) {
       toast.error("ID da maleta não informado");
@@ -170,7 +265,7 @@ export function useSupplyDialog({
   const handleGeneratePdf = useCallback(async (suitcaseInfo: any) => {
     if (!suitcaseId || selectedItems.length === 0) return;
     
-    setIsPrintingPdf(true);
+    setIsGeneratingPdf(true);
     
     try {
       // Gerar PDF de abastecimento
@@ -188,7 +283,7 @@ export function useSupplyDialog({
       console.error("Erro ao gerar PDF:", error);
       toast.error("Erro ao gerar PDF de abastecimento");
     } finally {
-      setIsPrintingPdf(false);
+      setIsGeneratingPdf(false);
     }
   }, [suitcaseId, selectedItems]);
 
@@ -202,6 +297,9 @@ export function useSupplyDialog({
     setIsAdding(false);
     setAddingItem({});
     setIsPrintingPdf(false);
+    setIsSupplying(false);
+    setIsGeneratingPdf(false);
+    setIsLoadingCurrentItems(false);
   }, []);
 
   return {
@@ -214,13 +312,24 @@ export function useSupplyDialog({
     isAdding,
     addingItem,
     isPrintingPdf,
+    isSupplying,
+    isGeneratingPdf,
+    isLoadingCurrentItems,
     handleSearch,
-    handleSelectItem,
+    handleKeyPress,
+    handleAddItem,
+    handleSelectItem: handleAddItem, // Alias para compatibilidade
     handleUpdateQuantity,
     handleRemoveItem,
+    handleIncreaseQuantity,
+    handleDecreaseQuantity,
     handleSupplySuitcase,
     handleAddItemDirectly,
     handleGeneratePdf,
+    handleFinishSupply,
+    calculateTotalValue,
+    calculateTotalItems,
+    formatMoney,
     resetState
   };
 }
