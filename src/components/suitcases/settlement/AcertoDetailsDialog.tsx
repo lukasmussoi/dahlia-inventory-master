@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,8 @@ import {
   Package,
   User,
   CreditCard,
-  Printer
+  Printer,
+  X
 } from "lucide-react";
 import { toast } from "sonner";
 import { Acerto } from "@/types/suitcase";
@@ -33,6 +35,12 @@ export function AcertoDetailsDialog({
 }: AcertoDetailsDialogProps) {
   const [currentAcerto, setCurrentAcerto] = useState<Acerto | null>(null);
   const [isPrinting, setIsPrinting] = useState(false);
+
+  // Função para forçar recarga da página ao fechar
+  const handleForceReload = () => {
+    console.log("[AcertoDetailsDialog] Forçando recarga da página para resolver problemas de travamento");
+    window.location.reload();
+  };
 
   const formatDate = (dateString: string) => {
     return format(new Date(dateString), "dd/MM/yyyy", { locale: ptBR });
@@ -86,7 +94,7 @@ export function AcertoDetailsDialog({
   if (!acertoId) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleForceReload}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-auto p-0">
         <div className="p-6 pb-2">
           <div className="flex items-center justify-between mb-2">
@@ -98,7 +106,7 @@ export function AcertoDetailsDialog({
               variant="ghost" 
               size="icon" 
               className="h-8 w-8" 
-              onClick={() => onOpenChange(false)}
+              onClick={handleForceReload}
             >
               &times;
             </Button>
@@ -224,7 +232,7 @@ export function AcertoDetailsDialog({
         </div>
         
         <div className="p-4 border-t flex justify-end gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={handleForceReload}>
             Fechar
           </Button>
         </div>

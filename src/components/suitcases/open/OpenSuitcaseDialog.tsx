@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { SuitcaseItemsTab } from "./tabs/SuitcaseItemsTab";
 import { SuitcaseHistoryTab } from "./tabs/SuitcaseHistoryTab";
 import { useOpenSuitcase } from "@/hooks/suitcase/useOpenSuitcase";
+import { X } from "lucide-react";
 
 interface OpenSuitcaseDialogProps {
   open: boolean;
@@ -44,12 +45,17 @@ export function OpenSuitcaseDialog({
     resetState
   } = useOpenSuitcase(open ? suitcaseId : null, open);
 
+  // Função para forçar recarga da página ao fechar
+  const handleForceReload = () => {
+    console.log("[OpenSuitcaseDialog] Forçando recarga da página para resolver problemas de travamento");
+    window.location.reload();
+  };
+
   // Manipulador seguro para fechamento da modal
   const handleCloseDialog = useCallback(() => {
-    console.log("[OpenSuitcaseDialog] Iniciando processo de fechamento seguro");
-    setIsClosing(true);
-    onOpenChange(false);
-  }, [onOpenChange]);
+    console.log("[OpenSuitcaseDialog] Iniciando processo de fechamento forçado");
+    handleForceReload();
+  }, []);
 
   // Função para tratar a mudança de abas com validação de tipo
   const handleTabChange = useCallback((value: string) => {
@@ -65,29 +71,21 @@ export function OpenSuitcaseDialog({
       console.log("[OpenSuitcaseDialog] Modal aberta - preparando ambiente");
       setIsClosing(false);
     }
-    
-    // Quando a modal é fechada, aguardar a animação terminar antes de limpar os estados
-    if (!open && !isClosing) {
-      console.log("[OpenSuitcaseDialog] Modal fechada - iniciando sequência de limpeza");
-      
-      // Aguardar a animação de fechamento antes de limpar o estado
-      const cleanupTimeout = setTimeout(() => {
-        console.log("[OpenSuitcaseDialog] Animação concluída - executando limpeza completa");
-        resetState();
-        setIsClosing(false);
-        console.log("[OpenSuitcaseDialog] Limpeza finalizada - sistema pronto para nova interação");
-      }, 300); // Tempo aproximado da animação do Dialog do shadcn
-      
-      // Limpar o timeout se o componente for desmontado antes de sua conclusão
-      return () => clearTimeout(cleanupTimeout);
-    }
-  }, [open, resetState, isClosing]);
+  }, [open]);
 
   // Renderização durante carregamento
   if (isLoading && open) {
     return (
-      <Dialog open={open} onOpenChange={handleCloseDialog}>
+      <Dialog open={open} onOpenChange={handleForceReload}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+          <button 
+            className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none"
+            onClick={handleForceReload}
+          >
+            <X className="h-4 w-4" />
+            <span className="sr-only">Fechar</span>
+          </button>
+          
           <DialogTitle>Carregando detalhes da maleta...</DialogTitle>
           <div className="flex justify-center items-center p-8">
             <LoadingIndicator />
@@ -99,8 +97,16 @@ export function OpenSuitcaseDialog({
 
   // Renderização principal do conteúdo
   return (
-    <Dialog open={open} onOpenChange={handleCloseDialog}>
+    <Dialog open={open} onOpenChange={handleForceReload}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+        <button 
+          className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none"
+          onClick={handleForceReload}
+        >
+          <X className="h-4 w-4" />
+          <span className="sr-only">Fechar</span>
+        </button>
+        
         <DialogTitle>
           {suitcase ? `Maleta ${suitcase.code}` : "Detalhes da Maleta"}
         </DialogTitle>
@@ -132,7 +138,7 @@ export function OpenSuitcaseDialog({
         )}
         
         <div className="flex justify-end mt-4">
-          <Button variant="outline" onClick={handleCloseDialog}>
+          <Button variant="outline" onClick={handleForceReload}>
             Fechar
           </Button>
         </div>

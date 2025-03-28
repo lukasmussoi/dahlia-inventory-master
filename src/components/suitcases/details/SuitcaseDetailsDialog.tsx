@@ -14,6 +14,7 @@ import { useSuitcaseDetails } from "@/hooks/useSuitcaseDetails";
 import { addDays } from "date-fns";
 import { SuitcaseItem } from "@/types/suitcase";
 import { Button } from "@/components/ui/button";
+import { X } from "lucide-react";
 
 interface SuitcaseDetailsDialogProps {
   open: boolean;
@@ -63,6 +64,12 @@ export function SuitcaseDetailsDialog({
     resetStates
   } = useSuitcaseDetails(suitcaseId, open, onOpenChange, onRefresh);
 
+  // Função para forçar recarga da página ao fechar
+  const handleForceReload = () => {
+    console.log("[SuitcaseDetailsDialog] Forçando recarga da página para resolver problemas de travamento");
+    window.location.reload();
+  };
+
   // Limpar estados ao fechar o diálogo
   useEffect(() => {
     if (!open) {
@@ -81,25 +88,6 @@ export function SuitcaseDetailsDialog({
       void handleUpdateNextSettlementDate(futureDate);
     }
   }, [suitcase, handleUpdateNextSettlementDate]);
-
-  // Manipulador de mudança de diálogo que garante limpeza de estados
-  const handleDialogChange = (newOpen: boolean) => {
-    if (!newOpen) {
-      // Resetamos os estados e notificamos o componente pai imediatamente
-      resetStates();
-      onOpenChange(newOpen);
-    } else {
-      onOpenChange(newOpen);
-    }
-  };
-
-  // Função para fechar o diálogo com limpeza completa de estados
-  const handleClose = () => {
-    // Forçar o reset de estados antes de fechar
-    resetStates();
-    // Notificar o componente pai que o diálogo deve fechar
-    onOpenChange(false);
-  };
 
   // Adaptadores para ajustar os tipos de retorno para Promise<void>
   const handleUpdateNextSettlementDateAdapter = async (date: Date) => {
@@ -132,8 +120,16 @@ export function SuitcaseDetailsDialog({
 
   if (isLoadingSuitcase || !suitcase) {
     return (
-      <Dialog open={open} onOpenChange={handleDialogChange}>
+      <Dialog open={open} onOpenChange={handleForceReload}>
         <DialogContent className="no-close-x">
+          <button 
+            className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none"
+            onClick={handleForceReload}
+          >
+            <X className="h-4 w-4" />
+            <span className="sr-only">Fechar</span>
+          </button>
+          
           <DialogTitle>Detalhes da Maleta</DialogTitle>
           <div className="flex justify-center items-center p-8">
             <LoadingIndicator />
@@ -145,8 +141,16 @@ export function SuitcaseDetailsDialog({
 
   return (
     <>
-      <Dialog open={open} onOpenChange={handleDialogChange}>
+      <Dialog open={open} onOpenChange={handleForceReload}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto no-close-x">
+          <button 
+            className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none"
+            onClick={handleForceReload}
+          >
+            <X className="h-4 w-4" />
+            <span className="sr-only">Fechar</span>
+          </button>
+          
           <DialogTitle>Detalhes da Maleta {suitcase.code}</DialogTitle>
           <SuitcaseDetailsTabs
             activeTab={activeTab}
@@ -177,7 +181,7 @@ export function SuitcaseDetailsDialog({
             onDeleteClick={() => setShowDeleteDialog(true)}
           />
           <div className="flex justify-end mt-4">
-            <Button variant="outline" onClick={handleClose}>Fechar Janela</Button>
+            <Button variant="outline" onClick={handleForceReload}>Fechar Janela</Button>
           </div>
         </DialogContent>
       </Dialog>
