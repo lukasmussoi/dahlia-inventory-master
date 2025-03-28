@@ -4,7 +4,7 @@
  * @file Este arquivo controla as operações relacionadas aos itens de maletas
  */
 import { SuitcaseItemModel } from "@/models/suitcase/item";
-import { SuitcaseItemStatus } from "@/types/suitcase";
+import { SuitcaseItemStatus, SuitcaseItem } from "@/types/suitcase";
 import { supabase } from "@/integrations/supabase/client";
 
 export const SuitcaseItemController = {

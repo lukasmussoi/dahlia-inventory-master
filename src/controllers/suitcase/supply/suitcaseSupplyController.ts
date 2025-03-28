@@ -3,7 +3,7 @@
  * Controlador de Suprimento de Maletas
  * @file Funções para adicionar e remover itens de maletas
  */
-import { SuitcaseItemModel } from "@/models/suitcase/suitcaseItemModel";
+import { SuitcaseItemModel } from "@/models/suitcase/item";
 import { SuitcaseModel } from "@/models/suitcaseModel";
 import { supabase } from "@/integrations/supabase/client";
 import { SupplyItem, SuitcaseItem } from "@/types/suitcase";
@@ -15,9 +15,9 @@ export class SuitcaseSupplyController {
    * @param suitcaseId ID da maleta
    * @returns Itens disponíveis para adicionar
    */
-  static async searchInventoryItems(searchTerm: string, suitcaseId: string): Promise<SupplyItem[]> {
+  static async searchInventoryItems(searchTerm: string, suitcaseId?: string): Promise<SupplyItem[]> {
     try {
-      console.log(`Buscando itens com termo "${searchTerm}" para a maleta ${suitcaseId}`);
+      console.log(`Buscando itens com termo "${searchTerm}" para a maleta ${suitcaseId || 'não especificada'}`);
       
       // Garantir que temos um termo de busca válido
       if (!searchTerm || searchTerm.trim().length < 2) {

@@ -59,11 +59,22 @@ export const CombinedSuitcaseController = {
   // SuitcaseSupplyController
   searchInventoryForSuitcase: SuitcaseSupplyController.searchInventoryItems,
   
-  // Métodos ausentes - Usando funções existentes para manter a compatibilidade
+  // Implementação dos métodos ausentes
   supplySuitcase: SuitcaseItemController.addItemToSuitcase,
   generateSupplyPDF: PdfController.generateSuitcasePDF,
-  countSuitcaseItems: SuitcaseItemController.countSuitcaseItems,
-  getSuitcasesItemCounts: SuitcaseItemController.getSuitcasesItemCounts
+  
+  // Métodos para contagem de itens
+  countSuitcaseItems: async (suitcaseId: string) => {
+    return await SuitcaseItemController.getSuitcaseItems(suitcaseId).then(items => ({ count: items.length }));
+  },
+  getSuitcasesItemCounts: async (suitcaseIds: string[]) => {
+    const counts: {[key: string]: number} = {};
+    for (const id of suitcaseIds) {
+      const items = await SuitcaseItemController.getSuitcaseItems(id);
+      counts[id] = items.length;
+    }
+    return counts;
+  }
 };
 
 export default CombinedSuitcaseController;
