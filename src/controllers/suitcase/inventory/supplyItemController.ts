@@ -1,86 +1,104 @@
 
 /**
  * Controlador de Itens para Abastecimento
- * @file Este arquivo controla as operações de busca e manipulação de itens para abastecimento
- * @relacionamento Utiliza o supabase para consultas diretas no banco de dados
+ * @file Este arquivo coordena a busca e verificação de itens do inventário para abastecimento de maletas
+ * @relacionamento Utiliza inventory model e inventorySearchModel para acesso ao estoque
  */
+import { InventoryModel } from "@/models/inventory";
 import { supabase } from "@/integrations/supabase/client";
-
-interface InventorySearchResult {
-  id: string;
-  name: string;
-  sku: string;
-  quantity: number;
-  price: number;
-  photo_url?: string;
-  inventory_photos?: Array<{ photo_url: string }>;
-}
+import { InventorySearchModel } from "@/models/suitcase/inventorySearchModel";
 
 export class SupplyItemController {
   /**
-   * Busca itens do inventário com base em um termo de pesquisa
+   * Busca itens do inventário para abastecimento
    * @param searchTerm Termo para busca
    * @returns Lista de itens do inventário que correspondem à busca
    */
-  static async searchInventoryItems(searchTerm: string): Promise<InventorySearchResult[]> {
+  static async searchInventoryItems(searchTerm: string) {
     try {
-      if (!searchTerm || searchTerm.length < 2) return [];
-
-      const { data, error } = await supabase
-        .from('inventory')
-        .select(`
-          id,
-          name,
-          sku,
-          quantity,
-          price,
-          inventory_photos(photo_url)
-        `)
-        .or(`name.ilike.%${searchTerm}%,sku.ilike.%${searchTerm}%,barcode.ilike.%${searchTerm}%`)
-        .eq('archived', false)
-        .gt('quantity', 0)
-        .order('name')
-        .limit(20);
-
-      if (error) throw error;
-
-      return data.map(item => ({
-        ...item,
-        photo_url: item.inventory_photos && item.inventory_photos.length > 0
-          ? item.inventory_photos[0].photo_url
-          : null
-      }));
+      const items = await InventorySearchModel.searchAvailableInventory(searchTerm);
+      
+      // Enriquecer os dados com informações de quantidade reservada e disponível
+      const enrichedItems = await Promise.all(
+        items.map(async (item) => {
+          // Buscar dados de estoque atualizados
+          const { data: stockData } = await supabase
+            .from('inventory')
+            .select('quantity, quantity_reserved')
+            .eq('id', item.id)
+            .single();
+          
+          // Calcular quantidade disponível
+          const quantity_total = stockData?.quantity || 0;
+          const quantity_reserved = stockData?.quantity_reserved || 0;
+          const quantity_available = quantity_total - quantity_reserved;
+          
+          return {
+            ...item,
+            quantity_total,
+            quantity_reserved,
+            quantity_available,
+            // Usar a quantidade disponível para a UI
+            quantity: quantity_available
+          };
+        })
+      );
+      
+      return enrichedItems;
     } catch (error) {
-      console.error("Erro ao buscar itens do inventário:", error);
+      console.error("Erro ao buscar itens para abastecimento:", error);
       throw error;
     }
   }
 
   /**
-   * Verifica se um item está disponível para abastecimento
+   * Verifica disponibilidade de um item para abastecer maleta
    * @param inventoryId ID do item no inventário
-   * @returns Status de disponibilidade e quantidade disponível
+   * @returns Informações de disponibilidade
    */
   static async checkItemAvailability(inventoryId: string) {
     try {
-      if (!inventoryId) throw new Error("ID do item é necessário");
-      
-      // Verificar a quantidade disponível no inventário
-      const { data, error } = await supabase
+      // Buscar dados atualizados do item
+      const { data: item, error } = await supabase
         .from('inventory')
-        .select('quantity')
+        .select('quantity, quantity_reserved')
         .eq('id', inventoryId)
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error("Erro ao verificar disponibilidade:", error);
+        return { 
+          available: false, 
+          message: "Erro ao verificar disponibilidade", 
+          quantity: 0,
+          quantity_reserved: 0,
+          quantity_available: 0
+        };
+      }
+      
+      // Calcular quantidade disponível
+      const quantity_total = item?.quantity || 0;
+      const quantity_reserved = item?.quantity_reserved || 0;
+      const quantity_available = quantity_total - quantity_reserved;
       
       return {
-        available: data && data.quantity > 0,
-        quantity: data ? data.quantity : 0
+        available: quantity_available > 0,
+        message: quantity_available > 0 
+          ? "Item disponível para abastecimento" 
+          : "Item sem estoque disponível",
+        quantity: quantity_total,
+        quantity_reserved,
+        quantity_available
       };
     } catch (error) {
-      console.error("Erro ao verificar disponibilidade do item:", error);
-      throw error;
+      console.error("Erro ao verificar disponibilidade:", error);
+      return { 
+        available: false, 
+        message: "Erro ao verificar disponibilidade", 
+        quantity: 0,
+        quantity_reserved: 0,
+        quantity_available: 0
+      };
     }
   }
 }

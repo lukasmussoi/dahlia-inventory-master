@@ -1,3 +1,4 @@
+
 /**
  * Hook para Gerenciar o Diálogo de Abastecimento
  * @file Este hook centraliza a lógica do diálogo de abastecimento de maletas
@@ -17,6 +18,8 @@ interface SelectedItem {
   price: number;
   quantity: number;
   max_quantity?: number;
+  quantity_available?: number;
+  quantity_reserved?: number;
   photo_url?: string | { photo_url: string }[];
   from_suitcase?: boolean;
 }
@@ -155,7 +158,9 @@ export function useSupplyDialog(
         sku: item.sku,
         price: item.price,
         quantity: 1,
-        max_quantity: item.quantity,
+        max_quantity: item.quantity_total,
+        quantity_available: item.quantity_available,
+        quantity_reserved: item.quantity_reserved,
         photo_url: item.photo_url
       };
       setSelectedItems(currentItems => groupIdenticalItems([...currentItems, newItem]));
@@ -179,7 +184,9 @@ export function useSupplyDialog(
         name: itemToRemove.name,
         sku: itemToRemove.sku,
         price: itemToRemove.price,
-        quantity: itemToRemove.max_quantity,
+        quantity: itemToRemove.quantity_available || itemToRemove.max_quantity,
+        quantity_available: itemToRemove.quantity_available,
+        quantity_reserved: itemToRemove.quantity_reserved,
         photo_url: itemToRemove.photo_url
       }]);
     }
@@ -189,13 +196,13 @@ export function useSupplyDialog(
   const handleIncreaseQuantity = (itemId: string) => {
     const updatedItems = selectedItems.map((item) => {
       if (item.id === itemId) {
-        // Verificar limite de estoque para itens novos
+        // Para novos itens, verificar limite de estoque disponível
         if (!item.from_suitcase) {
-          const maxQuantity = item.max_quantity || Number.MAX_SAFE_INTEGER;
-          if ((item.quantity || 1) < maxQuantity) {
+          const availableQuantity = item.quantity_available || item.max_quantity || Number.MAX_SAFE_INTEGER;
+          if ((item.quantity || 1) < availableQuantity) {
             return { ...item, quantity: (item.quantity || 1) + 1 };
           }
-          toast.warning(`Limite de estoque atingido: ${maxQuantity} unidades`);
+          toast.warning(`Limite de estoque disponível atingido: ${availableQuantity} unidades`);
           return item;
         }
         // Para itens existentes, permitir aumentar sem limite (serão novos itens adicionados)
@@ -271,9 +278,10 @@ export function useSupplyDialog(
             itemsToSupply
           );
           console.log("Itens adicionados com sucesso:", addedItems);
-        } catch (error) {
+        } catch (error: any) {
           console.error("Erro ao adicionar itens à maleta:", error);
-          toast.error("Não foi possível adicionar os itens à maleta");
+          // Exibir mensagem mais explicativa
+          toast.error(error.message || "Não foi possível adicionar os itens à maleta");
           setIsSupplying(false);
           return;
         }
@@ -326,9 +334,9 @@ export function useSupplyDialog(
       // Atualizar e fechar
       if (onRefresh) onRefresh();
       onOpenChange(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao abastecer maleta:", error);
-      toast.error("Erro ao abastecer maleta");
+      toast.error(error.message || "Erro ao abastecer maleta");
     } finally {
       setIsSupplying(false);
       setIsGeneratingPdf(false);

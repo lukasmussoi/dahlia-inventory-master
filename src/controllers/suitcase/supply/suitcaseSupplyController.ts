@@ -1,3 +1,4 @@
+
 /**
  * Controlador de Abastecimento de Maletas
  * @file Este arquivo coordena as operações de abastecimento de maletas
@@ -57,30 +58,29 @@ export class SuitcaseSupplyController {
         
         // Verificar se a quantidade solicitada está disponível
         const quantity = item.quantity || 1;
-        if (availability.quantity < quantity) {
-          console.warn(`Quantidade solicitada (${quantity}) excede disponível (${availability.quantity}) para item ${item.inventory_id}`);
-          continue;
+        if (availability.quantity_available < quantity) {
+          console.warn(`Quantidade solicitada (${quantity}) excede disponível (${availability.quantity_available}) para item ${item.inventory_id}`);
+          throw new Error(`Quantidade solicitada (${quantity}) excede disponível (${availability.quantity_available}) para o item ${item.product?.name || item.inventory_id}`);
         }
         
-        // Para cada unidade, adicionar como um item separado
-        for (let i = 0; i < quantity; i++) {
-          try {
-            // Adicionar item à maleta (um por vez)
-            const addedItem = await SuitcaseItemModel.addItemToSuitcase({
-              suitcase_id: suitcaseId,
-              inventory_id: item.inventory_id,
-              quantity: 1 // Sempre adicionar com quantidade 1
-            });
-            
-            // Adicionar à lista de itens adicionados
-            addedItems.push({
-              ...addedItem,
-              product: item.product
-            });
-          } catch (error) {
-            console.error(`Erro ao adicionar unidade ${i+1} do item ${item.inventory_id} à maleta:`, error);
-            throw error; // Propagar erro para interromper a operação
-          }
+        try {
+          // Reservar item para a maleta com a quantidade especificada
+          const addedItem = await SuitcaseItemModel.reserveItemToSuitcase({
+            suitcase_id: suitcaseId,
+            inventory_id: item.inventory_id,
+            quantity
+          });
+          
+          // Adicionar à lista de itens adicionados
+          addedItems.push({
+            ...addedItem,
+            product: item.product
+          });
+          
+          console.log(`Item ${item.inventory_id} adicionado à maleta com quantidade ${quantity}`);
+        } catch (error) {
+          console.error(`Erro ao adicionar item ${item.inventory_id} à maleta:`, error);
+          throw error; // Propagar erro para interromper a operação
         }
       }
 
