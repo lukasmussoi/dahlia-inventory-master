@@ -1,119 +1,75 @@
 
 /**
  * Modelo de Vendas de Itens de Maleta
- * @file Funções para gerenciar as informações de vendas de itens de maleta
- * @relacionamento Utiliza supabase client diretamente
+ * @file Este arquivo contém operações relacionadas a vendas de itens de maleta
  */
 import { supabase } from "@/integrations/supabase/client";
 
 export class ItemSalesModel {
   /**
-   * Atualiza informações de venda de um item
-   * @param itemId ID do item
-   * @param field Campo a ser atualizado (customer_name, payment_method, etc)
-   * @param value Novo valor
-   * @returns Resultado da operação
+   * Busca informações de venda de um item de maleta
+   * @param suitcaseItemId ID do item da maleta
+   * @returns Informações de venda
    */
-  static async updateSaleInfo(itemId: string, field: string, value: string): Promise<{ success: boolean }> {
+  static async getSuitcaseItemSales(suitcaseItemId: string) {
     try {
-      // Atualizar informações de venda
       const { data, error } = await supabase
         .from('suitcase_item_sales')
-        .select('id')
-        .eq('suitcase_item_id', itemId)
-        .single();
+        .select('*')
+        .eq('suitcase_item_id', suitcaseItemId)
+        .maybeSingle();
       
-      if (error && error.code !== 'PGRST116') {
-        console.error("Erro ao buscar informações de venda:", error);
-        throw error;
-      }
+      if (error) throw error;
       
-      if (data) {
-        // Já existe um registro, atualizar
-        const { error: updateError } = await supabase
-          .from('suitcase_item_sales')
-          .update({ [field]: value })
-          .eq('id', data.id);
-        
-        if (updateError) {
-          console.error("Erro ao atualizar informações de venda:", updateError);
-          throw updateError;
-        }
-      } else {
-        // Criar novo registro
-        const { error: insertError } = await supabase
-          .from('suitcase_item_sales')
-          .insert({
-            suitcase_item_id: itemId,
-            [field]: value
-          });
-        
-        if (insertError) {
-          console.error("Erro ao inserir informações de venda:", insertError);
-          throw insertError;
-        }
-      }
-      
-      return { success: true };
+      return data;
     } catch (error) {
-      console.error("Erro ao atualizar informações de venda:", error);
-      throw error;
+      console.error("Erro ao buscar informações de venda:", error);
+      return null;
     }
   }
-
+  
   /**
-   * Registra várias informações de venda para um item
+   * Atualiza informações de venda
    * @param itemId ID do item
-   * @param saleData Dados de venda
-   * @returns Resultado da operação
+   * @param field Campo a atualizar
+   * @param value Novo valor
+   * @returns true se atualizado com sucesso
    */
-  static async registerSaleInfo(itemId: string, saleData: {
-    customer_name?: string;
-    payment_method?: string;
-    sale_date?: string;
-  }): Promise<{ success: boolean }> {
+  static async updateSaleInfo(itemId: string, field: string, value: string) {
     try {
-      // Verificar se já existe registro para este item
-      const { data, error } = await supabase
+      // Verificar se já existe registro de venda
+      const { data: saleData, error: saleError } = await supabase
         .from('suitcase_item_sales')
         .select('id')
         .eq('suitcase_item_id', itemId)
         .maybeSingle();
       
-      if (error && error.code !== 'PGRST116') {
-        console.error("Erro ao buscar informações de venda:", error);
-        throw error;
-      }
+      if (saleError) throw saleError;
       
-      if (data) {
-        // Já existe um registro, atualizar
-        const { error: updateError } = await supabase
+      // Se existe, atualizar
+      if (saleData) {
+        const { error } = await supabase
           .from('suitcase_item_sales')
-          .update(saleData)
-          .eq('id', data.id);
+          .update({ [field]: value })
+          .eq('id', saleData.id);
         
-        if (updateError) {
-          console.error("Erro ao atualizar informações de venda:", updateError);
-          throw updateError;
-        }
-      } else {
-        // Criar novo registro
-        const { error: insertError } = await supabase
+        if (error) throw error;
+      } 
+      // Se não existe, criar
+      else {
+        const { error } = await supabase
           .from('suitcase_item_sales')
-          .insert({
+          .insert({ 
             suitcase_item_id: itemId,
-            ...saleData
+            [field]: value
           });
         
-        if (insertError) {
-          console.error("Erro ao inserir informações de venda:", insertError);
-          throw insertError;
-        }
+        if (error) throw error;
       }
       
-      return { success: true };
+      return true;
     } catch (error) {
-      console.error("Erro ao registrar informações de venda:", error);
+      console.error("Erro ao atualizar informações de venda:", error);
       throw error;
     }
   }

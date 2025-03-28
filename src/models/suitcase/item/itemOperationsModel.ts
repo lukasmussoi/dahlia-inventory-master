@@ -144,4 +144,81 @@ export class SuitcaseItemOperations {
       return false;
     }
   }
+
+  /**
+   * Devolve um item para o inventário
+   * @param suitcaseItemId ID do item da maleta
+   * @param isDamaged Indica se o item está danificado
+   * @returns true se a operação foi bem-sucedida
+   */
+  static async returnItemToInventory(suitcaseItemId: string, isDamaged: boolean = false): Promise<boolean> {
+    try {
+      console.log(`[SuitcaseItemOperations] Devolvendo item ${suitcaseItemId} ao inventário, danificado: ${isDamaged}`);
+      
+      // 1. Obter informações do item da maleta
+      const { data: itemData, error: itemError } = await supabase
+        .from('suitcase_items')
+        .select(`
+          id,
+          inventory_id,
+          suitcase_id,
+          quantity,
+          status
+        `)
+        .eq('id', suitcaseItemId)
+        .single();
+      
+      if (itemError) {
+        console.error('[SuitcaseItemOperations] Erro ao obter item da maleta:', itemError);
+        throw itemError;
+      }
+      
+      // 2. Se o item estiver danificado, registrar no histórico de itens danificados
+      if (isDamaged) {
+        const { error: damagedError } = await supabase
+          .from('inventory_damaged_items')
+          .insert({
+            inventory_id: itemData.inventory_id,
+            suitcase_id: itemData.suitcase_id,
+            quantity: itemData.quantity || 1,
+            reason: 'Devolvido danificado da maleta',
+            damage_type: 'damaged'
+          });
+        
+        if (damagedError) {
+          console.error('[SuitcaseItemOperations] Erro ao registrar item danificado:', damagedError);
+          throw damagedError;
+        }
+      } 
+      // 3. Se não estiver danificado, liberar a reserva e atualizar o estoque
+      else {
+        const { error: releaseError } = await this.releaseFromSuitcase(
+          itemData.inventory_id, 
+          itemData.quantity || 1
+        );
+        
+        if (releaseError) {
+          console.error('[SuitcaseItemOperations] Erro ao liberar reserva:', releaseError);
+          throw releaseError;
+        }
+      }
+      
+      // 4. Atualizar o status do item na maleta para 'returned'
+      const { error: updateError } = await supabase
+        .from('suitcase_items')
+        .update({ status: 'returned' })
+        .eq('id', suitcaseItemId);
+      
+      if (updateError) {
+        console.error('[SuitcaseItemOperations] Erro ao atualizar status do item:', updateError);
+        throw updateError;
+      }
+      
+      console.log(`[SuitcaseItemOperations] Item ${suitcaseItemId} devolvido ao inventário com sucesso`);
+      return true;
+    } catch (error) {
+      console.error('[SuitcaseItemOperations] Erro ao devolver item ao inventário:', error);
+      return false;
+    }
+  }
 }

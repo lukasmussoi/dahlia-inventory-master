@@ -300,6 +300,7 @@ export function useSupplyDialog(
       ];
       
       try {
+        // Corrigindo a chamada para o método generateSupplyPDF
         const pdfUrl = await CombinedSuitcaseController.generateSupplyPDF(
           suitcaseId,
           allItems,

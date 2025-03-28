@@ -15,18 +15,22 @@ export const SuitcaseItemModel = {
   getSuitcaseItems: BaseItemModel.getSuitcaseItems,
   addItemToSuitcase: BaseItemModel.addItemToSuitcase,
   updateSuitcaseItemStatus: BaseItemModel.updateSuitcaseItemStatus,
+  updateSuitcaseItemQuantity: BaseItemModel.updateSuitcaseItemQuantity,
   removeSuitcaseItem: BaseItemModel.removeSuitcaseItem,
+  getItemSuitcaseInfo: BaseItemModel.getItemSuitcaseInfo,
   
   // Métodos do modelo de consultas
   checkItemAvailability: ItemQueryModel.checkItemAvailability,
   
   // Métodos do modelo de vendas
   getSuitcaseItemSales: ItemSalesModel.getSuitcaseItemSales,
+  updateSaleInfo: ItemSalesModel.updateSaleInfo,
   
   // Métodos do modelo de operações
   reserveForSuitcase: SuitcaseItemOperations.reserveForSuitcase,
   releaseFromSuitcase: SuitcaseItemOperations.releaseFromSuitcase,
-  finalizeSale: SuitcaseItemOperations.finalizeSale
+  finalizeSale: SuitcaseItemOperations.finalizeSale,
+  returnItemToInventory: SuitcaseItemOperations.returnItemToInventory
 };
 
 // Também exportamos os modelos individuais para acesso direto se necessário
