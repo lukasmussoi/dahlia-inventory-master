@@ -103,7 +103,7 @@ export class SuitcaseSupplyController {
    * @returns URL do PDF gerado
    */
   static async generateSupplyPDF(suitcaseId: string, items: SupplyItem[], suitcaseInfo: any): Promise<string> {
-    return SupplyPdfController.generateSuitcasePDF(suitcaseId, items, suitcaseInfo);
+    return SupplyPdfController.generateSupplyPDF(suitcaseId, items, suitcaseInfo);
   }
 
   /**

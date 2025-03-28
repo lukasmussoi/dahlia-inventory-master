@@ -4,7 +4,7 @@
  * @file Este arquivo contém o formulário para criar e editar informações de uma maleta
  * @relacionamento Utilizado para criar novas maletas ou editar maletas existentes
  */
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -60,6 +60,20 @@ interface SuitcaseFormDialogProps {
   onSubmit?: (data: any) => Promise<void>;
 }
 
+// Função para extrair valores do endereço
+const extractAddressValue = (address: any, field: string): string => {
+  // Se o endereço for null/undefined, retornar string vazia
+  if (!address) return '';
+  
+  // Se o endereço for um objeto JSON, tentar extrair o campo
+  if (typeof address === 'object' && !Array.isArray(address)) {
+    return address[field]?.toString() || '';
+  }
+  
+  // Se for qualquer outro tipo, retornar string vazia
+  return '';
+};
+
 export function SuitcaseFormDialog({
   open,
   onOpenChange,
@@ -73,20 +87,6 @@ export function SuitcaseFormDialog({
   const [loading, setLoading] = useState(true);
   const [city, setCity] = useState("");
   const [neighborhood, setNeighborhood] = useState("");
-
-  // Função para extrair valores do endereço
-  const extractAddressValue = (address: any, field: string): string => {
-    // Se o endereço for null/undefined, retornar string vazia
-    if (!address) return '';
-    
-    // Se o endereço for um objeto JSON, tentar extrair o campo
-    if (typeof address === 'object' && !Array.isArray(address)) {
-      return address[field]?.toString() || '';
-    }
-    
-    // Se for qualquer outro tipo, retornar string vazia
-    return '';
-  };
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
