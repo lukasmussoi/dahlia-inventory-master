@@ -146,8 +146,9 @@ export function SuitcaseFormDialog({
   };
 
   useEffect(() => {
-    if (form.watch("seller_id")) {
-      void fetchSellerInfo(form.watch("seller_id"));
+    const sellerId = form.watch("seller_id");
+    if (sellerId) {
+      void fetchSellerInfo(sellerId);
     }
   }, [form.watch("seller_id")]);
 
