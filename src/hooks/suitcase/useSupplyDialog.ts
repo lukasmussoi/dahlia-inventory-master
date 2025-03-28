@@ -259,7 +259,7 @@ export function useSupplyDialog(
       const newItems = selectedItems.filter(item => !item.from_suitcase);
       
       // Adicionar cada item novo à maleta
-      let addedItems = [];
+      let addedItems: any[] = [];
       if (newItems.length > 0) {
         for (const item of newItems) {
           try {
