@@ -1,3 +1,4 @@
+
 /**
  * Hook para Gerenciar o Diálogo de Abastecimento
  * @file Este hook centraliza a lógica do diálogo de abastecimento de maletas
@@ -271,10 +272,11 @@ export function useSupplyDialog(
         }))
       ];
       
+      // Corrigindo o tipo para o PDF
       const pdfUrl = await CombinedSuitcaseController.generateSupplyPDF(
         suitcaseId,
-        suitcase,
-        allItemsForPdf
+        suitcase, // Passando a maleta como está, não como array
+        allItemsForPdf // Este é o array que precisamos
       );
       
       if (!pdfUrl) {

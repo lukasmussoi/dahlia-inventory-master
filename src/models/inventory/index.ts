@@ -27,11 +27,13 @@ export class InventoryModel {
   static restoreItem = InventoryItemModel.restoreItem;
   static checkItemInSuitcase = BaseInventoryModel.checkItemInSuitcase;
   
-  // Novos métodos de estoque
+  // Novos métodos de estoque (do InventoryMovementModel)
   static checkItemHasMovements = InventoryMovementModel.checkItemHasMovements;
+  static createMovement = InventoryMovementModel.createMovement;
+  
+  // Novos métodos de estoque (do InventoryStockModel)
   static updateItemPhotos = InventoryStockModel.updateItemPhotos;
   static getItemPhotos = InventoryStockModel.getItemPhotos;
-  static createMovement = InventoryMovementModel.createMovement;
   static reserveForSuitcase = InventoryStockModel.reserveForSuitcase;
   static releaseReservation = InventoryStockModel.releaseReservation;
   static finalizeSale = InventoryStockModel.finalizeSale;

@@ -6,7 +6,7 @@
 import { SuitcaseModel, SuitcaseItemModel } from "@/models/suitcase";
 import { supabase } from "@/integrations/supabase/client";
 import { InventoryController } from "@/controllers/inventoryController";
-import { PDFController } from "../pdf/pdfController";
+import { SupplyItemController } from "../inventory/supplyItemController";
 
 export const SuitcaseSupplyController = {
   /**
@@ -68,6 +68,20 @@ export const SuitcaseSupplyController = {
   },
 
   /**
+   * Busca itens do inventário
+   * @param query Termo de busca
+   * @returns Array de itens correspondentes
+   */
+  async searchInventoryItems(query: string) {
+    try {
+      return await SupplyItemController.searchInventoryItems(query);
+    } catch (error) {
+      console.error("[SuitcaseSupplyController] Erro ao buscar itens:", error);
+      throw error;
+    }
+  },
+
+  /**
    * Gera um PDF com os itens da maleta para abastecimento
    * @param suitcaseId ID da maleta
    * @param suitcase Dados da maleta
@@ -76,8 +90,11 @@ export const SuitcaseSupplyController = {
    */
   async generateSupplyPDF(suitcaseId: string, suitcase: any, allItems: any[]) {
     try {
+      // Usar o módulo de PDF adequado
+      const { PDFController } = await import("../pdfController");
+      
       // Esta função gera o PDF de abastecimento
-      return await PDFController.generateSupplyPDF(suitcaseId, suitcase, allItems);
+      return await PDFController.generateSuitcasePDF(suitcaseId, suitcase, allItems);
     } catch (error) {
       console.error("[SuitcaseSupplyController] Erro ao gerar PDF de abastecimento:", error);
       throw error;

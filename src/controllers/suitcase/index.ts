@@ -57,11 +57,9 @@ export const CombinedSuitcaseController = {
   generateSuitcasePDF: PdfController.generateSuitcasePDF,
 
   // SuitcaseSupplyController
+  supplySuitcase: SuitcaseSupplyController.supplySuitcase,
   searchInventoryForSuitcase: SuitcaseSupplyController.searchInventoryItems,
-  
-  // Implementação dos métodos ausentes
-  supplySuitcase: SuitcaseItemController.addItemToSuitcase,
-  generateSupplyPDF: PdfController.generateSuitcasePDF,
+  generateSupplyPDF: SuitcaseSupplyController.generateSupplyPDF,
   
   // Métodos para contagem de itens
   countSuitcaseItems: async (suitcaseId: string) => {

@@ -29,16 +29,19 @@ export class InventoryStockModel {
         throw new Error(`Estoque insuficiente. Disponível: ${availableQuantity}, Solicitado: ${quantity}`);
       }
       
-      // Usar a função RPC para reservar o estoque
+      // Atualizar quantity_reserved
       const { data, error } = await supabase
-        .rpc('reserve_inventory_for_suitcase', {
-          inventory_id: inventoryId,
-          reserve_quantity: quantity
-        });
+        .from('inventory')
+        .update({ 
+          quantity_reserved: (item.quantity_reserved || 0) + quantity 
+        })
+        .eq('id', inventoryId)
+        .select()
+        .single();
       
       if (error) throw error;
       
-      return data;
+      return true;
     } catch (error) {
       console.error("[InventoryStockModel] Erro ao reservar item para maleta:", error);
       throw error;
@@ -53,15 +56,27 @@ export class InventoryStockModel {
    */
   static async releaseReservation(inventoryId: string, quantity: number) {
     try {
-      const { data, error } = await supabase
-        .rpc('release_reserved_inventory', {
-          inventory_id: inventoryId,
-          release_quantity: quantity
-        });
+      // Buscar valor atual
+      const { data: item, error: itemError } = await supabase
+        .from('inventory')
+        .select('quantity_reserved')
+        .eq('id', inventoryId)
+        .maybeSingle();
+      
+      if (itemError) throw itemError;
+      if (!item) throw new Error("Item não encontrado");
+      
+      // Calcular novo valor garantindo que não seja negativo
+      const newReservedValue = Math.max(0, (item.quantity_reserved || 0) - quantity);
+      
+      const { error } = await supabase
+        .from('inventory')
+        .update({ quantity_reserved: newReservedValue })
+        .eq('id', inventoryId);
       
       if (error) throw error;
       
-      return data;
+      return true;
     } catch (error) {
       console.error("[InventoryStockModel] Erro ao liberar reserva de item:", error);
       throw error;
@@ -76,15 +91,31 @@ export class InventoryStockModel {
    */
   static async finalizeSale(inventoryId: string, quantity: number) {
     try {
-      const { data, error } = await supabase
-        .rpc('finalize_inventory_sale', {
-          inventory_id: inventoryId,
-          sale_quantity: quantity
-        });
+      // Buscar valores atuais
+      const { data: item, error: itemError } = await supabase
+        .from('inventory')
+        .select('quantity, quantity_reserved')
+        .eq('id', inventoryId)
+        .maybeSingle();
+      
+      if (itemError) throw itemError;
+      if (!item) throw new Error("Item não encontrado");
+      
+      // Calcular novos valores garantindo que não sejam negativos
+      const newQuantity = Math.max(0, item.quantity - quantity);
+      const newReservedValue = Math.max(0, (item.quantity_reserved || 0) - quantity);
+      
+      const { error } = await supabase
+        .from('inventory')
+        .update({ 
+          quantity: newQuantity,
+          quantity_reserved: newReservedValue
+        })
+        .eq('id', inventoryId);
       
       if (error) throw error;
       
-      return data;
+      return true;
     } catch (error) {
       console.error("[InventoryStockModel] Erro ao finalizar venda de item:", error);
       throw error;

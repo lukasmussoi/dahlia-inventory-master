@@ -24,6 +24,14 @@ export class InventoryMovementModel {
     try {
       console.log("[InventoryMovementModel] Criando movimento:", movement);
       
+      // Obter o ID do usuário atual se não foi fornecido
+      let userId = movement.user_id;
+      if (!userId) {
+        // Obter o usuário atual da sessão
+        const { data: { user } } = await supabase.auth.getUser();
+        userId = user?.id || 'sistema';
+      }
+      
       const { data, error } = await supabase
         .from('inventory_movements')
         .insert({
@@ -33,7 +41,7 @@ export class InventoryMovementModel {
           reason: movement.reason,
           unit_cost: movement.unit_cost || 0,
           notes: movement.notes,
-          user_id: movement.user_id || supabase.auth.getUser().then(res => res.data.user?.id)
+          user_id: userId
         })
         .select()
         .maybeSingle();

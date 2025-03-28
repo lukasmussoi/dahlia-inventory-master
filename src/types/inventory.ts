@@ -10,17 +10,17 @@ export interface InventoryItem {
   sku: string;
   barcode?: string;
   quantity: number;
-  quantity_reserved?: number; // Nova propriedade: quantidade reservada em maletas
+  quantity_reserved: number; // Nova propriedade: quantidade reservada em maletas
   price: number;
   unit_cost: number;
-  raw_cost: number; // Alterado de opcional para obrigatório para corresponder ao modelo
+  raw_cost: number; // Agora propriedade obrigatória para corresponder ao modelo
   category_id: string;
   category_name?: string;
   supplier_id?: string;
   supplier_name?: string;
   plating_type_id?: string;
   plating_type_name?: string;
-  suggested_price?: number;
+  suggested_price: number; // Tornando obrigatório para corresponder ao modelo
   weight?: number;
   width?: number;
   height?: number;

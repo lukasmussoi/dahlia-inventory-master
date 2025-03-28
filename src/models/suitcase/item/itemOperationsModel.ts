@@ -48,10 +48,10 @@ export class SuitcaseItemOperationsModel {
       
       // Se a quantidade aumentou, reservar mais unidades no estoque
       if (quantityDiff > 0) {
-        // Alteração: Usar o método manual de atualização do inventário em vez de RPC
+        // Alteração: Atualizar manualmente sem usar supabase.sql
         await supabase
           .from('inventory')
-          .update({ quantity_reserved: supabase.sql`quantity_reserved + ${quantityDiff}` })
+          .update({ quantity_reserved: currentItem.quantity_reserved + quantityDiff })
           .eq('id', currentItem.inventory_id);
           
         // Registrar o movimento
@@ -64,12 +64,22 @@ export class SuitcaseItemOperationsModel {
       } 
       // Se a quantidade diminuiu, liberar unidades no estoque
       else if (quantityDiff < 0) {
-        // Alteração: Usar o método manual de atualização do inventário em vez de RPC
+        // Alteração: Atualizar manualmente sem usar supabase.sql
+        const absQuantityDiff = Math.abs(quantityDiff);
+        
+        // Buscar valor atual de quantity_reserved
+        const { data: inventory } = await supabase
+          .from('inventory')
+          .select('quantity_reserved')
+          .eq('id', currentItem.inventory_id)
+          .single();
+          
+        // Calcular novo valor, garantindo que não seja negativo
+        const newReservedValue = Math.max(0, (inventory?.quantity_reserved || 0) - absQuantityDiff);
+        
         await supabase
           .from('inventory')
-          .update({ 
-            quantity_reserved: supabase.sql`GREATEST(0, quantity_reserved - ${Math.abs(quantityDiff)})` 
-          })
+          .update({ quantity_reserved: newReservedValue })
           .eq('id', currentItem.inventory_id);
           
         // Registrar o movimento
@@ -131,13 +141,23 @@ export class SuitcaseItemOperationsModel {
           // Continuar o processo mesmo com erro no registro de dano
         }
         
+        // Buscar valor atual dos campos quantity e quantity_reserved
+        const { data: inventory } = await supabase
+          .from('inventory')
+          .select('quantity, quantity_reserved')
+          .eq('id', item.inventory_id)
+          .single();
+          
+        // Calcular novos valores, garantindo que não sejam negativos
+        const newQuantity = Math.max(0, (inventory?.quantity || 0) - quantity);
+        const newReservedValue = Math.max(0, (inventory?.quantity_reserved || 0) - quantity);
+        
         // Remover do estoque (baixa definitiva)
-        // Alteração: Usar o método manual de atualização do inventário em vez de RPC
         await supabase
           .from('inventory')
           .update({ 
-            quantity: supabase.sql`quantity - ${quantity}`,
-            quantity_reserved: supabase.sql`GREATEST(0, quantity_reserved - ${quantity})` 
+            quantity: newQuantity,
+            quantity_reserved: newReservedValue
           })
           .eq('id', item.inventory_id);
           
@@ -149,13 +169,20 @@ export class SuitcaseItemOperationsModel {
           reason: `Item danificado da maleta ${item.suitcase_id}`
         });
       } else {
+        // Buscar valor atual de quantity_reserved
+        const { data: inventory } = await supabase
+          .from('inventory')
+          .select('quantity_reserved')
+          .eq('id', item.inventory_id)
+          .single();
+          
+        // Calcular novo valor, garantindo que não seja negativo
+        const newReservedValue = Math.max(0, (inventory?.quantity_reserved || 0) - quantity);
+        
         // Liberar apenas a reserva, sem reduzir o estoque
-        // Alteração: Usar o método manual de atualização do inventário em vez de RPC
         await supabase
           .from('inventory')
-          .update({ 
-            quantity_reserved: supabase.sql`GREATEST(0, quantity_reserved - ${quantity})` 
-          })
+          .update({ quantity_reserved: newReservedValue })
           .eq('id', item.inventory_id);
           
         // Registrar o movimento

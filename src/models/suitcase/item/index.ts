@@ -1,41 +1,30 @@
 
 /**
- * Exportação Combinada dos Modelos de Itens de Maleta
- * @file Arquivo de exportação central com todos os modelos de itens
+ * Exportação de modelos relacionados a itens de maleta
+ * @file Este arquivo agrupa todos os modelos de itens de maleta
  */
-import { BaseItemModel } from './baseItemModel';
-import { ItemQueryModel } from './itemQueryModel';
-import { ItemOperationsModel } from './itemOperationsModel';
-import { ItemSalesModel } from './itemSalesModel';
+import { BaseItemModel } from "./baseItemModel";
+import { ItemQueryModel } from "./itemQueryModel";
+import { ItemSalesModel } from "./itemSalesModel";
+import { SuitcaseItemOperationsModel } from "./itemOperationsModel";
 
-// Exportar todas as classes individualmente
-export { BaseItemModel, ItemQueryModel, ItemOperationsModel, ItemSalesModel };
-
-// Criar e exportar classe combinada para manter compatibilidade com o código existente
+// Exportar o modelo combinado
 export class SuitcaseItemModel {
   // BaseItemModel
-  static processItemData = BaseItemModel.processItemData;
+  static getSuitcaseItemById = BaseItemModel.getSuitcaseItemById;
+  static getSuitcaseItems = BaseItemModel.getSuitcaseItems;
+  static addItemToSuitcase = BaseItemModel.addItemToSuitcase;
+  static updateSuitcaseItemStatus = BaseItemModel.updateSuitcaseItemStatus;
+  static removeSuitcaseItem = BaseItemModel.removeSuitcaseItem;
   
   // ItemQueryModel
-  static getSuitcaseItemById = ItemQueryModel.getSuitcaseItemById;
-  static getSuitcaseItems = ItemQueryModel.getSuitcaseItems;
-  static getSuitcaseItemSales = ItemQueryModel.getSuitcaseItemSales;
+  static checkItemAvailability = ItemQueryModel.checkItemAvailability;
   static getItemSuitcaseInfo = ItemQueryModel.getItemSuitcaseInfo;
-  static countSuitcaseItems = ItemQueryModel.countSuitcaseItems;
-  static getSuitcasesItemCounts = ItemQueryModel.getSuitcasesItemCounts;
-  
-  // ItemOperationsModel
-  static checkItemAvailability = ItemOperationsModel.checkItemAvailability;
-  static addItemToSuitcase = ItemOperationsModel.addItemToSuitcase;
-  static updateSuitcaseItemStatus = ItemOperationsModel.updateSuitcaseItemStatus;
-  static removeSuitcaseItem = ItemOperationsModel.removeSuitcaseItem;
-  static updateSuitcaseItemQuantity = ItemOperationsModel.updateSuitcaseItemQuantity;
-  static returnItemToInventory = ItemOperationsModel.returnItemToInventory;
   
   // ItemSalesModel
-  static updateSaleInfo = ItemSalesModel.updateSaleInfo;
-  static registerSaleInfo = ItemSalesModel.registerSaleInfo;
+  static getSuitcaseItemSales = ItemSalesModel.getSuitcaseItemSales;
+  
+  // ItemOperationsModel (Novo)
+  static updateSuitcaseItemQuantity = SuitcaseItemOperationsModel.updateItemQuantity;
+  static returnItemToInventory = SuitcaseItemOperationsModel.returnItemToInventory;
 }
-
-// Exportar por padrão para manter compatibilidade
-export default SuitcaseItemModel;
