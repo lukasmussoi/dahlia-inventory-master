@@ -29,6 +29,16 @@ interface SuitcaseHistoryTabProps {
   acertosHistorico: Acerto[];
 }
 
+// Interface para o item vendido agrupado
+interface TopItemVendido {
+  id: string;
+  name: string;
+  sku: string;
+  photo_url: string;
+  quantity: number;
+  total: number;
+}
+
 export function SuitcaseHistoryTab({
   suitcase,
   acertosHistorico
@@ -75,7 +85,7 @@ export function SuitcaseHistoryTab({
   // Calcular top 5 itens mais vendidos
   const topItensVendidos = useMemo(() => {
     // Agrupar itens por ID e contar ocorrências
-    const contagem = todosItensVendidos.reduce((acc, item) => {
+    const contagem: Record<string, TopItemVendido> = todosItensVendidos.reduce((acc, item) => {
       const key = item.id;
       if (!acc[key]) {
         acc[key] = {
@@ -91,7 +101,7 @@ export function SuitcaseHistoryTab({
         acc[key].total += item.price;
       }
       return acc;
-    }, {} as Record<string, any>);
+    }, {} as Record<string, TopItemVendido>);
     
     // Converter para array e ordenar por quantidade
     const topItems = Object.values(contagem)

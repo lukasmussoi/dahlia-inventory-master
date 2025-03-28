@@ -13,7 +13,7 @@ export class BaseItemModel {
    * @returns Item com dados processados
    */
   static processItemData(rawItem: any): SuitcaseItem {
-    let photoUrl;
+    let photoUrl: string | PhotoUrl[] | undefined;
     
     // Processar URL da foto do produto
     if (rawItem.product?.photos && Array.isArray(rawItem.product.photos)) {

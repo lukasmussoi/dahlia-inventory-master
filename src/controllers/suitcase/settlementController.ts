@@ -26,7 +26,7 @@ export const SettlementController = {
         .select(`
           *,
           suitcase:suitcases(id, code),
-          seller:resellers(id, name)
+          seller:resellers(id, name, commission_rate)
         `)
         .eq('suitcase_id', suitcaseId)
         .order('settlement_date', { ascending: false });

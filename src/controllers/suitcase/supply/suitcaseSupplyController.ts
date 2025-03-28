@@ -1,4 +1,3 @@
-
 /**
  * Controlador de Abastecimento de Maletas
  * @file Este arquivo coordena as operações de abastecimento de maletas
@@ -70,8 +69,7 @@ export class SuitcaseSupplyController {
             const addedItem = await SuitcaseItemModel.addItemToSuitcase({
               suitcase_id: suitcaseId,
               inventory_id: item.inventory_id,
-              quantity: 1, // Sempre adicionar com quantidade 1
-              status: 'in_possession'
+              quantity: 1 // Sempre adicionar com quantidade 1
             });
             
             // Adicionar à lista de itens adicionados

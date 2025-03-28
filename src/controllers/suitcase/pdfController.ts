@@ -35,8 +35,8 @@ export class PdfController {
         suitcaseInfo = suitcase;
       }
       
-      // Calcular valor total da maleta corretamente
-      const valorTotal = (items as any[]).reduce((acumulador: number, item: any) => {
+      // Calcular valor total da maleta corretamente, garantindo que estamos trabalhando com um array
+      const valorTotal = items.reduce((acumulador: number, item: any) => {
         const itemPrice = item.product?.price || 0;
         const itemQuantity = item.quantity || 1;
         return acumulador + (itemPrice * itemQuantity);
