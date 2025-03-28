@@ -25,13 +25,15 @@ import {
   ArrowRightLeft,
   MoreVertical,
   PackageOpen,
-  History
+  History,
+  Trash2
 } from "lucide-react";
 import { 
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger
+  DropdownMenuTrigger,
+  DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import { Suitcase } from "@/types/suitcase";
 import { SuitcaseSupplyDialog } from "./supply/SuitcaseSupplyDialog";
@@ -39,6 +41,8 @@ import { SuitcaseSettlementDialog } from "./settlement/SuitcaseSettlementDialog"
 import { OpenSuitcaseDialog } from "./open/OpenSuitcaseDialog";
 import { formatStatus } from "@/utils/formatUtils";
 import { SuitcaseHistoryDialog } from "./history/SuitcaseHistoryDialog";
+import { DeleteSuitcaseDialog } from "./details/DeleteSuitcaseDialog";
+import { useSuitcaseDeletion } from "@/hooks/suitcase/useSuitcaseDeletion";
 
 interface SuitcaseCardProps {
   suitcase: Suitcase;
@@ -60,6 +64,14 @@ export function SuitcaseCard({
   const [showOpenDialog, setShowOpenDialog] = useState(false);
   const [showHistoryDialog, setShowHistoryDialog] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  
+  // Hook para gerenciar exclusão da maleta
+  const { 
+    showDeleteDialog, 
+    setShowDeleteDialog, 
+    isDeleting, 
+    handleDeleteSuitcase 
+  } = useSuitcaseDeletion();
   
   // Referência para controlar o menu dropdown
   const dropdownTriggerRef = useRef<HTMLButtonElement>(null);
@@ -134,6 +146,23 @@ export function SuitcaseCard({
     // Fechar dropdown quando abre o dialog
     setDropdownOpen(false);
   };
+
+  // Manipulador para "Excluir Maleta"
+  const handleDeleteClick = () => {
+    setShowDeleteDialog(true);
+    // Fechar dropdown quando abre o dialog
+    setDropdownOpen(false);
+  };
+  
+  // Função para processar a exclusão efetiva da maleta
+  const handleDeleteConfirm = async () => {
+    await handleDeleteSuitcase(suitcase.id);
+    
+    // Recarregar a lista de maletas após exclusão bem-sucedida
+    if (onRefresh) {
+      onRefresh();
+    }
+  };
   
   // Função para fechar dialogs e garantir reset de estados
   const handleDialogOpenChange = (dialog: string, isOpen: boolean) => {
@@ -149,6 +178,9 @@ export function SuitcaseCard({
         break;
       case 'history':
         setShowHistoryDialog(isOpen);
+        break;
+      case 'delete':
+        setShowDeleteDialog(isOpen);
         break;
     }
     
@@ -226,7 +258,7 @@ export function SuitcaseCard({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              {/* Botão "Abrir Maleta" - Apenas para administradores */}
+              {/* Botões visíveis apenas para administradores */}
               {isAdmin && (
                 <>
                   <DropdownMenuItem onClick={handleOpenSuitcase}>
@@ -234,10 +266,20 @@ export function SuitcaseCard({
                     Abrir Maleta
                   </DropdownMenuItem>
                   
-                  {/* Botão "Histórico" - Nova opção apenas para administradores */}
                   <DropdownMenuItem onClick={handleOpenHistory}>
                     <History className="h-4 w-4 mr-2" />
                     Histórico
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuSeparator />
+                  
+                  {/* Botão de exclusão - apenas para administradores */}
+                  <DropdownMenuItem 
+                    onClick={handleDeleteClick}
+                    className="text-red-600 focus:bg-red-100 focus:text-red-700"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Excluir Maleta
                   </DropdownMenuItem>
                 </>
               )}
@@ -275,6 +317,14 @@ export function SuitcaseCard({
         onOpenChange={(open) => handleDialogOpenChange('history', open)}
         suitcaseId={suitcase.id}
         suitcaseCode={suitcase.code || ""}
+      />
+
+      {/* Diálogo de confirmação de exclusão */}
+      <DeleteSuitcaseDialog
+        open={showDeleteDialog}
+        onOpenChange={(open) => handleDialogOpenChange('delete', open)}
+        isDeleting={isDeleting}
+        onDelete={handleDeleteConfirm}
       />
     </>
   );
