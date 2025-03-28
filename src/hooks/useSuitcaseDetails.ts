@@ -43,7 +43,7 @@ export function useSuitcaseDetails(
     refetchSuitcaseItems,
     acertosHistorico,
     isLoadingAcertos,
-    resetQueryState
+    resetQueries
   } = useSuitcaseQueries(suitcaseId, open);
   
   // Função para resetar todos os estados
@@ -65,8 +65,8 @@ export function useSuitcaseDetails(
     if (resetPrintState) resetPrintState();
     if (resetDateState) resetDateState();
     
-    // Resetar estado de queries
-    if (resetQueryState) resetQueryState();
+    // Resetar estado de queries - CORREÇÃO: usar resetQueries em vez de resetQueryState
+    if (resetQueries) resetQueries();
     
     // Garantir que os estados locais sejam resetados
     setIsClosing(false);
@@ -80,7 +80,7 @@ export function useSuitcaseDetails(
     resetItemsState,
     resetPrintState,
     resetDateState,
-    resetQueryState
+    resetQueries // CORREÇÃO: usar resetQueries aqui também
   ]);
 
   // Efeito para monitorar quando o diálogo é fechado
