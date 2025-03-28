@@ -263,10 +263,10 @@ export function useSupplyDialog(
       
       console.log(`[useSupplyDialog] Itens: ${newItems.length} novos, ${existingItems.length} existentes`);
       
-      // Preparar os itens para abastecimento
+      // Preparar os itens para abastecimento - GARANTINDO QUE A QUANTIDADE SEJA PASSADA CORRETAMENTE
       const itemsToSupply = newItems.map(item => ({
         inventory_id: item.id,
-        quantity: item.quantity,
+        quantity: item.quantity, // Garantir que a quantidade selecionada seja passada
         product: {
           id: item.id,
           name: item.name,
@@ -275,6 +275,11 @@ export function useSupplyDialog(
           photo_url: item.photo_url
         }
       }));
+
+      // Log de verificação para cada item sendo abastecido
+      itemsToSupply.forEach(item => {
+        console.log(`[LOG] Verificando item para abastecimento: ${item.product.name} (${item.product.sku}) - Quantidade: ${item.quantity}`);
+      });
 
       // Abastecer a maleta com novos itens
       let addedItems = [];

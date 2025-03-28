@@ -222,7 +222,7 @@ export class ItemOperationsModel {
       // 4. Adicionar ou atualizar o item na maleta
       if (existingItemCheck.inSuitcase) {
         console.log(`[ItemOperations] Item já existe na maleta, atualizando quantidade`);
-        // Se o item já existe na maleta, atualize a quantidade
+        // Se o item já existe na maleta, atualize a quantidade SOMANDO à existente
         const newQuantity = (existingItemCheck.item.quantity || 0) + quantity;
         
         const { data: updatedItem, error: updateItemError } = await supabase
