@@ -65,7 +65,7 @@ export function useSuitcaseDetails(
     if (resetPrintState) resetPrintState();
     if (resetDateState) resetDateState();
     
-    // CORREÇÃO: usar resetQueries em vez de resetQueryState
+    // Limpar cache de queries e cancelar queries pendentes
     if (resetQueries) resetQueries();
     
     // Garantir que os estados locais sejam resetados
@@ -80,7 +80,7 @@ export function useSuitcaseDetails(
     resetItemsState,
     resetPrintState,
     resetDateState,
-    resetQueries // CORREÇÃO: usar resetQueries aqui também
+    resetQueries
   ]);
 
   // Efeito para monitorar quando o diálogo é fechado
