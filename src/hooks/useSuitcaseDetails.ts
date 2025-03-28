@@ -65,7 +65,7 @@ export function useSuitcaseDetails(
     if (resetPrintState) resetPrintState();
     if (resetDateState) resetDateState();
     
-    // Resetar estado de queries - CORREÇÃO: usar resetQueries em vez de resetQueryState
+    // CORREÇÃO: usar resetQueries em vez de resetQueryState
     if (resetQueries) resetQueries();
     
     // Garantir que os estados locais sejam resetados
