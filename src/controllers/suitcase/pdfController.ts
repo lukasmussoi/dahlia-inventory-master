@@ -60,7 +60,7 @@ export const PdfController = {
       
       // Adicionar valor total
       const totalValue = items.reduce((total, item) => {
-        return total + (item.product?.price || 0) * (item.quantity || 1);
+        return total + ((item.product?.price || 0) * (item.quantity || 1));
       }, 0);
       
       const finalY = (doc as any).lastAutoTable.finalY + 10;
