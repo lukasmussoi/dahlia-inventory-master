@@ -15,7 +15,9 @@ import { SuitcaseSummary } from "./SuitcaseSummary";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
+import { AcertoMaletaDialog } from "./settlement/AcertoMaletaDialog";
 import { CombinedSuitcaseController } from "@/controllers/suitcase";
+import { SuitcaseSupplyDialog } from "./supply/SuitcaseSupplyDialog";
 import { useQuery } from "@tanstack/react-query";
 
 interface SuitcasesContentProps {
@@ -30,6 +32,9 @@ export function SuitcasesContent({ isAdmin = false, userProfile, summary }: Suit
     status: "todos" // Inicializar com um valor padrão
   });
   const [showNewSuitcaseDialog, setShowNewSuitcaseDialog] = useState(false);
+  const [selectedSuitcase, setSelectedSuitcase] = useState<any>(null);
+  const [showAcertoDialog, setShowAcertoDialog] = useState(false);
+  const [showSupplyDialog, setShowSupplyDialog] = useState(false);
   const queryClient = useQueryClient();
 
   // Buscar maletas com filtros
@@ -60,6 +65,32 @@ export function SuitcasesContent({ isAdmin = false, userProfile, summary }: Suit
       console.error("Erro ao criar maleta:", error);
       toast.error("Erro ao criar maleta");
     }
+  };
+
+  // Função para abrir diálogo de acerto
+  const handleOpenAcertoDialog = (suitcase: any) => {
+    setSelectedSuitcase(suitcase);
+    setShowAcertoDialog(true);
+  };
+
+  // Função para abrir diálogo de abastecimento
+  const handleOpenSupplyDialog = (suitcase: any) => {
+    setSelectedSuitcase(suitcase);
+    setShowSupplyDialog(true);
+  };
+
+  // Função para fechar diálogo de acerto
+  const handleCloseAcertoDialog = () => {
+    setShowAcertoDialog(false);
+    setSelectedSuitcase(null);
+    refetch();
+  };
+
+  // Função para fechar diálogo de abastecimento
+  const handleCloseSupplyDialog = () => {
+    setShowSupplyDialog(false);
+    setSelectedSuitcase(null);
+    refetch();
   };
 
   // Buscar contagem de itens para todas as maletas
@@ -120,6 +151,8 @@ export function SuitcasesContent({ isAdmin = false, userProfile, summary }: Suit
             suitcases={suitcases} 
             isAdmin={isAdmin} 
             onRefresh={refetch}
+            onOpenAcertoDialog={handleOpenAcertoDialog}
+            onOpenSupplyDialog={handleOpenSupplyDialog}
           />
         )}
       </div>
@@ -130,6 +163,21 @@ export function SuitcasesContent({ isAdmin = false, userProfile, summary }: Suit
         onOpenChange={setShowNewSuitcaseDialog}
         onSubmit={handleCreateSuitcase}
         mode="create"
+      />
+
+      {/* Diálogo de acerto */}
+      <AcertoMaletaDialog
+        open={showAcertoDialog}
+        onOpenChange={handleCloseAcertoDialog}
+        suitcase={selectedSuitcase}
+      />
+
+      {/* Diálogo de abastecimento */}
+      <SuitcaseSupplyDialog
+        open={showSupplyDialog}
+        onOpenChange={handleCloseSupplyDialog}
+        suitcase={selectedSuitcase}
+        onRefresh={refetch}
       />
     </div>
   );

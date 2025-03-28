@@ -11,8 +11,7 @@ import { useState, useEffect } from "react";
 interface SuitcaseSettlementDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  suitcase: Suitcase | null;
-  suitcaseId?: string | null;
+  suitcase: Suitcase;
   onRefresh?: () => void;
 }
 
@@ -20,14 +19,10 @@ export function SuitcaseSettlementDialog({
   open,
   onOpenChange,
   suitcase,
-  suitcaseId,
   onRefresh
 }: SuitcaseSettlementDialogProps) {
   // Estado local para controlar o carregamento
   const [isLoading, setIsLoading] = useState(false);
-  
-  // Obter o ID da maleta de uma das duas fontes
-  const effectiveSuitcaseId = suitcase?.id || suitcaseId;
 
   // Limpar estado ao fechar
   useEffect(() => {
@@ -57,7 +52,7 @@ export function SuitcaseSettlementDialog({
     <Dialog open={open} onOpenChange={handleDialogChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Acerto da Maleta: {suitcase?.code}</DialogTitle>
+          <DialogTitle>Acerto da Maleta: {suitcase.code}</DialogTitle>
           <DialogDescription>
             Registro de acertos da maleta para controle financeiro.
           </DialogDescription>

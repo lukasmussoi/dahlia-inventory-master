@@ -3,6 +3,7 @@
  * Hook para gerenciar as consultas relacionadas a maletas
  * @file Gerencia queries de maletas, itens e histórico
  * @relacionamento Utilizado pelo useOpenSuitcase para buscar dados
+ * @modificação CORREÇÃO DEFINITIVA - Implementado cancelamento de queries e limpeza completa de cache
  */
 import { useCallback, useRef, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -10,11 +11,11 @@ import { CombinedSuitcaseController } from "@/controllers/suitcase";
 
 /**
  * Hook para gerenciar as consultas relacionadas a maletas
- * @param suitcaseId ID da maleta (null quando inativo)
- * @param isActive Status da página/componente (ativo/inativo)
+ * @param suitcaseId ID da maleta (null quando modal fechada)
+ * @param open Status do diálogo (aberto/fechado)
  */
-export function useSuitcaseQueries(suitcaseId: string | null, isActive: boolean) {
-  console.log(`[useSuitcaseQueries] Inicializando, suitcaseId: ${suitcaseId}, isActive: ${isActive}`);
+export function useSuitcaseQueries(suitcaseId: string | null, open: boolean) {
+  console.log(`[useSuitcaseQueries] Inicializando, suitcaseId: ${suitcaseId}, open: ${open}`);
   const queryClient = useQueryClient();
   
   // Referências para IDs ativos para uso durante limpeza
@@ -40,9 +41,9 @@ export function useSuitcaseQueries(suitcaseId: string | null, isActive: boolean)
       console.log(`[useSuitcaseQueries] Buscando detalhes da maleta: ${suitcaseId}`);
       return CombinedSuitcaseController.getSuitcaseById(suitcaseId || "");
     },
-    enabled: isActive && !!suitcaseId,
+    enabled: open && !!suitcaseId,
     staleTime: 1000 * 60 * 5, // 5 minutos
-    gcTime: 1000 * 60 * 10, // 10 minutos
+    gcTime: 1000 * 60, // 1 minuto
   });
 
   // Atualizar referência do seller_id quando disponível
@@ -63,9 +64,9 @@ export function useSuitcaseQueries(suitcaseId: string | null, isActive: boolean)
       console.log(`[useSuitcaseQueries] Buscando promotora para revendedor: ${suitcase?.seller_id}`);
       return CombinedSuitcaseController.getPromoterForReseller(suitcase?.seller_id || "");
     },
-    enabled: isActive && !!suitcase?.seller_id,
+    enabled: open && !!suitcase?.seller_id,
     staleTime: 1000 * 60 * 5, // 5 minutos
-    gcTime: 1000 * 60 * 10, // 10 minutos
+    gcTime: 1000 * 60, // 1 minuto
   });
 
   // Buscar itens da maleta
@@ -79,9 +80,9 @@ export function useSuitcaseQueries(suitcaseId: string | null, isActive: boolean)
       console.log(`[useSuitcaseQueries] Buscando itens da maleta: ${suitcaseId}`);
       return CombinedSuitcaseController.getSuitcaseItems(suitcaseId || "");
     },
-    enabled: isActive && !!suitcaseId,
+    enabled: open && !!suitcaseId,
     staleTime: 1000 * 60 * 5, // 5 minutos
-    gcTime: 1000 * 60 * 10, // 10 minutos
+    gcTime: 1000 * 60, // 1 minuto
   });
 
   // Buscar histórico de acertos
@@ -94,9 +95,9 @@ export function useSuitcaseQueries(suitcaseId: string | null, isActive: boolean)
       console.log(`[useSuitcaseQueries] Buscando histórico de acertos: ${suitcaseId}`);
       return CombinedSuitcaseController.getHistoricoAcertos(suitcaseId || "");
     },
-    enabled: isActive && !!suitcaseId,
+    enabled: open && !!suitcaseId,
     staleTime: 1000 * 60 * 5, // 5 minutos
-    gcTime: 1000 * 60 * 10, // 10 minutos
+    gcTime: 1000 * 60, // 1 minuto
   });
 
   // Função para cancelar e limpar todas as queries relacionadas
@@ -109,7 +110,7 @@ export function useSuitcaseQueries(suitcaseId: string | null, isActive: boolean)
     if (savedSuitcaseId) {
       console.log(`[useSuitcaseQueries] Removendo queries para maleta: ${savedSuitcaseId}`);
       
-      // Primeiro cancelar todas as queries pendentes
+      // CORREÇÃO CRÍTICA 1: Primeiro cancelar todas as queries pendentes
       queryClient.cancelQueries({
         predicate: (query) => {
           const queryKey = query.queryKey;
@@ -121,18 +122,18 @@ export function useSuitcaseQueries(suitcaseId: string | null, isActive: boolean)
             (savedSellerId && Array.isArray(queryKey) && queryKey[0] === "promoter-for-reseller" && queryKey[1] === savedSellerId)
           );
         }
-      }).then(() => {
-        // Remover dados do cache completamente após cancelar as queries
-        queryClient.removeQueries({ queryKey: ["suitcase", savedSuitcaseId] });
-        queryClient.removeQueries({ queryKey: ["suitcase-items", savedSuitcaseId] });
-        queryClient.removeQueries({ queryKey: ["acertos-historico", savedSuitcaseId] });
-        
-        if (savedSellerId) {
-          queryClient.removeQueries({ queryKey: ["promoter-for-reseller", savedSellerId] });
-        }
-        
-        console.log("[useSuitcaseQueries] Queries removidas do cache com sucesso");
       });
+      
+      // CORREÇÃO CRÍTICA 2: Remover dados do cache completamente, em vez de apenas invalidá-los
+      queryClient.removeQueries({ queryKey: ["suitcase", savedSuitcaseId] });
+      queryClient.removeQueries({ queryKey: ["suitcase-items", savedSuitcaseId] });
+      queryClient.removeQueries({ queryKey: ["acertos-historico", savedSuitcaseId] });
+      
+      if (savedSellerId) {
+        queryClient.removeQueries({ queryKey: ["promoter-for-reseller", savedSellerId] });
+      }
+      
+      console.log("[useSuitcaseQueries] Queries removidas do cache com sucesso");
     } else {
       console.log("[useSuitcaseQueries] Nenhum ID de maleta para limpar no cache");
     }
@@ -143,19 +144,6 @@ export function useSuitcaseQueries(suitcaseId: string | null, isActive: boolean)
     
     console.log("[useSuitcaseQueries] Limpeza de cache concluída");
   }, [queryClient]);
-
-  // Efeito para limpar queries quando o componente é desmontado ou quando isActive muda para false
-  useEffect(() => {
-    // Não limpar ao montar - apenas na desmontagem ou desativação
-    if (!isActive) {
-      resetQueries();
-    }
-    
-    return () => {
-      // Limpeza na desmontagem
-      resetQueries();
-    };
-  }, [isActive, resetQueries]);
 
   return {
     suitcase,
