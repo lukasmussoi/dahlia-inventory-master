@@ -59,7 +59,8 @@ export const PdfController = {
       });
       
       // Calcular o valor total - Correção do erro de tipo
-      const totalValue = items.reduce((acumulador: number, item: any) => {
+      // Utilizamos uma assinatura de reduce() adequada para retornar um number
+      const totalValue = (items as any[]).reduce((acumulador: number, item: any) => {
         // Extrair preço e quantidade, com valores padrão se não estiverem disponíveis
         const preco = item.product?.price || 0;
         const quantidade = item.quantity || 1;
