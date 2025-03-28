@@ -20,7 +20,7 @@ export class InventoryStatsModel {
       // Obter total de itens e valor
       const { data: totals, error: totalsError } = await supabase
         .from('inventory')
-        .select('price, quantity, unit_cost, min_stock, category_id')
+        .select('id, name, price, quantity, unit_cost, min_stock, category_id')
         .eq('archived', false);
       
       if (totalsError) throw totalsError;

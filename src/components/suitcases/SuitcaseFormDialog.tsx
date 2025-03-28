@@ -1,4 +1,3 @@
-
 /**
  * Componente de Diálogo de Formulário de Maleta
  * @file Este arquivo contém o formulário para criar e editar informações de uma maleta
@@ -151,7 +150,7 @@ export function SuitcaseFormDialog({
     if (sellerId) {
       fetchSellerInfo(sellerId);
     }
-  }, [form]); // Corrigido: usando form como dependência
+  }, [form.watch("seller_id")]);
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
