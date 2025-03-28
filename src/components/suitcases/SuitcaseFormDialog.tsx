@@ -151,7 +151,7 @@ export function SuitcaseFormDialog({
     if (sellerId) {
       fetchSellerInfo(sellerId);
     }
-  }, [form.watch("seller_id")]);
+  }, [form]); // Correção aqui: Usando form como dependência
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
