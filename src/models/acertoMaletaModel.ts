@@ -1,3 +1,4 @@
+
 /**
  * Modelo de Acertos de Maleta
  * @file Este arquivo contém as operações de banco de dados para os acertos de maleta
@@ -125,7 +126,7 @@ export class AcertoMaletaModel {
         }
       }
       
-      // 2. Processar itens presentes (retornar ao estoque)
+      // 2. Processar itens presentes (devolver ao estoque)
       for (const itemId of itemsPresent) {
         // Verificar se o item já foi processado
         if (processedItems.has(itemId)) {
@@ -133,7 +134,7 @@ export class AcertoMaletaModel {
           continue;
         }
         
-        console.log(`Retornando item ${itemId} ao estoque`);
+        console.log(`Verificando item ${itemId} para retorno ao estoque`);
         try {
           // Buscar informações do item para verificar seu status atual
           const item = await SuitcaseItemModel.getSuitcaseItemById(itemId);
@@ -143,14 +144,20 @@ export class AcertoMaletaModel {
           }
           
           // Verificar se o item já foi devolvido ao estoque
-          if (item.status === 'returned') {
-            console.log(`Item ${itemId} já está com status 'returned', ignorando processamento duplicado.`);
+          if (item.status === 'returned' || item.status === 'damaged') {
+            console.log(`Item ${itemId} já está com status '${item.status}', ignorando processamento duplicado.`);
             processedItems.add(itemId);
             continue;
           }
           
-          // Chamar função melhorada para garantir que o item seja devolvido ao estoque
-          await SuitcaseItemModel.returnItemToInventory(itemId);
+          // Chamar a função atualizada para devolução ao estoque
+          const result = await SuitcaseItemModel.returnItemToInventory(itemId);
+          
+          if (result.already_processed) {
+            console.log(`Item ${itemId} já foi processado anteriormente: ${result.message}`);
+          } else {
+            console.log(`Item ${itemId} processado com sucesso: ${result.message}`);
+          }
           
           // Marcar o item como processado
           processedItems.add(itemId);
