@@ -1,4 +1,3 @@
-
 /**
  * Hook para Gerenciar o Diálogo de Abastecimento
  * @file Este hook centraliza a lógica do diálogo de abastecimento de maletas
@@ -252,9 +251,13 @@ export function useSupplyDialog(
 
     setIsSupplying(true);
     try {
+      console.log("[useSupplyDialog] Iniciando processo de abastecimento");
+      
       // Separar itens novos e itens existentes com quantidades modificadas
       const existingItems = selectedItems.filter(item => item.from_suitcase);
       const newItems = selectedItems.filter(item => !item.from_suitcase);
+      
+      console.log(`[useSupplyDialog] Itens: ${newItems.length} novos, ${existingItems.length} existentes`);
       
       // Preparar os itens para abastecimento
       const itemsToSupply = newItems.map(item => ({
@@ -273,15 +276,22 @@ export function useSupplyDialog(
       let addedItems = [];
       if (itemsToSupply.length > 0) {
         try {
+          console.log(`[useSupplyDialog] Enviando ${itemsToSupply.length} itens para abastecimento`);
+          console.log("[useSupplyDialog] Detalhes dos itens:", itemsToSupply);
+          
           addedItems = await CombinedSuitcaseController.supplySuitcase(
             suitcaseId,
             itemsToSupply
           );
-          console.log("Itens adicionados com sucesso:", addedItems);
+          
+          console.log("[useSupplyDialog] Itens adicionados com sucesso:", addedItems);
         } catch (error: any) {
-          console.error("Erro ao adicionar itens à maleta:", error);
+          console.error("[useSupplyDialog] Erro ao adicionar itens à maleta:", error);
+          const mensagemErro = error.message || "Não foi possível adicionar os itens à maleta";
+          console.error(`[useSupplyDialog] Erro ao adicionar itens à maleta: ${mensagemErro}`);
+          
           // Exibir mensagem mais explicativa
-          toast.error(error.message || "Não foi possível adicionar os itens à maleta");
+          toast.error(mensagemErro);
           setIsSupplying(false);
           return;
         }
@@ -307,6 +317,7 @@ export function useSupplyDialog(
       ];
       
       try {
+        console.log("[useSupplyDialog] Gerando PDF de abastecimento");
         const pdfUrl = await CombinedSuitcaseController.generateSupplyPDF(
           suitcaseId,
           allItems,
@@ -320,7 +331,7 @@ export function useSupplyDialog(
         // Abrir PDF em nova aba
         openPdfInNewTab(pdfUrl);
       } catch (pdfError) {
-        console.error("Erro ao gerar PDF de abastecimento:", pdfError);
+        console.error("[useSupplyDialog] Erro ao gerar PDF de abastecimento:", pdfError);
         toast.error("Abastecimento realizado, mas não foi possível gerar o PDF");
       }
       
@@ -335,7 +346,7 @@ export function useSupplyDialog(
       if (onRefresh) onRefresh();
       onOpenChange(false);
     } catch (error: any) {
-      console.error("Erro ao abastecer maleta:", error);
+      console.error("[useSupplyDialog] Erro ao abastecer maleta:", error);
       toast.error(error.message || "Erro ao abastecer maleta");
     } finally {
       setIsSupplying(false);

@@ -24,6 +24,7 @@ export class SuitcaseItemModel {
   
   // ItemOperationsModel
   static checkItemAvailability = ItemOperationsModel.checkItemAvailability;
+  static checkItemInSuitcase = ItemOperationsModel.checkItemInSuitcase;
   static addItemToSuitcase = ItemOperationsModel.addItemToSuitcase;
   static updateSuitcaseItemStatus = ItemOperationsModel.updateSuitcaseItemStatus;
   static removeSuitcaseItem = ItemOperationsModel.removeSuitcaseItem;

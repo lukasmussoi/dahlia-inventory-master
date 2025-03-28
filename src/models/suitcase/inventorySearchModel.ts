@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 export class InventorySearchModel {
   // Buscar itens de inventário
   static async searchInventoryItems(query: string): Promise<any[]> {
+    console.log(`[InventorySearchModel] Buscando itens com query: ${query}`);
     let searchQuery = supabase
       .from('inventory')
       .select(`
@@ -27,7 +28,12 @@ export class InventorySearchModel {
     
     const { data, error } = await searchQuery.limit(10);
     
-    if (error) throw error;
+    if (error) {
+      console.error(`[InventorySearchModel] Erro na busca:`, error);
+      throw error;
+    }
+    
+    console.log(`[InventorySearchModel] Encontrados ${data?.length || 0} itens`);
     
     // Processar para obter a primeira foto de cada item
     return (data || []).map(item => {
@@ -51,15 +57,29 @@ export class InventorySearchModel {
    * @returns Lista de itens com dados de disponibilidade
    */
   static async searchAvailableInventory(query: string): Promise<any[]> {
+    console.log(`[InventorySearchModel] Buscando itens disponíveis com query: ${query}`);
+    
     // Reutiliza a lógica básica de busca
     const items = await this.searchInventoryItems(query);
     
+    console.log(`[InventorySearchModel] Processando dados de disponibilidade para ${items.length} itens`);
+    
     // Adiciona informações de disponibilidade
-    return items.map(item => ({
-      ...item,
-      quantity_total: item.quantity || 0,
-      quantity_reserved: item.quantity_reserved || 0,
-      quantity_available: (item.quantity || 0) - (item.quantity_reserved || 0)
-    }));
+    const processedItems = items.map(item => {
+      const quantityTotal = item.quantity || 0;
+      const quantityReserved = item.quantity_reserved || 0;
+      const quantityAvailable = quantityTotal - quantityReserved;
+      
+      console.log(`[InventorySearchModel] Item ${item.name}: total=${quantityTotal}, reservado=${quantityReserved}, disponível=${quantityAvailable}`);
+      
+      return {
+        ...item,
+        quantity_total: quantityTotal,
+        quantity_reserved: quantityReserved,
+        quantity_available: quantityAvailable
+      };
+    });
+    
+    return processedItems;
   }
 }

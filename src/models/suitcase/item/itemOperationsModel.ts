@@ -20,6 +20,8 @@ export class ItemOperationsModel {
     quantity_available?: number;
   }> {
     try {
+      console.log(`[ItemOperations] Verificando disponibilidade do item ${inventoryId}`);
+      
       // Verificar se o item existe no inventário
       const { data: inventoryItem, error: inventoryError } = await supabase
         .from('inventory')
@@ -28,16 +30,21 @@ export class ItemOperationsModel {
         .single();
       
       if (inventoryError) {
-        console.error("Erro ao verificar disponibilidade no inventário:", inventoryError);
+        console.error("[ItemOperations] Erro ao verificar disponibilidade no inventário:", inventoryError);
         return { available: false, message: "Item não encontrado no inventário" };
       }
+      
+      console.log(`[ItemOperations] Dados do item obtidos:`, inventoryItem);
       
       // Calcular quantidade disponível (total - reservada)
       const quantity = inventoryItem?.quantity || 0;
       const quantity_reserved = inventoryItem?.quantity_reserved || 0;
       const quantity_available = quantity - quantity_reserved;
       
+      console.log(`[ItemOperations] Quantidades: total=${quantity}, reservada=${quantity_reserved}, disponível=${quantity_available}`);
+      
       if (quantity_available <= 0) {
+        console.log(`[ItemOperations] Item sem estoque disponível para reserva`);
         return { 
           available: false, 
           message: "Item sem estoque disponível para reserva", 
@@ -47,6 +54,7 @@ export class ItemOperationsModel {
         };
       }
       
+      console.log(`[ItemOperations] Item disponível para reserva`);
       return { 
         available: true, 
         message: "Item disponível", 
@@ -55,7 +63,7 @@ export class ItemOperationsModel {
         quantity_available
       };
     } catch (error) {
-      console.error("Erro ao verificar disponibilidade:", error);
+      console.error("[ItemOperations] Erro ao verificar disponibilidade:", error);
       return { available: false, message: "Erro ao verificar disponibilidade do item" };
     }
   }
@@ -72,21 +80,42 @@ export class ItemOperationsModel {
     message: string;
   }> {
     try {
+      console.log(`[ItemOperations] Verificando se o item ${inventoryId} já está na maleta ${suitcaseId}`);
+      
       // Verificar se o item já está na maleta específica
       const { data: existingItem, error } = await supabase
         .from('suitcase_items')
-        .select('id, quantity, status')
+        .select('id, quantity, status, suitcase_id')
         .eq('inventory_id', inventoryId)
         .eq('suitcase_id', suitcaseId)
         .eq('status', 'in_possession')
         .maybeSingle();
       
       if (error) {
-        console.error("Erro ao verificar item na maleta:", error);
-        return { inSuitcase: false, message: "Erro ao verificar item na maleta" };
+        console.error("[ItemOperations] Erro ao verificar item na maleta:", error);
+        throw new Error("Erro ao verificar item na maleta");
+      }
+      
+      // Buscar o código da maleta para mensagens de erro mais claras
+      let suitcaseCode = suitcaseId;
+      if (!existingItem) {
+        try {
+          const { data: suitcaseData } = await supabase
+            .from('suitcases')
+            .select('code')
+            .eq('id', suitcaseId)
+            .single();
+            
+          if (suitcaseData?.code) {
+            suitcaseCode = suitcaseData.code;
+          }
+        } catch (e) {
+          // Ignorar erro e manter o ID como código
+        }
       }
       
       if (existingItem) {
+        console.log(`[ItemOperations] Item já está na maleta com quantidade ${existingItem.quantity}`);
         return { 
           inSuitcase: true, 
           item: existingItem,
@@ -94,9 +123,10 @@ export class ItemOperationsModel {
         };
       }
       
-      return { inSuitcase: false, message: "Item não está na maleta" };
+      console.log(`[ItemOperations] Item não está na maleta ${suitcaseCode}`);
+      return { inSuitcase: false, message: `Item não está na maleta ${suitcaseCode}` };
     } catch (error) {
-      console.error("Erro ao verificar item na maleta:", error);
+      console.error("[ItemOperations] Erro ao verificar item na maleta:", error);
       return { inSuitcase: false, message: "Erro ao verificar item na maleta" };
     }
   }
@@ -114,26 +144,34 @@ export class ItemOperationsModel {
     try {
       const { suitcase_id, inventory_id, quantity } = data;
       
+      console.log(`[ItemOperations] Iniciando reserva: Item ${inventory_id}, Maleta ${suitcase_id}, Quantidade ${quantity}`);
+      
       if (quantity <= 0) {
+        console.error(`[ItemOperations] Quantidade inválida: ${quantity}`);
         throw new Error("A quantidade deve ser maior que zero");
       }
       
       // 1. Verificar disponibilidade do item
       const availabilityInfo = await this.checkItemAvailability(inventory_id);
       if (!availabilityInfo.available) {
+        console.error(`[ItemOperations] Item não disponível: ${availabilityInfo.message}`);
         throw new Error(availabilityInfo.message);
       }
       
       // Verificar se a quantidade solicitada está disponível
       if (availabilityInfo.quantity_available! < quantity) {
+        console.error(`[ItemOperations] Quantidade solicitada (${quantity}) excede o disponível (${availabilityInfo.quantity_available})`);
         throw new Error(`Quantidade solicitada (${quantity}) excede o disponível (${availabilityInfo.quantity_available})`);
       }
       
       // 2. Verificar se o item já está na maleta
       const existingItemCheck = await this.checkItemInSuitcase(inventory_id, suitcase_id);
+
+      // Variável para armazenar o item resultante
       let suitcaseItem;
       
       // 3. Atualizar a quantidade reservada no inventário
+      console.log(`[ItemOperations] Atualizando quantidade reservada no inventário`);
       const newReservedQuantity = (availabilityInfo.quantity_reserved || 0) + quantity;
       const { error: updateInventoryError } = await supabase
         .from('inventory')
@@ -141,11 +179,15 @@ export class ItemOperationsModel {
         .eq('id', inventory_id);
       
       if (updateInventoryError) {
+        console.error(`[ItemOperations] Erro ao atualizar quantity_reserved:`, updateInventoryError);
         throw updateInventoryError;
       }
       
+      console.log(`[ItemOperations] Quantidade reservada atualizada para ${newReservedQuantity}`);
+      
       // 4. Adicionar ou atualizar o item na maleta
       if (existingItemCheck.inSuitcase) {
+        console.log(`[ItemOperations] Item já existe na maleta, atualizando quantidade`);
         // Se o item já existe na maleta, atualize a quantidade
         const newQuantity = (existingItemCheck.item.quantity || 0) + quantity;
         
@@ -167,7 +209,10 @@ export class ItemOperationsModel {
           .single();
         
         if (updateItemError) {
+          console.error(`[ItemOperations] Erro ao atualizar quantidade do item na maleta:`, updateItemError);
+          
           // Em caso de erro, reverter a reserva
+          console.log(`[ItemOperations] Revertendo aumento da quantity_reserved devido a erro`);
           await supabase
             .from('inventory')
             .update({ 
@@ -178,8 +223,10 @@ export class ItemOperationsModel {
           throw updateItemError;
         }
         
+        console.log(`[ItemOperations] Item atualizado na maleta, nova quantidade: ${newQuantity}`);
         suitcaseItem = updatedItem;
       } else {
+        console.log(`[ItemOperations] Item não existe na maleta, criando novo`);
         // Se o item não existe na maleta, crie um novo
         const { data: newItem, error: insertItemError } = await supabase
           .from('suitcase_items')
@@ -203,7 +250,10 @@ export class ItemOperationsModel {
           .single();
         
         if (insertItemError) {
+          console.error(`[ItemOperations] Erro ao inserir item na maleta:`, insertItemError);
+          
           // Em caso de erro, reverter a reserva
+          console.log(`[ItemOperations] Revertendo aumento da quantity_reserved devido a erro`);
           await supabase
             .from('inventory')
             .update({ 
@@ -214,10 +264,12 @@ export class ItemOperationsModel {
           throw insertItemError;
         }
         
+        console.log(`[ItemOperations] Novo item adicionado à maleta com quantidade ${quantity}`);
         suitcaseItem = newItem;
       }
       
       // 5. Registrar o movimento de inventário
+      console.log(`[ItemOperations] Registrando movimento de inventário`);
       const { error: movementError } = await supabase
         .from('inventory_movements')
         .insert({
@@ -226,19 +278,22 @@ export class ItemOperationsModel {
           movement_type: 'reserva_maleta',
           reason: `Reserva para maleta ${suitcase_id}`,
           user_id: (await supabase.auth.getUser()).data.user?.id,
-          unit_cost: suitcaseItem.product?.unit_cost || 0
+          unit_cost: suitcaseItem?.product?.unit_cost || 0
         });
       
       if (movementError) {
-        console.error("Erro ao registrar movimento de inventário:", movementError);
+        console.error("[ItemOperations] Erro ao registrar movimento de inventário:", movementError);
         // Não reverter as operações anteriores, apenas registrar o erro
+        console.log("[ItemOperations] Continuando apesar do erro no registro de movimento");
+      } else {
+        console.log("[ItemOperations] Movimento de inventário registrado com sucesso");
       }
       
-      console.log("Item reservado com sucesso:", suitcaseItem);
+      console.log("[ItemOperations] Item reservado com sucesso:", suitcaseItem);
       return suitcaseItem;
       
     } catch (error) {
-      console.error("Erro ao reservar item para maleta:", error);
+      console.error("[ItemOperations] Erro ao reservar item para maleta:", error);
       throw error;
     }
   }
@@ -254,6 +309,7 @@ export class ItemOperationsModel {
     quantity?: number;
   }) {
     try {
+      console.log(`[ItemOperations] Redirecionando addItemToSuitcase para reserveItemToSuitcase`);
       // Redirecionar para o novo método de reserva
       return await this.reserveItemToSuitcase({
         suitcase_id: data.suitcase_id,
@@ -261,7 +317,7 @@ export class ItemOperationsModel {
         quantity: data.quantity || 1
       });
     } catch (error) {
-      console.error("Erro ao adicionar item à maleta:", error);
+      console.error("[ItemOperations] Erro ao adicionar item à maleta:", error);
       throw error;
     }
   }
