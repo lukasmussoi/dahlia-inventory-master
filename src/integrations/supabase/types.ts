@@ -241,6 +241,7 @@ export type Database = {
           price: number
           profit_margin: number | null
           quantity: number
+          quantity_reserved: number
           raw_cost: number | null
           reseller_commission: number | null
           sku: string | null
@@ -270,6 +271,7 @@ export type Database = {
           price: number
           profit_margin?: number | null
           quantity?: number
+          quantity_reserved?: number
           raw_cost?: number | null
           reseller_commission?: number | null
           sku?: string | null
@@ -299,6 +301,7 @@ export type Database = {
           price?: number
           profit_margin?: number | null
           quantity?: number
+          quantity_reserved?: number
           raw_cost?: number | null
           reseller_commission?: number | null
           sku?: string | null
@@ -896,6 +899,13 @@ export type Database = {
         }
         Returns: Json
       }
+      finalize_inventory_sale: {
+        Args: {
+          inventory_id: string
+          sale_quantity: number
+        }
+        Returns: boolean
+      }
       has_role:
         | {
             Args: {
@@ -920,6 +930,20 @@ export type Database = {
             }
             Returns: boolean
           }
+      release_reserved_inventory: {
+        Args: {
+          inventory_id: string
+          release_quantity: number
+        }
+        Returns: boolean
+      }
+      reserve_inventory_for_suitcase: {
+        Args: {
+          inventory_id: string
+          reserve_quantity: number
+        }
+        Returns: boolean
+      }
       validate_cpf_cnpj: {
         Args: {
           cpf_cnpj: string

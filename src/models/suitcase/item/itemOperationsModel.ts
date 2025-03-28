@@ -18,7 +18,7 @@ export class ItemOperationsModel {
       // Verificar se o item existe no inventário
       const { data: inventoryItem, error: inventoryError } = await supabase
         .from('inventory')
-        .select('quantity')
+        .select('quantity, quantity_reserved')
         .eq('id', inventoryId)
         .single();
       
@@ -26,7 +26,10 @@ export class ItemOperationsModel {
         return { available: false, message: "Item não encontrado no inventário" };
       }
       
-      if (inventoryItem.quantity <= 0) {
+      // Calcular quantidade disponível (total - reservado)
+      const availableQuantity = (inventoryItem.quantity || 0) - (inventoryItem.quantity_reserved || 0);
+      
+      if (availableQuantity <= 0) {
         return { available: false, message: "Item sem estoque disponível" };
       }
       
@@ -103,22 +106,21 @@ export class ItemOperationsModel {
         throw error;
       }
       
-      // Atualizar estoque - usando update direto em vez de RPC
-      const { data: inventoryItem } = await supabase
-        .from('inventory')
-        .select('quantity')
-        .eq('id', inventory_id)
-        .single();
+      // NOVA LÓGICA: Em vez de reduzir o estoque, apenas reservamos a quantidade
+      try {
+        // Usar RPC para reservar os itens no estoque
+        const { error: rpcError } = await supabase
+          .rpc('reserve_inventory_for_suitcase', {
+            inventory_id: inventory_id,
+            reserve_quantity: quantity
+          });
         
-      if (inventoryItem) {
-        const { error: updateError } = await supabase
-          .from('inventory')
-          .update({ quantity: Math.max(0, inventoryItem.quantity - quantity) })
-          .eq('id', inventory_id);
-          
-        if (updateError) {
-          console.error("Erro ao atualizar estoque:", updateError);
+        if (rpcError) {
+          console.error("Erro ao reservar item no estoque:", rpcError);
+          // Mesmo se der erro, não impedir o fluxo principal
         }
+      } catch (rpcError) {
+        console.error("Erro ao chamar RPC para reservar item:", rpcError);
       }
       
       return suitcaseItem;
@@ -164,7 +166,7 @@ export class ItemOperationsModel {
       // Primeiro, obter informações do item para saber qual inventoryId está sendo removido
       const { data: itemData, error: getError } = await supabase
         .from('suitcase_items')
-        .select('inventory_id, quantity')
+        .select('inventory_id, quantity, suitcase_id')
         .eq('id', itemId)
         .single();
       
@@ -182,23 +184,21 @@ export class ItemOperationsModel {
         throw error;
       }
       
-      // Devolver ao estoque - sem usar RPC
+      // NOVA LÓGICA: Liberar a quantidade reservada no estoque
       if (itemData) {
-        const { data: inventoryItem } = await supabase
-          .from('inventory')
-          .select('quantity')
-          .eq('id', itemData.inventory_id)
-          .single();
-            
-        if (inventoryItem) {
-          const { error: updateError } = await supabase
-            .from('inventory')
-            .update({ quantity: inventoryItem.quantity + (itemData.quantity || 1) })
-            .eq('id', itemData.inventory_id);
-            
-          if (updateError) {
-            console.error("Erro ao atualizar estoque:", updateError);
+        try {
+          // Usar RPC para liberar os itens reservados
+          const { error: rpcError } = await supabase
+            .rpc('release_reserved_inventory', {
+              inventory_id: itemData.inventory_id,
+              release_quantity: itemData.quantity || 1
+            });
+          
+          if (rpcError) {
+            console.error("Erro ao liberar reserva no estoque:", rpcError);
           }
+        } catch (rpcError) {
+          console.error("Erro ao chamar RPC para liberar reserva:", rpcError);
         }
       }
       
@@ -220,7 +220,7 @@ export class ItemOperationsModel {
       // Primeiro, obter informações do item para calcular a diferença de quantidade
       const { data: itemData, error: getError } = await supabase
         .from('suitcase_items')
-        .select('inventory_id, quantity')
+        .select('inventory_id, quantity, suitcase_id')
         .eq('id', itemId)
         .single();
       
@@ -243,36 +243,34 @@ export class ItemOperationsModel {
         throw error;
       }
       
-      // Atualizar estoque se necessário
+      // NOVA LÓGICA: Atualizar a quantidade reservada no estoque
       if (quantityDiff !== 0) {
-        const { data: inventoryItem } = await supabase
-          .from('inventory')
-          .select('quantity')
-          .eq('id', itemData.inventory_id)
-          .single();
-          
-        if (inventoryItem) {
+        try {
           if (quantityDiff < 0) {
-            // Devolver ao estoque
-            const { error: updateError } = await supabase
-              .from('inventory')
-              .update({ quantity: inventoryItem.quantity + Math.abs(quantityDiff) })
-              .eq('id', itemData.inventory_id);
-              
-            if (updateError) {
-              console.error("Erro ao atualizar estoque:", updateError);
+            // Liberar parte da reserva no estoque
+            const { error: rpcError } = await supabase
+              .rpc('release_reserved_inventory', {
+                inventory_id: itemData.inventory_id,
+                release_quantity: Math.abs(quantityDiff)
+              });
+            
+            if (rpcError) {
+              console.error("Erro ao liberar parte da reserva no estoque:", rpcError);
             }
           } else {
-            // Retirar do estoque
-            const { error: updateError } = await supabase
-              .from('inventory')
-              .update({ quantity: Math.max(0, inventoryItem.quantity - quantityDiff) })
-              .eq('id', itemData.inventory_id);
-              
-            if (updateError) {
-              console.error("Erro ao atualizar estoque:", updateError);
+            // Aumentar a reserva no estoque
+            const { error: rpcError } = await supabase
+              .rpc('reserve_inventory_for_suitcase', {
+                inventory_id: itemData.inventory_id,
+                reserve_quantity: quantityDiff
+              });
+            
+            if (rpcError) {
+              console.error("Erro ao aumentar reserva no estoque:", rpcError);
             }
           }
+        } catch (rpcError) {
+          console.error("Erro ao chamar RPC para atualizar reserva:", rpcError);
         }
       }
       
@@ -328,23 +326,37 @@ export class ItemOperationsModel {
         if (damageError) {
           console.error("Erro ao registrar item danificado:", damageError);
         }
-      } else {
-        // Se não estiver danificado, devolver ao estoque
-        const { data: inventoryItem } = await supabase
-          .from('inventory')
-          .select('quantity')
-          .eq('id', itemData.inventory_id)
-          .single();
-            
-        if (inventoryItem) {
-          const { error: updateInventoryError } = await supabase
-            .from('inventory')
-            .update({ quantity: inventoryItem.quantity + (itemData.quantity || 1) })
-            .eq('id', itemData.inventory_id);
-            
-          if (updateInventoryError) {
-            console.error("Erro ao atualizar estoque:", updateInventoryError);
+        
+        // NOVA LÓGICA: Para itens danificados, removê-los definitivamente do estoque
+        try {
+          // Usar RPC para finalizar a venda (que neste caso é uma baixa por dano)
+          const { error: rpcError } = await supabase
+            .rpc('finalize_inventory_sale', {
+              inventory_id: itemData.inventory_id,
+              sale_quantity: itemData.quantity || 1
+            });
+          
+          if (rpcError) {
+            console.error("Erro ao remover item danificado do estoque:", rpcError);
           }
+        } catch (rpcError) {
+          console.error("Erro ao chamar RPC para remover item danificado:", rpcError);
+        }
+      } else {
+        // NOVA LÓGICA: Para itens não danificados, apenas liberar a reserva
+        try {
+          // Usar RPC para liberar os itens reservados
+          const { error: rpcError } = await supabase
+            .rpc('release_reserved_inventory', {
+              inventory_id: itemData.inventory_id,
+              release_quantity: itemData.quantity || 1
+            });
+          
+          if (rpcError) {
+            console.error("Erro ao liberar reserva no estoque:", rpcError);
+          }
+        } catch (rpcError) {
+          console.error("Erro ao chamar RPC para liberar reserva:", rpcError);
         }
       }
       
