@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { SuitcasesContent } from "@/components/suitcases/SuitcasesContent";
 import { AuthController } from "@/controllers/authController";
 import { useQuery } from "@tanstack/react-query";

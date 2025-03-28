@@ -4,7 +4,7 @@
  * @file Componente que exibe os detalhes da maleta em uma janela modal
  * @relacionamento Utilizado pelo card de maleta quando o administrador clica em "Abrir Maleta"
  */
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   Dialog, 
   DialogContent, 
@@ -14,11 +14,11 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft } from "lucide-react";
 import { LoadingIndicator } from "@/components/shared/LoadingIndicator";
 import { SuitcaseItemsTab } from "@/components/suitcases/open/tabs/SuitcaseItemsTab";
 import { SuitcaseHistoryTab } from "@/components/suitcases/open/tabs/SuitcaseHistoryTab";
-import { useOpenSuitcase } from "@/hooks/suitcase/useOpenSuitcase";
+import { toast } from "sonner";
+import { CombinedSuitcaseController } from "@/controllers/suitcase";
 
 interface OpenSuitcaseModalProps {
   open: boolean;
@@ -27,45 +27,106 @@ interface OpenSuitcaseModalProps {
 }
 
 export function OpenSuitcaseModal({ open, onOpenChange, suitcaseId }: OpenSuitcaseModalProps) {
-  // Custom hook para gerenciar os dados e operações da maleta
-  const {
-    activeTab,
-    setActiveTab,
-    suitcase,
-    promoterInfo,
-    suitcaseItems,
-    acertosHistorico,
-    isLoading,
-    handleReturnToInventory,
-    handleMarkAsDamaged,
-    resetState
-  } = useOpenSuitcase(suitcaseId, open);
+  // Estados básicos
+  const [activeTab, setActiveTab] = useState<'itens' | 'historico'>('itens');
+  const [isLoading, setIsLoading] = useState(true);
+  const [suitcase, setSuitcase] = useState<any>(null);
+  const [promoterInfo, setPromoterInfo] = useState<any>(null);
+  const [suitcaseItems, setSuitcaseItems] = useState<any[]>([]);
+  const [acertosHistorico, setAcertosHistorico] = useState<any[]>([]);
 
-  // Efeito para limpar dados ao fechar modal
-  useEffect(() => {
-    if (!open) {
-      resetState();
+  // Função para carregar todos os dados necessários
+  const loadAllData = async () => {
+    if (!suitcaseId || !open) return;
+    
+    setIsLoading(true);
+    
+    try {
+      // Carregar dados da maleta
+      const suitcaseData = await CombinedSuitcaseController.getSuitcaseById(suitcaseId);
+      setSuitcase(suitcaseData);
+      
+      // Carregar dados da promotora, se tiver seller_id
+      if (suitcaseData?.seller_id) {
+        const promoterData = await CombinedSuitcaseController.getPromoterForReseller(suitcaseData.seller_id);
+        setPromoterInfo(promoterData);
+      }
+      
+      // Carregar itens da maleta
+      const items = await CombinedSuitcaseController.getSuitcaseItems(suitcaseId);
+      setSuitcaseItems(items || []);
+      
+      // Carregar histórico de acertos
+      const historico = await CombinedSuitcaseController.getHistoricoAcertos(suitcaseId);
+      setAcertosHistorico(historico || []);
+    } catch (error) {
+      console.error('Erro ao carregar dados da maleta:', error);
+      toast.error('Erro ao carregar dados da maleta');
+    } finally {
+      setIsLoading(false);
     }
-  }, [open, resetState]);
+  };
+
+  // Função simples para limpar todos os estados
+  const resetAllStates = () => {
+    setActiveTab('itens');
+    setSuitcase(null);
+    setPromoterInfo(null);
+    setSuitcaseItems([]);
+    setAcertosHistorico([]);
+  };
 
   // Função para fechar a modal com segurança
   const handleCloseModal = () => {
-    // Garantir que o estado seja resetado antes de fechar
-    resetState();
     onOpenChange(false);
   };
 
-  // Função para tratar a mudança de abas
-  const handleTabChange = (value: string) => {
-    if (value === 'itens' || value === 'historico') {
-      setActiveTab(value as 'itens' | 'historico');
+  // Efeito para carregar dados quando a modal é aberta
+  useEffect(() => {
+    if (open && suitcaseId) {
+      loadAllData();
+    }
+    
+    // Limpar estados quando a modal é fechada
+    if (!open) {
+      resetAllStates();
+    }
+  }, [open, suitcaseId]);
+
+  // Função para devolver item ao estoque
+  const handleReturnToInventory = async (itemId: string, quantity: number = 1) => {
+    try {
+      await CombinedSuitcaseController.returnItemToInventory(itemId, false);
+      toast.success("Item devolvido ao estoque com sucesso");
+      
+      // Recarregar lista de itens
+      const items = await CombinedSuitcaseController.getSuitcaseItems(suitcaseId || "");
+      setSuitcaseItems(items || []);
+    } catch (error) {
+      console.error("Erro ao devolver item ao estoque:", error);
+      toast.error("Erro ao devolver item ao estoque");
+    }
+  };
+
+  // Função para marcar item como danificado
+  const handleMarkAsDamaged = async (itemId: string) => {
+    try {
+      await CombinedSuitcaseController.returnItemToInventory(itemId, true);
+      toast.success("Item marcado como danificado");
+      
+      // Recarregar lista de itens
+      const items = await CombinedSuitcaseController.getSuitcaseItems(suitcaseId || "");
+      setSuitcaseItems(items || []);
+    } catch (error) {
+      console.error("Erro ao marcar item como danificado:", error);
+      toast.error("Erro ao marcar item como danificado");
     }
   };
 
   // Renderização durante carregamento
-  if (isLoading || !suitcase) {
+  if (isLoading) {
     return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={handleCloseModal}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Detalhes da Maleta</DialogTitle>
@@ -83,11 +144,11 @@ export function OpenSuitcaseModal({ open, onOpenChange, suitcaseId }: OpenSuitca
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold">
-            Maleta {suitcase.code}
+            Maleta {suitcase?.code}
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'itens' | 'historico')} className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-6">
             <TabsTrigger value="itens">Itens da Maleta</TabsTrigger>
             <TabsTrigger value="historico">Histórico da Maleta</TabsTrigger>
@@ -112,11 +173,9 @@ export function OpenSuitcaseModal({ open, onOpenChange, suitcaseId }: OpenSuitca
         </Tabs>
 
         <div className="flex justify-end mt-4">
-          <DialogClose asChild>
-            <Button variant="outline" onClick={handleCloseModal}>
-              Fechar
-            </Button>
-          </DialogClose>
+          <Button variant="outline" onClick={handleCloseModal}>
+            Fechar
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
