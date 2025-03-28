@@ -1,4 +1,3 @@
-
 /**
  * Modelo de Operações com Itens de Maleta
  * @file Funções para gerenciar operações de inclusão, atualização e remoção de itens em maletas
@@ -195,9 +194,6 @@ export class ItemOperationsModel {
       // Variável para armazenar o item resultante
       let suitcaseItem;
       
-      // Iniciar transação manual
-      console.log(`[ItemOperations] Iniciando transação manual`);
-      
       // 3. Atualizar a quantidade reservada no inventário
       console.log(`[ItemOperations] Atualizando quantidade reservada no inventário`);
       console.log(`[ItemOperations] Quantidade reservada atual: ${availabilityInfo.quantity_reserved}, Nova quantidade reservada: ${(availabilityInfo.quantity_reserved || 0) + quantity}`);
@@ -237,7 +233,7 @@ export class ItemOperationsModel {
         console.log(`- Nova quantidade total: ${newQuantity}`);
         console.log(`[LOG] Atualizando quantidade do item na maleta: atual=${currentQuantity}, adicional=${quantity}, nova total=${newQuantity}`);
         
-        // Realizar operação de update diretamente para garantir que a quantidade seja somada corretamente
+        // Realizar operação de update com SOMA explícita para garantir que a quantidade seja somada corretamente
         const { data: updatedItem, error: updateItemError } = await supabase
           .from('suitcase_items')
           .update({ quantity: newQuantity })

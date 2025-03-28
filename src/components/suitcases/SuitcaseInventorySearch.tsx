@@ -1,4 +1,9 @@
 
+/**
+ * Componente de Busca de Inventário para Maletas
+ * @file Este componente permite buscar e adicionar itens do inventário a uma maleta
+ * @relacionamento Utiliza o controlador combinado de maletas para operações
+ */
 import { useState } from "react";
 import { CombinedSuitcaseController } from "@/controllers/suitcase";
 import { Input } from "@/components/ui/input";
@@ -58,30 +63,51 @@ export function SuitcaseInventorySearch({ suitcaseId, onItemAdded }: SuitcaseInv
   // Adicionar item à maleta
   const handleAddItem = async (inventoryId: string) => {
     try {
-      setIsAdding(prev => ({ ...prev, [inventoryId]: true }));
-      
       const itemQuantity = quantity[inventoryId] || 1;
       const item = searchResults.find(item => item.id === inventoryId);
       
-      if (item) {
-        console.log(`[LOG] Adicionando ${itemQuantity} unidades do item ${item.name} (${item.sku}) à maleta`);
+      if (!item) {
+        toast.error("Item não encontrado");
+        return;
       }
       
-      // DEPURAÇÃO DETALHADA
-      console.log(`[SuitcaseInventorySearch] DEPURAÇÃO CRÍTICA - addItemToSuitcase:`);
+      // Verificar quantidade
+      if (itemQuantity <= 0) {
+        toast.error("A quantidade deve ser maior que zero");
+        return;
+      }
+      
+      if (itemQuantity > (item.quantity_available || 0)) {
+        toast.error(`Apenas ${item.quantity_available} unidades disponíveis em estoque`);
+        return;
+      }
+      
+      // Log detalhado para depuração
+      console.log(`[SuitcaseInventorySearch] DEPURAÇÃO DETALHADA:`);
       console.log(`- ID da maleta: ${suitcaseId}`);
       console.log(`- ID do item: ${inventoryId}`);
       console.log(`- Quantidade selecionada: ${itemQuantity}`);
+      console.log(`- Nome do item: ${item.name}`);
+      console.log(`- SKU: ${item.sku}`);
+      console.log(`- Quantidade disponível: ${item.quantity_available}`);
       
+      setIsAdding(prev => ({ ...prev, [inventoryId]: true }));
+      
+      // Função de callback para atualizar a interface após operação de adição
+      const onSuccess = () => {
+        // Remover o item dos resultados da busca
+        setSearchResults(prevResults => prevResults.filter(item => item.id !== inventoryId));
+        
+        // Notificar o componente pai
+        if (onItemAdded) onItemAdded();
+        
+        toast.success(`${itemQuantity} unidade(s) do item adicionada(s) à maleta com sucesso`);
+      };
+      
+      // Verificar o tipo de item e fazer a adição correta para itens novos ou existentes
       await CombinedSuitcaseController.addItemToSuitcase(suitcaseId, inventoryId, itemQuantity);
+      onSuccess();
       
-      // Atualizar lista de resultados para remover o item adicionado
-      setSearchResults(prevResults => prevResults.filter(item => item.id !== inventoryId));
-      
-      // Notificar o componente pai
-      if (onItemAdded) onItemAdded();
-      
-      toast.success(`Item adicionado à maleta com sucesso (${itemQuantity} unidades)`);
     } catch (error: any) {
       console.error("Erro ao adicionar item à maleta:", error);
       toast.error(error.message || "Erro ao adicionar item à maleta");

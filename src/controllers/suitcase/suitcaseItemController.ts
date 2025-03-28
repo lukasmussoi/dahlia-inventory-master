@@ -1,4 +1,3 @@
-
 /**
  * Controlador de Itens de Maleta
  * @file Este arquivo controla as operações relacionadas aos itens de maletas
@@ -28,20 +27,29 @@ export const SuitcaseItemController = {
 
   async addItemToSuitcase(suitcaseId: string, inventoryId: string, quantity: number = 1) {
     try {
+      console.log("[SuitcaseItemController] Iniciando adição de item à maleta");
+      console.log(`[SuitcaseItemController] Parâmetros: suitcaseId=${suitcaseId}, inventoryId=${inventoryId}, quantity=${quantity}`);
+      
       // Verificar se o item já está em outra maleta
       const itemInfo = await SuitcaseItemModel.getItemSuitcaseInfo(inventoryId);
       if (itemInfo && itemInfo.suitcase_id && itemInfo.suitcase_id !== suitcaseId) {
+        console.error(`[SuitcaseItemController] Item já está na maleta ${itemInfo.suitcase_code}`);
         throw new Error(`Este item já está na maleta ${itemInfo.suitcase_code}`);
       }
+      
+      // Se chegarmos aqui, podemos adicionar o item com a quantidade especificada
+      console.log(`[SuitcaseItemController] Adicionando ${quantity} unidade(s) do item ${inventoryId} à maleta ${suitcaseId}`);
       
       const result = await SuitcaseItemModel.addItemToSuitcase({
         suitcase_id: suitcaseId,
         inventory_id: inventoryId,
         quantity
       });
+      
+      console.log(`[SuitcaseItemController] Item adicionado com sucesso:`, result);
       return result;
     } catch (error) {
-      console.error("Erro ao adicionar item à maleta:", error);
+      console.error("[SuitcaseItemController] Erro ao adicionar item à maleta:", error);
       throw error;
     }
   },
