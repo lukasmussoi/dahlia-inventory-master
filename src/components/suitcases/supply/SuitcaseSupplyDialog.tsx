@@ -1,4 +1,3 @@
-
 /**
  * Diálogo de Abastecimento de Maleta
  * @file Este componente gerencia a interface para adicionar produtos a uma maleta
@@ -69,7 +68,6 @@ export function SuitcaseSupplyDialog({
         </DialogHeader>
 
         <div className="flex flex-col sm:flex-row gap-4 h-full grow">
-          {/* Painel de busca */}
           <div className="w-full sm:w-2/5 flex flex-col">
             <div className="flex items-center space-x-2 mb-4">
               <Input
@@ -117,17 +115,14 @@ export function SuitcaseSupplyDialog({
             </ScrollArea>
           </div>
 
-          {/* Separador vertical em telas maiores */}
           <div className="hidden sm:block">
             <Separator orientation="vertical" />
           </div>
 
-          {/* Separador horizontal em telas menores */}
           <div className="sm:hidden">
             <Separator />
           </div>
 
-          {/* Painel de itens selecionados */}
           <div className="w-full sm:w-3/5 flex flex-col">
             <div className="flex justify-between items-center mb-2">
               <h3 className="text-base font-medium">Itens selecionados</h3>

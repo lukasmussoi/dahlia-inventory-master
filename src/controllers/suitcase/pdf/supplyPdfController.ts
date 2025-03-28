@@ -27,7 +27,7 @@ export class SupplyPdfController {
    * @param suitcaseInfo Informações da maleta
    * @returns URL do PDF gerado
    */
-  static async generateSuitcasePDF(
+  static async generateSupplyPDF(
     suitcaseId: string, 
     items: PdfItem[], 
     suitcaseInfo: any
@@ -94,5 +94,17 @@ export class SupplyPdfController {
       console.error("Erro ao gerar PDF da maleta:", error);
       return '';
     }
+  }
+
+  /**
+   * Gera um PDF de maleta com seus itens
+   * Alias para generateSupplyPDF com mesmo comportamento
+   */
+  static async generateSuitcasePDF(
+    suitcaseId: string, 
+    items: PdfItem[], 
+    suitcaseInfo: any
+  ): Promise<string> {
+    return this.generateSupplyPDF(suitcaseId, items, suitcaseInfo);
   }
 }

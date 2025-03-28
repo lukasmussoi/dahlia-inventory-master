@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -116,7 +115,7 @@ export function SuitcaseFormDialog({
         }
         
         // Definir cidade e bairro com base no endereço da revendedora
-        if (addressData && typeof addressData === 'object') {
+        if (addressData && typeof addressData === 'object' && !Array.isArray(addressData)) {
           setCity(addressData.city || "");
           setNeighborhood(addressData.neighborhood || "");
         } else {

@@ -31,7 +31,11 @@ export class SuitcaseHistoryController {
       
       if (error) throw error;
       
-      return acertos || [];
+      // Converter para o tipo Acerto
+      return (acertos as any[]).map(acerto => ({
+        ...acerto,
+        items_vendidos: acerto.items_vendidos || []
+      }));
     } catch (error) {
       console.error("Erro ao buscar histórico de acertos:", error);
       return [];

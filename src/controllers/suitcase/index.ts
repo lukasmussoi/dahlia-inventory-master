@@ -9,6 +9,7 @@ import { SuitcaseSupplyController } from "./supply/suitcaseSupplyController";
 import { DeleteSuitcaseController } from "./deleteSuitcaseController";
 import { SupplyItemController } from "./inventory/supplyItemController";
 import { SupplyPdfController } from "./pdf/supplyPdfController";
+import { PdfController } from "./pdfController";
 import { PromoterController } from "./promoterController";
 import { SellerController } from "./sellerController";
 import { SuitcaseHistoryController } from "./suitcaseHistoryController";
@@ -20,23 +21,23 @@ export const CombinedSuitcaseController = {
   getSuitcases: SuitcaseController.getSuitcases,
   getSuitcaseById: SuitcaseController.getSuitcaseById,
   updateSuitcase: SuitcaseController.updateSuitcase,
-  getSuitcasesByStatus: SuitcaseController.getSuitcasesByStatus,
-  getSuitcasesBySeller: SuitcaseController.getSuitcasesBySeller,
-  getSellerNameById: SuitcaseController.getSellerNameById,
+  getSuitcasesByStatus: SuitcaseController.getSuitcases, // Alias para manter compatibilidade
+  getSuitcasesBySeller: SuitcaseController.getSuitcases, // Alias para manter compatibilidade
+  getSellerNameById: SellerController.getSellerById, // Alias para manter compatibilidade
   getSuitcaseSummary: SuitcaseController.getSuitcaseSummary,
   searchSuitcases: SuitcaseController.searchSuitcases,
   generateSuitcaseCode: SuitcaseController.generateSuitcaseCode,
   
   // Itens de maleta
   getSuitcaseItems: SuitcaseItemController.getSuitcaseItems,
-  updateItemStatus: SuitcaseItemController.updateItemStatus,
+  updateItemStatus: SuitcaseItemController.updateSuitcaseItemStatus, // Alias para manter compatibilidade
   updateSuitcaseItemStatus: SuitcaseItemController.updateSuitcaseItemStatus,
   updateSuitcaseItemQuantity: SuitcaseItemController.updateSuitcaseItemQuantity,
-  markItemAsLost: SuitcaseItemController.markItemAsLost,
-  markItemAsDamaged: SuitcaseItemController.markItemAsDamaged,
+  markItemAsLost: SuitcaseItemController.updateSuitcaseItemStatus, // Alias para manter compatibilidade
+  markItemAsDamaged: SuitcaseItemController.updateSuitcaseItemStatus, // Alias para manter compatibilidade
   returnItemToInventory: SuitcaseItemController.returnItemToInventory,
   returnItemsToInventory: SuitcaseItemController.returnItemsToInventory,
-  sellItem: SuitcaseItemController.sellItem,
+  sellItem: SuitcaseItemController.updateSuitcaseItemStatus, // Alias para manter compatibilidade
   addItemToSuitcase: SuitcaseItemController.addItemToSuitcase,
   removeSuitcaseItem: SuitcaseItemController.removeSuitcaseItem,
   updateSaleInfo: SuitcaseItemController.updateSaleInfo,
@@ -44,14 +45,14 @@ export const CombinedSuitcaseController = {
   
   // Abastecimento de maleta
   supplySuitcase: SuitcaseSupplyController.supplySuitcase,
-  generateSupplyPDF: SuitcaseSupplyController.generateSupplyPDF,
-  searchInventoryItems: SuitcaseSupplyController.searchInventoryItems,
+  generateSupplyPDF: SupplyPdfController.generateSupplyPDF,
+  searchInventoryItems: SupplyItemController.searchInventoryItems,
   countSuitcaseItems: SuitcaseSupplyController.countSuitcaseItems,
-  getSuitcaseItemCounts: SuitcaseSupplyController.getSuitcasesItemCounts,
+  getSuitcaseItemCounts: SuitcaseSupplyController.getSuitcasesItemCounts, // Alias para manter compatibilidade
   getSuitcasesItemCounts: SuitcaseSupplyController.getSuitcasesItemCounts,
   
   // PDF de maleta
-  generateSuitcasePDF: SupplyPdfController.generateSuitcasePDF,
+  generateSuitcasePDF: PdfController.generateSuitcasePDF,
   
   // Exclusão de maleta
   deleteSuitcase: DeleteSuitcaseController.deleteSuitcase,
@@ -75,6 +76,7 @@ export {
   DeleteSuitcaseController,
   SupplyItemController,
   SupplyPdfController,
+  PdfController,
   PromoterController,
   SellerController,
   SuitcaseHistoryController

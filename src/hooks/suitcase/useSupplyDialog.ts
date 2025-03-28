@@ -1,3 +1,4 @@
+
 /**
  * Hook para Gerenciar o Diálogo de Abastecimento
  * @file Este hook centraliza a lógica do diálogo de abastecimento de maletas
@@ -21,7 +22,14 @@ interface SelectedItem {
   from_suitcase?: boolean;
 }
 
-export function useSupplyDialog({ suitcaseId, onComplete }: UseSupplyDialogProps) {
+interface UseSupplyDialogProps {
+  suitcaseId: string | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onComplete?: () => void;
+}
+
+export function useSupplyDialog(suitcaseId: string | null, open: boolean, onOpenChange: (open: boolean) => void, onComplete?: () => void) {
   const [searchTerm, setSearchTerm] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -290,7 +298,7 @@ export function useSupplyDialog({ suitcaseId, onComplete }: UseSupplyDialogProps
       ];
       
       try {
-        // Corrigindo a chamada para o método generateSupplyPDF
+        // Usar o método correto para gerar o PDF de abastecimento
         const pdfUrl = await CombinedSuitcaseController.generateSupplyPDF(
           suitcaseId,
           allItems,
