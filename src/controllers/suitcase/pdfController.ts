@@ -5,6 +5,7 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 import { SupplyPdfController } from "./pdf/supplyPdfController";
+import { SuitcaseItem } from "@/types/suitcase";
 
 export class PdfController {
   /**
@@ -33,6 +34,15 @@ export class PdfController {
         if (error) throw error;
         suitcaseInfo = suitcase;
       }
+      
+      // Calcular valor total da maleta corretamente, garantindo que estamos trabalhando com um array
+      const valorTotal = items.reduce((acumulador: number, item: any) => {
+        const itemPrice = item.product?.price || 0;
+        const itemQuantity = item.quantity || 1;
+        return acumulador + (itemPrice * itemQuantity);
+      }, 0);
+      
+      console.log(`Valor total calculado da maleta: ${valorTotal}`);
       
       // Usar o SupplyPdfController para gerar o PDF no mesmo formato de abastecimento
       return await SupplyPdfController.generateSupplyPDF(suitcaseId, items, suitcaseInfo);

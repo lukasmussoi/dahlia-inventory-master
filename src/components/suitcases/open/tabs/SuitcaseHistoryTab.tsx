@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { formatMoney } from "@/utils/formatUtils";
+import { getProductPhotoUrl } from "@/utils/photoUtils";
 import { 
   BarChart, 
   Bar, 
@@ -26,6 +27,16 @@ import {
 interface SuitcaseHistoryTabProps {
   suitcase: Suitcase;
   acertosHistorico: Acerto[];
+}
+
+// Interface para o item vendido agrupado
+interface TopItemVendido {
+  id: string;
+  name: string;
+  sku: string;
+  photo_url: string;
+  quantity: number;
+  total: number;
 }
 
 export function SuitcaseHistoryTab({
@@ -44,49 +55,62 @@ export function SuitcaseHistoryTab({
       .sort((a, b) => a.date.localeCompare(b.date)); // Ordenar por data
   }, [acertosHistorico]);
 
-  // Calcular sugestões de reposição com base nos itens mais vendidos
-  const sugestaoReposicao = useMemo(() => {
-    // Implementação simplificada - esta lógica poderia ser mais complexa
-    // Aqui estamos apenas agrupando os itens vendidos e contando ocorrências
-    const todosItensVendidos: any[] = [];
+  // Processar todos os itens vendidos de todos os acertos para análise
+  const todosItensVendidos = useMemo(() => {
+    // Array para guardar todos os itens vendidos de todos os acertos
+    const itens: any[] = [];
     
+    // Processar cada acerto
     acertosHistorico.forEach(acerto => {
       if (acerto.items_vendidos && Array.isArray(acerto.items_vendidos)) {
         acerto.items_vendidos.forEach(item => {
           if (item.product) {
-            todosItensVendidos.push({
+            // Adicionar item à lista de vendidos com dados completos
+            itens.push({
               id: item.inventory_id,
               name: item.product.name,
               sku: item.product.sku,
-              price: item.price,
-              photo_url: Array.isArray(item.product.photo_url) 
-                ? item.product.photo_url[0]?.photo_url 
-                : item.product.photo_url
+              price: Number(item.price || item.product.price || 0),
+              photo_url: getProductPhotoUrl(item.product.photo_url),
+              unit_cost: Number(item.unit_cost || item.product.unit_cost || 0)
             });
           }
         });
       }
     });
     
-    // Contar ocorrências de cada item
-    const contagem: {[key: string]: {count: number, item: any}} = {};
-    todosItensVendidos.forEach(item => {
-      if (contagem[item.id]) {
-        contagem[item.id].count += 1;
+    return itens;
+  }, [acertosHistorico]);
+
+  // Calcular top 5 itens mais vendidos
+  const topItensVendidos = useMemo(() => {
+    // Agrupar itens por ID e contar ocorrências
+    const contagem: Record<string, TopItemVendido> = todosItensVendidos.reduce((acc, item) => {
+      const key = item.id;
+      if (!acc[key]) {
+        acc[key] = {
+          id: item.id,
+          name: item.name,
+          sku: item.sku,
+          photo_url: item.photo_url,
+          quantity: 1,
+          total: item.price
+        };
       } else {
-        contagem[item.id] = { count: 1, item };
+        acc[key].quantity += 1;
+        acc[key].total += item.price;
       }
-    });
+      return acc;
+    }, {} as Record<string, TopItemVendido>);
     
     // Converter para array e ordenar por quantidade
-    return Object.values(contagem)
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 10) // Limitar a 10 itens
-      .map(entry => ({
-        ...entry.item,
-        count: entry.count
-      }));
-  }, [acertosHistorico]);
+    const topItems = Object.values(contagem)
+      .sort((a, b) => b.quantity - a.quantity || b.total - a.total)
+      .slice(0, 5); // Limitar aos 5 principais
+      
+    console.log("Top 5 itens vendidos processados:", topItems);
+    return topItems;
+  }, [todosItensVendidos]);
 
   return (
     <div className="space-y-6">
@@ -175,18 +199,18 @@ export function SuitcaseHistoryTab({
         )}
       </div>
 
-      {/* Sugestão de Reposição */}
-      {sugestaoReposicao.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Sugestão de Reposição</CardTitle>
-            <CardDescription>
-              As 10 peças mais vendidas desta maleta - apenas sugestivo
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+      {/* Top 5 Itens Mais Vendidos */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Top 5 Itens Mais Vendidos</CardTitle>
+          <CardDescription>
+            Os itens mais vendidos desta maleta
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {topItensVendidos.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-              {sugestaoReposicao.map((item, index) => (
+              {topItensVendidos.map((item) => (
                 <div 
                   key={item.id} 
                   className="border rounded-md p-2 flex flex-col items-center text-center"
@@ -206,15 +230,24 @@ export function SuitcaseHistoryTab({
                   </div>
                   <p className="text-sm font-medium truncate w-full">{item.name}</p>
                   <p className="text-xs text-gray-500 truncate w-full">{item.sku}</p>
-                  <Badge variant="outline" className="mt-1">
-                    {item.count} {item.count === 1 ? 'venda' : 'vendas'}
-                  </Badge>
+                  <div className="mt-1 flex flex-col items-center">
+                    <Badge variant="outline">
+                      {item.quantity} {item.quantity === 1 ? 'venda' : 'vendas'}
+                    </Badge>
+                    <span className="text-xs mt-1 font-medium">
+                      {formatMoney(item.total)}
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>
-          </CardContent>
-        </Card>
-      )}
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-gray-500">Nenhum item vendido ainda nesta maleta.</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

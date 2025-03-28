@@ -26,15 +26,78 @@ export const SettlementController = {
         .select(`
           *,
           suitcase:suitcases(id, code),
-          seller:resellers(id, name)
+          seller:resellers(id, name, commission_rate)
         `)
         .eq('suitcase_id', suitcaseId)
         .order('settlement_date', { ascending: false });
         
       if (error) throw error;
       
+      // Para cada acerto, buscar os itens vendidos com detalhes completos do produto
+      const acertosCompletos = await Promise.all((acertos || []).map(async (acerto) => {
+        // Buscar itens vendidos para este acerto com todos os dados necessários
+        const { data: itensVendidos, error: itemsError } = await supabase
+          .from('acerto_itens_vendidos')
+          .select(`
+            *,
+            product:inventory_id(
+              id, 
+              name, 
+              sku, 
+              price, 
+              unit_cost, 
+              photo_url:inventory_photos(photo_url)
+            )
+          `)
+          .eq('acerto_id', acerto.id);
+          
+        if (itemsError) {
+          console.error(`Erro ao buscar itens vendidos para acerto ${acerto.id}:`, itemsError);
+          return acerto;
+        }
+        
+        // Processar os itens vendidos para cálculos corretos
+        const processedItems = itensVendidos || [];
+        
+        // Calcular o total de vendas somando os preços de todos os itens vendidos
+        const totalSales = processedItems.reduce((sum, item) => sum + Number(item.price || 0), 0);
+        
+        // Calcular o custo total dos itens vendidos
+        const totalCost = processedItems.reduce((sum, item) => {
+          // Usar o unit_cost do produto ou fallback para 0 se não disponível
+          const unitCost = Number(item.unit_cost || item.product?.unit_cost || 0);
+          return sum + unitCost;
+        }, 0);
+        
+        // Garantir que estamos usando o valor correto de comissão da revendedora
+        const commissionRate = acerto.seller?.commission_rate || 0.3; // 30% padrão se não especificado
+        
+        // Recalcular a comissão com base no total de vendas
+        const commissionAmount = totalSales * commissionRate;
+        
+        // Calcular o lucro líquido (vendas - comissão - custo)
+        const netProfit = totalSales - commissionAmount - totalCost;
+        
+        console.log(`Processando acerto ${acerto.id} com ${processedItems.length} itens vendidos`);
+        if (processedItems.length > 0) {
+          processedItems.forEach(item => {
+            console.log(`Item vendido: ${item.product?.name} (ID: ${item.inventory_id}) - Preço: ${item.price}`);
+          });
+        }
+        
+        // Retornar acerto com valores calculados e itens vendidos
+        return {
+          ...acerto,
+          items_vendidos: processedItems,
+          total_sales: totalSales,
+          commission_amount: commissionAmount,
+          total_cost: totalCost,
+          net_profit: netProfit
+        };
+      }));
+      
       console.log(`Histórico de acertos buscado para a maleta: ${suitcaseId}`);
-      return acertos as Acerto[] || [];
+      return acertosCompletos;
     } catch (error) {
       console.error("Erro ao buscar histórico de acertos:", error);
       throw error;
@@ -123,22 +186,22 @@ export const SettlementController = {
       
       // 2. Calcular valores totais com base nos itens vendidos
       let totalSales = 0;
+      let totalCosts = 0;
       
       // Buscar detalhes dos itens vendidos para calcular o valor total
       if (itemsSoldIds.length > 0) {
-        // Buscar detalhes a partir da tabela acerto_itens_vendidos
-        // em vez de buscar da tabela suitcase_items para garantir precisão
+        // Buscar detalhes dos itens vendidos
         const { data: vendaRegistros, error: vendaError } = await supabase
           .from('acerto_itens_vendidos')
-          .select('price')
+          .select('price, unit_cost')
           .eq('acerto_id', acertoId);
           
         if (vendaError) {
           console.error("Erro ao buscar registros de venda:", vendaError);
-          // Não lançar erro aqui, continuar o processamento
           toast.error("Erro ao buscar detalhes dos itens vendidos, usando valores calculados alternativos");
         } else if (vendaRegistros && vendaRegistros.length > 0) {
           totalSales = vendaRegistros.reduce((sum, item) => sum + (item.price || 0), 0);
+          totalCosts = vendaRegistros.reduce((sum, item) => sum + (item.unit_cost || 0), 0);
         }
       }
       
@@ -165,7 +228,10 @@ export const SettlementController = {
       const commissionRate = resellerData?.commission_rate || 0.3;
       const commissionAmount = totalSales * commissionRate;
       
-      console.log(`Valor total das vendas: ${totalSales}, Comissão (${commissionRate * 100}%): ${commissionAmount}`);
+      // Calcular lucro líquido
+      const netProfit = totalSales - commissionAmount - totalCosts;
+      
+      console.log(`Valor total das vendas: ${totalSales}, Comissão (${commissionRate * 100}%): ${commissionAmount}, Custo: ${totalCosts}, Lucro: ${netProfit}`);
       
       // 4. Atualizar acerto com status concluído e valores calculados
       const { data: updatedAcerto, error } = await supabase
@@ -174,6 +240,8 @@ export const SettlementController = {
           status: 'concluido',
           total_sales: totalSales,
           commission_amount: commissionAmount,
+          total_cost: totalCosts,
+          net_profit: netProfit,
           next_settlement_date: nextSettlementDate
         })
         .eq('id', acertoId)

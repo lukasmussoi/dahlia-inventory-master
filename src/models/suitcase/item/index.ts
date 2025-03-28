@@ -1,59 +1,39 @@
 
 /**
- * Índice de Modelos de Item de Maleta
- * @file Este arquivo exporta todos os modelos relacionados a itens de maleta
+ * Exportação Combinada dos Modelos de Itens de Maleta
+ * @file Arquivo de exportação central com todos os modelos de itens
  */
-import { BaseItemModel } from "./baseItemModel";
-import { ItemOperationsModel } from "./itemOperationsModel";
-import { ItemQueryModel } from "./itemQueryModel";
-import { ItemSalesModel } from "./itemSalesModel";
+import { BaseItemModel } from './baseItemModel';
+import { ItemQueryModel } from './itemQueryModel';
+import { ItemOperationsModel } from './itemOperationsModel';
+import { ItemSalesModel } from './itemSalesModel';
 
-// Criando uma classe combinada para manter compatibilidade com o código existente
+// Exportar todas as classes individualmente
+export { BaseItemModel, ItemQueryModel, ItemOperationsModel, ItemSalesModel };
+
+// Criar e exportar classe combinada para manter compatibilidade com o código existente
 export class SuitcaseItemModel {
-  // Métodos base
-  static getSuitcaseItemById = BaseItemModel.getSuitcaseItemById;
-  static getSuitcaseItems = BaseItemModel.getSuitcaseItems;
-  static getItemSuitcaseInfo = BaseItemModel.getItemSuitcaseInfo;
-
-  // Métodos de operações
+  // BaseItemModel
+  static processItemData = BaseItemModel.processItemData;
+  
+  // ItemQueryModel
+  static getSuitcaseItemById = ItemQueryModel.getSuitcaseItemById;
+  static getSuitcaseItems = ItemQueryModel.getSuitcaseItems;
+  static getSuitcaseItemSales = ItemQueryModel.getSuitcaseItemSales;
+  static getItemSuitcaseInfo = ItemQueryModel.getItemSuitcaseInfo;
+  
+  // ItemOperationsModel
+  static checkItemAvailability = ItemOperationsModel.checkItemAvailability;
   static addItemToSuitcase = ItemOperationsModel.addItemToSuitcase;
   static updateSuitcaseItemStatus = ItemOperationsModel.updateSuitcaseItemStatus;
-  static updateSuitcaseItemQuantity = ItemOperationsModel.updateSuitcaseItemQuantity;
   static removeSuitcaseItem = ItemOperationsModel.removeSuitcaseItem;
+  static updateSuitcaseItemQuantity = ItemOperationsModel.updateSuitcaseItemQuantity;
   static returnItemToInventory = ItemOperationsModel.returnItemToInventory;
-  static returnItemsToInventory = (itemIds: string[], isDamaged: boolean = false) => {
-    return Promise.all(itemIds.map(id => ItemOperationsModel.returnItemToInventory(id, isDamaged)));
-  };
-
-  // Métodos de consulta
-  static checkItemAvailability = ItemQueryModel.checkItemAvailability;
-
-  // Métodos de vendas
-  static getSuitcaseItemSales = ItemSalesModel.getSuitcaseItemSales;
+  
+  // ItemSalesModel
   static updateSaleInfo = ItemSalesModel.updateSaleInfo;
-
-  // Métodos auxiliares para a integração com o sistema de estoque
-  static reserveForSuitcase = async (inventoryId: string, quantity: number = 1) => {
-    const { data, error } = await BaseItemModel.supabase.rpc('reserve_inventory_for_suitcase', {
-      inventory_id: inventoryId,
-      reserve_quantity: quantity
-    });
-    if (error) throw error;
-    return data;
-  };
-
-  static releaseFromSuitcase = async (inventoryId: string, quantity: number = 1) => {
-    const { data, error } = await BaseItemModel.supabase.rpc('release_reserved_inventory', {
-      inventory_id: inventoryId,
-      release_quantity: quantity
-    });
-    if (error) throw error;
-    return data;
-  };
+  static registerSaleInfo = ItemSalesModel.registerSaleInfo;
 }
 
-// Também exportamos os modelos individuais para acesso direto
-export { BaseItemModel, ItemOperationsModel, ItemQueryModel, ItemSalesModel };
-
-// Exportação padrão
+// Exportar por padrão para manter compatibilidade
 export default SuitcaseItemModel;

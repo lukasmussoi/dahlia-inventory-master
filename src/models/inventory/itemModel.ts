@@ -1,3 +1,4 @@
+
 /**
  * Modelo de Item de Inventário
  * @file Este arquivo contém operações específicas para itens do inventário
@@ -31,54 +32,43 @@ export class InventoryItemModel {
       ? parseFloat(itemData.raw_cost)
       : itemData.raw_cost || 0;
     
-    // IMPORTANTE: Não incluir barcode na inserção inicial para deixar o trigger do banco gerar automaticamente
-    const insertData = {
-      name: itemData.name,
-      sku: itemData.sku,
-      category_id: itemData.category_id,
-      quantity: itemData.quantity || 0,
-      price: itemData.price,
-      unit_cost: unitCost,
-      raw_cost: rawCost,
-      suggested_price: itemData.suggested_price || 0,
-      weight: itemData.weight,
-      width: itemData.width,
-      height: itemData.height,
-      depth: itemData.depth,
-      min_stock: itemData.min_stock || 0,
-      supplier_id: itemData.supplier_id,
-      popularity: itemData.popularity || 0,
-      plating_type_id: itemData.plating_type_id,
-      material_weight: itemData.material_weight,
-      packaging_cost: itemData.packaging_cost || 0,
-      gram_value: itemData.gram_value || 0,
-      profit_margin: itemData.profit_margin || 0,
-      reseller_commission: itemData.reseller_commission || 0.3,
-      markup_percentage: itemData.markup_percentage || 30
-    };
-    
-    // Removendo a propriedade barcode explicitamente para evitar conflitos
-    if (itemData.barcode) {
-      console.log("[ItemModel] Barcode fornecido será ignorado para permitir geração automática:", itemData.barcode);
-    }
-    
     const { data, error } = await supabase
       .from('inventory')
-      .insert(insertData)
+      .insert({
+        name: itemData.name,
+        sku: itemData.sku,
+        barcode: itemData.barcode,
+        category_id: itemData.category_id,
+        quantity: itemData.quantity || 0,
+        price: itemData.price,
+        unit_cost: unitCost,      // Custo Total (calculado)
+        raw_cost: rawCost,        // Preço do Bruto (matéria-prima)
+        suggested_price: itemData.suggested_price || 0,
+        weight: itemData.weight,
+        width: itemData.width,
+        height: itemData.height,
+        depth: itemData.depth,
+        min_stock: itemData.min_stock || 0,
+        supplier_id: itemData.supplier_id,
+        popularity: itemData.popularity || 0,
+        plating_type_id: itemData.plating_type_id,
+        material_weight: itemData.material_weight,
+        packaging_cost: itemData.packaging_cost || 0,
+        gram_value: itemData.gram_value || 0,
+        profit_margin: itemData.profit_margin || 0,
+        reseller_commission: itemData.reseller_commission || 0.3,
+        markup_percentage: itemData.markup_percentage || 30
+      })
       .select()
       .maybeSingle();
     
-    if (error) {
-      console.error("[ItemModel] Erro ao criar item:", error);
-      throw error;
-    }
+    if (error) throw error;
     if (!data) throw new Error("Erro ao criar item: nenhum dado retornado");
     
     // Log para verificar valores salvos
     console.log("[ItemModel] Valores salvos no banco:", {
       unit_cost: data.unit_cost,  // Custo Total (calculado)
-      raw_cost: data.raw_cost,    // Preço do Bruto (matéria-prima)
-      barcode: data.barcode       // Código de barras gerado automaticamente
+      raw_cost: data.raw_cost     // Preço do Bruto (matéria-prima)
     });
     
     return data;

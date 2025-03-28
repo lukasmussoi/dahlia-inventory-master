@@ -66,8 +66,8 @@ export function SuitcasePrintDialog({ open, onOpenChange, suitcase }: SuitcasePr
       // Converter itens para o formato esperado pelo SupplyPdfController
       const supplyItems = convertToSupplyItems(suitcaseItems);
       
-      // Usar o método correto do CombinedSuitcaseController para gerar o PDF
-      const pdfUrl = await CombinedSuitcaseController.generateSuitcasePDF(
+      // Usar o SupplyPdfController para gerar o PDF com o mesmo formato do PDF de abastecimento
+      const pdfUrl = await SupplyPdfController.generateSupplyPDF(
         suitcase.id,
         supplyItems,
         suitcase

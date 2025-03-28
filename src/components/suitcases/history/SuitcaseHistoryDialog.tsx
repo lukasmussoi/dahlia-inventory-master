@@ -92,11 +92,16 @@ export function SuitcaseHistoryDialog({
       
       setAcertos(historico);
       
+      console.log("Histórico de acertos carregado:", historico);
+      
       // Processar e calcular os itens mais vendidos
       const itemsMap = new Map<string, {id: string, name: string, quantity: number, total: number}>();
       
+      // Percorrer todos os acertos e seus itens vendidos
       historico.forEach(acerto => {
-        if (!acerto.items_vendidos) return;
+        console.log(`Processando acerto ${acerto.id} com ${acerto.items_vendidos?.length || 0} itens vendidos`);
+        
+        if (!acerto.items_vendidos || acerto.items_vendidos.length === 0) return;
         
         acerto.items_vendidos.forEach(item => {
           if (!item.product) return;
@@ -104,6 +109,8 @@ export function SuitcaseHistoryDialog({
           const productId = item.product.id;
           const productName = item.product.name;
           const itemPrice = item.price || 0;
+          
+          console.log(`Item vendido: ${productName} (ID: ${productId}) - Preço: ${itemPrice}`);
           
           if (itemsMap.has(productId)) {
             const existingItem = itemsMap.get(productId)!;
@@ -124,6 +131,8 @@ export function SuitcaseHistoryDialog({
       const sortedItems = Array.from(itemsMap.values())
         .sort((a, b) => b.quantity - a.quantity)
         .slice(0, 5);
+      
+      console.log("Top 5 itens vendidos processados:", sortedItems);
       
       // Verificar novamente se o componente está montado
       if (isMounted.current) {
@@ -160,15 +169,42 @@ export function SuitcaseHistoryDialog({
     }
   }, [open, fetchHistoryData]);
 
-  // Calcular resumos financeiros
+  // Calcular resumos financeiros corretamente
   const calculateSummary = useCallback(() => {
-    const totalVendas = acertos.reduce((sum, acerto) => sum + (acerto.total_sales || 0), 0);
-    const totalComissoes = acertos.reduce((sum, acerto) => sum + (acerto.commission_amount || 0), 0);
-    const totalLucro = acertos.reduce((sum, acerto) => sum + (acerto.net_profit || 0), 0);
+    // Iniciar com valores zerados
+    let totalVendas = 0;
+    let totalComissoes = 0;
+    let totalCustos = 0;
+    let totalLucro = 0;
+    
+    // Percorrer todos os acertos para somar valores
+    acertos.forEach(acerto => {
+      // Valores básicos que já estão no acerto
+      totalVendas += acerto.total_sales || 0;
+      totalComissoes += acerto.commission_amount || 0;
+      
+      // Calcular custos de forma confiável
+      const custosItens = acerto.items_vendidos?.reduce(
+        (sum, item) => sum + (item.unit_cost || 0), 
+        0
+      ) || 0;
+      
+      totalCustos += custosItens;
+      
+      // Verificar se o lucro líquido já existe no acerto, se não, calcular
+      if (acerto.net_profit !== undefined && acerto.net_profit !== null) {
+        totalLucro += acerto.net_profit;
+      } else {
+        // Calcular: vendas - comissões - custos
+        const lucroCalculado = acerto.total_sales - acerto.commission_amount - custosItens;
+        totalLucro += lucroCalculado;
+      }
+    });
     
     return {
       totalVendas,
-      totalComissoes,
+      totalComissoes, 
+      totalCustos,
       totalLucro
     };
   }, [acertos]);
@@ -193,23 +229,35 @@ export function SuitcaseHistoryDialog({
 
   // Gerar dados para gráfico de pizza
   const generatePieChartData = useCallback(() => {
-    const { totalVendas, totalComissoes, totalLucro } = calculateSummary();
+    const { totalVendas, totalComissoes, totalCustos, totalLucro } = calculateSummary();
     
     return [
       { name: 'Lucro', value: totalLucro },
       { name: 'Comissões', value: totalComissoes },
-      { name: 'Outros Custos', value: totalVendas - totalComissoes - totalLucro }
+      { name: 'Outros Custos', value: totalCustos }
     ];
   }, [calculateSummary]);
 
   // Gerar dados para gráfico de barras
   const generateBarChartData = useCallback(() => {
-    return acertos.slice(0, 5).map(acerto => ({
-      data: formatDate(acerto.settlement_date),
-      vendas: acerto.total_sales || 0,
-      lucro: acerto.net_profit || 0,
-      comissao: acerto.commission_amount || 0
-    }));
+    return acertos.slice(0, 5).map(acerto => {
+      // Calcular o lucro líquido para este acerto específico se não estiver definido
+      const custosItens = acerto.items_vendidos?.reduce(
+        (sum, item) => sum + (item.unit_cost || 0), 
+        0
+      ) || 0;
+      
+      const lucro = acerto.net_profit !== undefined 
+        ? acerto.net_profit 
+        : (acerto.total_sales || 0) - (acerto.commission_amount || 0) - custosItens;
+      
+      return {
+        data: formatDate(acerto.settlement_date),
+        vendas: acerto.total_sales || 0,
+        lucro: lucro,
+        comissao: acerto.commission_amount || 0
+      };
+    });
   }, [acertos]);
 
   const summary = calculateSummary();
@@ -414,7 +462,13 @@ export function SuitcaseHistoryDialog({
                         <div>
                           <p className="text-sm text-gray-500">Lucro Líquido</p>
                           <p className="text-lg font-medium">
-                            {formatCurrency(acerto.net_profit || 0)}
+                            {formatCurrency(
+                              acerto.net_profit !== undefined 
+                                ? acerto.net_profit 
+                                : (acerto.total_sales || 0) - (acerto.commission_amount || 0) - (
+                                  acerto.items_vendidos?.reduce((sum, item) => sum + (item.unit_cost || 0), 0) || 0
+                                )
+                            )}
                           </p>
                         </div>
                       </div>

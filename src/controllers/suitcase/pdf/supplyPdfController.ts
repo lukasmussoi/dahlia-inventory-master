@@ -1,137 +1,267 @@
 
 /**
- * Controlador para Geração de PDF de Abastecimento
- * @file Este arquivo contém funções para geração de PDFs relacionados ao abastecimento de maletas
+ * Controlador de Geração de PDF de Abastecimento
+ * @file Este arquivo controla a geração de PDFs de abastecimento de maletas
+ * @relacionamento Utiliza o SupplyItemController para processar dados
  */
-import { supabase } from "@/integrations/supabase/client";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import jsPDF from "jspdf";
-import "jspdf-autotable";
-import { SupplyItem } from "@/types/suitcase";
+import autoTable from "jspdf-autotable";
+import { getProductPhotoUrl } from "@/utils/photoUtils";
+import { supabase } from "@/integrations/supabase/client";
+import { formatCurrency } from "@/lib/utils";
+
+interface SupplyItem {
+  inventory_id: string;
+  quantity: number;
+  product?: {
+    id: string;
+    name: string;
+    sku: string;
+    price: number;
+    photo_url?: string | { photo_url: string }[];
+  };
+}
 
 export class SupplyPdfController {
   /**
-   * Gera um PDF de comprovante de abastecimento de maleta
+   * Gera um PDF de comprovante de abastecimento
    * @param suitcaseId ID da maleta
    * @param items Itens adicionados à maleta
-   * @param suitcaseInfo Informações da maleta para o cabeçalho
    * @returns URL do PDF gerado
    */
-  static async generateSupplyPDF(
-    suitcaseId: string, 
-    items: SupplyItem[], 
-    suitcaseInfo: any
-  ): Promise<string> {
+  static async generateSupplyPDF(suitcaseId: string, items: SupplyItem[], suitcaseInfo: any): Promise<string> {
     try {
-      // Verificar se há itens para incluir no PDF
-      if (!items || items.length === 0) {
-        throw new Error("Nenhum item para incluir no PDF");
+      console.log(`Iniciando geração de PDF de abastecimento para maleta ${suitcaseId}`);
+      
+      // Buscar informações da maleta se não fornecidas
+      let suitcase = suitcaseInfo;
+      if (!suitcase) {
+        const { data, error } = await supabase
+          .from('suitcases')
+          .select(`
+            *,
+            seller:resellers(id, name, phone, commission_rate, address)
+          `)
+          .eq('id', suitcaseId)
+          .single();
+
+        if (error) throw error;
+        suitcase = data;
       }
 
-      // Criar instância do PDF
-      const doc = new jsPDF();
-      
-      // Adicionar cabeçalho
-      doc.setFontSize(18);
-      doc.text("Comprovante de Abastecimento de Maleta", 14, 22);
-      
-      doc.setFontSize(12);
-      doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 14, 32);
-      doc.text(`Maleta: ${suitcaseInfo?.code || `#${suitcaseId.substring(0, 8)}`}`, 14, 38);
-      
-      if (suitcaseInfo?.seller?.name) {
-        doc.text(`Revendedora: ${suitcaseInfo.seller.name}`, 14, 44);
+      // Verificar se a maleta existe
+      if (!suitcase) {
+        throw new Error("Maleta não encontrada");
       }
-      
-      // Preparar dados para a tabela
-      const tableData = items.map((item, index) => [
-        index + 1,
-        item.product?.sku || 'N/A',
-        item.product?.name || 'Item sem nome',
-        item.quantity || 1,
-        this.formatMoney(item.product?.price || 0),
-        this.formatMoney((item.product?.price || 0) * (item.quantity || 1))
-      ]);
-      
-      // Calcular valor total
-      const totalValue = items.reduce((sum, item) => {
-        return sum + (item.product?.price || 0) * (item.quantity || 1);
+
+      // Calcular total de peças e valor
+      const totalItems = items.reduce((total, item) => total + (item.quantity || 1), 0);
+      const totalValue = items.reduce((total, item) => {
+        const price = item.product?.price || 0;
+        const quantity = item.quantity || 1;
+        return total + (price * quantity);
       }, 0);
+
+      // Agrupar itens idênticos
+      const groupedItems = this.groupItems(items);
+
+      // Criar o PDF
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+
+      // Título
+      doc.setFontSize(18);
+      doc.setFont("helvetica", "bold");
+      doc.text("Comprovante de Abastecimento da Maleta", pageWidth / 2, 20, { align: "center" });
+
+      // Informações da maleta
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Código: ${suitcase.code || `#${suitcase.id.substring(0, 8)}`}`, 14, 35);
+      doc.text(`Revendedora: ${suitcase.seller?.name || 'Não especificado'}`, 14, 43);
       
-      // Adicionar tabela
-      (doc as any).autoTable({
-        startY: 50,
-        head: [['#', 'Código', 'Produto', 'Qtd', 'Valor Unit.', 'Subtotal']],
+      // Adicionar telefone se disponível
+      let currentY = 51;
+      if (suitcase.seller?.phone) {
+        doc.text(`Telefone: ${suitcase.seller.phone}`, 14, currentY);
+        currentY += 8;
+      }
+
+      // Adicionar cidade/bairro
+      const locationText = `${suitcase.city || 'Cidade não especificada'}${suitcase.neighborhood ? ', ' + suitcase.neighborhood : ''}`;
+      doc.text(`Localização: ${locationText}`, 14, currentY);
+      currentY += 8;
+      
+      const currentDate = format(new Date(), "dd/MM/yyyy", { locale: ptBR });
+      doc.text(`Data do abastecimento: ${currentDate}`, 14, currentY);
+      currentY += 8;
+      
+      const nextSettlementDate = suitcase.next_settlement_date 
+        ? format(new Date(suitcase.next_settlement_date), "dd/MM/yyyy", { locale: ptBR })
+        : 'Não definida';
+      doc.text(`Data do próximo acerto: ${nextSettlementDate}`, 14, currentY);
+      currentY += 10;
+
+      // Tabela de itens com imagens separadas do texto
+      const tableData = await this.generateTableData(groupedItems);
+      
+      autoTable(doc, {
+        startY: currentY,
+        // Modificado: Adicionada coluna "Foto" separada da coluna "Produto"
+        head: [['Foto', 'Produto', 'Código', 'Qtd', 'Preço', 'Total']],
         body: tableData,
-        foot: [['', '', '', 'Total', '', this.formatMoney(totalValue)]],
-        theme: 'grid',
+        theme: 'striped',
         headStyles: { fillColor: [233, 30, 99], textColor: 255 },
-        footStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
+        margin: { top: currentY },
+        columnStyles: {
+          0: { cellWidth: 20 },  // Coluna de foto
+          1: { cellWidth: 60 },  // Coluna de produto (nome)
+          2: { cellWidth: 25 },  // Código
+          3: { cellWidth: 15 },  // Quantidade
+          4: { cellWidth: 25 },  // Preço
+          5: { cellWidth: 25 }   // Total
+        },
+        didDrawCell: (data) => {
+          // Se for a primeira coluna e não for cabeçalho
+          if (data.column.index === 0 && data.row.index >= 0 && data.row.raw) {
+            // Verificar se há uma imagem para desenhar
+            const imageData = data.row.raw[6]; // A sétima coluna (índice 6) contém a URL da imagem
+            if (imageData && typeof imageData === 'string' && imageData.length > 0) {
+              try {
+                const imgProps = doc.getImageProperties(imageData);
+                const imgHeight = 10;
+                const imgWidth = (imgProps.width * imgHeight) / imgProps.height;
+                
+                // Centralizar a imagem na célula
+                const cellCenterX = data.cell.x + (data.cell.width / 2) - (imgWidth / 2);
+                const cellCenterY = data.cell.y + (data.cell.height / 2) - (imgHeight / 2);
+                
+                // Desenhar a imagem centralizada na célula de foto
+                doc.addImage(
+                  imageData, 
+                  'JPEG', 
+                  cellCenterX, 
+                  cellCenterY, 
+                  imgWidth, 
+                  imgHeight
+                );
+              } catch (error) {
+                console.error("Erro ao adicionar imagem ao PDF:", error);
+              }
+            }
+          }
+        }
       });
-      
-      // Adicionar informações adicionais
+
+      // Total
       const finalY = (doc as any).lastAutoTable.finalY + 10;
-      doc.text("Observações:", 14, finalY);
-      doc.text("- Este documento é um comprovante de abastecimento da maleta.", 14, finalY + 6);
-      doc.text("- Os itens listados estão sob responsabilidade da revendedora.", 14, finalY + 12);
-      
-      // Adicionar área para assinaturas
-      doc.text("_______________________________", 30, finalY + 30);
-      doc.text("Assinatura da Revendedora", 42, finalY + 36);
-      
-      doc.text("_______________________________", 120, finalY + 30);
-      doc.text("Assinatura do Responsável", 132, finalY + 36);
-      
-      // Gerar PDF como blob
+      doc.setFont("helvetica", "bold");
+      doc.text(`Total de peças: ${totalItems}`, 14, finalY);
+      doc.text(`Valor total: ${formatCurrency(totalValue)}`, 14, finalY + 8);
+
+      // Espaço para assinatura
+      const signatureY = finalY + 30;
+      doc.line(14, signatureY, 196, signatureY);
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text("Assinatura da revendedora confirmando o recebimento das peças acima", pageWidth / 2, signatureY + 5, { align: "center" });
+
+      // Retornar o PDF como URL de Blob
+      console.log("Gerando blob do PDF de abastecimento...");
       const pdfBlob = doc.output('blob');
+      const blobUrl = URL.createObjectURL(pdfBlob);
+      console.log("URL do blob do PDF gerada:", blobUrl);
       
-      // Gerar nome para o arquivo
-      const fileName = `abastecimento_maleta_${suitcaseInfo?.code || suitcaseId.substring(0, 8)}_${new Date().toISOString().slice(0, 10)}.pdf`;
-      
-      // Criar um objeto de arquivo para upload
-      const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
-      
-      // Fazer upload para o Supabase Storage
-      const { data, error } = await supabase.storage
-        .from('documentos')
-        .upload(`maletas/abastecimentos/${fileName}`, file, {
-          cacheControl: '3600',
-          upsert: true
-        });
-      
-      if (error) throw error;
-      
-      // Obter URL pública do arquivo
-      const { data: publicUrl } = supabase.storage
-        .from('documentos')
-        .getPublicUrl(`maletas/abastecimentos/${fileName}`);
-      
-      return publicUrl.publicUrl;
+      return blobUrl;
     } catch (error) {
       console.error("Erro ao gerar PDF de abastecimento:", error);
       throw error;
     }
   }
-  
+
   /**
-   * Gera PDF de uma maleta específica
-   * @param suitcaseId ID da maleta
-   * @param items Itens da maleta
-   * @param suitcase Informações da maleta
-   * @returns URL do PDF gerado
+   * Agrupa itens idênticos para o PDF
    */
-  static async generateSuitcasePDF(suitcaseId: string, items: any[], suitcase: any): Promise<string> {
-    return this.generateSupplyPDF(suitcaseId, items, suitcase);
+  private static groupItems(items: SupplyItem[]) {
+    const groupedMap = new Map();
+    
+    items.forEach(item => {
+      const key = item.inventory_id;
+      if (groupedMap.has(key)) {
+        const existing = groupedMap.get(key);
+        existing.quantity += item.quantity || 1;
+      } else {
+        groupedMap.set(key, {
+          ...item,
+          quantity: item.quantity || 1
+        });
+      }
+    });
+    
+    return Array.from(groupedMap.values());
   }
-  
+
   /**
-   * Formata valores monetários
-   * @param value Valor a ser formatado
-   * @returns String formatada
+   * Gera os dados da tabela para o PDF
    */
-  private static formatMoney(value: number): string {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(value);
+  private static async generateTableData(items: SupplyItem[]) {
+    const tableData = [];
+    
+    for (const item of items) {
+      const product = item.product;
+      if (!product) continue;
+      
+      const price = product.price || 0;
+      const quantity = item.quantity || 1;
+      const total = price * quantity;
+      
+      // Buscar URL da imagem
+      let imageUrl = getProductPhotoUrl(product.photo_url);
+      let base64Image = '';
+      
+      // Converter imagem para Base64 se existir
+      if (imageUrl) {
+        try {
+          const response = await fetch(imageUrl);
+          if (!response.ok) {
+            console.error(`Erro ao buscar imagem: ${response.status} ${response.statusText}`);
+            // Continuar sem a imagem se não conseguir carregar
+          } else {
+            const blob = await response.blob();
+            base64Image = await this.blobToBase64(blob);
+          }
+        } catch (error) {
+          console.error(`Erro ao converter imagem para Base64: ${error}`);
+          // Continuar sem a imagem em caso de erro
+        }
+      }
+      
+      // Modificado: Separar nome do produto da imagem (agora a primeira coluna é vazia, usada apenas para imagem)
+      tableData.push([
+        '', // Célula vazia para a imagem (será preenchida no didDrawCell)
+        product.name || 'Sem nome', // Nome do produto em coluna separada
+        product.sku || 'N/A',
+        quantity.toString(),
+        formatCurrency(price),
+        formatCurrency(total),
+        base64Image // Esta coluna será usada para a imagem, não será mostrada como texto
+      ]);
+    }
+    
+    return tableData;
+  }
+
+  /**
+   * Converte um Blob para Base64
+   */
+  private static blobToBase64(blob: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
   }
 }

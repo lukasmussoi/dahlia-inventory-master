@@ -1,4 +1,3 @@
-
 /**
  * Controlador de Abastecimento de Maletas
  * @file Este arquivo coordena as operações de abastecimento de maletas
@@ -70,17 +69,14 @@ export class SuitcaseSupplyController {
             const addedItem = await SuitcaseItemModel.addItemToSuitcase({
               suitcase_id: suitcaseId,
               inventory_id: item.inventory_id,
-              quantity: 1, // Sempre adicionar com quantidade 1
-              status: 'in_possession'
+              quantity: 1 // Sempre adicionar com quantidade 1
             });
             
             // Adicionar à lista de itens adicionados
-            if (addedItem) {
-              addedItems.push({
-                ...addedItem,
-                product: item.product
-              });
-            }
+            addedItems.push({
+              ...addedItem,
+              product: item.product
+            });
           } catch (error) {
             console.error(`Erro ao adicionar unidade ${i+1} do item ${item.inventory_id} à maleta:`, error);
             throw error; // Propagar erro para interromper a operação
@@ -99,7 +95,6 @@ export class SuitcaseSupplyController {
    * Gera um PDF de comprovante de abastecimento
    * @param suitcaseId ID da maleta
    * @param items Itens adicionados à maleta
-   * @param suitcaseInfo Informações da maleta para o PDF
    * @returns URL do PDF gerado
    */
   static async generateSupplyPDF(suitcaseId: string, items: SupplyItem[], suitcaseInfo: any): Promise<string> {

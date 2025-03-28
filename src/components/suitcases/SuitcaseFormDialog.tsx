@@ -1,32 +1,9 @@
 
-/**
- * Componente de Diálogo de Formulário de Maleta
- * @file Este arquivo contém o formulário para criar e editar informações de uma maleta
- * @relacionamento Utilizado para criar novas maletas ou editar maletas existentes
- */
 import { useState, useEffect } from "react";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import * as z from "zod";
-
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -34,247 +11,222 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { CombinedSuitcaseController } from "@/controllers/suitcase";
 import { toast } from "sonner";
 import { Suitcase } from "@/types/suitcase";
-
-const formSchema = z.object({
-  code: z.string().min(2, {
-    message: "O código da maleta deve ter pelo menos 2 caracteres.",
-  }),
-  seller_id: z.string().min(1, {
-    message: "Selecione uma revendedora.",
-  }),
-  city: z.string().optional(),
-  neighborhood: z.string().optional(),
-});
+import { CombinedSuitcaseController } from "@/controllers/suitcase";
+import { Loader2 } from "lucide-react";
 
 interface SuitcaseFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  suitcase?: Suitcase;
-  onSuccess?: () => void;
-  mode?: string;
-  onSubmit?: (data: any) => Promise<void>;
+  onSubmit: (data: any) => void;
+  suitcase?: Suitcase | null;
+  mode: 'create' | 'edit';
 }
-
-// Função para extrair valores do endereço
-const extractAddressValue = (address: any, field: string): string => {
-  // Se o endereço for null/undefined, retornar string vazia
-  if (!address) return '';
-  
-  // Se o endereço for um objeto JSON, tentar extrair o campo
-  if (typeof address === 'object' && !Array.isArray(address)) {
-    return address[field]?.toString() || '';
-  }
-  
-  // Se for qualquer outro tipo, retornar string vazia
-  return '';
-};
 
 export function SuitcaseFormDialog({
   open,
   onOpenChange,
+  onSubmit,
   suitcase,
-  onSuccess,
-  mode = "create",
-  onSubmit: externalSubmit,
+  mode
 }: SuitcaseFormDialogProps) {
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [sellers, setSellers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [city, setCity] = useState("");
-  const [neighborhood, setNeighborhood] = useState("");
+  const [code, setCode] = useState<string>("");
+  const [sellerId, setSellerId] = useState<string>("");
+  const [city, setCity] = useState<string>("");
+  const [neighborhood, setNeighborhood] = useState<string>("");
+  const [status, setStatus] = useState<string>("in_use");
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [sellers, setSellers] = useState<any[]>([]);
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      code: "",
-      seller_id: "",
-      city: "",
-      neighborhood: "",
-    },
-  });
-
+  // Carregar dados iniciais (quando estiver em modo de edição)
   useEffect(() => {
-    setIsEditMode(!!suitcase);
-    if (suitcase) {
-      form.setValue("code", suitcase.code);
-      form.setValue("seller_id", suitcase.seller_id);
+    if (suitcase && mode === 'edit') {
+      setCode(suitcase.code || "");
+      setSellerId(suitcase.seller_id || "");
       setCity(suitcase.city || "");
       setNeighborhood(suitcase.neighborhood || "");
-    } else {
-      form.reset();
+      setStatus(suitcase.status || "in_use");
+    } else if (mode === 'create') {
+      // Limpar formulário e gerar novo código
+      setCode("");
+      setSellerId("");
       setCity("");
       setNeighborhood("");
+      setStatus("in_use");
+      generateNewCode();
     }
-  }, [suitcase, form]);
+  }, [suitcase, mode, open]);
 
+  // Carregar revendedores
   useEffect(() => {
-    const fetchSellers = async () => {
-      try {
-        const sellersData = await CombinedSuitcaseController.getAllSellers();
-        setSellers(sellersData);
-      } catch (error) {
-        console.error("Erro ao buscar revendedoras:", error);
-        toast.error("Erro ao buscar revendedoras");
-      } finally {
-        setLoading(false);
-      }
-    };
+    if (open) {
+      loadResellers();
+    }
+  }, [open]);
 
-    fetchSellers();
-  }, []);
-
-  // Monitorar mudanças no campo seller_id
+  // Efeito para carregar dados da revendedora selecionada
   useEffect(() => {
-    const sellerId = form.getValues("seller_id");
     if (sellerId) {
-      fetchSellerInfo(sellerId);
+      loadSellerAddress(sellerId);
     }
-  }, [form]);
+  }, [sellerId]);
 
-  // Quando buscar o vendedor
-  const fetchSellerInfo = async (sellerId: string) => {
+  // Gerar novo código de maleta
+  const generateNewCode = async () => {
     try {
-      const seller = await CombinedSuitcaseController.getSellerById(sellerId);
-      if (seller) {
-        // Use a função utilitária para extrair valores do endereço
-        const cityValue = extractAddressValue(seller.address, 'city');
-        const neighborhoodValue = extractAddressValue(seller.address, 'neighborhood');
-        
-        setCity(cityValue);
-        setNeighborhood(neighborhoodValue);
-      }
+      const newCode = await CombinedSuitcaseController.generateSuitcaseCode();
+      setCode(newCode);
     } catch (error) {
-      console.error("Erro ao buscar informações da revendedora:", error);
+      console.error("Erro ao gerar código da maleta:", error);
+      setCode("ML000");
     }
   };
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  // Carregar revendedores
+  const loadResellers = async () => {
+    setIsLoading(true);
     try {
-      if (externalSubmit) {
-        await externalSubmit(values);
-      } else if (isEditMode && suitcase) {
-        // Editar maleta existente
-        await CombinedSuitcaseController.updateSuitcase({
-          id: suitcase.id,
-          code: values.code,
-          seller_id: values.seller_id,
-          city,
-          neighborhood,
-        });
-        toast.success("Maleta atualizada com sucesso!");
-      } else {
-        // Criar nova maleta
-        await CombinedSuitcaseController.createSuitcase({
-          code: values.code,
-          seller_id: values.seller_id,
-          city,
-          neighborhood,
-        });
-        toast.success("Maleta criada com sucesso!");
-      }
-      onSuccess?.();
-      onOpenChange(false);
+      const data = await CombinedSuitcaseController.getAllSellers();
+      setSellers(data);
     } catch (error) {
-      console.error("Erro ao salvar maleta:", error);
-      toast.error("Erro ao salvar maleta");
+      console.error("Erro ao carregar revendedoras:", error);
+      toast.error("Erro ao carregar revendedoras");
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  // Carregar endereço da revendedora selecionada
+  const loadSellerAddress = async (sellerId: string) => {
+    try {
+      const seller = await CombinedSuitcaseController.getSellerById(sellerId);
+      
+      if (seller) {
+        // Processar o endereço (pode vir como string JSON ou objeto)
+        let address = seller.address;
+        
+        if (typeof address === 'string') {
+          try {
+            address = JSON.parse(address);
+          } catch (e) {
+            console.error("Erro ao processar endereço JSON:", e);
+            address = {};
+          }
+        }
+        
+        // Definir cidade e bairro com base no endereço da revendedora
+        setCity(address?.city || "");
+        setNeighborhood(address?.neighborhood || "");
+      }
+    } catch (error) {
+      console.error("Erro ao carregar dados da revendedora:", error);
+    }
+  };
+
+  // Lidar com o envio do formulário
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!sellerId) {
+      toast.error("Selecione uma revendedora");
+      return;
+    }
+
+    if (!city || !neighborhood) {
+      toast.error("A revendedora selecionada não possui cidade e bairro cadastrados");
+      return;
+    }
+
+    const formData = {
+      code,
+      seller_id: sellerId,
+      city,
+      neighborhood,
+      status: status || "in_use"
+    };
+
+    onSubmit(formData);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{isEditMode ? "Editar Maleta" : "Criar Maleta"}</DialogTitle>
-          <DialogDescription>
-            {isEditMode
-              ? "Edite os campos abaixo para atualizar a maleta."
-              : "Adicione uma nova maleta ao sistema."}
-          </DialogDescription>
+          <DialogTitle>
+            {mode === 'create' ? "Nova Maleta" : "Editar Maleta"}
+          </DialogTitle>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="code"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Código da Maleta</FormLabel>
-                  <FormControl>
-                    <Input placeholder="MALETA-001" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="seller_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Revendedora</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione uma revendedora" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {loading ? (
-                        <SelectItem value="">Carregando...</SelectItem>
-                      ) : (
-                        sellers.map((seller: any) => (
-                          <SelectItem key={seller.id} value={seller.id}>
-                            {seller.name}
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <div className="flex items-center justify-between">
-              <Label htmlFor="city">Cidade</Label>
-              <Switch id="city" checked={!!city} onCheckedChange={() => {}} />
-            </div>
-            <Input
-              type="text"
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              placeholder="Cidade"
-              disabled={!form.watch("seller_id")}
-            />
-            <div className="flex items-center justify-between">
-              <Label htmlFor="neighborhood">Bairro</Label>
-              <Switch
-                id="neighborhood"
-                checked={!!neighborhood}
-                onCheckedChange={() => {}}
+
+        <form onSubmit={handleSubmit} className="space-y-4 py-4">
+          <div className="grid grid-cols-1 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="code">Código</Label>
+              <Input
+                id="code"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder="ML001"
+                required
               />
             </div>
-            <Input
-              type="text"
-              value={neighborhood}
-              onChange={(e) => setNeighborhood(e.target.value)}
-              placeholder="Bairro"
-              disabled={!form.watch("seller_id")}
-            />
-            <DialogFooter>
-              <Button type="submit">
-                {isEditMode ? "Salvar Alterações" : "Criar Maleta"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+
+            <div className="space-y-2">
+              <Label htmlFor="seller">Revendedora</Label>
+              <Select value={sellerId} onValueChange={setSellerId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione uma revendedora" />
+                </SelectTrigger>
+                <SelectContent>
+                  {isLoading ? (
+                    <div className="flex items-center justify-center p-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    </div>
+                  ) : (
+                    sellers.map((seller) => (
+                      <SelectItem key={seller.id} value={seller.id}>
+                        {seller.name}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+              
+              {/* Exibir cidade e bairro (somente leitura) */}
+              {sellerId && city && neighborhood && (
+                <div className="mt-2 text-sm text-pink-500">
+                  <p className="flex items-center">
+                    <span className="font-medium">Localização:</span>
+                    <span className="ml-1">{city} • {neighborhood}</span>
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="status">Status</Label>
+              <Select value={status} onValueChange={setStatus}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="in_use">Em Uso</SelectItem>
+                  <SelectItem value="returned">Devolvida</SelectItem>
+                  <SelectItem value="in_replenishment">Aguardando Reposição</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="flex justify-end space-x-2 pt-4">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" className="bg-pink-500 hover:bg-pink-600">
+              {mode === 'create' ? "Criar Maleta" : "Salvar Alterações"}
+            </Button>
+          </div>
+        </form>
       </DialogContent>
     </Dialog>
   );

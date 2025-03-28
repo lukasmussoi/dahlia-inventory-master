@@ -48,12 +48,7 @@ export function SuitcaseSupplyDialog({
     calculateTotalItems,
     handleFinishSupply,
     formatMoney
-  } = useSupplyDialog({
-    suitcaseId: suitcase?.id || null,
-    open,
-    onOpenChange,
-    onSuccess: onRefresh
-  });
+  } = useSupplyDialog(suitcase?.id || null, open, onOpenChange, onRefresh);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -74,6 +69,7 @@ export function SuitcaseSupplyDialog({
         </DialogHeader>
 
         <div className="flex flex-col sm:flex-row gap-4 h-full grow">
+          {/* Painel de busca */}
           <div className="w-full sm:w-2/5 flex flex-col">
             <div className="flex items-center space-x-2 mb-4">
               <Input
@@ -84,7 +80,7 @@ export function SuitcaseSupplyDialog({
                 className="flex-1"
               />
               <Button
-                onClick={() => handleSearch()}
+                onClick={handleSearch}
                 disabled={isSearching}
                 className="shrink-0"
                 variant="outline"
@@ -121,14 +117,17 @@ export function SuitcaseSupplyDialog({
             </ScrollArea>
           </div>
 
+          {/* Separador vertical em telas maiores */}
           <div className="hidden sm:block">
             <Separator orientation="vertical" />
           </div>
 
+          {/* Separador horizontal em telas menores */}
           <div className="sm:hidden">
             <Separator />
           </div>
 
+          {/* Painel de itens selecionados */}
           <div className="w-full sm:w-3/5 flex flex-col">
             <div className="flex justify-between items-center mb-2">
               <h3 className="text-base font-medium">Itens selecionados</h3>
@@ -146,15 +145,8 @@ export function SuitcaseSupplyDialog({
                 ) : selectedItems.length > 0 ? (
                   selectedItems.map((item) => (
                     <SelectedItemCard 
-                      key={item.inventory_id} 
-                      item={{
-                        id: item.inventory_id,
-                        name: item.product?.name || "",
-                        sku: item.product?.sku || "",
-                        price: item.product?.price || 0,
-                        quantity: item.quantity || 1,
-                        photo_url: item.product?.photo_url
-                      }}
+                      key={item.id} 
+                      item={item}
                       onRemove={handleRemoveItem}
                       onIncrease={handleIncreaseQuantity}
                       onDecrease={handleDecreaseQuantity}
