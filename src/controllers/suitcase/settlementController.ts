@@ -33,14 +33,21 @@ export const SettlementController = {
         
       if (error) throw error;
       
-      // Para cada acerto, buscar os itens vendidos
+      // Para cada acerto, buscar os itens vendidos com detalhes completos do produto
       const acertosCompletos = await Promise.all((acertos || []).map(async (acerto) => {
-        // Buscar itens vendidos para este acerto
+        // Buscar itens vendidos para este acerto com todos os dados necessários
         const { data: itensVendidos, error: itemsError } = await supabase
           .from('acerto_itens_vendidos')
           .select(`
             *,
-            product:inventory(id, name, sku, price, unit_cost, photo_url:inventory_photos(photo_url))
+            product:inventory_id(
+              id, 
+              name, 
+              sku, 
+              price, 
+              unit_cost, 
+              photo_url:inventory_photos(photo_url)
+            )
           `)
           .eq('acerto_id', acerto.id);
           
@@ -49,16 +56,41 @@ export const SettlementController = {
           return acerto;
         }
         
-        // Calcular o custo total dos itens
-        const totalCost = (itensVendidos || []).reduce((sum, item) => sum + (item.unit_cost || 0), 0);
+        // Processar os itens vendidos para cálculos corretos
+        const processedItems = itensVendidos || [];
         
-        // Calcular o lucro líquido
-        const netProfit = (acerto.total_sales || 0) - (acerto.commission_amount || 0) - totalCost;
+        // Calcular o total de vendas somando os preços de todos os itens vendidos
+        const totalSales = processedItems.reduce((sum, item) => sum + Number(item.price || 0), 0);
         
-        // Retornar acerto com informações adicionais
+        // Calcular o custo total dos itens vendidos
+        const totalCost = processedItems.reduce((sum, item) => {
+          // Usar o unit_cost do produto ou fallback para 0 se não disponível
+          const unitCost = Number(item.unit_cost || item.product?.unit_cost || 0);
+          return sum + unitCost;
+        }, 0);
+        
+        // Garantir que estamos usando o valor correto de comissão da revendedora
+        const commissionRate = acerto.seller?.commission_rate || 0.3; // 30% padrão se não especificado
+        
+        // Recalcular a comissão com base no total de vendas
+        const commissionAmount = totalSales * commissionRate;
+        
+        // Calcular o lucro líquido (vendas - comissão - custo)
+        const netProfit = totalSales - commissionAmount - totalCost;
+        
+        console.log(`Processando acerto ${acerto.id} com ${processedItems.length} itens vendidos`);
+        if (processedItems.length > 0) {
+          processedItems.forEach(item => {
+            console.log(`Item vendido: ${item.product?.name} (ID: ${item.inventory_id}) - Preço: ${item.price}`);
+          });
+        }
+        
+        // Retornar acerto com valores calculados e itens vendidos
         return {
           ...acerto,
-          items_vendidos: itensVendidos || [],
+          items_vendidos: processedItems,
+          total_sales: totalSales,
+          commission_amount: commissionAmount,
           total_cost: totalCost,
           net_profit: netProfit
         };

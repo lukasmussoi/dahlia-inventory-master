@@ -1,4 +1,8 @@
 
+/**
+ * Utilitários para manipulação de fotos
+ * @file Funções auxiliares para processar URLs de fotos de produtos
+ */
 import { PhotoUrl } from "@/types/suitcase";
 
 /**

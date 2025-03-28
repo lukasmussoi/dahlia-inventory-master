@@ -1,50 +1,49 @@
 
 /**
- * Modelo Base de Itens de Maleta
- * @file Funções auxiliares e transformações de dados para itens de maleta
- * @relacionamento Utilizado pelos demais modelos de itens de maleta
+ * Modelo Base para Itens de Maleta
+ * @file Funções comuns para processamento de dados de itens
+ * @relacionamento Utilizado por outros modelos de itens
  */
 import { SuitcaseItem, PhotoUrl } from "@/types/suitcase";
 
 export class BaseItemModel {
   /**
-   * Processa os dados de um item de maleta retornado pelo banco
-   * @param item Dados do item retornado pelo banco
-   * @returns Item processado no formato esperado pela aplicação
+   * Processa os dados brutos de um item da maleta
+   * @param rawItem Dados do item recebidos da consulta
+   * @returns Item com dados processados
    */
-  static processItemData(item: any): SuitcaseItem {
-    // Extrair URL da foto, garantindo que é uma string válida
+  static processItemData(rawItem: any): SuitcaseItem {
     let photoUrl;
-    if (item.product?.photos && 
-        Array.isArray(item.product.photos) && 
-        item.product.photos.length > 0) {
-      // Verificar se o item da array é um objeto com photo_url
-      if (item.product.photos[0] && typeof item.product.photos[0] === 'object') {
-        photoUrl = item.product.photos[0].photo_url;
-      }
+    
+    // Processar URL da foto do produto
+    if (rawItem.product?.photos && Array.isArray(rawItem.product.photos)) {
+      photoUrl = rawItem.product.photos;
+    } else if (rawItem.product?.photo_url) {
+      photoUrl = rawItem.product.photo_url;
     }
     
-    // Garantir que added_at existe
-    const added_at = item.created_at || new Date().toISOString();
+    // Processar quantidade do item
+    const quantity = typeof rawItem.quantity === 'number' ? rawItem.quantity : 1;
     
-    // Retornar o objeto com a estrutura correta
+    // Construir o objeto SuitcaseItem com dados processados
     return {
-      id: item.id,
-      suitcase_id: item.suitcase_id,
-      inventory_id: item.inventory_id,
-      status: item.status,
-      added_at: added_at,
-      created_at: item.created_at,
-      updated_at: item.updated_at,
-      quantity: item.quantity,
-      product: item.product ? {
-        id: item.product.id,
-        name: item.product.name,
-        price: item.product.price,
-        sku: item.product.sku,
+      id: rawItem.id,
+      suitcase_id: rawItem.suitcase_id,
+      inventory_id: rawItem.inventory_id,
+      status: rawItem.status,
+      added_at: rawItem.added_at,
+      quantity: quantity,
+      created_at: rawItem.created_at,
+      updated_at: rawItem.updated_at,
+      product: rawItem.product ? {
+        id: rawItem.product.id,
+        sku: rawItem.product.sku,
+        name: rawItem.product.name,
+        price: rawItem.product.price,
+        unit_cost: rawItem.product.unit_cost,
         photo_url: photoUrl
       } : undefined,
-      sales: []
+      sales: rawItem.sales || []
     };
   }
 }
