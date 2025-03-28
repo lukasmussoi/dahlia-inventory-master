@@ -18,7 +18,6 @@ import { CombinedSuitcaseController } from "@/controllers/suitcase";
 import { Acerto, AcertoItem } from "@/types/suitcase";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
-import { AcertoDetailsController } from "@/controllers/acertoMaleta/acertoDetailsController";
 
 // Cores para o gráfico
 const CHART_COLORS = [
@@ -41,7 +40,7 @@ export function SuitcaseHistoryDialog({
 }: SuitcaseHistoryDialogProps) {
   // Estados locais
   const [acertos, setAcertos] = useState<Acerto[]>([]);
-  const [topItems, setTopItems] = useState<{id: string, name: string, count: number, total_value: number}[]>([]);
+  const [topItems, setTopItems] = useState<{id: string, name: string, quantity: number, total: number}[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("resumo");
   
@@ -95,14 +94,49 @@ export function SuitcaseHistoryDialog({
       
       console.log("Histórico de acertos carregado:", historico);
       
-      // Buscar os 5 itens mais vendidos usando o controlador específico
-      const topItemsResult = await AcertoDetailsController.getTop5ItemsVendidos(suitcaseId);
+      // Processar e calcular os itens mais vendidos
+      const itemsMap = new Map<string, {id: string, name: string, quantity: number, total: number}>();
       
-      console.log("Top 5 itens vendidos carregados:", topItemsResult);
+      // Percorrer todos os acertos e seus itens vendidos
+      historico.forEach(acerto => {
+        console.log(`Processando acerto ${acerto.id} com ${acerto.items_vendidos?.length || 0} itens vendidos`);
+        
+        if (!acerto.items_vendidos || acerto.items_vendidos.length === 0) return;
+        
+        acerto.items_vendidos.forEach(item => {
+          if (!item.product) return;
+          
+          const productId = item.product.id;
+          const productName = item.product.name;
+          const itemPrice = item.price || 0;
+          
+          console.log(`Item vendido: ${productName} (ID: ${productId}) - Preço: ${itemPrice}`);
+          
+          if (itemsMap.has(productId)) {
+            const existingItem = itemsMap.get(productId)!;
+            existingItem.quantity += 1;
+            existingItem.total += itemPrice;
+          } else {
+            itemsMap.set(productId, {
+              id: productId,
+              name: productName,
+              quantity: 1,
+              total: itemPrice
+            });
+          }
+        });
+      });
+      
+      // Ordenar e pegar os 5 mais vendidos
+      const sortedItems = Array.from(itemsMap.values())
+        .sort((a, b) => b.quantity - a.quantity)
+        .slice(0, 5);
+      
+      console.log("Top 5 itens vendidos processados:", sortedItems);
       
       // Verificar novamente se o componente está montado
       if (isMounted.current) {
-        setTopItems(topItemsResult);
+        setTopItems(sortedItems);
         setIsLoading(false);
       }
     } catch (error) {
@@ -145,20 +179,26 @@ export function SuitcaseHistoryDialog({
     
     // Percorrer todos os acertos para somar valores
     acertos.forEach(acerto => {
-      // Somar valores básicos
+      // Valores básicos que já estão no acerto
       totalVendas += acerto.total_sales || 0;
       totalComissoes += acerto.commission_amount || 0;
       
-      // Calcular os custos corretamente
-      const custosAcerto = typeof acerto.total_cost === 'number' ? acerto.total_cost : 0;
-      totalCustos += custosAcerto;
+      // Calcular custos de forma confiável
+      const custosItens = acerto.items_vendidos?.reduce(
+        (sum, item) => sum + (item.unit_cost || 0), 
+        0
+      ) || 0;
       
-      // Calcular lucro líquido
-      const lucroAcerto = typeof acerto.net_profit === 'number' 
-        ? acerto.net_profit 
-        : (acerto.total_sales || 0) - (acerto.commission_amount || 0) - custosAcerto;
+      totalCustos += custosItens;
       
-      totalLucro += lucroAcerto;
+      // Verificar se o lucro líquido já existe no acerto, se não, calcular
+      if (acerto.net_profit !== undefined && acerto.net_profit !== null) {
+        totalLucro += acerto.net_profit;
+      } else {
+        // Calcular: vendas - comissões - custos
+        const lucroCalculado = acerto.total_sales - acerto.commission_amount - custosItens;
+        totalLucro += lucroCalculado;
+      }
     });
     
     return {
@@ -201,19 +241,21 @@ export function SuitcaseHistoryDialog({
   // Gerar dados para gráfico de barras
   const generateBarChartData = useCallback(() => {
     return acertos.slice(0, 5).map(acerto => {
-      // Garantir tipos corretos para todos os valores
-      const vendas = acerto.total_sales || 0;
-      const comissao = acerto.commission_amount || 0;
-      const custo = typeof acerto.total_cost === 'number' ? acerto.total_cost : 0;
-      const lucro = typeof acerto.net_profit === 'number' 
+      // Calcular o lucro líquido para este acerto específico se não estiver definido
+      const custosItens = acerto.items_vendidos?.reduce(
+        (sum, item) => sum + (item.unit_cost || 0), 
+        0
+      ) || 0;
+      
+      const lucro = acerto.net_profit !== undefined 
         ? acerto.net_profit 
-        : vendas - comissao - custo;
+        : (acerto.total_sales || 0) - (acerto.commission_amount || 0) - custosItens;
       
       return {
         data: formatDate(acerto.settlement_date),
-        vendas: vendas,
+        vendas: acerto.total_sales || 0,
         lucro: lucro,
-        comissao: comissao
+        comissao: acerto.commission_amount || 0
       };
     });
   }, [acertos]);
@@ -363,9 +405,9 @@ export function SuitcaseHistoryDialog({
                         </div>
                         <div className="flex items-center gap-4">
                           <span className="text-sm text-gray-600 px-2 py-1 bg-gray-100 rounded">
-                            {item.count} {item.count === 1 ? 'unidade' : 'unidades'}
+                            {item.quantity} {item.quantity === 1 ? 'unidade' : 'unidades'}
                           </span>
-                          <span className="text-sm font-medium">{formatCurrency(item.total_value)}</span>
+                          <span className="text-sm font-medium">{formatCurrency(item.total)}</span>
                         </div>
                       </div>
                     ))}
@@ -421,10 +463,11 @@ export function SuitcaseHistoryDialog({
                           <p className="text-sm text-gray-500">Lucro Líquido</p>
                           <p className="text-lg font-medium">
                             {formatCurrency(
-                              typeof acerto.net_profit === 'number'
-                                ? acerto.net_profit
-                                : ((acerto.total_sales || 0) - (acerto.commission_amount || 0) - 
-                                   (typeof acerto.total_cost === 'number' ? acerto.total_cost : 0))
+                              acerto.net_profit !== undefined 
+                                ? acerto.net_profit 
+                                : (acerto.total_sales || 0) - (acerto.commission_amount || 0) - (
+                                  acerto.items_vendidos?.reduce((sum, item) => sum + (item.unit_cost || 0), 0) || 0
+                                )
                             )}
                           </p>
                         </div>

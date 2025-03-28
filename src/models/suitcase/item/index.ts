@@ -21,8 +21,6 @@ export class SuitcaseItemModel {
   static getSuitcaseItems = ItemQueryModel.getSuitcaseItems;
   static getSuitcaseItemSales = ItemQueryModel.getSuitcaseItemSales;
   static getItemSuitcaseInfo = ItemQueryModel.getItemSuitcaseInfo;
-  static countSuitcaseItems = ItemQueryModel.countSuitcaseItems;
-  static getSuitcasesItemCounts = ItemQueryModel.getSuitcasesItemCounts;
   
   // ItemOperationsModel
   static checkItemAvailability = ItemOperationsModel.checkItemAvailability;
