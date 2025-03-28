@@ -11,13 +11,14 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
+import { DayPickerRangeProps } from "react-day-picker"
 
 interface DatePickerProps {
   className?: string
   children?: React.ReactNode
   mode?: "single" | "range" | "multiple"
-  onSelect?: (date: Date | Date[] | undefined) => void
-  selected?: Date | Date[] | undefined
+  selected?: Date | Date[] | { from: Date; to?: Date }
+  onSelect?: (date: Date | Date[] | { from: Date; to?: Date } | undefined) => void
   defaultMonth?: Date
   locale?: any
 }
@@ -52,7 +53,7 @@ export function DatePicker({
         </PopoverTrigger>
       )}
       <PopoverContent className="w-auto p-0" align="start">
-        {mode === "single" ? (
+        {mode === "single" && (
           <Calendar
             mode="single"
             selected={selected as Date}
@@ -61,19 +62,18 @@ export function DatePicker({
             locale={locale}
             className={cn("p-3 pointer-events-auto", className)}
           />
-        ) : mode === "range" ? (
+        )}
+        {mode === "range" && (
           <Calendar
             mode="range"
-            selected={selected as {
-              from: Date;
-              to?: Date;
-            }}
-            onSelect={onSelect as (range: { from: Date; to?: Date; } | undefined) => void}
+            selected={selected as { from: Date; to?: Date }}
+            onSelect={onSelect as (range: { from: Date; to?: Date } | undefined) => void}
             defaultMonth={defaultMonth}
             locale={locale}
             className={cn("p-3 pointer-events-auto", className)}
           />
-        ) : (
+        )}
+        {mode === "multiple" && (
           <Calendar
             mode="multiple"
             selected={selected as Date[]}
