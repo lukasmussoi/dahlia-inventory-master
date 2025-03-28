@@ -13,7 +13,7 @@ export interface InventoryItem {
   quantity_reserved?: number; // Nova propriedade: quantidade reservada em maletas
   price: number;
   unit_cost: number;
-  raw_cost?: number;
+  raw_cost: number; // Alterado de opcional para obrigatório para corresponder ao modelo
   category_id: string;
   category_name?: string;
   supplier_id?: string;
@@ -45,9 +45,10 @@ export type MovementType =
   | 'saida' 
   | 'ajuste' 
   | 'devolucao' 
-  | 'reserva_maleta'   // Novo tipo: reserva para maleta
-  | 'retorno_maleta'   // Novo tipo: retorno da maleta sem venda
-  | 'venda_maleta';    // Novo tipo: venda na maleta
+  | 'reserva_maleta'
+  | 'retorno_maleta'
+  | 'venda_maleta'
+  | 'danificado'; // Adicionado tipo para itens danificados
 
 export interface InventoryMovement {
   id: string;

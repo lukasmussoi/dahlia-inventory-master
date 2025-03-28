@@ -9,6 +9,8 @@ import { CategoryModel } from "./categoryModel";
 import { PlatingTypeModel } from "./platingTypeModel";
 import { SupplierModel } from "./supplierModel";
 import { InventoryStatsModel } from "./statsModel";
+import { InventoryMovementModel } from "./movementModel";
+import { InventoryStockModel } from "./stockModel";
 
 // Re-exportar os tipos
 export * from "./types";
@@ -24,9 +26,15 @@ export class InventoryModel {
   static archiveItem = InventoryItemModel.archiveItem;
   static restoreItem = InventoryItemModel.restoreItem;
   static checkItemInSuitcase = BaseInventoryModel.checkItemInSuitcase;
-  static checkItemHasMovements = BaseInventoryModel.checkItemHasMovements;
-  static updateItemPhotos = BaseInventoryModel.updateItemPhotos;
-  static getItemPhotos = BaseInventoryModel.getItemPhotos;
+  
+  // Novos métodos de estoque
+  static checkItemHasMovements = InventoryMovementModel.checkItemHasMovements;
+  static updateItemPhotos = InventoryStockModel.updateItemPhotos;
+  static getItemPhotos = InventoryStockModel.getItemPhotos;
+  static createMovement = InventoryMovementModel.createMovement;
+  static reserveForSuitcase = InventoryStockModel.reserveForSuitcase;
+  static releaseReservation = InventoryStockModel.releaseReservation;
+  static finalizeSale = InventoryStockModel.finalizeSale;
   
   // Categorias
   static getAllCategories = CategoryModel.getAllCategories;

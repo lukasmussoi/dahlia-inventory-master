@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { useSuitcaseQueries } from "./useSuitcaseQueries";
 import { CombinedSuitcaseController } from "@/controllers/suitcase";
 import { InventoryController } from "@/controllers/inventoryController";
+import { MovementType } from "@/types/inventory";
 
 export function useOpenSuitcase(suitcaseId: string | null, open: boolean) {
   console.log(`[useOpenSuitcase] Inicializando hook, suitcaseId: ${suitcaseId}, open: ${open}`);
@@ -75,7 +76,7 @@ export function useOpenSuitcase(suitcaseId: string | null, open: boolean) {
         await InventoryController.createMovement({
           inventory_id: item.inventory_id,
           quantity: quantity,
-          movement_type: "retorno da maleta",
+          movement_type: 'retorno_maleta' as MovementType,
           reason: `Devolução parcial (${quantity} unidades) da maleta ${suitcase?.code || ''}`
         });
         
@@ -117,7 +118,7 @@ export function useOpenSuitcase(suitcaseId: string | null, open: boolean) {
         await InventoryController.createMovement({
           inventory_id: item.inventory_id,
           quantity: -1, // Redução de uma unidade
-          movement_type: "danificado",
+          movement_type: 'danificado' as MovementType,
           reason: `Item danificado da maleta ${suitcase?.code || ''}`
         });
         
