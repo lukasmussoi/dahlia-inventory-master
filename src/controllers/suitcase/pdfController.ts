@@ -58,9 +58,14 @@ export const PdfController = {
         headStyles: { fillColor: [233, 30, 99] }
       });
       
-      // Adicionar valor total
-      const totalValue = items.reduce((total, item) => {
-        return total + ((item.product?.price || 0) * (item.quantity || 1));
+      // Calcular o valor total - Correção do erro de tipo
+      const totalValue = items.reduce((acumulador: number, item: any) => {
+        // Extrair preço e quantidade, com valores padrão se não estiverem disponíveis
+        const preco = item.product?.price || 0;
+        const quantidade = item.quantity || 1;
+        
+        // Retornar o acumulador mais o valor do item atual
+        return acumulador + (preco * quantidade);
       }, 0);
       
       const finalY = (doc as any).lastAutoTable.finalY + 10;
