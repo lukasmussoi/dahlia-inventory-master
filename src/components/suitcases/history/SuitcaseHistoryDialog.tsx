@@ -4,7 +4,7 @@
  * @file Exibe o histórico completo de acertos de uma maleta específica
  * @relacionamento Utilizado pelo SuitcaseCard quando o admin clica em "Histórico"
  */
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -17,6 +17,7 @@ import { ptBR } from "date-fns/locale";
 import { CombinedSuitcaseController } from "@/controllers/suitcase";
 import { Acerto, AcertoItem } from "@/types/suitcase";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 // Cores para o gráfico
 const CHART_COLORS = [
@@ -43,19 +44,52 @@ export function SuitcaseHistoryDialog({
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("resumo");
   
-  // Função para forçar recarga da página ao fechar o diálogo (para evitar travamentos)
-  const handleForceReload = () => {
-    window.location.reload();
-  };
+  // Referência para controlar o estado de montagem
+  const isMounted = useRef(true);
+  
+  // QueryClient para gerenciamento de cache
+  const queryClient = useQueryClient();
+  
+  // Função para limpar recursos e fechar o diálogo
+  const handleClose = useCallback(() => {
+    console.log("[SuitcaseHistoryDialog] Fechando diálogo e limpando recursos");
+    
+    // Limpar cache da query para evitar vazamentos
+    if (suitcaseId) {
+      queryClient.cancelQueries({
+        queryKey: ["acertos-historico", suitcaseId]
+      });
+      
+      // Opcionalmente remover do cache ao fechar
+      queryClient.removeQueries({
+        queryKey: ["acertos-historico", suitcaseId]
+      });
+    }
+    
+    // Limpar estados locais
+    setAcertos([]);
+    setTopItems([]);
+    setActiveTab("resumo");
+    setIsLoading(false);
+    
+    // Notificar mudança de estado para o componente pai
+    onOpenChange(false);
+  }, [onOpenChange, suitcaseId, queryClient]);
 
   // Buscar dados do histórico da maleta
   const fetchHistoryData = useCallback(async () => {
-    if (!open || !suitcaseId) return;
+    if (!open || !suitcaseId || !isMounted.current) return;
     
+    console.log(`[SuitcaseHistoryDialog] Buscando dados para maleta ${suitcaseId}`);
     setIsLoading(true);
+    
     try {
       // Buscar acertos da maleta
       const historico = await CombinedSuitcaseController.getHistoricoAcertos(suitcaseId);
+      
+      // Verificar se o componente ainda está montado antes de atualizar o estado
+      if (!isMounted.current) return;
+      
       setAcertos(historico);
       
       // Processar e calcular os itens mais vendidos
@@ -91,18 +125,37 @@ export function SuitcaseHistoryDialog({
         .sort((a, b) => b.quantity - a.quantity)
         .slice(0, 5);
       
-      setTopItems(sortedItems);
+      // Verificar novamente se o componente está montado
+      if (isMounted.current) {
+        setTopItems(sortedItems);
+        setIsLoading(false);
+      }
     } catch (error) {
       console.error("Erro ao buscar histórico da maleta:", error);
-      toast.error("Erro ao carregar o histórico da maleta");
-    } finally {
-      setIsLoading(false);
+      
+      // Verificar se o componente está montado antes de mostrar o toast
+      if (isMounted.current) {
+        toast.error("Erro ao carregar o histórico da maleta");
+        setIsLoading(false);
+      }
     }
   }, [suitcaseId, open]);
+
+  // Efeito para gerenciar o ciclo de vida do componente
+  useEffect(() => {
+    console.log(`[SuitcaseHistoryDialog] Inicializando, open: ${open}`);
+    isMounted.current = true;
+    
+    return () => {
+      console.log("[SuitcaseHistoryDialog] Desmontando componente");
+      isMounted.current = false;
+    };
+  }, []);
 
   // Efeito para carregar dados quando a modal abrir
   useEffect(() => {
     if (open) {
+      console.log("[SuitcaseHistoryDialog] Modal aberta, carregando dados");
       fetchHistoryData();
     }
   }, [open, fetchHistoryData]);
@@ -164,13 +217,13 @@ export function SuitcaseHistoryDialog({
   const barChartData = generateBarChartData();
 
   // Componente de carregamento
-  if (isLoading) {
+  if (isLoading && open) {
     return (
-      <Dialog open={open} onOpenChange={handleForceReload}>
+      <Dialog open={open} onOpenChange={handleClose}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <button 
             className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none"
-            onClick={handleForceReload}
+            onClick={handleClose}
           >
             <X className="h-4 w-4" />
             <span className="sr-only">Fechar</span>
@@ -186,11 +239,11 @@ export function SuitcaseHistoryDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleForceReload}>
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <button 
           className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none"
-          onClick={handleForceReload}
+          onClick={handleClose}
         >
           <X className="h-4 w-4" />
           <span className="sr-only">Fechar</span>
@@ -392,7 +445,7 @@ export function SuitcaseHistoryDialog({
         </Tabs>
         
         <div className="flex justify-end mt-4">
-          <Button variant="outline" onClick={handleForceReload}>
+          <Button variant="outline" onClick={handleClose}>
             Fechar
           </Button>
         </div>

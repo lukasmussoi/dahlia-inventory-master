@@ -4,7 +4,7 @@
  * @file Exibe os dados de uma maleta em formato de card com ações
  * @relacionamento Utilizado na listagem de maletas e interage com dialogs de acerto e abastecimento
  */
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { format, isPast, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { 
@@ -59,6 +59,10 @@ export function SuitcaseCard({
   const [showSettlementDialog, setShowSettlementDialog] = useState(false);
   const [showOpenDialog, setShowOpenDialog] = useState(false);
   const [showHistoryDialog, setShowHistoryDialog] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  
+  // Referência para controlar o menu dropdown
+  const dropdownTriggerRef = useRef<HTMLButtonElement>(null);
 
   const hasLateSettlement = suitcase.next_settlement_date && 
     isPast(parseISO(suitcase.next_settlement_date));
@@ -120,11 +124,38 @@ export function SuitcaseCard({
   // Manipulador para "Abrir Maleta"
   const handleOpenSuitcase = () => {
     setShowOpenDialog(true);
+    // Fechar dropdown quando abre o dialog
+    setDropdownOpen(false);
   };
 
-  // Manipulador para "Histórico da Maleta" (nova funcionalidade)
+  // Manipulador para "Histórico da Maleta"
   const handleOpenHistory = () => {
     setShowHistoryDialog(true);
+    // Fechar dropdown quando abre o dialog
+    setDropdownOpen(false);
+  };
+  
+  // Função para fechar dialogs e garantir reset de estados
+  const handleDialogOpenChange = (dialog: string, isOpen: boolean) => {
+    switch (dialog) {
+      case 'supply':
+        setShowSupplyDialog(isOpen);
+        break;
+      case 'settlement':
+        setShowSettlementDialog(isOpen);
+        break;
+      case 'open':
+        setShowOpenDialog(isOpen);
+        break;
+      case 'history':
+        setShowHistoryDialog(isOpen);
+        break;
+    }
+    
+    // Garantir que o dropdown esteja fechado após fechar qualquer diálogo
+    if (!isOpen) {
+      setDropdownOpen(false);
+    }
   };
 
   return (
@@ -182,9 +213,14 @@ export function SuitcaseCard({
             Acerto
           </Button>
 
-          <DropdownMenu>
+          <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-8 w-8"
+                ref={dropdownTriggerRef}
+              >
                 <MoreVertical className="h-4 w-4" />
                 <span className="sr-only">Mais ações</span>
               </Button>
@@ -213,7 +249,7 @@ export function SuitcaseCard({
       {/* Diálogo de abastecimento */}
       <SuitcaseSupplyDialog
         open={showSupplyDialog}
-        onOpenChange={setShowSupplyDialog}
+        onOpenChange={(open) => handleDialogOpenChange('supply', open)}
         suitcase={suitcase}
         onRefresh={onRefresh}
       />
@@ -221,7 +257,7 @@ export function SuitcaseCard({
       {/* Diálogo de acerto */}
       <SuitcaseSettlementDialog
         open={showSettlementDialog}
-        onOpenChange={setShowSettlementDialog}
+        onOpenChange={(open) => handleDialogOpenChange('settlement', open)}
         suitcase={suitcase}
         onRefresh={onRefresh}
       />
@@ -229,14 +265,14 @@ export function SuitcaseCard({
       {/* Diálogo "Abrir Maleta" */}
       <OpenSuitcaseDialog
         open={showOpenDialog}
-        onOpenChange={setShowOpenDialog}
+        onOpenChange={(open) => handleDialogOpenChange('open', open)}
         suitcaseId={suitcase.id}
       />
 
-      {/* Diálogo "Histórico da Maleta" - Novo componente */}
+      {/* Diálogo "Histórico da Maleta" */}
       <SuitcaseHistoryDialog
         open={showHistoryDialog}
-        onOpenChange={setShowHistoryDialog}
+        onOpenChange={(open) => handleDialogOpenChange('history', open)}
         suitcaseId={suitcase.id}
         suitcaseCode={suitcase.code || ""}
       />
