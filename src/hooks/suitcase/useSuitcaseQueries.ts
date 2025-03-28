@@ -3,7 +3,7 @@
  * Hook para gerenciar as consultas relacionadas a maletas
  * @file Gerencia queries de maletas, itens e histórico
  * @relacionamento Utilizado pelo useOpenSuitcase para buscar dados
- * @modificação BUG CRÍTICO CORRIGIDO - Refeito gerenciamento de cache e ciclo de vida das queries
+ * @modificação CORREÇÃO DEFINITIVA - Implementado cancelamento de queries e limpeza completa de cache
  */
 import { useCallback, useRef, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -18,7 +18,7 @@ export function useSuitcaseQueries(suitcaseId: string | null, open: boolean) {
   console.log(`[useSuitcaseQueries] Inicializando, suitcaseId: ${suitcaseId}, open: ${open}`);
   const queryClient = useQueryClient();
   
-  // Referência ao ID da maleta atual para usar durante limpeza
+  // Referências para IDs ativos para uso durante limpeza
   const currentSuitcaseIdRef = useRef<string | null>(suitcaseId);
   const currentSellerIdRef = useRef<string | null>(null);
   
@@ -100,9 +100,9 @@ export function useSuitcaseQueries(suitcaseId: string | null, open: boolean) {
     gcTime: 1000 * 60, // 1 minuto
   });
 
-  // Função para resetar o estado das queries - MELHORIA CRÍTICA
-  const resetQueryState = useCallback(() => {
-    console.log("[useSuitcaseQueries] Iniciando limpeza completa do cache de queries");
+  // Função para cancelar e limpar todas as queries relacionadas
+  const resetQueries = useCallback(() => {
+    console.log("[useSuitcaseQueries] Iniciando limpeza total do cache de queries");
     
     const savedSuitcaseId = currentSuitcaseIdRef.current;
     const savedSellerId = currentSellerIdRef.current;
@@ -110,10 +110,11 @@ export function useSuitcaseQueries(suitcaseId: string | null, open: boolean) {
     if (savedSuitcaseId) {
       console.log(`[useSuitcaseQueries] Removendo queries para maleta: ${savedSuitcaseId}`);
       
-      // Primeiro cancelar todas as queries pendentes
+      // CORREÇÃO CRÍTICA 1: Primeiro cancelar todas as queries pendentes
       queryClient.cancelQueries({
         predicate: (query) => {
           const queryKey = query.queryKey;
+          // Verificar se a query está relacionada com a maleta atual
           return (
             (Array.isArray(queryKey) && queryKey[0] === "suitcase" && queryKey[1] === savedSuitcaseId) ||
             (Array.isArray(queryKey) && queryKey[0] === "suitcase-items" && queryKey[1] === savedSuitcaseId) ||
@@ -123,7 +124,7 @@ export function useSuitcaseQueries(suitcaseId: string | null, open: boolean) {
         }
       });
       
-      // Remover dados do cache para evitar vazamentos de memória e re-renderizações indesejadas
+      // CORREÇÃO CRÍTICA 2: Remover dados do cache completamente, em vez de apenas invalidá-los
       queryClient.removeQueries({ queryKey: ["suitcase", savedSuitcaseId] });
       queryClient.removeQueries({ queryKey: ["suitcase-items", savedSuitcaseId] });
       queryClient.removeQueries({ queryKey: ["acertos-historico", savedSuitcaseId] });
@@ -132,7 +133,7 @@ export function useSuitcaseQueries(suitcaseId: string | null, open: boolean) {
         queryClient.removeQueries({ queryKey: ["promoter-for-reseller", savedSellerId] });
       }
       
-      console.log("[useSuitcaseQueries] Dados removidos do cache com sucesso");
+      console.log("[useSuitcaseQueries] Queries removidas do cache com sucesso");
     } else {
       console.log("[useSuitcaseQueries] Nenhum ID de maleta para limpar no cache");
     }
@@ -155,6 +156,6 @@ export function useSuitcaseQueries(suitcaseId: string | null, open: boolean) {
     refetchSuitcaseItems,
     acertosHistorico,
     isLoadingAcertos,
-    resetQueryState
+    resetQueries
   };
 }

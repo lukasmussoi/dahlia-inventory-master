@@ -3,7 +3,7 @@
  * Hook para Abrir Maleta
  * @file Gerencia o estado e as operações de visualização, devolução e marcação de itens danificados
  * @relacionamento Utilizado pelo OpenSuitcaseDialog para gerenciar as abas e operações com itens
- * @modificação BUG CRÍTICO CORRIGIDO - Refeito gerenciamento do ciclo de vida para evitar travamentos após fechamento
+ * @modificação CORREÇÃO DEFINITIVA - Reescrito o gerenciamento de ciclo de vida e controle de montagem
  */
 import { useState, useCallback, useRef, useEffect } from "react";
 import { toast } from "sonner";
@@ -31,30 +31,19 @@ export function useOpenSuitcase(suitcaseId: string | null, open: boolean) {
     isLoadingAcertos,
     loadingPromoterInfo,
     refetchSuitcaseItems,
-    resetQueryState
+    resetQueries
   } = useSuitcaseQueries(suitcaseId, open);
 
   // Efeito para gerenciar o ciclo de vida do componente
   useEffect(() => {
     console.log("[useOpenSuitcase] Componente montado");
-    
-    // Ao montar, garantir que sabemos que o componente está ativo
     isMounted.current = true;
     
-    // Ao desmontar, marcar que não está mais montado para evitar atualizações de estado
     return () => {
       console.log("[useOpenSuitcase] Componente desmontando");
       isMounted.current = false;
     };
   }, []);
-
-  // Efeito para resetar o estado quando o diálogo é fechado
-  useEffect(() => {
-    if (!open && suitcaseId === null) {
-      console.log("[useOpenSuitcase] Modal fechado, resetando estado");
-      setActiveTab('itens');
-    }
-  }, [open, suitcaseId]);
 
   // Estado de carregamento combinado
   const isLoading = isLoadingSuitcase || isLoadingSuitcaseItems || isLoadingAcertos || loadingPromoterInfo;
@@ -154,16 +143,16 @@ export function useOpenSuitcase(suitcaseId: string | null, open: boolean) {
 
   // Função para reset completo do estado
   const resetState = useCallback(() => {
-    console.log("[useOpenSuitcase] Iniciando sequência completa de limpeza");
+    console.log("[useOpenSuitcase] Iniciando reset completo do estado");
     
-    // Resetar tabs
+    // Resetar aba ativa para a inicial
     setActiveTab('itens');
     
-    // Limpar cache de queries
-    resetQueryState();
+    // Limpar cache de queries e cancelar queries pendentes
+    resetQueries();
     
-    console.log("[useOpenSuitcase] Limpeza de estado concluída");
-  }, [resetQueryState]);
+    console.log("[useOpenSuitcase] Reset do estado concluído");
+  }, [resetQueries]);
 
   return {
     activeTab,

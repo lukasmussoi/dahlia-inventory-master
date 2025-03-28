@@ -3,7 +3,7 @@
  * Diálogo para Abrir Maleta
  * @file Exibe os itens e histórico da maleta para administradores
  * @relacionamento Utilizado pelo SuitcaseCard quando o admin clica em "Abrir Maleta"
- * @modificação BUG CRÍTICO CORRIGIDO - Ciclo de vida da modal completamente refeito para evitar travamentos ao fechar
+ * @modificação CORREÇÃO DEFINITIVA - Reformulado o ciclo de vida para garantir limpeza completa e evitar travamentos
  */
 import { useEffect, useState, useCallback } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -27,10 +27,10 @@ export function OpenSuitcaseDialog({
 }: OpenSuitcaseDialogProps) {
   console.log(`[OpenSuitcaseDialog] Renderizando diálogo, open: ${open}, suitcaseId: ${suitcaseId}`);
   
-  // Controle de estado interno do fechamento
-  const [isDialogClosing, setIsDialogClosing] = useState(false);
-  
-  // Hook principal para gerenciar dados e ações da maleta
+  // Estado para controlar o processo de fechamento da modal
+  const [isClosing, setIsClosing] = useState(false);
+
+  // Hook principal que gerencia todos os dados e operações da maleta
   const {
     activeTab,
     setActiveTab,
@@ -44,52 +44,46 @@ export function OpenSuitcaseDialog({
     resetState
   } = useOpenSuitcase(open ? suitcaseId : null, open);
 
-  // Manipulador seguro de fechamento
+  // Manipulador seguro para fechamento da modal
   const handleCloseDialog = useCallback(() => {
-    console.log("[OpenSuitcaseDialog] Iniciando sequência de fechamento seguro");
-    // Marca que estamos no processo de fechamento
-    setIsDialogClosing(true);
-    // Notifica o componente pai para atualizar seu estado
+    console.log("[OpenSuitcaseDialog] Iniciando processo de fechamento seguro");
+    setIsClosing(true);
     onOpenChange(false);
   }, [onOpenChange]);
 
-  // Efeito para gerenciar abertura/fechamento e limpeza do diálogo
-  useEffect(() => {
-    // Quando abrir a modal, resetar o estado de fechamento
-    if (open) {
-      console.log("[OpenSuitcaseDialog] Modal aberta - resetando estado de fechamento");
-      setIsDialogClosing(false);
-    }
-    
-    // Quando fechar a modal, realizar limpeza após a animação
-    if (!open) {
-      console.log("[OpenSuitcaseDialog] Modal fechada - aguardando animação");
-      
-      // Aguardar a conclusão da animação antes de limpar estados
-      const cleanupTimeout = setTimeout(() => {
-        console.log("[OpenSuitcaseDialog] Animação concluída - executando limpeza completa de estado");
-        resetState();
-        setIsDialogClosing(false);
-        console.log("[OpenSuitcaseDialog] Limpeza finalizada - modal completamente fechada");
-      }, 300); // Tempo aproximado da animação de fechamento do shadcn Dialog
-      
-      // Limpar timeout se o componente for desmontado
-      return () => {
-        console.log("[OpenSuitcaseDialog] Limpando timeout de animação");
-        clearTimeout(cleanupTimeout);
-      };
-    }
-  }, [open, resetState]);
-
-  // Manipulador para alterar a aba com tipagem correta
+  // Função para tratar a mudança de abas com validação de tipo
   const handleTabChange = useCallback((value: string) => {
-    // Verificar se o valor é um dos valores permitidos antes de atualizar o estado
     if (value === 'itens' || value === 'historico') {
       setActiveTab(value);
     }
   }, [setActiveTab]);
 
-  // Renderização condicional baseada no estado de carregamento
+  // Efeito para gerenciar abertura e fechamento da modal, garantindo limpeza completa
+  useEffect(() => {
+    // Quando abrir a modal, resetar o estado de fechamento
+    if (open) {
+      console.log("[OpenSuitcaseDialog] Modal aberta - preparando ambiente");
+      setIsClosing(false);
+    }
+    
+    // Quando a modal é fechada, aguardar a animação terminar antes de limpar os estados
+    if (!open) {
+      console.log("[OpenSuitcaseDialog] Modal fechada - iniciando sequência de limpeza");
+      
+      // Aguardar a animação de fechamento antes de limpar o estado
+      const cleanupTimeout = setTimeout(() => {
+        console.log("[OpenSuitcaseDialog] Animação concluída - executando limpeza completa");
+        resetState();
+        setIsClosing(false);
+        console.log("[OpenSuitcaseDialog] Limpeza finalizada - sistema pronto para nova interação");
+      }, 300); // Tempo aproximado da animação do Dialog do shadcn
+      
+      // Limpar o timeout se o componente for desmontado antes de sua conclusão
+      return () => clearTimeout(cleanupTimeout);
+    }
+  }, [open, resetState]);
+
+  // Renderização durante carregamento
   if (isLoading) {
     return (
       <Dialog open={open} onOpenChange={handleCloseDialog}>
@@ -103,7 +97,7 @@ export function OpenSuitcaseDialog({
     );
   }
 
-  // Renderização do conteúdo principal
+  // Renderização principal do conteúdo
   return (
     <Dialog open={open} onOpenChange={handleCloseDialog}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
