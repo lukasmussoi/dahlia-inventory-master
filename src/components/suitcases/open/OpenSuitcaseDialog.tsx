@@ -3,9 +3,9 @@
  * Diálogo para Abrir Maleta
  * @file Exibe os itens e histórico da maleta para administradores
  * @relacionamento Utilizado pelo SuitcaseCard quando o admin clica em "Abrir Maleta"
- * @modificação Corrigido bug de travamento ao fechar a modal, garantindo ordem consistente de hooks e limpeza de estados
+ * @modificação Corrigido bug de travamento ao fechar a modal, melhorando o ciclo de vida e garantindo limpeza de estados
  */
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LoadingIndicator } from "@/components/shared/LoadingIndicator";
@@ -25,8 +25,10 @@ export function OpenSuitcaseDialog({
   onOpenChange,
   suitcaseId
 }: OpenSuitcaseDialogProps) {
-  // Importante: Sempre obtenha o hook useOpenSuitcase, mesmo quando fechado
-  // para manter a consistência na ordem dos hooks
+  // Estado local para controlar o processo de fechamento
+  const [isClosing, setIsClosing] = useState(false);
+  
+  // Hook principal - sempre é executado para manter ordem consistente dos hooks
   const {
     activeTab,
     setActiveTab,
@@ -43,20 +45,29 @@ export function OpenSuitcaseDialog({
   // Gerenciamento seguro de fechamento da modal
   const handleCloseDialog = () => {
     console.log("[OpenSuitcaseDialog] Iniciando processo de fechamento da modal");
-    // Primeiro notifica a mudança de estado para fechar a modal
+    setIsClosing(true);
     onOpenChange(false);
   };
 
-  // Efeito para limpeza de estado ao fechar o diálogo
-  // Mantido fora de qualquer condicional para evitar problemas de hook
+  // Efeito para gerenciar o ciclo de vida da modal
   useEffect(() => {
+    // Se a modal foi aberta (transição de fechado para aberto)
+    if (open) {
+      console.log("[OpenSuitcaseDialog] Modal aberta, resetando estado de fechamento");
+      setIsClosing(false);
+    }
+    
+    // Se a modal foi fechada
     if (!open) {
       console.log("[OpenSuitcaseDialog] Modal fechada, iniciando limpeza");
       
-      // Usando setTimeout para garantir que a limpeza ocorra após a animação de fechamento
+      // Usando setTimeout para garantir que a animação de fechamento termine
       const cleanupTimeout = setTimeout(() => {
-        resetState();
-        console.log("[OpenSuitcaseDialog] Limpeza completa após animação");
+        if (isClosing) {
+          resetState();
+          setIsClosing(false);
+          console.log("[OpenSuitcaseDialog] Limpeza completa após animação");
+        }
       }, 300); // Tempo aproximado da animação de fechamento
       
       return () => {
@@ -64,10 +75,9 @@ export function OpenSuitcaseDialog({
         console.log("[OpenSuitcaseDialog] Limpeza do timeout de fechamento");
       };
     }
-  }, [open, resetState]);
+  }, [open, resetState, isClosing]);
 
   // Renderização condicional do conteúdo baseada no estado de carregamento
-  // Não usamos condicionais para os hooks, apenas para o JSX renderizado
   if (isLoading || !suitcase) {
     return (
       <Dialog open={open} onOpenChange={handleCloseDialog}>

@@ -3,21 +3,26 @@
  * Hook para Abrir Maleta
  * @file Gerencia o estado e as operações de visualização, devolução e marcação de itens danificados
  * @relacionamento Utilizado pelo OpenSuitcaseDialog para gerenciar as abas e operações com itens
- * @modificação Corrigido bug de travamento ao fechar a modal, melhorando gerenciamento de estado e limpeza de recursos
+ * @modificação Corrigido bug de travamento ao fechar a modal, melhorando o ciclo de vida e garantindo limpeza de estados
  */
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { useSuitcaseQueries } from "./useSuitcaseQueries";
 import { CombinedSuitcaseController } from "@/controllers/suitcase";
 import { InventoryController } from "@/controllers/inventoryController";
 
 export function useOpenSuitcase(suitcaseId: string, open: boolean) {
-  // Estado para controle da aba ativa - sempre mantenha este estado
-  // mesmo quando a modal estiver fechada
+  console.log(`[useOpenSuitcase] Inicializando hook, suitcaseId: ${suitcaseId}, open: ${open}`);
+  
+  // Referência para monitorar se o componente está montado
+  const isMounted = useRef(true);
+  
+  // Estado para controle da aba ativa - sempre mantemos este estado
+  // mesmo quando a modal estiver fechada, para evitar problemas de hook
   const [activeTab, setActiveTab] = useState<'itens' | 'historico'>('itens');
 
   // Consultas para buscar dados da maleta, itens e histórico
-  // Passamos suitcaseId apenas quando open for true para evitar consultas desnecessárias
+  // Passamos suitcaseId de forma segura para evitar consultas desnecessárias
   const {
     suitcase,
     promoterInfo,
@@ -30,6 +35,14 @@ export function useOpenSuitcase(suitcaseId: string, open: boolean) {
     refetchSuitcaseItems,
     resetQueryState
   } = useSuitcaseQueries(open ? suitcaseId : null, open);
+
+  // Efeito para garantir limpeza ao desmontar o componente
+  useEffect(() => {
+    return () => {
+      console.log("[useOpenSuitcase] Componente desmontando, marcando como não montado");
+      isMounted.current = false;
+    };
+  }, []);
 
   // Estado de carregamento combinado
   const isLoading = isLoadingSuitcase || isLoadingSuitcaseItems || isLoadingAcertos || loadingPromoterInfo;
@@ -72,8 +85,10 @@ export function useOpenSuitcase(suitcaseId: string, open: boolean) {
         toast.success("Item devolvido ao estoque com sucesso");
       }
       
-      // Atualizar a lista de itens
-      refetchSuitcaseItems();
+      // Atualizar a lista de itens somente se o componente ainda estiver montado
+      if (isMounted.current) {
+        refetchSuitcaseItems();
+      }
     } catch (error) {
       console.error("[useOpenSuitcase] Erro ao devolver item ao estoque:", error);
       toast.error("Erro ao devolver item ao estoque");
@@ -115,8 +130,10 @@ export function useOpenSuitcase(suitcaseId: string, open: boolean) {
         toast.success("Item marcado como danificado");
       }
       
-      // Atualizar a lista de itens
-      refetchSuitcaseItems();
+      // Atualizar a lista de itens somente se o componente ainda estiver montado
+      if (isMounted.current) {
+        refetchSuitcaseItems();
+      }
     } catch (error) {
       console.error("[useOpenSuitcase] Erro ao marcar item como danificado:", error);
       toast.error("Erro ao marcar item como danificado");
