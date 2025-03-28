@@ -3,9 +3,9 @@
  * Diálogo para Abrir Maleta
  * @file Exibe os itens e histórico da maleta para administradores
  * @relacionamento Utilizado pelo SuitcaseCard quando o admin clica em "Abrir Maleta"
- * @modificação Corrigido bug de travamento ao fechar a modal, melhorando o ciclo de vida e garantindo limpeza de estados
+ * @modificação BUG CRÍTICO CORRIGIDO - Ciclo de vida da modal completamente refeito para evitar travamentos ao fechar
  */
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LoadingIndicator } from "@/components/shared/LoadingIndicator";
@@ -25,10 +25,12 @@ export function OpenSuitcaseDialog({
   onOpenChange,
   suitcaseId
 }: OpenSuitcaseDialogProps) {
-  // Estado local para controlar o processo de fechamento
-  const [isClosing, setIsClosing] = useState(false);
+  console.log(`[OpenSuitcaseDialog] Renderizando diálogo, open: ${open}, suitcaseId: ${suitcaseId}`);
   
-  // Hook principal - sempre é executado para manter ordem consistente dos hooks
+  // Controle de estado interno do fechamento
+  const [isDialogClosing, setIsDialogClosing] = useState(false);
+  
+  // Hook principal para gerenciar dados e ações da maleta
   const {
     activeTab,
     setActiveTab,
@@ -40,45 +42,47 @@ export function OpenSuitcaseDialog({
     handleReturnToInventory,
     handleMarkAsDamaged,
     resetState
-  } = useOpenSuitcase(suitcaseId, open);
+  } = useOpenSuitcase(open ? suitcaseId : null, open);
 
-  // Gerenciamento seguro de fechamento da modal
-  const handleCloseDialog = () => {
-    console.log("[OpenSuitcaseDialog] Iniciando processo de fechamento da modal");
-    setIsClosing(true);
+  // Manipulador seguro de fechamento
+  const handleCloseDialog = useCallback(() => {
+    console.log("[OpenSuitcaseDialog] Iniciando sequência de fechamento seguro");
+    // Marca que estamos no processo de fechamento
+    setIsDialogClosing(true);
+    // Notifica o componente pai para atualizar seu estado
     onOpenChange(false);
-  };
+  }, [onOpenChange]);
 
-  // Efeito para gerenciar o ciclo de vida da modal
+  // Efeito para gerenciar abertura/fechamento e limpeza do diálogo
   useEffect(() => {
-    // Se a modal foi aberta (transição de fechado para aberto)
+    // Quando abrir a modal, resetar o estado de fechamento
     if (open) {
-      console.log("[OpenSuitcaseDialog] Modal aberta, resetando estado de fechamento");
-      setIsClosing(false);
+      console.log("[OpenSuitcaseDialog] Modal aberta - resetando estado de fechamento");
+      setIsDialogClosing(false);
     }
     
-    // Se a modal foi fechada
+    // Quando fechar a modal, realizar limpeza após a animação
     if (!open) {
-      console.log("[OpenSuitcaseDialog] Modal fechada, iniciando limpeza");
+      console.log("[OpenSuitcaseDialog] Modal fechada - aguardando animação");
       
-      // Usando setTimeout para garantir que a animação de fechamento termine
+      // Aguardar a conclusão da animação antes de limpar estados
       const cleanupTimeout = setTimeout(() => {
-        if (isClosing) {
-          resetState();
-          setIsClosing(false);
-          console.log("[OpenSuitcaseDialog] Limpeza completa após animação");
-        }
-      }, 300); // Tempo aproximado da animação de fechamento
+        console.log("[OpenSuitcaseDialog] Animação concluída - executando limpeza completa de estado");
+        resetState();
+        setIsDialogClosing(false);
+        console.log("[OpenSuitcaseDialog] Limpeza finalizada - modal completamente fechada");
+      }, 300); // Tempo aproximado da animação de fechamento do shadcn Dialog
       
+      // Limpar timeout se o componente for desmontado
       return () => {
+        console.log("[OpenSuitcaseDialog] Limpando timeout de animação");
         clearTimeout(cleanupTimeout);
-        console.log("[OpenSuitcaseDialog] Limpeza do timeout de fechamento");
       };
     }
-  }, [open, resetState, isClosing]);
+  }, [open, resetState]);
 
-  // Renderização condicional do conteúdo baseada no estado de carregamento
-  if (isLoading || !suitcase) {
+  // Renderização condicional baseada no estado de carregamento
+  if (isLoading) {
     return (
       <Dialog open={open} onOpenChange={handleCloseDialog}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
@@ -91,38 +95,44 @@ export function OpenSuitcaseDialog({
     );
   }
 
-  // Renderização do conteúdo principal quando carregado
+  // Renderização do conteúdo principal
   return (
     <Dialog open={open} onOpenChange={handleCloseDialog}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-        <DialogTitle>Maleta {suitcase.code}</DialogTitle>
+        <DialogTitle>
+          {suitcase ? `Maleta ${suitcase.code}` : "Detalhes da Maleta"}
+        </DialogTitle>
         
-        <Tabs value={activeTab} onValueChange={setActiveTab as any} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="itens">Itens da Maleta</TabsTrigger>
-            <TabsTrigger value="historico">Histórico da Maleta</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="itens">
-            <SuitcaseItemsTab 
-              suitcase={suitcase}
-              promoterInfo={promoterInfo}
-              suitcaseItems={suitcaseItems}
-              onReturnToInventory={handleReturnToInventory}
-              onMarkAsDamaged={handleMarkAsDamaged}
-            />
-          </TabsContent>
-          
-          <TabsContent value="historico">
-            <SuitcaseHistoryTab 
-              suitcase={suitcase}
-              acertosHistorico={acertosHistorico}
-            />
-          </TabsContent>
-        </Tabs>
+        {suitcase && (
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="itens">Itens da Maleta</TabsTrigger>
+              <TabsTrigger value="historico">Histórico da Maleta</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="itens">
+              <SuitcaseItemsTab 
+                suitcase={suitcase}
+                promoterInfo={promoterInfo}
+                suitcaseItems={suitcaseItems}
+                onReturnToInventory={handleReturnToInventory}
+                onMarkAsDamaged={handleMarkAsDamaged}
+              />
+            </TabsContent>
+            
+            <TabsContent value="historico">
+              <SuitcaseHistoryTab 
+                suitcase={suitcase}
+                acertosHistorico={acertosHistorico}
+              />
+            </TabsContent>
+          </Tabs>
+        )}
         
         <div className="flex justify-end mt-4">
-          <Button variant="outline" onClick={handleCloseDialog}>Fechar</Button>
+          <Button variant="outline" onClick={handleCloseDialog}>
+            Fechar
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

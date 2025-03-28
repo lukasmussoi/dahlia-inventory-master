@@ -3,7 +3,7 @@
  * Hook para Abrir Maleta
  * @file Gerencia o estado e as operações de visualização, devolução e marcação de itens danificados
  * @relacionamento Utilizado pelo OpenSuitcaseDialog para gerenciar as abas e operações com itens
- * @modificação Corrigido bug de travamento ao fechar a modal, melhorando o ciclo de vida e garantindo limpeza de estados
+ * @modificação BUG CRÍTICO CORRIGIDO - Refeito gerenciamento do ciclo de vida para evitar travamentos após fechamento
  */
 import { useState, useCallback, useRef, useEffect } from "react";
 import { toast } from "sonner";
@@ -11,18 +11,16 @@ import { useSuitcaseQueries } from "./useSuitcaseQueries";
 import { CombinedSuitcaseController } from "@/controllers/suitcase";
 import { InventoryController } from "@/controllers/inventoryController";
 
-export function useOpenSuitcase(suitcaseId: string, open: boolean) {
+export function useOpenSuitcase(suitcaseId: string | null, open: boolean) {
   console.log(`[useOpenSuitcase] Inicializando hook, suitcaseId: ${suitcaseId}, open: ${open}`);
   
-  // Referência para monitorar se o componente está montado
+  // Referência para controlar se o componente ainda está montado
   const isMounted = useRef(true);
   
-  // Estado para controle da aba ativa - sempre mantemos este estado
-  // mesmo quando a modal estiver fechada, para evitar problemas de hook
+  // Estado para controle da aba ativa
   const [activeTab, setActiveTab] = useState<'itens' | 'historico'>('itens');
 
-  // Consultas para buscar dados da maleta, itens e histórico
-  // Passamos suitcaseId de forma segura para evitar consultas desnecessárias
+  // Hook para buscar dados da maleta
   const {
     suitcase,
     promoterInfo,
@@ -34,15 +32,29 @@ export function useOpenSuitcase(suitcaseId: string, open: boolean) {
     loadingPromoterInfo,
     refetchSuitcaseItems,
     resetQueryState
-  } = useSuitcaseQueries(open ? suitcaseId : null, open);
+  } = useSuitcaseQueries(suitcaseId, open);
 
-  // Efeito para garantir limpeza ao desmontar o componente
+  // Efeito para gerenciar o ciclo de vida do componente
   useEffect(() => {
+    console.log("[useOpenSuitcase] Componente montado");
+    
+    // Ao montar, garantir que sabemos que o componente está ativo
+    isMounted.current = true;
+    
+    // Ao desmontar, marcar que não está mais montado para evitar atualizações de estado
     return () => {
-      console.log("[useOpenSuitcase] Componente desmontando, marcando como não montado");
+      console.log("[useOpenSuitcase] Componente desmontando");
       isMounted.current = false;
     };
   }, []);
+
+  // Efeito para resetar o estado quando o diálogo é fechado
+  useEffect(() => {
+    if (!open && suitcaseId === null) {
+      console.log("[useOpenSuitcase] Modal fechado, resetando estado");
+      setActiveTab('itens');
+    }
+  }, [open, suitcaseId]);
 
   // Estado de carregamento combinado
   const isLoading = isLoadingSuitcase || isLoadingSuitcaseItems || isLoadingAcertos || loadingPromoterInfo;
@@ -80,7 +92,7 @@ export function useOpenSuitcase(suitcaseId: string, open: boolean) {
         
         toast.success(`${quantity} ${quantity === 1 ? 'unidade devolvida' : 'unidades devolvidas'} ao estoque`);
       } else {
-        // Se estamos devolvendo todas as unidades, usar a função existente que já lida com o estoque
+        // Se estamos devolvendo todas as unidades, usar a função existente
         await CombinedSuitcaseController.returnItemToInventory(itemId, false);
         toast.success("Item devolvido ao estoque com sucesso");
       }
@@ -107,7 +119,7 @@ export function useOpenSuitcase(suitcaseId: string, open: boolean) {
         return;
       }
 
-      // Se o item tem mais de uma unidade, reduzir a quantidade em vez de marcá-lo completamente como danificado
+      // Se o item tem mais de uma unidade, reduzir a quantidade em vez de marcá-lo completamente
       if (item.quantity && item.quantity > 1) {
         // Reduzir a quantidade em 1
         await CombinedSuitcaseController.updateSuitcaseItemQuantity(itemId, item.quantity - 1);
@@ -140,17 +152,17 @@ export function useOpenSuitcase(suitcaseId: string, open: boolean) {
     }
   }, [suitcaseItems, suitcase, refetchSuitcaseItems]);
 
-  // Função melhorada para reset completo do estado
+  // Função para reset completo do estado
   const resetState = useCallback(() => {
-    console.log("[useOpenSuitcase] Iniciando limpeza completa do estado");
+    console.log("[useOpenSuitcase] Iniciando sequência completa de limpeza");
     
-    // Reset da aba ativa para o valor inicial
+    // Resetar tabs
     setActiveTab('itens');
     
-    // Limpeza do cache de queries
+    // Limpar cache de queries
     resetQueryState();
     
-    console.log("[useOpenSuitcase] Limpeza de estado concluída com sucesso");
+    console.log("[useOpenSuitcase] Limpeza de estado concluída");
   }, [resetQueryState]);
 
   return {
