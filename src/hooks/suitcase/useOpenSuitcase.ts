@@ -3,6 +3,7 @@
  * Hook para Abrir Maleta
  * @file Gerencia o estado e as operações de visualização, devolução e marcação de itens danificados
  * @relacionamento Utilizado pelo OpenSuitcaseDialog para gerenciar as abas e operações com itens
+ * @modificação Corrigido bug de travamento ao fechar a modal, melhorando gerenciamento de estados
  */
 import { useState, useCallback } from "react";
 import { toast } from "sonner";
@@ -34,7 +35,7 @@ export function useOpenSuitcase(suitcaseId: string, open: boolean) {
   // Função para devolver item ao estoque
   const handleReturnToInventory = useCallback(async (itemId: string, quantity: number = 1) => {
     try {
-      console.log(`Devolvendo item ${itemId} ao estoque, quantidade: ${quantity}`);
+      console.log(`[useOpenSuitcase] Devolvendo item ${itemId} ao estoque, quantidade: ${quantity}`);
       
       // Verificar se o item existe no estado atual
       const item = suitcaseItems.find(item => item.id === itemId);
@@ -72,7 +73,7 @@ export function useOpenSuitcase(suitcaseId: string, open: boolean) {
       // Atualizar a lista de itens
       refetchSuitcaseItems();
     } catch (error) {
-      console.error("Erro ao devolver item ao estoque:", error);
+      console.error("[useOpenSuitcase] Erro ao devolver item ao estoque:", error);
       toast.error("Erro ao devolver item ao estoque");
     }
   }, [suitcaseItems, suitcase, refetchSuitcaseItems]);
@@ -80,7 +81,7 @@ export function useOpenSuitcase(suitcaseId: string, open: boolean) {
   // Função para marcar item como danificado
   const handleMarkAsDamaged = useCallback(async (itemId: string) => {
     try {
-      console.log(`Marcando item ${itemId} como danificado`);
+      console.log(`[useOpenSuitcase] Marcando item ${itemId} como danificado`);
       
       // Verificar se o item existe no estado atual
       const item = suitcaseItems.find(item => item.id === itemId);
@@ -115,10 +116,23 @@ export function useOpenSuitcase(suitcaseId: string, open: boolean) {
       // Atualizar a lista de itens
       refetchSuitcaseItems();
     } catch (error) {
-      console.error("Erro ao marcar item como danificado:", error);
+      console.error("[useOpenSuitcase] Erro ao marcar item como danificado:", error);
       toast.error("Erro ao marcar item como danificado");
     }
   }, [suitcaseItems, suitcase, refetchSuitcaseItems]);
+
+  // Melhorando a função de reset para garantir limpeza completa
+  const resetState = useCallback(() => {
+    console.log("[useOpenSuitcase] Iniciando limpeza de estado");
+    
+    // Reset da aba ativa
+    setActiveTab('itens');
+    
+    // Limpeza das queries e cache
+    resetQueryState();
+    
+    console.log("[useOpenSuitcase] Limpeza de estados concluída");
+  }, [resetQueryState]);
 
   return {
     activeTab,
@@ -130,6 +144,6 @@ export function useOpenSuitcase(suitcaseId: string, open: boolean) {
     isLoading,
     handleReturnToInventory,
     handleMarkAsDamaged,
-    resetState: resetQueryState
+    resetState
   };
 }
