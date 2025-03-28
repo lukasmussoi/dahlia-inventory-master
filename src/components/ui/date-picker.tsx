@@ -52,14 +52,37 @@ export function DatePicker({
         </PopoverTrigger>
       )}
       <PopoverContent className="w-auto p-0" align="start">
-        <Calendar
-          mode={mode}
-          selected={selected}
-          onSelect={onSelect}
-          defaultMonth={defaultMonth}
-          locale={locale}
-          className={cn("p-3 pointer-events-auto", className)}
-        />
+        {mode === "single" ? (
+          <Calendar
+            mode="single"
+            selected={selected as Date}
+            onSelect={onSelect as (date: Date | undefined) => void}
+            defaultMonth={defaultMonth}
+            locale={locale}
+            className={cn("p-3 pointer-events-auto", className)}
+          />
+        ) : mode === "range" ? (
+          <Calendar
+            mode="range"
+            selected={selected as {
+              from: Date;
+              to?: Date;
+            }}
+            onSelect={onSelect as (range: { from: Date; to?: Date; } | undefined) => void}
+            defaultMonth={defaultMonth}
+            locale={locale}
+            className={cn("p-3 pointer-events-auto", className)}
+          />
+        ) : (
+          <Calendar
+            mode="multiple"
+            selected={selected as Date[]}
+            onSelect={onSelect as (dates: Date[] | undefined) => void}
+            defaultMonth={defaultMonth}
+            locale={locale}
+            className={cn("p-3 pointer-events-auto", className)}
+          />
+        )}
       </PopoverContent>
     </Popover>
   )
