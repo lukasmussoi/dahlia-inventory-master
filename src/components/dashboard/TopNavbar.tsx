@@ -14,7 +14,8 @@ import {
   Tag,
   UserCircle,
   ShoppingCart,
-  User
+  User,
+  ClipboardCheck
 } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -81,6 +82,18 @@ export function TopNavbar({ isAdmin }: TopNavbarProps) {
         title: "Maletas",
         icon: Briefcase,
         url: "/dashboard/suitcases",
+        subItems: [
+          {
+            title: "Gestão de Maletas",
+            url: "/dashboard/suitcases",
+            icon: Briefcase,
+          },
+          {
+            title: "Acertos",
+            url: "/dashboard/suitcases/acertos",
+            icon: ClipboardCheck,
+          }
+        ],
       }
     ];
 

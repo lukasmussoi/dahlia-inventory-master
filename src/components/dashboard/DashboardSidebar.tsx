@@ -14,6 +14,7 @@ import {
   ShoppingCart,
   UserCircle,
   Award,
+  ClipboardCheck
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
@@ -60,6 +61,11 @@ const menuItems = [
         title: "Maletas",
         href: "/dashboard/suitcases",
         icon: Briefcase,
+      },
+      {
+        title: "Acertos",
+        href: "/dashboard/suitcases/acertos",
+        icon: ClipboardCheck,
       },
       {
         title: "Etiquetas",

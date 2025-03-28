@@ -5,8 +5,7 @@
  * @relacionamento Depende dos controllers de maleta e componentes de grid e filtros
  */
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { SuitcaseController } from "@/controllers/suitcaseController";
 import { SuitcaseFilters } from "@/types/suitcase";
 import { SuitcaseGrid } from "./SuitcaseGrid";
@@ -19,9 +18,7 @@ import { toast } from "sonner";
 import { AcertoMaletaDialog } from "./settlement/AcertoMaletaDialog";
 import { CombinedSuitcaseController } from "@/controllers/suitcase";
 import { SuitcaseSupplyDialog } from "./supply/SuitcaseSupplyDialog";
-import { AcertosList } from "./settlement/AcertosList";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { AcertoMaletaController } from "@/controllers/acertoMaletaController";
+import { useQuery } from "@tanstack/react-query";
 
 interface SuitcasesContentProps {
   isAdmin?: boolean;
@@ -38,9 +35,6 @@ export function SuitcasesContent({ isAdmin = false, userProfile, summary }: Suit
   const [selectedSuitcase, setSelectedSuitcase] = useState<any>(null);
   const [showAcertoDialog, setShowAcertoDialog] = useState(false);
   const [showSupplyDialog, setShowSupplyDialog] = useState(false);
-  const [activeTab, setActiveTab] = useState("maletas");
-  const [selectedAcerto, setSelectedAcerto] = useState<any>(null);
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   // Buscar maletas com filtros
@@ -99,18 +93,6 @@ export function SuitcasesContent({ isAdmin = false, userProfile, summary }: Suit
     refetch();
   };
 
-  // Função para visualizar acerto
-  const handleViewAcerto = (acerto: any) => {
-    setSelectedAcerto(acerto);
-    // Implementar a visualização do acerto conforme necessário
-    console.log("Visualizando acerto:", acerto);
-  };
-
-  // Função para atualizar a lista de acertos
-  const handleRefreshAcertos = () => {
-    queryClient.invalidateQueries({ queryKey: ['acertos'] });
-  };
-
   // Buscar contagem de itens para todas as maletas
   useEffect(() => {
     if (suitcases && suitcases.length > 0) {
@@ -155,49 +137,24 @@ export function SuitcasesContent({ isAdmin = false, userProfile, summary }: Suit
 
         <SuitcaseSummary summary={summary} />
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-2 w-full mb-4">
-            <TabsTrigger value="maletas" className="text-center">
-              <span className="flex items-center justify-center">
-                Maletas
-              </span>
-            </TabsTrigger>
-            <TabsTrigger value="acertos" className="text-center">
-              <span className="flex items-center justify-center">
-                Acertos
-              </span>
-            </TabsTrigger>
-          </TabsList>
+        <SuitcaseFiltersComponent 
+          filters={filters} 
+          onFiltersChange={handleApplyFilters} 
+        />
 
-          <TabsContent value="maletas" className="mt-0">
-            <SuitcaseFiltersComponent 
-              filters={filters} 
-              onFiltersChange={handleApplyFilters} 
-            />
-
-            {isLoading ? (
-              <div className="flex justify-center p-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-pink-500"></div>
-              </div>
-            ) : (
-              <SuitcaseGrid 
-                suitcases={suitcases} 
-                isAdmin={isAdmin} 
-                onRefresh={refetch}
-                onOpenAcertoDialog={handleOpenAcertoDialog}
-                onOpenSupplyDialog={handleOpenSupplyDialog}
-              />
-            )}
-          </TabsContent>
-
-          <TabsContent value="acertos" className="mt-0">
-            <AcertosList 
-              onViewAcerto={handleViewAcerto} 
-              onRefresh={handleRefreshAcertos}
-              isAdmin={isAdmin}
-            />
-          </TabsContent>
-        </Tabs>
+        {isLoading ? (
+          <div className="flex justify-center p-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-pink-500"></div>
+          </div>
+        ) : (
+          <SuitcaseGrid 
+            suitcases={suitcases} 
+            isAdmin={isAdmin} 
+            onRefresh={refetch}
+            onOpenAcertoDialog={handleOpenAcertoDialog}
+            onOpenSupplyDialog={handleOpenSupplyDialog}
+          />
+        )}
       </div>
 
       {/* Formulário de nova maleta */}

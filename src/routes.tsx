@@ -6,6 +6,7 @@ import Dashboard from "@/routes/dashboard";
 import NotFound from "@/pages/NotFound";
 import Inventory from "@/routes/inventory";
 import Suitcases from "@/routes/suitcases";
+import SuitcaseAcertos from "@/routes/suitcases/acertos";
 import Suppliers from "@/routes/suppliers";
 import Categories from "@/routes/categories";
 import Users from "@/routes/users";
@@ -33,6 +34,7 @@ const Router = () => {
           <Route path="inventory/label-creator" element={<InventoryLabelCreatorRoute />} />
           <Route path="inventory/reports" element={<InventoryReports />} />
           <Route path="suitcases" element={<Suitcases />} />
+          <Route path="suitcases/acertos" element={<SuitcaseAcertos />} />
           <Route path="suppliers" element={<Suppliers />} />
           <Route path="plating-types" element={<PlatingTypes />} />
           <Route path="categories" element={<Categories />} />
