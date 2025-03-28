@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import {
   Dialog,
@@ -29,9 +30,9 @@ import {
 import { SuitcaseModel, SellerModel } from "@/models/suitcase";
 import { toast } from "sonner";
 import { format } from 'date-fns';
-import { DatePicker } from "@/components/ui/date-picker"
+import { DatePicker } from "@/components/ui/date-picker";
 import { ptBR } from 'date-fns/locale';
-import { CalendarIcon } from "@radix-ui/react-icons";
+import { Calendar as CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Definição do schema Zod para validação do formulário
