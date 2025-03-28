@@ -1,3 +1,4 @@
+
 /**
  * Modelo de Operações de Itens de Maleta
  * @file Este arquivo contém operações para manipular itens dentro de maletas
@@ -5,24 +6,29 @@
 import { supabase } from "@/integrations/supabase/client";
 import { SuitcaseItemStatus } from "@/types/suitcase";
 
+interface AddItemData {
+  suitcase_id: string;
+  inventory_id: string;
+  quantity: number;
+  status: SuitcaseItemStatus;
+}
+
 export class ItemOperationsModel {
   /**
    * Adiciona um item do inventário à maleta
-   * @param suitcaseId ID da maleta
-   * @param inventoryId ID do item no inventário
-   * @param quantity Quantidade a ser adicionada (padrão: 1)
+   * @param itemData Dados do item a ser adicionado
    * @returns Resultado da operação
    */
-  static async addItemToSuitcase(suitcaseId: string, inventoryId: string, quantity: number = 1) {
-    if (!suitcaseId || !inventoryId) {
+  static async addItemToSuitcase(itemData: AddItemData) {
+    if (!itemData.suitcase_id || !itemData.inventory_id) {
       throw new Error("IDs de maleta e inventário são obrigatórios");
     }
 
     try {
       // Reservar a quantidade desejada no inventário
       const reserveResult = await supabase.rpc('reserve_inventory_for_suitcase', {
-        inventory_id: inventoryId,
-        reserve_quantity: quantity
+        inventory_id: itemData.inventory_id,
+        reserve_quantity: itemData.quantity
       });
 
       if (reserveResult.error) {
@@ -33,10 +39,10 @@ export class ItemOperationsModel {
       const { data, error } = await supabase
         .from('suitcase_items')
         .insert({
-          suitcase_id: suitcaseId,
-          inventory_id: inventoryId,
-          status: 'in_possession' as SuitcaseItemStatus,
-          quantity: quantity
+          suitcase_id: itemData.suitcase_id,
+          inventory_id: itemData.inventory_id,
+          status: itemData.status,
+          quantity: itemData.quantity
         })
         .select(`
           *,
@@ -47,8 +53,8 @@ export class ItemOperationsModel {
       if (error) {
         // Em caso de erro, tentar liberar a quantidade reservada
         await supabase.rpc('release_reserved_inventory', {
-          inventory_id: inventoryId,
-          release_quantity: quantity
+          inventory_id: itemData.inventory_id,
+          release_quantity: itemData.quantity
         });
         throw error;
       }

@@ -145,6 +145,7 @@ export function SuitcaseFormDialog({
     }
   };
 
+  // Usando uma variável para armazenar o valor atual do seller_id
   useEffect(() => {
     const sellerId = form.watch("seller_id");
     if (sellerId) {
