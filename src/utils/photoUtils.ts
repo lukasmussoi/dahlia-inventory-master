@@ -1,21 +1,28 @@
 
+/**
+ * Utilitário para manipulação de fotos de produtos
+ * @file Funções para processar URLs e formatos de fotos de produtos
+ */
+
 import { PhotoUrl } from "@/types/suitcase";
 
 /**
- * Função para obter a URL da foto de um produto a partir de diferentes formatos possíveis
- * @param photoUrl Pode ser uma string, um array de objetos PhotoUrl, ou undefined
- * @returns Uma string com a URL da foto ou string vazia
+ * Extrai a URL de foto a partir de diferentes formatos possíveis
+ * @param photoUrl Pode ser uma string, array de objetos ou undefined
+ * @returns URL da foto ou null
  */
-export const getProductPhotoUrl = (photoUrl: string | PhotoUrl[] | undefined): string => {
-  if (!photoUrl) return '';
+export function getProductPhotoUrl(photoUrl: string | PhotoUrl[] | undefined): string | null {
+  if (!photoUrl) return null;
   
+  // Caso 1: É uma string
   if (typeof photoUrl === 'string') {
     return photoUrl;
   }
   
+  // Caso 2: É um array de objetos PhotoUrl
   if (Array.isArray(photoUrl) && photoUrl.length > 0) {
-    return photoUrl[0]?.photo_url || '';
+    return photoUrl[0]?.photo_url || null;
   }
   
-  return '';
-};
+  return null;
+}

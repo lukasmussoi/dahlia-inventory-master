@@ -104,10 +104,14 @@ export class SuitcaseSupplyController {
         inventory_id: inventoryId
       });
       
-      // Atualizar status da maleta se estiver vazia
+      // Atualizar status da maleta para não vazia
       const suitcase = await SuitcaseModel.getSuitcaseById(suitcaseId);
-      if (suitcase && suitcase.is_empty) {
-        await SuitcaseModel.updateSuitcase(suitcaseId, { is_empty: false });
+      if (suitcase && suitcase.status === 'in_use') {
+        // Verificar se é o primeiro item (para evitar atualizações desnecessárias)
+        const { count } = await SuitcaseItemModel.countSuitcaseItems(suitcaseId);
+        if (count === 1) {
+          await SuitcaseModel.updateSuitcase(suitcaseId, { });
+        }
       }
       
       return suitcaseItem;

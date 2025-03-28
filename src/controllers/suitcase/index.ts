@@ -10,7 +10,7 @@ import { DeleteSuitcaseController } from "./deleteSuitcaseController";
 import { SellerController } from "./sellerController";
 import { InventorySearchController } from "./inventorySearchController";
 import { PdfController } from "./pdfController";
-import { SuitcaseSupplyController } from "./supplyController";
+import { SuitcaseSupplyController } from "./supply/suitcaseSupplyController";
 
 // Criar e exportar o controlador combinado
 export const CombinedSuitcaseController = {
@@ -53,15 +53,17 @@ export const CombinedSuitcaseController = {
   searchInventoryItems: InventorySearchController.searchInventoryItems,
   getItemSuitcaseInfo: InventorySearchController.getItemSuitcaseInfo,
   
-  // Atualizar o método generateSuitcasePDF para utilizar a mesma abordagem do abastecimento
+  // PdfController
   generateSuitcasePDF: PdfController.generateSuitcasePDF,
 
   // SuitcaseSupplyController
   searchInventoryForSuitcase: SuitcaseSupplyController.searchInventoryItems,
-  supplySuitcase: SuitcaseSupplyController.supplySuitcase,
-  generateSupplyPDF: SuitcaseSupplyController.generateSupplyPDF,
-  countSuitcaseItems: SuitcaseSupplyController.countSuitcaseItems,
-  getSuitcasesItemCounts: SuitcaseSupplyController.getSuitcasesItemCounts
+  
+  // Métodos ausentes - Usando funções existentes para manter a compatibilidade
+  supplySuitcase: SuitcaseItemController.addItemToSuitcase,
+  generateSupplyPDF: PdfController.generateSuitcasePDF,
+  countSuitcaseItems: SuitcaseItemController.countSuitcaseItems,
+  getSuitcasesItemCounts: SuitcaseItemController.getSuitcasesItemCounts
 };
 
 export default CombinedSuitcaseController;

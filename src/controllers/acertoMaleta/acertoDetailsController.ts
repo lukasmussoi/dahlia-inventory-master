@@ -47,7 +47,7 @@ export class AcertoDetailsController {
       }
       
       // Agrupar itens vendidos pelo inventory_id para cálculos corretos
-      const itemsAgrupados = {};
+      const itemsAgrupados: Record<string, any> = {};
       (itemsVendidos || []).forEach(item => {
         if (!itemsAgrupados[item.inventory_id]) {
           itemsAgrupados[item.inventory_id] = {
@@ -93,7 +93,7 @@ export class AcertoDetailsController {
       
       // Calcular totais adicionais
       const itensTotais = Object.values(itemsAgrupados);
-      const totalCost = itensTotais.reduce((sum, item: any) => sum + item.custo_total, 0);
+      const totalCost = itensTotais.reduce((sum, item: any) => sum + Number(item.custo_total), 0);
       const netProfit = (data.total_sales || 0) - (data.commission_amount || 0) - totalCost;
       
       console.log("Calculando valores:", {
@@ -164,14 +164,14 @@ export class AcertoDetailsController {
       }
       
       // Agrupar por inventory_id para contar quantas vezes cada produto foi vendido
-      const itemsAgrupados = {};
+      const itemsAgrupados: Record<string, any> = {};
       itensVendidos.forEach(item => {
         if (!itemsAgrupados[item.inventory_id]) {
           itemsAgrupados[item.inventory_id] = {
             id: item.inventory_id,
             name: item.product?.name || 'Produto sem nome',
             sku: item.product?.sku || '',
-            price: item.product?.price || 0,
+            price: item.price || 0,
             photo_url: this.getPhotoUrl(item.product),
             count: 1,
             total_value: item.price || 0
