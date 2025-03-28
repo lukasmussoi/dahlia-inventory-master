@@ -1,4 +1,3 @@
-
 /**
  * Controlador de Acertos de Maleta
  * @file Este arquivo controla as operações relacionadas aos acertos de maleta,
@@ -49,10 +48,30 @@ export const SettlementController = {
           return acerto;
         }
         
-        // Calcular o custo total dos itens
-        const totalCost = (itensVendidos || []).reduce((sum, item) => sum + (item.unit_cost || 0), 0);
+        // Agrupar itens vendidos pelo inventory_id para calcular corretamente itens vendidos múltiplas vezes
+        const itemsGroupedByInventoryId = {};
+        (itensVendidos || []).forEach(item => {
+          if (!itemsGroupedByInventoryId[item.inventory_id]) {
+            itemsGroupedByInventoryId[item.inventory_id] = {
+              ...item,
+              quantidade_vendida: 1,
+              preco_total: item.price || 0,
+              custo_total: item.unit_cost || 0
+            };
+          } else {
+            itemsGroupedByInventoryId[item.inventory_id].quantidade_vendida += 1;
+            itemsGroupedByInventoryId[item.inventory_id].preco_total += (item.price || 0);
+            itemsGroupedByInventoryId[item.inventory_id].custo_total += (item.unit_cost || 0);
+          }
+        });
         
-        // Calcular o lucro líquido
+        const itensProcessados = Object.values(itemsGroupedByInventoryId);
+        
+        // Calcular o custo total dos itens considerando múltiplas unidades do mesmo item
+        const totalCost = itensProcessados.reduce((sum, item: any) => 
+          sum + item.custo_total, 0);
+        
+        // Calcular o lucro líquido corretamente
         const netProfit = (acerto.total_sales || 0) - (acerto.commission_amount || 0) - totalCost;
         
         // Retornar acerto com informações adicionais
@@ -161,15 +180,36 @@ export const SettlementController = {
         // Buscar detalhes dos itens vendidos
         const { data: vendaRegistros, error: vendaError } = await supabase
           .from('acerto_itens_vendidos')
-          .select('price, unit_cost')
+          .select('price, unit_cost, inventory_id')
           .eq('acerto_id', acertoId);
           
         if (vendaError) {
           console.error("Erro ao buscar registros de venda:", vendaError);
           toast.error("Erro ao buscar detalhes dos itens vendidos, usando valores calculados alternativos");
         } else if (vendaRegistros && vendaRegistros.length > 0) {
-          totalSales = vendaRegistros.reduce((sum, item) => sum + (item.price || 0), 0);
-          totalCosts = vendaRegistros.reduce((sum, item) => sum + (item.unit_cost || 0), 0);
+          // Agrupar por inventory_id para calcular corretamente itens vendidos múltiplas vezes
+          const itensAgrupados = {};
+          vendaRegistros.forEach(item => {
+            if (!itensAgrupados[item.inventory_id]) {
+              itensAgrupados[item.inventory_id] = {
+                preco_total: item.price || 0,
+                custo_total: item.unit_cost || 0,
+                quantidade: 1
+              };
+            } else {
+              itensAgrupados[item.inventory_id].preco_total += (item.price || 0);
+              itensAgrupados[item.inventory_id].custo_total += (item.unit_cost || 0);
+              itensAgrupados[item.inventory_id].quantidade += 1;
+            }
+          });
+          
+          // Calcular totais corretamente considerando múltiplas unidades do mesmo item
+          const itensProcessados = Object.values(itensAgrupados);
+          totalSales = itensProcessados.reduce((sum, item: any) => sum + item.preco_total, 0);
+          totalCosts = itensProcessados.reduce((sum, item: any) => sum + item.custo_total, 0);
+          
+          console.log("Cálculo correto considerando múltiplas unidades:", 
+            { totalSales, totalCosts, itensAgrupados });
         }
       }
       
