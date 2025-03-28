@@ -1,4 +1,3 @@
-
 /**
  * Componente de Card de Maleta
  * @file Exibe os dados de uma maleta em formato de card com ações
@@ -24,7 +23,7 @@ import {
   User, 
   ArrowRightLeft,
   MoreVertical,
-  BoxOpen
+  PackageOpen
 } from "lucide-react";
 import { 
   DropdownMenu,
@@ -185,7 +184,7 @@ export function SuitcaseCard({
               {/* Botão "Abrir Maleta" - Apenas para administradores */}
               {isAdmin && (
                 <DropdownMenuItem onClick={handleOpenSuitcase}>
-                  <BoxOpen className="h-4 w-4 mr-2" />
+                  <PackageOpen className="h-4 w-4 mr-2" />
                   Abrir Maleta
                 </DropdownMenuItem>
               )}
