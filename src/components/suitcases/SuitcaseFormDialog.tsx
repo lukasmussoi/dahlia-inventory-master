@@ -1,9 +1,24 @@
-
-import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import { useEffect, useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -11,222 +26,305 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { SuitcaseModel, SellerModel } from "@/models/suitcase";
 import { toast } from "sonner";
-import { Suitcase } from "@/types/suitcase";
-import { CombinedSuitcaseController } from "@/controllers/suitcase";
-import { Loader2 } from "lucide-react";
+import { format } from 'date-fns';
+import { DatePicker } from "@/components/ui/date-picker"
+import { ptBR } from 'date-fns/locale';
+import { CalendarIcon } from "@radix-ui/react-icons";
+import { cn } from "@/lib/utils";
+
+// Definição do schema Zod para validação do formulário
+const formSchema = z.object({
+  code: z.string().min(2, {
+    message: "O código da maleta deve ter pelo menos 2 caracteres.",
+  }),
+  promoter_id: z.string().min(1, {
+    message: "Selecione uma promotora.",
+  }),
+  reseller_id: z.string().min(1, {
+    message: "Selecione uma revendedora.",
+  }),
+  status: z.string().min(1, {
+    message: "Selecione um status.",
+  }),
+  notes: z.string().optional(),
+  created_at: z.date(),
+  next_settlement_date: z.date()
+});
 
 interface SuitcaseFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (data: any) => void;
-  suitcase?: Suitcase | null;
-  mode: 'create' | 'edit';
+  onSubmit: (values: z.infer<typeof formSchema>, suitcaseId?: string) => Promise<void>;
+  promoterOptions: { value: string; label: string }[];
+  suitcaseData?: SuitcaseModel | null;
+  isUpdate?: boolean;
 }
 
 export function SuitcaseFormDialog({
   open,
   onOpenChange,
   onSubmit,
-  suitcase,
-  mode
+  promoterOptions,
+  suitcaseData,
+  isUpdate = false
 }: SuitcaseFormDialogProps) {
-  const [code, setCode] = useState<string>("");
-  const [sellerId, setSellerId] = useState<string>("");
-  const [city, setCity] = useState<string>("");
-  const [neighborhood, setNeighborhood] = useState<string>("");
-  const [status, setStatus] = useState<string>("in_use");
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [sellers, setSellers] = useState<any[]>([]);
-
-  // Carregar dados iniciais (quando estiver em modo de edição)
-  useEffect(() => {
-    if (suitcase && mode === 'edit') {
-      setCode(suitcase.code || "");
-      setSellerId(suitcase.seller_id || "");
-      setCity(suitcase.city || "");
-      setNeighborhood(suitcase.neighborhood || "");
-      setStatus(suitcase.status || "in_use");
-    } else if (mode === 'create') {
-      // Limpar formulário e gerar novo código
-      setCode("");
-      setSellerId("");
-      setCity("");
-      setNeighborhood("");
-      setStatus("in_use");
-      generateNewCode();
-    }
-  }, [suitcase, mode, open]);
-
-  // Carregar revendedores
-  useEffect(() => {
-    if (open) {
-      loadResellers();
-    }
-  }, [open]);
-
-  // Efeito para carregar dados da revendedora selecionada
-  useEffect(() => {
-    if (sellerId) {
-      loadSellerAddress(sellerId);
-    }
-  }, [sellerId]);
-
-  // Gerar novo código de maleta
-  const generateNewCode = async () => {
+  // Estados locais para gerenciar as opções de revendedoras e o estado de carregamento
+  const [resellerOptions, setResellerOptions] = useState<{ value: string; label: string }[]>([]);
+  const [loadingResellers, setLoadingResellers] = useState(false);
+  
+  // Inicializar o formulário com react-hook-form
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      code: suitcaseData?.code || "",
+      promoter_id: suitcaseData?.promoter_id || "",
+      reseller_id: suitcaseData?.reseller_id || "",
+      status: suitcaseData?.status || "in_preparation",
+      notes: suitcaseData?.notes || "",
+      created_at: suitcaseData?.created_at ? new Date(suitcaseData.created_at) : new Date(),
+      next_settlement_date: suitcaseData?.next_settlement_date ? new Date(suitcaseData.next_settlement_date) : new Date()
+    },
+    mode: "onChange"
+  });
+  
+  // Função para buscar as revendedoras associadas a uma promotora
+  const fetchResellersByPromoter = async (promoterId: string) => {
     try {
-      const newCode = await CombinedSuitcaseController.generateSuitcaseCode();
-      setCode(newCode);
+      const resellers = await SellerModel.getResellersByPromoterId(promoterId);
+      return resellers.map(reseller => ({
+        value: reseller.id,
+        label: reseller.name,
+      }));
     } catch (error) {
-      console.error("Erro ao gerar código da maleta:", error);
-      setCode("ML000");
+      console.error("Erro ao buscar revendedoras:", error);
+      toast.error("Erro ao buscar revendedoras");
+      return [];
     }
   };
 
-  // Carregar revendedores
-  const loadResellers = async () => {
-    setIsLoading(true);
-    try {
-      const data = await CombinedSuitcaseController.getAllSellers();
-      setSellers(data);
-    } catch (error) {
-      console.error("Erro ao carregar revendedoras:", error);
-      toast.error("Erro ao carregar revendedoras");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Carregar endereço da revendedora selecionada
-  const loadSellerAddress = async (sellerId: string) => {
-    try {
-      const seller = await CombinedSuitcaseController.getSellerById(sellerId);
-      
-      if (seller) {
-        // Processar o endereço (pode vir como string JSON ou objeto)
-        let address = seller.address;
-        
-        if (typeof address === 'string') {
-          try {
-            address = JSON.parse(address);
-          } catch (e) {
-            console.error("Erro ao processar endereço JSON:", e);
-            address = {};
-          }
-        }
-        
-        // Definir cidade e bairro com base no endereço da revendedora
-        setCity(address?.city || "");
-        setNeighborhood(address?.neighborhood || "");
-      }
-    } catch (error) {
-      console.error("Erro ao carregar dados da revendedora:", error);
-    }
-  };
-
-  // Lidar com o envio do formulário
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  // Atualizar a lista de revendedoras quando a promotora mudar
+  useEffect(() => {
+    const promoterId = form.getValues("promoter_id");
     
-    if (!sellerId) {
-      toast.error("Selecione uma revendedora");
-      return;
+    if (promoterId) {
+      setLoadingResellers(true);
+      fetchResellersByPromoter(promoterId)
+        .then(resellers => {
+          setResellerOptions(resellers);
+          setLoadingResellers(false);
+        })
+        .catch(error => {
+          console.error("Erro ao buscar revendedoras:", error);
+          setLoadingResellers(false);
+        });
+    } else {
+      setResellerOptions([]);
     }
+  }, [form.watch("promoter_id")]);
 
-    if (!city || !neighborhood) {
-      toast.error("A revendedora selecionada não possui cidade e bairro cadastrados");
-      return;
-    }
-
-    const formData = {
-      code,
-      seller_id: sellerId,
-      city,
-      neighborhood,
-      status: status || "in_use"
-    };
-
-    onSubmit(formData);
+  // Manipulador de envio do formulário
+  const onSubmitHandler = async (values: z.infer<typeof formSchema>) => {
+    await onSubmit(values, suitcaseData?.id);
+    onOpenChange(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>
-            {mode === 'create' ? "Nova Maleta" : "Editar Maleta"}
-          </DialogTitle>
+          <DialogTitle>{isUpdate ? "Editar Maleta" : "Nova Maleta"}</DialogTitle>
+          <DialogDescription>
+            Preencha os dados da maleta.
+          </DialogDescription>
         </DialogHeader>
-
-        <form onSubmit={handleSubmit} className="space-y-4 py-4">
-          <div className="grid grid-cols-1 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="code">Código</Label>
-              <Input
-                id="code"
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                placeholder="ML001"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="seller">Revendedora</Label>
-              <Select value={sellerId} onValueChange={setSellerId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione uma revendedora" />
-                </SelectTrigger>
-                <SelectContent>
-                  {isLoading ? (
-                    <div className="flex items-center justify-center p-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    </div>
-                  ) : (
-                    sellers.map((seller) => (
-                      <SelectItem key={seller.id} value={seller.id}>
-                        {seller.name}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-              
-              {/* Exibir cidade e bairro (somente leitura) */}
-              {sellerId && city && neighborhood && (
-                <div className="mt-2 text-sm text-pink-500">
-                  <p className="flex items-center">
-                    <span className="font-medium">Localização:</span>
-                    <span className="ml-1">{city} • {neighborhood}</span>
-                  </p>
-                </div>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmitHandler)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="code"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Código da Maleta</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Código" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
               )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
-              <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione um status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="in_use">Em Uso</SelectItem>
-                  <SelectItem value="returned">Devolvida</SelectItem>
-                  <SelectItem value="in_replenishment">Aguardando Reposição</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="flex justify-end space-x-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit" className="bg-pink-500 hover:bg-pink-600">
-              {mode === 'create' ? "Criar Maleta" : "Salvar Alterações"}
-            </Button>
-          </div>
-        </form>
+            />
+            <FormField
+              control={form.control}
+              name="created_at"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Data de Criação</FormLabel>
+                  <DatePicker
+                    locale={ptBR}
+                    className={cn(
+                      "w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+                      !field.value && "text-muted-foreground"
+                    )}
+                    onSelect={(date) => {
+                      field.onChange(date)
+                    }}
+                    defaultMonth={field.value}
+                    mode="single"
+                  >
+                    <FormControl>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "w-[240px] justify-start text-left font-normal",
+                          !field.value && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {field.value ? (
+                          format(field.value, "dd/MM/yyyy", { locale: ptBR })
+                        ) : (
+                          <span>Escolher Data</span>
+                        )}
+                      </Button>
+                    </FormControl>
+                  </DatePicker>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="next_settlement_date"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Data Próximo Acerto</FormLabel>
+                  <DatePicker
+                    locale={ptBR}
+                    className={cn(
+                      "w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+                      !field.value && "text-muted-foreground"
+                    )}
+                    onSelect={(date) => {
+                      field.onChange(date)
+                    }}
+                    defaultMonth={field.value}
+                    mode="single"
+                  >
+                    <FormControl>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "w-[240px] justify-start text-left font-normal",
+                          !field.value && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {field.value ? (
+                          format(field.value, "dd/MM/yyyy", { locale: ptBR })
+                        ) : (
+                          <span>Escolher Data</span>
+                        )}
+                      </Button>
+                    </FormControl>
+                  </DatePicker>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="promoter_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Promotora</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione uma promotora" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {promoterOptions.map((promoter) => (
+                        <SelectItem key={promoter.value} value={promoter.value}>
+                          {promoter.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="reseller_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Revendedora</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                    disabled={loadingResellers}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione uma revendedora" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {resellerOptions.map((reseller) => (
+                        <SelectItem key={reseller.value} value={reseller.value}>
+                          {reseller.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="status"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Status</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione um status" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="in_preparation">Em Preparação</SelectItem>
+                      <SelectItem value="in_transit">Em Trânsito</SelectItem>
+                      <SelectItem value="in_use">Em Uso</SelectItem>
+                      <SelectItem value="in_replenishment">Em Reposição</SelectItem>
+                      <SelectItem value="settled">Acertada</SelectItem>
+                      <SelectItem value="inactive">Inativa</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Observações</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Observações" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button type="submit">Salvar</Button>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );
