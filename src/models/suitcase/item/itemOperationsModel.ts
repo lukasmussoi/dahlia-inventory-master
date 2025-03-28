@@ -50,6 +50,7 @@ export class ItemOperationsModel {
       const quantity_available = Math.max(0, quantity - quantity_reserved);
       
       console.log(`[ItemOperations] Quantidades do item ${itemSku}: total=${quantity}, reservada=${quantity_reserved}, disponível=${quantity_available}`);
+      console.log(`[LOG] Buscando estoque disponível para ${itemName} (${itemSku}): Total=${quantity}, Reservado=${quantity_reserved}, Disponível=${quantity_available}`);
       
       if (quantity_available <= 0) {
         console.log(`[ItemOperations] Item ${itemSku} sem estoque disponível para reserva`);
@@ -74,7 +75,10 @@ export class ItemOperationsModel {
       console.error("[ItemOperations] Erro ao verificar disponibilidade:", error);
       return { 
         available: false, 
-        message: error instanceof Error ? error.message : "Erro ao verificar disponibilidade do item" 
+        message: error instanceof Error ? error.message : "Erro ao verificar disponibilidade do item", 
+        quantity: 0,
+        quantity_reserved: 0,
+        quantity_available: 0
       };
     }
   }
@@ -213,6 +217,7 @@ export class ItemOperationsModel {
       
       console.log(`[ItemOperations] Quantidade reservada atualizada para ${newReservedQuantity}. Resultado:`, updatedInventory);
       console.log(`[ItemOperations] Novo estoque do item: total=${updatedInventory[0].quantity}, reservado=${updatedInventory[0].quantity_reserved}, disponível=${updatedInventory[0].quantity - updatedInventory[0].quantity_reserved}`);
+      console.log(`[LOG] quantity_reserved atualizado para ${newReservedQuantity}`);
       
       // 4. Adicionar ou atualizar o item na maleta
       if (existingItemCheck.inSuitcase) {
@@ -276,6 +281,7 @@ export class ItemOperationsModel {
         }
         
         console.log(`[ItemOperations] Item atualizado na maleta, nova quantidade: ${newQuantity}`);
+        console.log(`[LOG] Item adicionado com sucesso à maleta (quantidade atualizada para ${newQuantity})`);
         suitcaseItem = updatedItem;
       } else {
         console.log(`[ItemOperations] Item não existe na maleta, criando novo`);
@@ -340,6 +346,7 @@ export class ItemOperationsModel {
         }
         
         console.log(`[ItemOperations] Novo item adicionado à maleta com quantidade ${quantity}`);
+        console.log(`[LOG] Item adicionado com sucesso à maleta (quantidade: ${quantity})`);
         suitcaseItem = newItem;
       }
       

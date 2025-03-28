@@ -29,11 +29,12 @@ export class SupplyItemController {
   /**
    * Verifica disponibilidade de um item para abastecer maleta
    * @param inventoryId ID do item no inventário
+   * @param requestedQuantity Quantidade solicitada para adição
    * @returns Informações de disponibilidade
    */
-  static async checkItemAvailability(inventoryId: string) {
+  static async checkItemAvailability(inventoryId: string, requestedQuantity: number = 1) {
     try {
-      console.log(`[SupplyItemController] Verificando disponibilidade do item: ${inventoryId}`);
+      console.log(`[SupplyItemController] Verificando disponibilidade do item: ${inventoryId} para quantidade: ${requestedQuantity}`);
       
       // Buscar dados atualizados do item
       const { data: item, error } = await supabase
@@ -75,11 +76,21 @@ export class SupplyItemController {
       console.log(`[SupplyItemController] Disponibilidade do item ${itemName} (${itemSku}): total=${quantity_total}, reservado=${quantity_reserved}, disponível=${quantity_available}`);
       console.log(`[LOG] Buscando estoque disponível para ${itemName} (${itemSku}): Total=${quantity_total}, Reservado=${quantity_reserved}, Disponível=${quantity_available}`);
       
+      // Verificar se a quantidade solicitada está disponível
+      const hasEnoughStock = quantity_available >= requestedQuantity;
+      
+      if (!hasEnoughStock) {
+        console.log(`[SupplyItemController] Item ${itemSku} não tem estoque suficiente. Solicitado: ${requestedQuantity}, Disponível: ${quantity_available}`);
+        console.log(`[ERRO] Não foi possível reservar item ${itemSku} - Disponível: ${quantity_available} - Solicitado: ${requestedQuantity}`);
+      } else {
+        console.log(`[LOG] Adicionando ${requestedQuantity} unidades do item ${itemSku} à maleta`);
+      }
+      
       return {
-        available: quantity_available > 0,
-        message: quantity_available > 0 
+        available: hasEnoughStock,
+        message: hasEnoughStock 
           ? `Item ${itemName} (${itemSku}) disponível para abastecimento (${quantity_available} unidades)` 
-          : `Item ${itemName} (${itemSku}) sem estoque disponível (total: ${quantity_total}, reservado: ${quantity_reserved})`,
+          : `Quantidade solicitada (${requestedQuantity}) excede o disponível (${quantity_available}) para o item ${itemName} (${itemSku})`,
         quantity: quantity_total,
         quantity_reserved,
         quantity_available

@@ -1,4 +1,3 @@
-
 /**
  * Controlador de Abastecimento de Maletas
  * @file Este arquivo coordena as operações de abastecimento de maletas
@@ -76,7 +75,8 @@ export class SuitcaseSupplyController {
         console.log(`[SuitcaseSupplyController] Processando item ${item.inventory_id} (${productName} - ${productSku}) com quantidade ${item.quantity}`);
         
         // Verificar se o item está disponível usando o Controller específico
-        const availability = await SupplyItemController.checkItemAvailability(item.inventory_id);
+        const quantity = item.quantity || 1;
+        const availability = await SupplyItemController.checkItemAvailability(item.inventory_id, quantity);
         
         console.log(`[SuitcaseSupplyController] Verificação de disponibilidade para ${productName} (${productSku}):`, availability);
         
@@ -85,21 +85,14 @@ export class SuitcaseSupplyController {
           throw new Error(`Item ${productName} (${productSku}) não disponível para abastecimento: ${availability.message}`);
         }
         
-        // Verificar se a quantidade solicitada está disponível
-        const quantity = item.quantity || 1;
-        if (availability.quantity_available < quantity) {
-          const errorMsg = `Quantidade solicitada (${quantity}) excede disponível (${availability.quantity_available}) para o item ${productName} (${productSku})`;
-          console.warn(`[SuitcaseSupplyController] ${errorMsg}`);
-          throw new Error(errorMsg);
-        }
-        
         try {
-          console.log(`[SuitcaseSupplyController] Chamando reserveItemToSuitcase para o item ${productSku}`);
+          console.log(`[SuitcaseSupplyController] Chamando reserveItemToSuitcase para o item ${productSku} com quantidade ${quantity}`);
           console.log(`[SuitcaseSupplyController] Parâmetros:`, {
             suitcase_id: suitcaseId,
             inventory_id: item.inventory_id,
             quantity
           });
+          console.log(`[LOG] Adicionando ${quantity} unidades do item ${productSku} à maleta ${suitcaseCode}`);
           
           // Reservar item para a maleta com a quantidade especificada
           const addedItem = await ItemOperationsModel.reserveItemToSuitcase({
@@ -122,7 +115,7 @@ export class SuitcaseSupplyController {
           console.log(`[SuitcaseSupplyController] Item ${productSku} adicionado à maleta com quantidade ${quantity}`);
           console.log(`[LOG] Item ${productName} (${productSku}) adicionado com sucesso à maleta ${suitcaseCode} (${quantity} unidades)`);
         } catch (error: any) {
-          console.error(`[SuitcaseSupplyController] Erro ao adicionar item ${productSku} à maleta:`, error);
+          console.error(`[SuitcaseSupplyController] Erro ao adicionar unidade ${quantity} do item ${item.inventory_id} à maleta:`, error);
           throw error; // Propagar erro para interromper a operação
         }
       }

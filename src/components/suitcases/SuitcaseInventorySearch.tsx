@@ -61,6 +61,11 @@ export function SuitcaseInventorySearch({ suitcaseId, onItemAdded }: SuitcaseInv
       setIsAdding(prev => ({ ...prev, [inventoryId]: true }));
       
       const itemQuantity = quantity[inventoryId] || 1;
+      const item = searchResults.find(item => item.id === inventoryId);
+      
+      if (item) {
+        console.log(`[LOG] Adicionando ${itemQuantity} unidades do item ${item.name} (${item.sku}) à maleta`);
+      }
       
       await CombinedSuitcaseController.addItemToSuitcase(suitcaseId, inventoryId, itemQuantity);
       
@@ -70,7 +75,7 @@ export function SuitcaseInventorySearch({ suitcaseId, onItemAdded }: SuitcaseInv
       // Notificar o componente pai
       if (onItemAdded) onItemAdded();
       
-      toast.success("Item adicionado à maleta com sucesso");
+      toast.success(`Item adicionado à maleta com sucesso (${itemQuantity} unidades)`);
     } catch (error: any) {
       console.error("Erro ao adicionar item à maleta:", error);
       toast.error(error.message || "Erro ao adicionar item à maleta");
@@ -85,9 +90,11 @@ export function SuitcaseInventorySearch({ suitcaseId, onItemAdded }: SuitcaseInv
     
     // Garantir que a quantidade não exceda o estoque disponível
     const item = searchResults.find(item => item.id === inventoryId);
-    if (item && newValue > item.quantity) {
-      newValue = item.quantity;
-      toast.info(`Quantidade limitada ao estoque disponível (${item.quantity})`);
+    const maxAvailable = item?.quantity_available || item?.quantity || 0;
+    
+    if (item && newValue > maxAvailable) {
+      newValue = maxAvailable;
+      toast.info(`Quantidade limitada ao estoque disponível (${maxAvailable})`);
     }
     
     setQuantity(prev => ({
@@ -140,7 +147,7 @@ export function SuitcaseInventorySearch({ suitcaseId, onItemAdded }: SuitcaseInv
                 <TableHead className="w-[80px]">SKU</TableHead>
                 <TableHead>Produto</TableHead>
                 <TableHead className="text-right">Preço</TableHead>
-                <TableHead className="text-right w-[80px]">Estoque</TableHead>
+                <TableHead className="text-right w-[80px]">Disponível</TableHead>
                 <TableHead className="w-[80px]">Qtd</TableHead>
                 <TableHead className="w-[100px]">Ações</TableHead>
               </TableRow>
@@ -148,7 +155,8 @@ export function SuitcaseInventorySearch({ suitcaseId, onItemAdded }: SuitcaseInv
             <TableBody>
               {searchResults.map((item) => {
                 const isItemAdding = isAdding[item.id] || false;
-                const hasStock = item.quantity > 0;
+                const availableStock = item.quantity_available || Math.max(0, (item.quantity || 0) - (item.quantity_reserved || 0));
+                const hasStock = availableStock > 0;
                 const itemQuantity = quantity[item.id] || 1;
                 
                 return (
@@ -160,14 +168,14 @@ export function SuitcaseInventorySearch({ suitcaseId, onItemAdded }: SuitcaseInv
                     </TableCell>
                     <TableCell className="text-right">
                       <Badge variant={hasStock ? "outline" : "destructive"} className="ml-auto">
-                        {item.quantity}
+                        {availableStock}
                       </Badge>
                     </TableCell>
                     <TableCell>
                       <Input
                         type="number"
                         min={1}
-                        max={item.quantity}
+                        max={availableStock}
                         value={itemQuantity}
                         onChange={(e) => handleQuantityChange(item.id, parseInt(e.target.value) || 1)}
                         disabled={!hasStock || isItemAdding}

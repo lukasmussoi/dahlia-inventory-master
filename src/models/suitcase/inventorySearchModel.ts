@@ -100,11 +100,8 @@ export class InventorySearchModel {
           };
         })
       );
-
-      // Filtra apenas itens com disponibilidade maior que zero
-      const availableItems = processedItems.filter(item => item.quantity_available > 0);
       
-      console.log(`[InventorySearchModel] Retornando ${availableItems.length} itens disponíveis de ${processedItems.length} encontrados`);
+      console.log(`[InventorySearchModel] Retornando ${processedItems.length} itens processados`);
       
       return processedItems;
     } catch (error) {
