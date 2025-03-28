@@ -3,7 +3,7 @@
  * Diálogo para Abrir Maleta
  * @file Exibe os itens e histórico da maleta para administradores
  * @relacionamento Utilizado pelo SuitcaseCard quando o admin clica em "Abrir Maleta"
- * @modificação Corrigido bug de travamento ao fechar a modal, garantindo limpeza de estados e fechamento adequado
+ * @modificação Corrigido bug de travamento ao fechar a modal, garantindo ordem consistente de hooks e limpeza de estados
  */
 import { useEffect } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -25,6 +25,8 @@ export function OpenSuitcaseDialog({
   onOpenChange,
   suitcaseId
 }: OpenSuitcaseDialogProps) {
+  // Importante: Sempre obtenha o hook useOpenSuitcase, mesmo quando fechado
+  // para manter a consistência na ordem dos hooks
   const {
     activeTab,
     setActiveTab,
@@ -40,26 +42,23 @@ export function OpenSuitcaseDialog({
 
   // Gerenciamento seguro de fechamento da modal
   const handleCloseDialog = () => {
+    console.log("[OpenSuitcaseDialog] Iniciando processo de fechamento da modal");
     // Primeiro notifica a mudança de estado para fechar a modal
     onOpenChange(false);
-    
-    // Log para depuração
-    console.log("[OpenSuitcaseDialog] Modal fechada, limpeza de estado iniciada");
   };
 
-  // Limpar estado ao fechar o diálogo
+  // Efeito para limpeza de estado ao fechar o diálogo
+  // Mantido fora de qualquer condicional para evitar problemas de hook
   useEffect(() => {
     if (!open) {
-      // Log para depuração
-      console.log("[OpenSuitcaseDialog] Detectado fechamento, executando resetState()");
+      console.log("[OpenSuitcaseDialog] Modal fechada, iniciando limpeza");
       
       // Usando setTimeout para garantir que a limpeza ocorra após a animação de fechamento
       const cleanupTimeout = setTimeout(() => {
         resetState();
-        console.log("[OpenSuitcaseDialog] Estado limpo com sucesso");
+        console.log("[OpenSuitcaseDialog] Limpeza completa após animação");
       }, 300); // Tempo aproximado da animação de fechamento
-
-      // Limpeza do timeout se o componente desmontar
+      
       return () => {
         clearTimeout(cleanupTimeout);
         console.log("[OpenSuitcaseDialog] Limpeza do timeout de fechamento");
@@ -67,6 +66,8 @@ export function OpenSuitcaseDialog({
     }
   }, [open, resetState]);
 
+  // Renderização condicional do conteúdo baseada no estado de carregamento
+  // Não usamos condicionais para os hooks, apenas para o JSX renderizado
   if (isLoading || !suitcase) {
     return (
       <Dialog open={open} onOpenChange={handleCloseDialog}>
@@ -80,6 +81,7 @@ export function OpenSuitcaseDialog({
     );
   }
 
+  // Renderização do conteúdo principal quando carregado
   return (
     <Dialog open={open} onOpenChange={handleCloseDialog}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">

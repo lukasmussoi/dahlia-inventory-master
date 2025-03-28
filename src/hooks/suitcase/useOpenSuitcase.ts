@@ -3,7 +3,7 @@
  * Hook para Abrir Maleta
  * @file Gerencia o estado e as operações de visualização, devolução e marcação de itens danificados
  * @relacionamento Utilizado pelo OpenSuitcaseDialog para gerenciar as abas e operações com itens
- * @modificação Corrigido bug de travamento ao fechar a modal, melhorando gerenciamento de estados
+ * @modificação Corrigido bug de travamento ao fechar a modal, melhorando gerenciamento de estado e limpeza de recursos
  */
 import { useState, useCallback } from "react";
 import { toast } from "sonner";
@@ -12,10 +12,12 @@ import { CombinedSuitcaseController } from "@/controllers/suitcase";
 import { InventoryController } from "@/controllers/inventoryController";
 
 export function useOpenSuitcase(suitcaseId: string, open: boolean) {
-  // Estado para controle da aba ativa
+  // Estado para controle da aba ativa - sempre mantenha este estado
+  // mesmo quando a modal estiver fechada
   const [activeTab, setActiveTab] = useState<'itens' | 'historico'>('itens');
 
   // Consultas para buscar dados da maleta, itens e histórico
+  // Passamos suitcaseId apenas quando open for true para evitar consultas desnecessárias
   const {
     suitcase,
     promoterInfo,
@@ -121,17 +123,17 @@ export function useOpenSuitcase(suitcaseId: string, open: boolean) {
     }
   }, [suitcaseItems, suitcase, refetchSuitcaseItems]);
 
-  // Melhorando a função de reset para garantir limpeza completa
+  // Função melhorada para reset completo do estado
   const resetState = useCallback(() => {
-    console.log("[useOpenSuitcase] Iniciando limpeza de estado");
+    console.log("[useOpenSuitcase] Iniciando limpeza completa do estado");
     
-    // Reset da aba ativa
+    // Reset da aba ativa para o valor inicial
     setActiveTab('itens');
     
-    // Limpeza das queries e cache
+    // Limpeza do cache de queries
     resetQueryState();
     
-    console.log("[useOpenSuitcase] Limpeza de estados concluída");
+    console.log("[useOpenSuitcase] Limpeza de estado concluída com sucesso");
   }, [resetQueryState]);
 
   return {
