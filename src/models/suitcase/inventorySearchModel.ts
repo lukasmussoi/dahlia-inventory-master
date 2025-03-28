@@ -44,4 +44,22 @@ export class InventorySearchModel {
       };
     });
   }
+
+  /**
+   * Busca itens disponíveis no inventário para abastecimento de maletas
+   * @param query Termo de busca (nome, sku, código de barras)
+   * @returns Lista de itens com dados de disponibilidade
+   */
+  static async searchAvailableInventory(query: string): Promise<any[]> {
+    // Reutiliza a lógica básica de busca
+    const items = await this.searchInventoryItems(query);
+    
+    // Adiciona informações de disponibilidade
+    return items.map(item => ({
+      ...item,
+      quantity_total: item.quantity || 0,
+      quantity_reserved: item.quantity_reserved || 0,
+      quantity_available: (item.quantity || 0) - (item.quantity_reserved || 0)
+    }));
+  }
 }

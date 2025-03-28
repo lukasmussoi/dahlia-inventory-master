@@ -22,11 +22,16 @@ export class SupplyItemController {
       const enrichedItems = await Promise.all(
         items.map(async (item) => {
           // Buscar dados de estoque atualizados
-          const { data: stockData } = await supabase
+          const { data: stockData, error } = await supabase
             .from('inventory')
             .select('quantity, quantity_reserved')
             .eq('id', item.id)
             .single();
+          
+          if (error) {
+            console.error("Erro ao buscar dados de estoque:", error);
+            return item;
+          }
           
           // Calcular quantidade disponível
           const quantity_total = stockData?.quantity || 0;

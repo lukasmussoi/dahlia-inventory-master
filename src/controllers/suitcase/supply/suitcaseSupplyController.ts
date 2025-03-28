@@ -8,6 +8,7 @@ import { SuitcaseItemModel } from "@/models/suitcase/item";
 import { supabase } from "@/integrations/supabase/client";
 import { SupplyItemController } from "../inventory/supplyItemController";
 import { SupplyPdfController } from "../pdf/supplyPdfController";
+import { ItemOperationsModel } from "@/models/suitcase/item/itemOperationsModel";
 
 interface SupplyItem {
   inventory_id: string;
@@ -65,7 +66,7 @@ export class SuitcaseSupplyController {
         
         try {
           // Reservar item para a maleta com a quantidade especificada
-          const addedItem = await SuitcaseItemModel.reserveItemToSuitcase({
+          const addedItem = await ItemOperationsModel.reserveItemToSuitcase({
             suitcase_id: suitcaseId,
             inventory_id: item.inventory_id,
             quantity

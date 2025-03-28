@@ -29,6 +29,7 @@ export class SuitcaseItemModel {
   static removeSuitcaseItem = ItemOperationsModel.removeSuitcaseItem;
   static updateSuitcaseItemQuantity = ItemOperationsModel.updateSuitcaseItemQuantity;
   static returnItemToInventory = ItemOperationsModel.returnItemToInventory;
+  static reserveItemToSuitcase = ItemOperationsModel.reserveItemToSuitcase;
   
   // ItemSalesModel
   static updateSaleInfo = ItemSalesModel.updateSaleInfo;

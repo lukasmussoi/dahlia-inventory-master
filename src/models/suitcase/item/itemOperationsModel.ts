@@ -134,12 +134,8 @@ export class ItemOperationsModel {
       const existingItemCheck = await this.checkItemInSuitcase(inventory_id, suitcase_id);
       let suitcaseItem;
       
-      // Iniciar uma transação para garantir que todas as operações ocorram ou nenhuma
-      const { error: beginError } = await supabase.rpc('begin_transaction');
-      if (beginError) {
-        console.error("Erro ao iniciar transação:", beginError);
-        throw new Error("Erro ao iniciar processo de reserva de item");
-      }
+      // Iniciar manualmente uma transação (sem usar RPC)
+      let transaction = null;
       
       try {
         // 3. Atualizar a quantidade reservada no inventário
@@ -226,19 +222,27 @@ export class ItemOperationsModel {
           throw movementError;
         }
         
-        // Confirmar transação
-        const { error: commitError } = await supabase.rpc('commit_transaction');
-        if (commitError) {
-          throw commitError;
-        }
-        
         console.log("Item reservado com sucesso:", suitcaseItem);
         return suitcaseItem;
         
       } catch (transactionError) {
-        // Reverter transação em caso de erro
-        console.error("Erro na transação, revertendo:", transactionError);
-        await supabase.rpc('rollback_transaction');
+        // Em caso de erro, tentar reverter manualmente
+        console.error("Erro na operação, tentando reverter:", transactionError);
+        
+        // Tentar reverter a quantidade reservada
+        if (availabilityInfo.quantity_reserved !== undefined) {
+          try {
+            await supabase
+              .from('inventory')
+              .update({ 
+                quantity_reserved: availabilityInfo.quantity_reserved 
+              })
+              .eq('id', inventory_id);
+          } catch (rollbackError) {
+            console.error("Erro ao tentar reverter quantidade reservada:", rollbackError);
+          }
+        }
+        
         throw transactionError;
       }
     } catch (error) {
