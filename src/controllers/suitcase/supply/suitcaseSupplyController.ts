@@ -1,3 +1,4 @@
+
 /**
  * Controlador de Abastecimento de Maletas
  * @file Este arquivo coordena as operações de abastecimento de maletas
@@ -72,10 +73,12 @@ export class SuitcaseSupplyController {
         
         const productName = item.product?.name || 'sem nome';
         const productSku = item.product?.sku || 'sem SKU';
-        console.log(`[SuitcaseSupplyController] Processando item ${item.inventory_id} (${productName} - ${productSku}) com quantidade ${item.quantity}`);
+        const quantity = item.quantity || 1;
+        
+        console.log(`[SuitcaseSupplyController] Processando item ${item.inventory_id} (${productName} - ${productSku}) com quantidade ${quantity}`);
+        console.log(`[LOG] Processando adição de ${quantity} unidades do item ${productName} (${productSku}) à maleta ${suitcaseCode}`);
         
         // Verificar se o item está disponível usando o Controller específico
-        const quantity = item.quantity || 1;
         const availability = await SupplyItemController.checkItemAvailability(item.inventory_id, quantity);
         
         console.log(`[SuitcaseSupplyController] Verificação de disponibilidade para ${productName} (${productSku}):`, availability);
@@ -115,7 +118,7 @@ export class SuitcaseSupplyController {
           console.log(`[SuitcaseSupplyController] Item ${productSku} adicionado à maleta com quantidade ${quantity}`);
           console.log(`[LOG] Item ${productName} (${productSku}) adicionado com sucesso à maleta ${suitcaseCode} (${quantity} unidades)`);
         } catch (error: any) {
-          console.error(`[SuitcaseSupplyController] Erro ao adicionar unidade ${quantity} do item ${item.inventory_id} à maleta:`, error);
+          console.error(`[SuitcaseSupplyController] Erro ao adicionar ${quantity} unidades do item ${item.inventory_id} à maleta:`, error);
           throw error; // Propagar erro para interromper a operação
         }
       }

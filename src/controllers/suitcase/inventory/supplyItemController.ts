@@ -83,7 +83,7 @@ export class SupplyItemController {
         console.log(`[SupplyItemController] Item ${itemSku} não tem estoque suficiente. Solicitado: ${requestedQuantity}, Disponível: ${quantity_available}`);
         console.log(`[ERRO] Não foi possível reservar item ${itemSku} - Disponível: ${quantity_available} - Solicitado: ${requestedQuantity}`);
       } else {
-        console.log(`[LOG] Adicionando ${requestedQuantity} unidades do item ${itemSku} à maleta`);
+        console.log(`[LOG] Verificando disponibilidade de ${requestedQuantity} unidades do item ${itemSku} - OK (disponível: ${quantity_available})`);
       }
       
       return {
