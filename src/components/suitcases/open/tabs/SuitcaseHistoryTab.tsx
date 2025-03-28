@@ -1,3 +1,4 @@
+
 /**
  * Aba de Histórico da Maleta
  * @file Exibe os acertos passados e estatísticas de vendas da maleta

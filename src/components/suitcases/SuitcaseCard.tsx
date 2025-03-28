@@ -2,7 +2,7 @@
 /**
  * Componente de Card de Maleta
  * @file Exibe os dados de uma maleta em formato de card com ações
- * @relacionamento Utilizado na listagem de maletas e interage com dialogs de detalhes e abastecimento
+ * @relacionamento Utilizado na listagem de maletas e interage com dialogs de acerto e abastecimento
  */
 import { useState } from "react";
 import { format, isPast, parseISO } from "date-fns";
@@ -24,7 +24,7 @@ import {
   User, 
   ArrowRightLeft,
   MoreVertical,
-  Box
+  BoxOpen
 } from "lucide-react";
 import { 
   DropdownMenu,
@@ -33,7 +33,6 @@ import {
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { Suitcase } from "@/types/suitcase";
-import { SuitcaseDetailsDialog } from "./SuitcaseDetailsDialog";
 import { SuitcaseSupplyDialog } from "./supply/SuitcaseSupplyDialog";
 import { SuitcaseSettlementDialog } from "./settlement/SuitcaseSettlementDialog";
 import { OpenSuitcaseDialog } from "./open/OpenSuitcaseDialog";
@@ -54,15 +53,14 @@ export function SuitcaseCard({
   onOpenAcertoDialog,
   onOpenSupplyDialog
 }: SuitcaseCardProps) {
-  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [showSupplyDialog, setShowSupplyDialog] = useState(false);
   const [showSettlementDialog, setShowSettlementDialog] = useState(false);
-  const [showOpenDialog, setShowOpenDialog] = useState(false); // Novo estado para o dialog "Abrir Maleta"
+  const [showOpenDialog, setShowOpenDialog] = useState(false);
 
   const hasLateSettlement = suitcase.next_settlement_date && 
     isPast(parseISO(suitcase.next_settlement_date));
 
-  // Atualizado para não usar a variante 'warning', que estava causando problemas
+  // Determina a variante do badge com base no status da maleta
   const getBadgeVariant = () => {
     switch (suitcase.status) {
       case 'in_use':
@@ -74,7 +72,7 @@ export function SuitcaseCard({
       case 'lost':
         return 'destructive';
       case 'in_audit':
-        return 'outline'; // Alterado de 'warning' para 'outline'
+        return 'outline'; 
       default:
         return 'outline';
     }
@@ -184,14 +182,10 @@ export function SuitcaseCard({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setShowDetailsDialog(true)}>
-                Ver detalhes
-              </DropdownMenuItem>
-              
               {/* Botão "Abrir Maleta" - Apenas para administradores */}
               {isAdmin && (
                 <DropdownMenuItem onClick={handleOpenSuitcase}>
-                  <Box className="h-4 w-4 mr-2" />
+                  <BoxOpen className="h-4 w-4 mr-2" />
                   Abrir Maleta
                 </DropdownMenuItem>
               )}
@@ -199,15 +193,6 @@ export function SuitcaseCard({
           </DropdownMenu>
         </CardFooter>
       </Card>
-
-      {/* Diálogo de detalhes */}
-      <SuitcaseDetailsDialog
-        open={showDetailsDialog}
-        onOpenChange={setShowDetailsDialog}
-        suitcaseId={suitcase.id}
-        onRefresh={onRefresh}
-        isAdmin={isAdmin}
-      />
 
       {/* Diálogo de abastecimento */}
       <SuitcaseSupplyDialog
@@ -225,7 +210,7 @@ export function SuitcaseCard({
         onRefresh={onRefresh}
       />
 
-      {/* Novo: Diálogo "Abrir Maleta" */}
+      {/* Diálogo "Abrir Maleta" */}
       <OpenSuitcaseDialog
         open={showOpenDialog}
         onOpenChange={setShowOpenDialog}

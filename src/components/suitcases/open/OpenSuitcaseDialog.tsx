@@ -46,7 +46,7 @@ export function OpenSuitcaseDialog({
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-          <DialogTitle>Carrengado detalhes da maleta...</DialogTitle>
+          <DialogTitle>Carregando detalhes da maleta...</DialogTitle>
           <div className="flex justify-center items-center p-8">
             <LoadingIndicator />
           </div>
@@ -60,7 +60,7 @@ export function OpenSuitcaseDialog({
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogTitle>Maleta {suitcase.code}</DialogTitle>
         
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab as any} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="itens">Itens da Maleta</TabsTrigger>
             <TabsTrigger value="historico">Histórico da Maleta</TabsTrigger>
