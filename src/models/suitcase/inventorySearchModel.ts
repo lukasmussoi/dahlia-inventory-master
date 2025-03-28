@@ -59,27 +59,52 @@ export class InventorySearchModel {
   static async searchAvailableInventory(query: string): Promise<any[]> {
     console.log(`[InventorySearchModel] Buscando itens disponíveis com query: ${query}`);
     
-    // Reutiliza a lógica básica de busca
-    const items = await this.searchInventoryItems(query);
-    
-    console.log(`[InventorySearchModel] Processando dados de disponibilidade para ${items.length} itens`);
-    
-    // Adiciona informações de disponibilidade
-    const processedItems = items.map(item => {
-      const quantityTotal = item.quantity || 0;
-      const quantityReserved = item.quantity_reserved || 0;
-      const quantityAvailable = quantityTotal - quantityReserved;
+    try {
+      // Reutiliza a lógica básica de busca
+      const items = await this.searchInventoryItems(query);
       
-      console.log(`[InventorySearchModel] Item ${item.name}: total=${quantityTotal}, reservado=${quantityReserved}, disponível=${quantityAvailable}`);
+      console.log(`[InventorySearchModel] Processando dados de disponibilidade para ${items.length} itens`);
       
-      return {
-        ...item,
-        quantity_total: quantityTotal,
-        quantity_reserved: quantityReserved,
-        quantity_available: quantityAvailable
-      };
-    });
-    
-    return processedItems;
+      // Para cada item, obter dados atualizados de estoque do banco
+      const processedItems = await Promise.all(
+        items.map(async (item) => {
+          // Buscar dados frescos do banco para garantir values atualizados
+          const { data: stockData, error: stockError } = await supabase
+            .from('inventory')
+            .select('quantity, quantity_reserved')
+            .eq('id', item.id)
+            .single();
+            
+          if (stockError) {
+            console.error(`[InventorySearchModel] Erro ao buscar estoque para ${item.id}:`, stockError);
+            // Usar valores do item como fallback
+            return {
+              ...item,
+              quantity_total: item.quantity || 0,
+              quantity_reserved: item.quantity_reserved || 0,
+              quantity_available: Math.max(0, (item.quantity || 0) - (item.quantity_reserved || 0))
+            };
+          }
+          
+          const quantityTotal = stockData?.quantity || 0;
+          const quantityReserved = stockData?.quantity_reserved || 0;
+          const quantityAvailable = Math.max(0, quantityTotal - quantityReserved);
+          
+          console.log(`[InventorySearchModel] Item ${item.name} (${item.id}): total=${quantityTotal}, reservado=${quantityReserved}, disponível=${quantityAvailable}`);
+          
+          return {
+            ...item,
+            quantity_total: quantityTotal,
+            quantity_reserved: quantityReserved,
+            quantity_available: quantityAvailable
+          };
+        })
+      );
+      
+      return processedItems;
+    } catch (error) {
+      console.error("[InventorySearchModel] Erro ao processar disponibilidade:", error);
+      throw error;
+    }
   }
 }

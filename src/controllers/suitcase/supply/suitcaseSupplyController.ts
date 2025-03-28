@@ -41,6 +41,7 @@ export class SuitcaseSupplyController {
   static async supplySuitcase(suitcaseId: string, items: SupplyItem[]) {
     try {
       console.log(`[SuitcaseSupplyController] Iniciando abastecimento da maleta ${suitcaseId} com ${items.length} itens`);
+      console.log(`[SuitcaseSupplyController] Detalhes dos itens:`, JSON.stringify(items, null, 2));
       
       if (!suitcaseId) throw new Error("ID da maleta é necessário");
       if (!items || items.length === 0) throw new Error("Nenhum item selecionado para abastecimento");
@@ -65,7 +66,10 @@ export class SuitcaseSupplyController {
 
       // Adicionar cada item à maleta
       for (const item of items) {
-        if (!item.inventory_id) continue;
+        if (!item.inventory_id) {
+          console.warn(`[SuitcaseSupplyController] Item sem ID de inventário, ignorando`);
+          continue;
+        }
         
         console.log(`[SuitcaseSupplyController] Processando item ${item.inventory_id} (${item.product?.name || 'sem nome'}) com quantidade ${item.quantity}`);
         
@@ -86,6 +90,11 @@ export class SuitcaseSupplyController {
         
         try {
           console.log(`[SuitcaseSupplyController] Chamando reserveItemToSuitcase para o item ${item.inventory_id}`);
+          console.log(`[SuitcaseSupplyController] Parâmetros:`, {
+            suitcase_id: suitcaseId,
+            inventory_id: item.inventory_id,
+            quantity
+          });
           
           // Reservar item para a maleta com a quantidade especificada
           const addedItem = await ItemOperationsModel.reserveItemToSuitcase({
@@ -106,7 +115,7 @@ export class SuitcaseSupplyController {
           });
           
           console.log(`[SuitcaseSupplyController] Item ${item.inventory_id} adicionado à maleta com quantidade ${quantity}`);
-        } catch (error) {
+        } catch (error: any) {
           console.error(`[SuitcaseSupplyController] Erro ao adicionar item ${item.inventory_id} à maleta:`, error);
           throw error; // Propagar erro para interromper a operação
         }

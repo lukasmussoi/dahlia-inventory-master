@@ -252,6 +252,8 @@ export function useSupplyDialog(
     setIsSupplying(true);
     try {
       console.log("[useSupplyDialog] Iniciando processo de abastecimento");
+      console.log("[useSupplyDialog] Maleta:", suitcaseId);
+      console.log("[useSupplyDialog] Qtde de itens:", selectedItems.length);
       
       // Separar itens novos e itens existentes com quantidades modificadas
       const existingItems = selectedItems.filter(item => item.from_suitcase);
@@ -277,7 +279,7 @@ export function useSupplyDialog(
       if (itemsToSupply.length > 0) {
         try {
           console.log(`[useSupplyDialog] Enviando ${itemsToSupply.length} itens para abastecimento`);
-          console.log("[useSupplyDialog] Detalhes dos itens:", itemsToSupply);
+          console.log("[useSupplyDialog] Detalhes dos itens:", JSON.stringify(itemsToSupply, null, 2));
           
           addedItems = await CombinedSuitcaseController.supplySuitcase(
             suitcaseId,
@@ -286,12 +288,17 @@ export function useSupplyDialog(
           
           console.log("[useSupplyDialog] Itens adicionados com sucesso:", addedItems);
         } catch (error: any) {
-          console.error("[useSupplyDialog] Erro ao adicionar itens à maleta:", error);
-          const mensagemErro = error.message || "Não foi possível adicionar os itens à maleta";
+          const mensagemErro = error instanceof Error 
+            ? error.message 
+            : "Não foi possível adicionar os itens à maleta";
+          
           console.error(`[useSupplyDialog] Erro ao adicionar itens à maleta: ${mensagemErro}`);
+          console.error(`[useSupplyDialog] Detalhes do erro:`, error);
           
           // Exibir mensagem mais explicativa
-          toast.error(mensagemErro);
+          toast.error(mensagemErro, {
+            description: "Verifique se há estoque disponível e se o item não está vinculado a outra maleta."
+          });
           setIsSupplying(false);
           return;
         }
@@ -347,7 +354,7 @@ export function useSupplyDialog(
       onOpenChange(false);
     } catch (error: any) {
       console.error("[useSupplyDialog] Erro ao abastecer maleta:", error);
-      toast.error(error.message || "Erro ao abastecer maleta");
+      toast.error(error instanceof Error ? error.message : "Erro ao abastecer maleta");
     } finally {
       setIsSupplying(false);
       setIsGeneratingPdf(false);
