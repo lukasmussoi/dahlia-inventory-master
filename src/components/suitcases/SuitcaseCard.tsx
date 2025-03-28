@@ -1,4 +1,3 @@
-
 /**
  * Componente de Card de Maleta
  * @file Exibe os dados de uma maleta em formato de card com ações
