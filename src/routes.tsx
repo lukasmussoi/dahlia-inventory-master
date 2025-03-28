@@ -33,7 +33,7 @@ const withSuspense = (Component: React.ComponentType) => (
 const RoutesComponent = () => {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/" element={<Navigate to="/auth" replace />} />
       <Route path="/auth" element={withSuspense(Auth)} />
       
       <Route path="/dashboard" element={<DashboardLayout />}>
@@ -58,7 +58,7 @@ const RoutesComponent = () => {
         <Route path="resellers/edit/:id" element={withSuspense(ResellerForm)} />
       </Route>
       
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/auth" replace />} />
     </Routes>
   );
 };

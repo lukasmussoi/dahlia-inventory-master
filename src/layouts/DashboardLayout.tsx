@@ -1,4 +1,9 @@
 
+/**
+ * Layout principal do Dashboard
+ * @file Componente que define a estrutura comum das páginas do dashboard
+ * @relacionamento Utilizado pelo routes.tsx para envolver as rotas do dashboard
+ */
 import React from 'react';
 import { Outlet } from 'react-router-dom';
 import { TopNavbar } from '@/components/dashboard/TopNavbar';
