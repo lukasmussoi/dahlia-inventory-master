@@ -1,3 +1,4 @@
+
 /**
  * Controlador de Acertos de Maleta
  * @file Este arquivo controla as operações relacionadas aos acertos de maleta,
@@ -32,59 +33,8 @@ export const SettlementController = {
         
       if (error) throw error;
       
-      // Para cada acerto, buscar os itens vendidos
-      const acertosCompletos = await Promise.all((acertos || []).map(async (acerto) => {
-        // Buscar itens vendidos para este acerto
-        const { data: itensVendidos, error: itemsError } = await supabase
-          .from('acerto_itens_vendidos')
-          .select(`
-            *,
-            product:inventory(id, name, sku, price, unit_cost, photo_url:inventory_photos(photo_url))
-          `)
-          .eq('acerto_id', acerto.id);
-          
-        if (itemsError) {
-          console.error(`Erro ao buscar itens vendidos para acerto ${acerto.id}:`, itemsError);
-          return acerto;
-        }
-        
-        // Agrupar itens vendidos pelo inventory_id para calcular corretamente itens vendidos múltiplas vezes
-        const itemsGroupedByInventoryId = {};
-        (itensVendidos || []).forEach(item => {
-          if (!itemsGroupedByInventoryId[item.inventory_id]) {
-            itemsGroupedByInventoryId[item.inventory_id] = {
-              ...item,
-              quantidade_vendida: 1,
-              preco_total: item.price || 0,
-              custo_total: item.unit_cost || 0
-            };
-          } else {
-            itemsGroupedByInventoryId[item.inventory_id].quantidade_vendida += 1;
-            itemsGroupedByInventoryId[item.inventory_id].preco_total += (item.price || 0);
-            itemsGroupedByInventoryId[item.inventory_id].custo_total += (item.unit_cost || 0);
-          }
-        });
-        
-        const itensProcessados = Object.values(itemsGroupedByInventoryId);
-        
-        // Calcular o custo total dos itens considerando múltiplas unidades do mesmo item
-        const totalCost = itensProcessados.reduce((sum, item: any) => 
-          sum + item.custo_total, 0);
-        
-        // Calcular o lucro líquido corretamente
-        const netProfit = (acerto.total_sales || 0) - (acerto.commission_amount || 0) - totalCost;
-        
-        // Retornar acerto com informações adicionais
-        return {
-          ...acerto,
-          items_vendidos: itensVendidos || [],
-          total_cost: totalCost,
-          net_profit: netProfit
-        };
-      }));
-      
       console.log(`Histórico de acertos buscado para a maleta: ${suitcaseId}`);
-      return acertosCompletos;
+      return acertos as Acerto[] || [];
     } catch (error) {
       console.error("Erro ao buscar histórico de acertos:", error);
       throw error;
@@ -173,43 +123,22 @@ export const SettlementController = {
       
       // 2. Calcular valores totais com base nos itens vendidos
       let totalSales = 0;
-      let totalCosts = 0;
       
       // Buscar detalhes dos itens vendidos para calcular o valor total
       if (itemsSoldIds.length > 0) {
-        // Buscar detalhes dos itens vendidos
+        // Buscar detalhes a partir da tabela acerto_itens_vendidos
+        // em vez de buscar da tabela suitcase_items para garantir precisão
         const { data: vendaRegistros, error: vendaError } = await supabase
           .from('acerto_itens_vendidos')
-          .select('price, unit_cost, inventory_id')
+          .select('price')
           .eq('acerto_id', acertoId);
           
         if (vendaError) {
           console.error("Erro ao buscar registros de venda:", vendaError);
+          // Não lançar erro aqui, continuar o processamento
           toast.error("Erro ao buscar detalhes dos itens vendidos, usando valores calculados alternativos");
         } else if (vendaRegistros && vendaRegistros.length > 0) {
-          // Agrupar por inventory_id para calcular corretamente itens vendidos múltiplas vezes
-          const itensAgrupados = {};
-          vendaRegistros.forEach(item => {
-            if (!itensAgrupados[item.inventory_id]) {
-              itensAgrupados[item.inventory_id] = {
-                preco_total: item.price || 0,
-                custo_total: item.unit_cost || 0,
-                quantidade: 1
-              };
-            } else {
-              itensAgrupados[item.inventory_id].preco_total += (item.price || 0);
-              itensAgrupados[item.inventory_id].custo_total += (item.unit_cost || 0);
-              itensAgrupados[item.inventory_id].quantidade += 1;
-            }
-          });
-          
-          // Calcular totais corretamente considerando múltiplas unidades do mesmo item
-          const itensProcessados = Object.values(itensAgrupados);
-          totalSales = itensProcessados.reduce((sum, item: any) => sum + item.preco_total, 0);
-          totalCosts = itensProcessados.reduce((sum, item: any) => sum + item.custo_total, 0);
-          
-          console.log("Cálculo correto considerando múltiplas unidades:", 
-            { totalSales, totalCosts, itensAgrupados });
+          totalSales = vendaRegistros.reduce((sum, item) => sum + (item.price || 0), 0);
         }
       }
       
@@ -236,10 +165,7 @@ export const SettlementController = {
       const commissionRate = resellerData?.commission_rate || 0.3;
       const commissionAmount = totalSales * commissionRate;
       
-      // Calcular lucro líquido
-      const netProfit = totalSales - commissionAmount - totalCosts;
-      
-      console.log(`Valor total das vendas: ${totalSales}, Comissão (${commissionRate * 100}%): ${commissionAmount}, Custo: ${totalCosts}, Lucro: ${netProfit}`);
+      console.log(`Valor total das vendas: ${totalSales}, Comissão (${commissionRate * 100}%): ${commissionAmount}`);
       
       // 4. Atualizar acerto com status concluído e valores calculados
       const { data: updatedAcerto, error } = await supabase
@@ -248,8 +174,6 @@ export const SettlementController = {
           status: 'concluido',
           total_sales: totalSales,
           commission_amount: commissionAmount,
-          total_cost: totalCosts,
-          net_profit: netProfit,
           next_settlement_date: nextSettlementDate
         })
         .eq('id', acertoId)
