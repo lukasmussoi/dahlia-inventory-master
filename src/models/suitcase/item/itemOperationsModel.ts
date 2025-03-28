@@ -1,369 +1,147 @@
 
 /**
  * Modelo de Operações de Itens de Maleta
- * @file Funções para adicionar, atualizar e remover itens de maleta
- * @relacionamento Utiliza ItemQueryModel e BaseItemModel
+ * @file Este arquivo contém operações de manipulação de estoque relacionadas aos itens de maleta
  */
 import { supabase } from "@/integrations/supabase/client";
-import { SuitcaseItemStatus, SuitcaseItem, SuitcaseItemSale } from "@/types/suitcase";
-import { ItemQueryModel } from "./itemQueryModel";
-import { BaseItemModel } from "./baseItemModel";
+import { SuitcaseItem } from "@/types/suitcase";
 
-export class ItemOperationsModel {
+export class SuitcaseItemOperations {
   /**
-   * Verificar se um item está disponível para adição à maleta
-   * @param inventory_id ID do item no inventário
-   * @returns Informações de disponibilidade do item
+   * Reserva quantidade de um item no inventário para uma maleta
+   * @param inventoryId ID do item no inventário
+   * @param quantity Quantidade a ser reservada
+   * @returns true se a operação foi bem-sucedida
    */
-  static async checkItemAvailability(inventory_id: string): Promise<{
-    available: boolean;
-    quantity: number;
-    item_info?: {
-      name: string;
-      sku: string;
-    };
-    in_suitcase?: any;
-  }> {
-    // Buscar a quantidade disponível em estoque
-    const { data: inventoryData, error: inventoryError } = await supabase
-      .from('inventory')
-      .select('quantity, name, sku')
-      .eq('id', inventory_id)
-      .maybeSingle();
-    
-    if (inventoryError) throw inventoryError;
-    if (!inventoryData) return { available: false, quantity: 0 };
-    
-    // Se não há estoque disponível, retornar indisponível
-    if (inventoryData.quantity <= 0) {
-      return { 
-        available: false, 
-        quantity: 0,
-        item_info: { 
-          name: inventoryData.name,
-          sku: inventoryData.sku
-        }
-      };
-    }
-    
-    // Para peças com apenas uma unidade em estoque, verificar se já está em alguma maleta
-    if (inventoryData.quantity === 1) {
-      const inSuitcase = await ItemQueryModel.getItemSuitcaseInfo(inventory_id);
-      
-      // Se já está em uma maleta, retornar indisponível junto com a informação da maleta
-      if (inSuitcase) {
-        return {
-          available: false,
-          quantity: 1,
-          item_info: {
-            name: inventoryData.name,
-            sku: inventoryData.sku
-          },
-          in_suitcase: inSuitcase
-        };
-      }
-    }
-    
-    // Se não está em nenhuma maleta ou tem mais de uma unidade, está disponível
-    return {
-      available: true,
-      quantity: inventoryData.quantity,
-      item_info: { 
-        name: inventoryData.name,
-        sku: inventoryData.sku
-      }
-    };
-  }
-
-  /**
-   * Adicionar peça à maleta
-   * @param itemData Dados do item a ser adicionado
-   * @returns Item adicionado
-   */
-  static async addItemToSuitcase(itemData: {
-    suitcase_id: string;
-    inventory_id: string;
-    quantity?: number;
-    status?: SuitcaseItemStatus;
-  }): Promise<SuitcaseItem> {
-    if (!itemData.suitcase_id) throw new Error("ID da maleta é necessário");
-    if (!itemData.inventory_id) throw new Error("ID do inventário é necessário");
-    
-    // Garantir que quantidade seja válida
-    const quantity = itemData.quantity && itemData.quantity > 0 ? itemData.quantity : 1;
-    
-    // Verificar disponibilidade do item
-    const availability = await this.checkItemAvailability(itemData.inventory_id);
-    
-    if (!availability.available) {
-      if (availability.in_suitcase) {
-        throw new Error(`Item "${availability.item_info?.name}" já está na maleta ${availability.in_suitcase.suitcase_code} (${availability.in_suitcase.seller_name})`);
-      } else {
-        throw new Error(`Item "${availability.item_info?.name}" não está disponível no estoque`);
-      }
-    }
-    
-    // Verificar se a quantidade solicitada está disponível
-    if (availability.quantity < quantity) {
-      throw new Error(`Quantidade solicitada (${quantity}) excede o estoque disponível (${availability.quantity})`);
-    }
-    
-    // Iniciar transação para garantir consistência
+  static async reserveForSuitcase(inventoryId: string, quantity: number = 1): Promise<boolean> {
     try {
-      // 1. Adicionar item à maleta
-      const { data, error } = await supabase
-        .from('suitcase_items')
-        .insert({
-          suitcase_id: itemData.suitcase_id,
-          inventory_id: itemData.inventory_id,
-          quantity: quantity,
-          status: itemData.status || 'in_possession'
-        })
-        .select()
-        .maybeSingle();
+      console.log(`[SuitcaseItemOperations] Reservando ${quantity} unidades do item ${inventoryId} para maleta`);
       
-      if (error) throw error;
-      if (!data) throw new Error("Erro ao adicionar peça à maleta: nenhum dado retornado");
-      
-      // 2. Reduzir o estoque
-      const { error: inventoryError } = await supabase
+      // 1. Verificar se há quantidade suficiente no estoque
+      const { data: inventoryData, error: inventoryError } = await supabase
         .from('inventory')
-        .update({ 
-          quantity: availability.quantity - quantity 
-        })
-        .eq('id', itemData.inventory_id);
+        .select('quantity, quantity_reserved')
+        .eq('id', inventoryId)
+        .single();
       
       if (inventoryError) {
-        // Tentar reverter a inserção do item na maleta
-        await supabase
-          .from('suitcase_items')
-          .delete()
-          .eq('id', data.id);
-          
+        console.error('[SuitcaseItemOperations] Erro ao verificar estoque:', inventoryError);
         throw inventoryError;
       }
       
-      const added_at = data.created_at || new Date().toISOString();
+      const availableQuantity = (inventoryData.quantity || 0) - (inventoryData.quantity_reserved || 0);
+      if (availableQuantity < quantity) {
+        console.error(`[SuitcaseItemOperations] Quantidade insuficiente. Disponível: ${availableQuantity}, Solicitado: ${quantity}`);
+        return false;
+      }
       
-      return {
-        id: data.id,
-        suitcase_id: data.suitcase_id,
-        inventory_id: data.inventory_id,
-        status: data.status as SuitcaseItemStatus,
-        added_at: added_at,
-        created_at: data.created_at,
-        updated_at: data.updated_at,
-        quantity: data.quantity,
-        sales: []
-      };
+      // 2. Incrementar quantidade reservada no inventário
+      const { error: updateError } = await supabase
+        .from('inventory')
+        .update({ 
+          quantity_reserved: (inventoryData.quantity_reserved || 0) + quantity 
+        })
+        .eq('id', inventoryId);
+      
+      if (updateError) {
+        console.error('[SuitcaseItemOperations] Erro ao reservar estoque:', updateError);
+        throw updateError;
+      }
+      
+      console.log(`[SuitcaseItemOperations] ${quantity} unidades do item ${inventoryId} reservadas com sucesso`);
+      return true;
     } catch (error) {
-      console.error("Erro na transação de adicionar item à maleta:", error);
-      throw error;
+      console.error('[SuitcaseItemOperations] Erro ao reservar item para maleta:', error);
+      return false;
     }
   }
-
+  
   /**
-   * Atualizar status de uma peça da maleta
-   * @param itemId ID da peça
-   * @param status Novo status
-   * @param saleInfo Informações de venda, se aplicável
-   * @returns Item atualizado
+   * Libera quantidade de um item no inventário quando removido da maleta
+   * @param inventoryId ID do item no inventário
+   * @param quantity Quantidade a ser liberada
+   * @returns true se a operação foi bem-sucedida
    */
-  static async updateSuitcaseItemStatus(
-    itemId: string, 
-    status: SuitcaseItemStatus,
-    saleInfo?: Partial<SuitcaseItemSale>
-  ): Promise<SuitcaseItem> {
-    if (!itemId) throw new Error("ID da peça é necessário");
-    
-    // Primeiro atualizar o status da peça
-    const { data, error } = await supabase
-      .from('suitcase_items')
-      .update({ status })
-      .eq('id', itemId)
-      .select()
-      .maybeSingle();
-    
-    if (error) throw error;
-    if (!data) throw new Error("Erro ao atualizar status da peça: nenhum dado retornado");
-    
-    // Se for venda e tiver informações adicionais, registrar a venda
-    if (status === 'sold' && saleInfo) {
-      const { error: saleError } = await supabase
-        .from('suitcase_item_sales')
-        .insert({
-          ...saleInfo,
-          suitcase_item_id: itemId
-        });
-      
-      if (saleError) throw saleError;
-    }
-    
-    return BaseItemModel.processItemData(data);
-  }
-
-  /**
-   * Remover peça da maleta
-   * @param itemId ID do item
-   */
-  static async removeSuitcaseItem(itemId: string): Promise<void> {
-    if (!itemId) throw new Error("ID do item é necessário");
-    
-    const { error } = await supabase
-      .from('suitcase_items')
-      .delete()
-      .eq('id', itemId);
-    
-    if (error) throw error;
-  }
-
-  /**
-   * Atualizar quantidade de um item da maleta
-   * @param itemId ID da peça
-   * @param quantity Nova quantidade
-   * @returns Item atualizado
-   */
-  static async updateSuitcaseItemQuantity(itemId: string, quantity: number): Promise<SuitcaseItem> {
-    if (!itemId) throw new Error("ID da peça é necessário");
-    if (quantity < 1) throw new Error("A quantidade deve ser maior que zero");
-    
-    // Primeiro, verificar se o item existe e seu status atual
-    const item = await ItemQueryModel.getSuitcaseItemById(itemId);
-    if (!item) throw new Error("Item não encontrado");
-    
-    // Verificar se o item está em posse (só podemos alterar qtd se estiver em posse)
-    if (item.status !== 'in_possession') {
-      throw new Error(`Não é possível alterar a quantidade de um item ${item.status === 'sold' ? 'vendido' : item.status === 'returned' ? 'devolvido' : 'perdido'}`);
-    }
-    
-    // Atualizar a quantidade
-    const { data, error } = await supabase
-      .from('suitcase_items')
-      .update({ quantity })
-      .eq('id', itemId)
-      .select()
-      .maybeSingle();
-    
-    if (error) throw error;
-    if (!data) throw new Error("Erro ao atualizar quantidade do item: nenhum dado retornado");
-    
-    return BaseItemModel.processItemData(data);
-  }
-
-  /**
-   * Retornar um item para o estoque
-   * @param itemId ID do item
-   * @param isDamaged Se o item está danificado ou não
-   * @returns Promise que resolve quando o item for devolvido ao estoque
-   */
-  static async returnItemToInventory(itemId: string, isDamaged: boolean = false): Promise<void> {
-    if (!itemId) throw new Error("ID do item é necessário");
-    
+  static async releaseFromSuitcase(inventoryId: string, quantity: number = 1): Promise<boolean> {
     try {
-      // Buscar informações do item
-      const item = await ItemQueryModel.getSuitcaseItemById(itemId);
-      if (!item) {
-        console.warn(`Item ${itemId} não encontrado, pulando retorno ao estoque`);
-        return;
+      console.log(`[SuitcaseItemOperations] Liberando ${quantity} unidades reservadas do item ${inventoryId}`);
+      
+      const { data: inventoryData, error: inventoryError } = await supabase
+        .from('inventory')
+        .select('quantity_reserved')
+        .eq('id', inventoryId)
+        .single();
+      
+      if (inventoryError) {
+        console.error('[SuitcaseItemOperations] Erro ao verificar reservas:', inventoryError);
+        throw inventoryError;
       }
       
-      // Verificar se o item já está com status de devolvido ou vendido
-      // para evitar processamento duplicado do mesmo item
-      if (item.status === 'returned' || item.status === 'sold' || item.status === 'damaged') {
-        console.log(`Item ${itemId} já está com status ${item.status}, ignorando devolução ao estoque para evitar duplicação`);
-        return;
+      // Garantir que não teremos valores negativos
+      const newReservedQuantity = Math.max(0, (inventoryData.quantity_reserved || 0) - quantity);
+      
+      const { error: updateError } = await supabase
+        .from('inventory')
+        .update({ quantity_reserved: newReservedQuantity })
+        .eq('id', inventoryId);
+      
+      if (updateError) {
+        console.error('[SuitcaseItemOperations] Erro ao liberar reserva:', updateError);
+        throw updateError;
       }
       
-      // Registrar que o item estava na maleta e será devolvido ao estoque
-      console.log(`Iniciando processamento para retornar item ${itemId} ao estoque. Status atual: ${item.status}, Danificado: ${isDamaged}`);
-      
-      // Se o item não estiver danificado, incrementar a quantidade no estoque
-      if (!isDamaged) {
-        const quantidade = item.quantity || 1;
-        
-        // Buscar quantidade atual no estoque
-        const { data: inventoryData, error: getError } = await supabase
-          .from('inventory')
-          .select('quantity')
-          .eq('id', item.inventory_id)
-          .maybeSingle();
-        
-        if (getError) {
-          console.error(`Erro ao buscar quantidade no estoque para o item ${item.inventory_id}:`, getError);
-          throw getError;
-        }
-        
-        if (inventoryData) {
-          const newQuantity = (inventoryData.quantity || 0) + quantidade;
-          
-          // Atualizar quantidade no estoque usando uma transação atômica
-          const { error: updateInventoryError } = await supabase
-            .from('inventory')
-            .update({ quantity: newQuantity })
-            .eq('id', item.inventory_id);
-          
-          if (updateInventoryError) {
-            console.error(`Erro ao atualizar estoque para o item ${item.inventory_id}:`, updateInventoryError);
-            throw updateInventoryError;
-          }
-          
-          console.log(`Estoque atualizado para o item ${item.inventory_id}: ${inventoryData.quantity} -> ${newQuantity}`);
-        }
-      } else {
-        // Se o item estiver danificado, registramos no log, mas não aumentamos a quantidade no estoque
-        console.log(`Item ${itemId} marcado como danificado e não será adicionado ao estoque disponível`);
-        
-        // Registrar item danificado em tabela específica
-        try {
-          const { error: damageError } = await supabase
-            .from('inventory_damaged_items')
-            .insert({
-              inventory_id: item.inventory_id,
-              suitcase_id: item.suitcase_id,
-              reason: 'Devolvido como danificado',
-              quantity: item.quantity || 1,
-              user_id: (await supabase.auth.getUser()).data.user?.id
-            });
-            
-          if (damageError) {
-            console.error(`Erro ao registrar item danificado ${itemId}:`, damageError);
-            // Não interromper o fluxo por erro no registro de dano
-          }
-        } catch (damageInsertError) {
-          console.error(`Erro na inserção de registro de dano para item ${itemId}:`, damageInsertError);
-          // Não interromper o fluxo por erro no registro de dano
-        }
-      }
-      
-      // Atualizar o status do item para "returned" (devolvido) ou "damaged" (danificado)
-      const newStatus: SuitcaseItemStatus = isDamaged ? 'damaged' : 'returned';
-      
-      const { error: updateItemError } = await supabase
-        .from('suitcase_items')
-        .update({ status: newStatus })
-        .eq('id', itemId);
-      
-      if (updateItemError) {
-        console.error(`Erro ao atualizar status do item ${itemId} para '${newStatus}':`, updateItemError);
-        throw updateItemError;
-      }
-      
-      // Verificar se há dependências em acerto_itens_vendidos antes de remover
-      const { data: dependencies } = await supabase
-        .from('acerto_itens_vendidos')
-        .select('id')
-        .eq('suitcase_item_id', itemId);
-      
-      if (dependencies && dependencies.length > 0) {
-        console.log(`O item ${itemId} tem ${dependencies.length} dependências em acerto_itens_vendidos. Não será removido diretamente.`);
-        // Neste caso, atualizamos para o novo status acima, mas não removemos diretamente
-      } else {
-        // Registrar no log o status da operação
-        console.log(`Item ${itemId} devolvido ao estoque como ${isDamaged ? 'danificado' : 'disponível'}`);
-      }
+      console.log(`[SuitcaseItemOperations] ${quantity} unidades do item ${inventoryId} liberadas com sucesso`);
+      return true;
     } catch (error) {
-      console.error("Erro ao retornar item ao estoque:", error);
-      throw error;
+      console.error('[SuitcaseItemOperations] Erro ao liberar item da maleta:', error);
+      return false;
+    }
+  }
+  
+  /**
+   * Finaliza a venda de um item, diminuindo a quantidade em estoque
+   * @param inventoryId ID do item no inventário
+   * @param quantity Quantidade vendida
+   * @returns true se a operação foi bem-sucedida
+   */
+  static async finalizeSale(inventoryId: string, quantity: number = 1): Promise<boolean> {
+    try {
+      console.log(`[SuitcaseItemOperations] Finalizando venda de ${quantity} unidades do item ${inventoryId}`);
+      
+      // 1. Pegar informações atuais do estoque
+      const { data: inventoryData, error: inventoryError } = await supabase
+        .from('inventory')
+        .select('quantity, quantity_reserved')
+        .eq('id', inventoryId)
+        .single();
+      
+      if (inventoryError) {
+        console.error('[SuitcaseItemOperations] Erro ao verificar estoque:', inventoryError);
+        throw inventoryError;
+      }
+      
+      // 2. Atualizar quantidades
+      const newQuantity = Math.max(0, (inventoryData.quantity || 0) - quantity);
+      const newReservedQuantity = Math.max(0, (inventoryData.quantity_reserved || 0) - quantity);
+      
+      const { error: updateError } = await supabase
+        .from('inventory')
+        .update({
+          quantity: newQuantity,
+          quantity_reserved: newReservedQuantity
+        })
+        .eq('id', inventoryId);
+      
+      if (updateError) {
+        console.error('[SuitcaseItemOperations] Erro ao atualizar estoque após venda:', updateError);
+        throw updateError;
+      }
+      
+      console.log(`[SuitcaseItemOperations] Venda de ${quantity} unidades do item ${inventoryId} finalizada com sucesso`);
+      return true;
+    } catch (error) {
+      console.error('[SuitcaseItemOperations] Erro ao finalizar venda:', error);
+      return false;
     }
   }
 }

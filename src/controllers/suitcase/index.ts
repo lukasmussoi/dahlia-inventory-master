@@ -1,67 +1,47 @@
 
 /**
  * Controlador Combinado de Maletas
- * @file Este arquivo exporta funções de outros controladores relacionados a maletas
+ * @file Este arquivo combina diferentes controladores relacionados a maletas
  */
 import { SuitcaseController } from "./suitcaseController";
 import { SuitcaseItemController } from "./suitcaseItemController";
-import { SettlementController } from "./settlementController";
+import { SuitcaseSupplyController } from "./supply/suitcaseSupplyController";
 import { DeleteSuitcaseController } from "./deleteSuitcaseController";
-import { SellerController } from "./sellerController";
-import { InventorySearchController } from "./inventorySearchController";
-import { PdfController } from "./pdfController";
-import { SuitcaseSupplyController } from "./supplyController";
 
-// Criar e exportar o controlador combinado
+// Controlador combinado para operações de maleta
 export const CombinedSuitcaseController = {
-  // SuitcaseController
+  // Operações básicas de maleta
+  createSuitcase: SuitcaseController.createSuitcase,
   getSuitcases: SuitcaseController.getSuitcases,
   getSuitcaseById: SuitcaseController.getSuitcaseById,
-  createSuitcase: SuitcaseController.createSuitcase,
   updateSuitcase: SuitcaseController.updateSuitcase,
-  deleteSuitcase: SuitcaseController.deleteSuitcase,
-  searchSuitcases: SuitcaseController.searchSuitcases,
-  generateSuitcaseCode: SuitcaseController.generateSuitcaseCode,
-  getSuitcaseSummary: SuitcaseController.getSuitcaseSummary,
+  getSuitcasesByStatus: SuitcaseController.getSuitcasesByStatus,
+  getSuitcasesBySeller: SuitcaseController.getSuitcasesBySeller,
+  getSellerNameById: SuitcaseController.getSellerNameById,
   
-  // SuitcaseItemController
-  getSuitcaseItemById: SuitcaseItemController.getSuitcaseItemById,
+  // Itens de maleta
   getSuitcaseItems: SuitcaseItemController.getSuitcaseItems,
-  addItemToSuitcase: SuitcaseItemController.addItemToSuitcase,
-  updateSuitcaseItemStatus: SuitcaseItemController.updateSuitcaseItemStatus,
-  removeSuitcaseItem: SuitcaseItemController.removeSuitcaseItem,
-  updateSuitcaseItemQuantity: SuitcaseItemController.updateSuitcaseItemQuantity,
+  updateItemStatus: SuitcaseItemController.updateItemStatus,
+  markItemAsLost: SuitcaseItemController.markItemAsLost,
+  markItemAsDamaged: SuitcaseItemController.markItemAsDamaged,
   returnItemToInventory: SuitcaseItemController.returnItemToInventory,
-  returnItemsToInventory: SuitcaseItemController.returnItemsToInventory,
-  updateSaleInfo: SuitcaseItemController.updateSaleInfo,
+  sellItem: SuitcaseItemController.sellItem,
   
-  // SettlementController
-  getHistoricoAcertos: SettlementController.getHistoricoAcertos,
-  createPendingSettlement: SettlementController.createPendingSettlement,
-  finalizeSettlement: SettlementController.finalizeSettlement,
-  
-  // DeleteSuitcaseController
-  canDeleteSuitcase: DeleteSuitcaseController.canDeleteSuitcase,
-  deleteSuitcaseWithCascade: DeleteSuitcaseController.deleteSuitcaseWithCascade,
-  
-  // SellerController
-  getSellerById: SellerController.getSellerById,
-  getAllSellers: SellerController.getAllSellers,
-  getPromoterForReseller: SellerController.getPromoterForReseller,
-  
-  // InventorySearchController
-  searchInventoryItems: InventorySearchController.searchInventoryItems,
-  getItemSuitcaseInfo: InventorySearchController.getItemSuitcaseInfo,
-  
-  // Atualizar o método generateSuitcasePDF para utilizar a mesma abordagem do abastecimento
-  generateSuitcasePDF: PdfController.generateSuitcasePDF,
-
-  // SuitcaseSupplyController
-  searchInventoryForSuitcase: SuitcaseSupplyController.searchInventoryItems,
+  // Abastecimento de maleta
   supplySuitcase: SuitcaseSupplyController.supplySuitcase,
   generateSupplyPDF: SuitcaseSupplyController.generateSupplyPDF,
+  searchInventoryForSuitcase: SuitcaseSupplyController.searchInventoryItems,
   countSuitcaseItems: SuitcaseSupplyController.countSuitcaseItems,
-  getSuitcasesItemCounts: SuitcaseSupplyController.getSuitcasesItemCounts
+  getSuitcaseItemCounts: SuitcaseSupplyController.getSuitcasesItemCounts,
+  
+  // Exclusão de maleta
+  deleteSuitcase: DeleteSuitcaseController.deleteSuitcase
 };
 
-export default CombinedSuitcaseController;
+// Também exportamos os controladores individuais para acesso direto se necessário
+export { 
+  SuitcaseController, 
+  SuitcaseItemController, 
+  SuitcaseSupplyController,
+  DeleteSuitcaseController
+};
