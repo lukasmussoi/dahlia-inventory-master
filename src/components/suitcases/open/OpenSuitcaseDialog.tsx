@@ -81,6 +81,14 @@ export function OpenSuitcaseDialog({
     }
   }, [open, resetState]);
 
+  // Manipulador para alterar a aba com tipagem correta
+  const handleTabChange = useCallback((value: string) => {
+    // Verificar se o valor é um dos valores permitidos antes de atualizar o estado
+    if (value === 'itens' || value === 'historico') {
+      setActiveTab(value);
+    }
+  }, [setActiveTab]);
+
   // Renderização condicional baseada no estado de carregamento
   if (isLoading) {
     return (
@@ -104,7 +112,7 @@ export function OpenSuitcaseDialog({
         </DialogTitle>
         
         {suitcase && (
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="itens">Itens da Maleta</TabsTrigger>
               <TabsTrigger value="historico">Histórico da Maleta</TabsTrigger>
