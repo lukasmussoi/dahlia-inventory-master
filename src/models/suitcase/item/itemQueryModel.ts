@@ -142,4 +142,65 @@ export class ItemQueryModel {
       seller_name: data.suitcases?.resellers?.name || ''
     };
   }
+
+  /**
+   * Conta o número de itens em uma maleta
+   * @param suitcaseId ID da maleta
+   * @returns Objeto com o número total de itens
+   */
+  static async countSuitcaseItems(suitcaseId: string): Promise<{ count: number }> {
+    try {
+      if (!suitcaseId) throw new Error("ID da maleta é necessário");
+      
+      const { count, error } = await supabase
+        .from('suitcase_items')
+        .select('*', { count: 'exact', head: true })
+        .eq('suitcase_id', suitcaseId);
+      
+      if (error) throw error;
+      
+      return { count: count || 0 };
+    } catch (error) {
+      console.error("Erro ao contar itens da maleta:", error);
+      return { count: 0 };
+    }
+  }
+
+  /**
+   * Obtém a contagem de itens para múltiplas maletas
+   * @param suitcaseIds Lista de IDs de maletas
+   * @returns Mapa de ID da maleta para contagem de itens
+   */
+  static async getSuitcasesItemCounts(suitcaseIds: string[]): Promise<{ [key: string]: number }> {
+    try {
+      if (!suitcaseIds || suitcaseIds.length === 0) return {};
+      
+      const { data, error } = await supabase
+        .from('suitcase_items')
+        .select('suitcase_id')
+        .in('suitcase_id', suitcaseIds);
+      
+      if (error) throw error;
+      
+      // Agrupar e contar itens por maleta
+      const counts: { [key: string]: number } = {};
+      
+      // Inicializar contagens como 0 para todas as maletas solicitadas
+      suitcaseIds.forEach(id => {
+        counts[id] = 0;
+      });
+      
+      // Contar os itens encontrados
+      data.forEach(item => {
+        if (item.suitcase_id) {
+          counts[item.suitcase_id] = (counts[item.suitcase_id] || 0) + 1;
+        }
+      });
+      
+      return counts;
+    } catch (error) {
+      console.error("Erro ao obter contagens de itens das maletas:", error);
+      return {};
+    }
+  }
 }

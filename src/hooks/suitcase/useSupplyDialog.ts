@@ -1,3 +1,4 @@
+
 /**
  * Hook para Gerenciar o Diálogo de Abastecimento
  * @file Este hook centraliza a lógica do diálogo de abastecimento de maletas
@@ -5,10 +6,11 @@
  */
 import { useState, useEffect } from "react";
 import { CombinedSuitcaseController } from "@/controllers/suitcase";
-import { Suitcase } from "@/types/suitcase";
+import { Suitcase, SupplyItem } from "@/types/suitcase";
 import { toast } from "sonner";
 import { openPdfInNewTab } from "@/utils/pdfUtils";
 import { formatMoney } from "@/utils/formatUtils";
+import { getProductPhotoUrl } from "@/utils/photoUtils";
 
 interface SelectedItem {
   id: string;
@@ -109,11 +111,11 @@ export function useSupplyDialog(
 
     setIsSearching(true);
     try {
-      const results = await CombinedSuitcaseController.searchInventoryForSuitcase(searchTerm);
+      const results = await CombinedSuitcaseController.searchInventoryForSuitcase(searchTerm, suitcaseId || undefined);
       
       // Filtrar resultados que já estão selecionados
       const filteredResults = results.filter(
-        result => !selectedItems.some(item => item.id === result.id)
+        result => !selectedItems.some(item => item.id === result.product.id)
       );
       
       setSearchResults(filteredResults);
@@ -133,10 +135,14 @@ export function useSupplyDialog(
   };
 
   // Adicionar item à lista de selecionados
-  const handleAddItem = (item: any) => {
+  const handleAddItem = (item: SupplyItem) => {
+    if (!item.product) return;
+    
+    const productId = item.product.id;
+    
     // Verificar se o item já está na lista
     const existingItemIndex = selectedItems.findIndex(
-      (selectedItem) => selectedItem.id === item.id
+      (selectedItem) => selectedItem.id === productId
     );
 
     if (existingItemIndex !== -1) {
@@ -149,20 +155,20 @@ export function useSupplyDialog(
       setSelectedItems(updatedItems);
     } else {
       // Se não estiver na lista, adicionar com quantidade 1
-      const newItem = { 
-        id: item.id,
-        name: item.name,
-        sku: item.sku,
-        price: item.price,
+      const newItem: SelectedItem = { 
+        id: productId,
+        name: item.product.name,
+        sku: item.product.sku,
+        price: item.product.price,
         quantity: 1,
         max_quantity: item.quantity,
-        photo_url: item.photo_url
+        photo_url: item.product.photo_url
       };
       setSelectedItems(currentItems => groupIdenticalItems([...currentItems, newItem]));
     }
 
     // Remover dos resultados da busca
-    setSearchResults(searchResults.filter((resultItem) => resultItem.id !== item.id));
+    setSearchResults(searchResults.filter((resultItem) => resultItem.product.id !== productId));
   };
 
   // Remover item da lista de selecionados
@@ -175,12 +181,15 @@ export function useSupplyDialog(
     // Adicionar de volta aos resultados da busca apenas se não for um item já existente na maleta
     if (itemToRemove && !itemToRemove.from_suitcase) {
       setSearchResults([...searchResults, { 
-        id: itemToRemove.id,
-        name: itemToRemove.name,
-        sku: itemToRemove.sku,
-        price: itemToRemove.price,
-        quantity: itemToRemove.max_quantity,
-        photo_url: itemToRemove.photo_url
+        inventory_id: itemToRemove.id,
+        quantity: itemToRemove.max_quantity || 1,
+        product: { 
+          id: itemToRemove.id,
+          name: itemToRemove.name,
+          sku: itemToRemove.sku,
+          price: itemToRemove.price,
+          photo_url: itemToRemove.photo_url
+        }
       }]);
     }
   };
@@ -249,30 +258,27 @@ export function useSupplyDialog(
       const existingItems = selectedItems.filter(item => item.from_suitcase);
       const newItems = selectedItems.filter(item => !item.from_suitcase);
       
-      // Preparar os itens para abastecimento
-      const itemsToSupply = newItems.map(item => ({
-        inventory_id: item.id,
-        quantity: item.quantity,
-        product: {
-          id: item.id,
-          name: item.name,
-          sku: item.sku,
-          price: item.price,
-          photo_url: item.photo_url
-        }
-      }));
-
-      // Abastecer a maleta com novos itens
+      // Adicionar cada item novo à maleta
       let addedItems = [];
-      if (itemsToSupply.length > 0) {
-        try {
-          addedItems = await CombinedSuitcaseController.supplySuitcase(
-            suitcaseId,
-            itemsToSupply
-          );
+      if (newItems.length > 0) {
+        for (const item of newItems) {
+          try {
+            const addedItem = await CombinedSuitcaseController.supplySuitcase(
+              suitcaseId,
+              item.id
+            );
+            
+            if (addedItem) {
+              addedItems.push(addedItem);
+            }
+          } catch (error) {
+            console.error(`Erro ao adicionar item ${item.id} à maleta:`, error);
+          }
+        }
+        
+        if (addedItems.length > 0) {
           console.log("Itens adicionados com sucesso:", addedItems);
-        } catch (error) {
-          console.error("Erro ao adicionar itens à maleta:", error);
+        } else {
           toast.error("Não foi possível adicionar os itens à maleta");
           setIsSupplying(false);
           return;
@@ -282,27 +288,28 @@ export function useSupplyDialog(
       // Gerar PDF após abastecimento com todos os itens (novos e existentes)
       setIsGeneratingPdf(true);
       
-      // Combinar todos os itens para o PDF
-      const allItems = [
-        ...addedItems,
-        ...existingItems.map(item => ({
-          inventory_id: item.id,
-          quantity: item.quantity,
-          product: {
-            id: item.id,
-            name: item.name,
-            sku: item.sku,
-            price: item.price,
-            photo_url: item.photo_url
-          }
-        }))
-      ];
-      
+      // Combinar todos os itens para o PDF (adicionados e existentes)
       try {
+        // Preparar os itens para o PDF
+        const allItemsForPdf = [
+          ...addedItems,
+          ...existingItems.map(item => ({
+            inventory_id: item.id,
+            quantity: item.quantity,
+            product: {
+              id: item.id,
+              name: item.name,
+              sku: item.sku,
+              price: item.price,
+              photo_url: item.photo_url
+            }
+          }))
+        ];
+        
         const pdfUrl = await CombinedSuitcaseController.generateSupplyPDF(
           suitcaseId,
-          allItems,
-          suitcase
+          suitcase,
+          allItemsForPdf
         );
         
         if (!pdfUrl) {

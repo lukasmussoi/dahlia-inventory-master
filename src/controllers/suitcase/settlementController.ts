@@ -26,28 +26,21 @@ export const SettlementController = {
         .select(`
           *,
           suitcase:suitcases(id, code),
-          seller:resellers(id, name, commission_rate)
+          seller:resellers(id, name)
         `)
         .eq('suitcase_id', suitcaseId)
         .order('settlement_date', { ascending: false });
         
       if (error) throw error;
       
-      // Para cada acerto, buscar os itens vendidos com detalhes completos do produto
-      const acertosCompletos = await Promise.all((acertos || []).map(async (acerto) => {
-        // Buscar itens vendidos para este acerto com todos os dados necessários
+      // Para cada acerto, buscar os itens vendidos
+      const acertosCompletos: Acerto[] = await Promise.all((acertos || []).map(async (acerto) => {
+        // Buscar itens vendidos para este acerto
         const { data: itensVendidos, error: itemsError } = await supabase
           .from('acerto_itens_vendidos')
           .select(`
             *,
-            product:inventory_id(
-              id, 
-              name, 
-              sku, 
-              price, 
-              unit_cost, 
-              photo_url:inventory_photos(photo_url)
-            )
+            product:inventory(id, name, sku, price, unit_cost, photo_url:inventory_photos(photo_url))
           `)
           .eq('acerto_id', acerto.id);
           
@@ -56,41 +49,36 @@ export const SettlementController = {
           return acerto;
         }
         
-        // Processar os itens vendidos para cálculos corretos
-        const processedItems = itensVendidos || [];
+        // Agrupar itens vendidos pelo inventory_id para calcular corretamente itens vendidos múltiplas vezes
+        const itemsGroupedByInventoryId: Record<string, any> = {};
+        (itensVendidos || []).forEach(item => {
+          if (!itemsGroupedByInventoryId[item.inventory_id]) {
+            itemsGroupedByInventoryId[item.inventory_id] = {
+              ...item,
+              quantidade_vendida: 1,
+              preco_total: item.price || 0,
+              custo_total: item.unit_cost || 0
+            };
+          } else {
+            itemsGroupedByInventoryId[item.inventory_id].quantidade_vendida += 1;
+            itemsGroupedByInventoryId[item.inventory_id].preco_total += (item.price || 0);
+            itemsGroupedByInventoryId[item.inventory_id].custo_total += (item.unit_cost || 0);
+          }
+        });
         
-        // Calcular o total de vendas somando os preços de todos os itens vendidos
-        const totalSales = processedItems.reduce((sum, item) => sum + Number(item.price || 0), 0);
+        const itensProcessados = Object.values(itemsGroupedByInventoryId);
         
-        // Calcular o custo total dos itens vendidos
-        const totalCost = processedItems.reduce((sum, item) => {
-          // Usar o unit_cost do produto ou fallback para 0 se não disponível
-          const unitCost = Number(item.unit_cost || item.product?.unit_cost || 0);
-          return sum + unitCost;
-        }, 0);
+        // Calcular o custo total dos itens considerando múltiplas unidades do mesmo item
+        const totalCost = itensProcessados.reduce((sum, item: any) => 
+          sum + Number(item.custo_total), 0);
         
-        // Garantir que estamos usando o valor correto de comissão da revendedora
-        const commissionRate = acerto.seller?.commission_rate || 0.3; // 30% padrão se não especificado
+        // Calcular o lucro líquido corretamente
+        const netProfit = (acerto.total_sales || 0) - (acerto.commission_amount || 0) - totalCost;
         
-        // Recalcular a comissão com base no total de vendas
-        const commissionAmount = totalSales * commissionRate;
-        
-        // Calcular o lucro líquido (vendas - comissão - custo)
-        const netProfit = totalSales - commissionAmount - totalCost;
-        
-        console.log(`Processando acerto ${acerto.id} com ${processedItems.length} itens vendidos`);
-        if (processedItems.length > 0) {
-          processedItems.forEach(item => {
-            console.log(`Item vendido: ${item.product?.name} (ID: ${item.inventory_id}) - Preço: ${item.price}`);
-          });
-        }
-        
-        // Retornar acerto com valores calculados e itens vendidos
+        // Retornar acerto com informações adicionais
         return {
           ...acerto,
-          items_vendidos: processedItems,
-          total_sales: totalSales,
-          commission_amount: commissionAmount,
+          items_vendidos: itensVendidos || [],
           total_cost: totalCost,
           net_profit: netProfit
         };
@@ -193,15 +181,36 @@ export const SettlementController = {
         // Buscar detalhes dos itens vendidos
         const { data: vendaRegistros, error: vendaError } = await supabase
           .from('acerto_itens_vendidos')
-          .select('price, unit_cost')
+          .select('price, unit_cost, inventory_id')
           .eq('acerto_id', acertoId);
           
         if (vendaError) {
           console.error("Erro ao buscar registros de venda:", vendaError);
           toast.error("Erro ao buscar detalhes dos itens vendidos, usando valores calculados alternativos");
         } else if (vendaRegistros && vendaRegistros.length > 0) {
-          totalSales = vendaRegistros.reduce((sum, item) => sum + (item.price || 0), 0);
-          totalCosts = vendaRegistros.reduce((sum, item) => sum + (item.unit_cost || 0), 0);
+          // Agrupar por inventory_id para calcular corretamente itens vendidos múltiplas vezes
+          const itensAgrupados: Record<string, any> = {};
+          vendaRegistros.forEach(item => {
+            if (!itensAgrupados[item.inventory_id]) {
+              itensAgrupados[item.inventory_id] = {
+                preco_total: item.price || 0,
+                custo_total: item.unit_cost || 0,
+                quantidade: 1
+              };
+            } else {
+              itensAgrupados[item.inventory_id].preco_total += (item.price || 0);
+              itensAgrupados[item.inventory_id].custo_total += (item.unit_cost || 0);
+              itensAgrupados[item.inventory_id].quantidade += 1;
+            }
+          });
+          
+          // Calcular totais corretamente considerando múltiplas unidades do mesmo item
+          const itensProcessados = Object.values(itensAgrupados);
+          totalSales = itensProcessados.reduce((sum, item: any) => sum + Number(item.preco_total), 0);
+          totalCosts = itensProcessados.reduce((sum, item: any) => sum + Number(item.custo_total), 0);
+          
+          console.log("Cálculo correto considerando múltiplas unidades:", 
+            { totalSales, totalCosts, itensAgrupados });
         }
       }
       

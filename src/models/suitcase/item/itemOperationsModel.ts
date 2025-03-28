@@ -1,3 +1,4 @@
+
 /**
  * Modelo de Operações com Itens de Maleta
  * @file Funções para gerenciar operações de inclusão, atualização e remoção de itens em maletas
@@ -102,24 +103,22 @@ export class ItemOperationsModel {
         throw error;
       }
       
-      // Atualizar estoque usando operação manual em vez de RPC
-      try {
-        // Obter a quantidade atual do inventário
-        const { data: inventoryItem } = await supabase
+      // Atualizar estoque - usando update direto em vez de RPC
+      const { data: inventoryItem } = await supabase
+        .from('inventory')
+        .select('quantity')
+        .eq('id', inventory_id)
+        .single();
+        
+      if (inventoryItem) {
+        const { error: updateError } = await supabase
           .from('inventory')
-          .select('quantity')
-          .eq('id', inventory_id)
-          .single();
+          .update({ quantity: Math.max(0, inventoryItem.quantity - quantity) })
+          .eq('id', inventory_id);
           
-        if (inventoryItem) {
-          // Atualizar com a nova quantidade
-          await supabase
-            .from('inventory')
-            .update({ quantity: Math.max(0, inventoryItem.quantity - quantity) })
-            .eq('id', inventory_id);
+        if (updateError) {
+          console.error("Erro ao atualizar estoque:", updateError);
         }
-      } catch (updateError) {
-        console.error("Erro ao atualizar estoque:", updateError);
       }
       
       return suitcaseItem;
@@ -183,25 +182,23 @@ export class ItemOperationsModel {
         throw error;
       }
       
-      // Devolver ao estoque usando operação manual em vez de RPC
+      // Devolver ao estoque - sem usar RPC
       if (itemData) {
-        try {
-          // Obter a quantidade atual do inventário
-          const { data: inventoryItem } = await supabase
-            .from('inventory')
-            .select('quantity')
-            .eq('id', itemData.inventory_id)
-            .single();
+        const { data: inventoryItem } = await supabase
+          .from('inventory')
+          .select('quantity')
+          .eq('id', itemData.inventory_id)
+          .single();
             
-          if (inventoryItem) {
-            // Atualizar com a nova quantidade
-            await supabase
-              .from('inventory')
-              .update({ quantity: inventoryItem.quantity + (itemData.quantity || 1) })
-              .eq('id', itemData.inventory_id);
+        if (inventoryItem) {
+          const { error: updateError } = await supabase
+            .from('inventory')
+            .update({ quantity: inventoryItem.quantity + (itemData.quantity || 1) })
+            .eq('id', itemData.inventory_id);
+            
+          if (updateError) {
+            console.error("Erro ao atualizar estoque:", updateError);
           }
-        } catch (updateError) {
-          console.error("Erro ao atualizar estoque:", updateError);
         }
       }
       
@@ -248,31 +245,34 @@ export class ItemOperationsModel {
       
       // Atualizar estoque se necessário
       if (quantityDiff !== 0) {
-        try {
-          // Obter a quantidade atual do inventário
-          const { data: inventoryItem } = await supabase
-            .from('inventory')
-            .select('quantity')
-            .eq('id', itemData.inventory_id)
-            .single();
-            
-          if (inventoryItem) {
-            if (quantityDiff < 0) {
-              // Devolver ao estoque
-              await supabase
-                .from('inventory')
-                .update({ quantity: inventoryItem.quantity + Math.abs(quantityDiff) })
-                .eq('id', itemData.inventory_id);
-            } else {
-              // Retirar do estoque
-              await supabase
-                .from('inventory')
-                .update({ quantity: Math.max(0, inventoryItem.quantity - quantityDiff) })
-                .eq('id', itemData.inventory_id);
+        const { data: inventoryItem } = await supabase
+          .from('inventory')
+          .select('quantity')
+          .eq('id', itemData.inventory_id)
+          .single();
+          
+        if (inventoryItem) {
+          if (quantityDiff < 0) {
+            // Devolver ao estoque
+            const { error: updateError } = await supabase
+              .from('inventory')
+              .update({ quantity: inventoryItem.quantity + Math.abs(quantityDiff) })
+              .eq('id', itemData.inventory_id);
+              
+            if (updateError) {
+              console.error("Erro ao atualizar estoque:", updateError);
+            }
+          } else {
+            // Retirar do estoque
+            const { error: updateError } = await supabase
+              .from('inventory')
+              .update({ quantity: Math.max(0, inventoryItem.quantity - quantityDiff) })
+              .eq('id', itemData.inventory_id);
+              
+            if (updateError) {
+              console.error("Erro ao atualizar estoque:", updateError);
             }
           }
-        } catch (updateError) {
-          console.error("Erro ao atualizar estoque:", updateError);
         }
       }
       
@@ -315,7 +315,6 @@ export class ItemOperationsModel {
       
       // Se o item estiver danificado, registrar na tabela de itens danificados
       if (isDamaged) {
-        // Usar 'unknown' como tipo de dano para compatibilidade com o esquema
         const { error: damageError } = await supabase
           .from('inventory_damaged_items')
           .insert({
@@ -323,7 +322,7 @@ export class ItemOperationsModel {
             suitcase_id: itemData.suitcase_id,
             quantity: itemData.quantity || 1,
             reason: 'Devolvido com danos da maleta',
-            damage_type: 'unknown'
+            damage_type: 'unknown' // Uso de um tipo válido do enum damage_type
           });
           
         if (damageError) {
@@ -331,23 +330,21 @@ export class ItemOperationsModel {
         }
       } else {
         // Se não estiver danificado, devolver ao estoque
-        try {
-          // Obter a quantidade atual do inventário
-          const { data: inventoryItem } = await supabase
-            .from('inventory')
-            .select('quantity')
-            .eq('id', itemData.inventory_id)
-            .single();
+        const { data: inventoryItem } = await supabase
+          .from('inventory')
+          .select('quantity')
+          .eq('id', itemData.inventory_id)
+          .single();
             
-          if (inventoryItem) {
-            // Atualizar com a nova quantidade
-            await supabase
-              .from('inventory')
-              .update({ quantity: inventoryItem.quantity + (itemData.quantity || 1) })
-              .eq('id', itemData.inventory_id);
+        if (inventoryItem) {
+          const { error: updateInventoryError } = await supabase
+            .from('inventory')
+            .update({ quantity: inventoryItem.quantity + (itemData.quantity || 1) })
+            .eq('id', itemData.inventory_id);
+            
+          if (updateInventoryError) {
+            console.error("Erro ao atualizar estoque:", updateInventoryError);
           }
-        } catch (updateError) {
-          console.error("Erro ao atualizar estoque:", updateError);
         }
       }
       

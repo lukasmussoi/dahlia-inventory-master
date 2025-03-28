@@ -10,7 +10,7 @@ import { DeleteSuitcaseController } from "./deleteSuitcaseController";
 import { SellerController } from "./sellerController";
 import { InventorySearchController } from "./inventorySearchController";
 import { PdfController } from "./pdfController";
-import { SuitcaseSupplyController } from "./supplyController";
+import { SuitcaseSupplyController } from "./supply/suitcaseSupplyController";
 
 // Criar e exportar o controlador combinado
 export const CombinedSuitcaseController = {
@@ -53,15 +53,28 @@ export const CombinedSuitcaseController = {
   searchInventoryItems: InventorySearchController.searchInventoryItems,
   getItemSuitcaseInfo: InventorySearchController.getItemSuitcaseInfo,
   
-  // Atualizar o método generateSuitcasePDF para utilizar a mesma abordagem do abastecimento
+  // PdfController
   generateSuitcasePDF: PdfController.generateSuitcasePDF,
 
   // SuitcaseSupplyController
   searchInventoryForSuitcase: SuitcaseSupplyController.searchInventoryItems,
-  supplySuitcase: SuitcaseSupplyController.supplySuitcase,
-  generateSupplyPDF: SuitcaseSupplyController.generateSupplyPDF,
-  countSuitcaseItems: SuitcaseSupplyController.countSuitcaseItems,
-  getSuitcasesItemCounts: SuitcaseSupplyController.getSuitcasesItemCounts
+  
+  // Implementação dos métodos ausentes
+  supplySuitcase: SuitcaseItemController.addItemToSuitcase,
+  generateSupplyPDF: PdfController.generateSuitcasePDF,
+  
+  // Métodos para contagem de itens
+  countSuitcaseItems: async (suitcaseId: string) => {
+    return await SuitcaseItemController.getSuitcaseItems(suitcaseId).then(items => ({ count: items.length }));
+  },
+  getSuitcasesItemCounts: async (suitcaseIds: string[]) => {
+    const counts: {[key: string]: number} = {};
+    for (const id of suitcaseIds) {
+      const items = await SuitcaseItemController.getSuitcaseItems(id);
+      counts[id] = items.length;
+    }
+    return counts;
+  }
 };
 
 export default CombinedSuitcaseController;
