@@ -4,7 +4,7 @@
  * @file Agrupa funcionalidades para gerenciar detalhes e operações em maletas
  * @relacionamento Utiliza hooks específicos como useInventorySearch, useSuitcaseItems
  */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { addDays } from "date-fns";
 import { useTabNavigation } from "./suitcase/useTabNavigation";
 import { useInventorySearch } from "./suitcase/useInventorySearch";
@@ -22,6 +22,9 @@ export function useSuitcaseDetails(
 ) {
   // Estado local para controlar se o componente está sendo desmontado
   const [isClosing, setIsClosing] = useState(false);
+  
+  // Referência para controlar se o componente está montado
+  const isMounted = useRef(true);
 
   // Utilizando hooks específicos
   const { activeTab, setActiveTab, resetTabState } = useTabNavigation();
@@ -46,8 +49,21 @@ export function useSuitcaseDetails(
     resetQueries
   } = useSuitcaseQueries(suitcaseId, open);
   
+  // Efeito para controlar o ciclo de vida do componente
+  useEffect(() => {
+    console.log("[useSuitcaseDetails] Componente montado");
+    isMounted.current = true;
+    
+    return () => {
+      console.log("[useSuitcaseDetails] Componente desmontando");
+      isMounted.current = false;
+    };
+  }, []);
+  
   // Função para resetar todos os estados
   const resetStates = useCallback(() => {
+    console.log("[useSuitcaseDetails] Iniciando reset de todos os estados");
+    
     // Resetar estados de navegação
     if (resetTabState) resetTabState();
     else setActiveTab("informacoes");
@@ -70,6 +86,8 @@ export function useSuitcaseDetails(
     
     // Garantir que os estados locais sejam resetados
     setIsClosing(false);
+    
+    console.log("[useSuitcaseDetails] Reset de estados concluído");
   }, [
     setActiveTab,
     resetTabState,
@@ -86,11 +104,26 @@ export function useSuitcaseDetails(
   // Efeito para monitorar quando o diálogo é fechado
   useEffect(() => {
     if (!open && !isClosing) {
-      // Se o diálogo está sendo fechado, limpar todos os estados
-      resetStates();
+      console.log("[useSuitcaseDetails] Modal fechada, iniciando limpeza de estados");
+      
+      // Definir o estado de fechamento
+      setIsClosing(true);
+      
+      // Usar um timeout para permitir que a animação de fechamento termine
+      const cleanupTimeout = setTimeout(() => {
+        // Se o componente ainda estiver montado, resetar os estados
+        if (isMounted.current) {
+          resetStates();
+        }
+      }, 300); // Tempo aproximado da animação do Dialog
+      
+      // Limpar o timeout se o componente for desmontado
+      return () => clearTimeout(cleanupTimeout);
     }
-    // Atualizar o estado de fechamento
-    setIsClosing(!open);
+    
+    if (open) {
+      setIsClosing(false);
+    }
   }, [open, isClosing, resetStates]);
 
   // Atualizar a data do próximo acerto na primeira carga
@@ -108,7 +141,7 @@ export function useSuitcaseDetails(
   const handleAddItemWrapper = async (inventoryId: string) => {
     if (!suitcaseId) return false;
     const success = await handleAddItem(suitcaseId, inventoryId);
-    if (success) {
+    if (success && isMounted.current) {
       refetchSuitcaseItems();
     }
     return success;
@@ -116,7 +149,7 @@ export function useSuitcaseDetails(
 
   const handleToggleSoldWrapper = async (item: any, sold: boolean) => {
     const success = await handleToggleSold(item, sold);
-    if (success) {
+    if (success && isMounted.current) {
       refetchSuitcaseItems();
     }
     return success;
@@ -124,7 +157,7 @@ export function useSuitcaseDetails(
 
   const handleUpdateSaleInfoWrapper = async (itemId: string, field: string, value: string) => {
     const success = await handleUpdateSaleInfo(itemId, field, value);
-    if (success) {
+    if (success && isMounted.current) {
       refetchSuitcaseItems();
     }
     return success;
@@ -132,7 +165,7 @@ export function useSuitcaseDetails(
 
   const handleReturnToInventoryWrapper = async (itemIds: string[], quantity: number, isDamaged: boolean) => {
     const success = await handleReturnToInventory(itemIds, quantity, isDamaged);
-    if (success) {
+    if (success && isMounted.current) {
       refetchSuitcaseItems();
     }
     return success;
@@ -147,7 +180,7 @@ export function useSuitcaseDetails(
   const handleUpdateNextSettlementDateWrapper = async (date?: Date | null) => {
     if (!suitcaseId) return false;
     const success = await handleUpdateNextSettlementDate(suitcaseId, date);
-    if (success) {
+    if (success && isMounted.current) {
       refetchSuitcase();
     }
     return success;
