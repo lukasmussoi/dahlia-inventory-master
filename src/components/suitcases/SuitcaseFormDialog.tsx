@@ -104,20 +104,25 @@ export function SuitcaseFormDialog({
       
       if (seller) {
         // Processar o endereço (pode vir como string JSON ou objeto)
-        let address = seller.address;
+        let addressData = seller.address;
         
-        if (typeof address === 'string') {
+        if (typeof addressData === 'string') {
           try {
-            address = JSON.parse(address);
+            addressData = JSON.parse(addressData);
           } catch (e) {
             console.error("Erro ao processar endereço JSON:", e);
-            address = {};
+            addressData = {};
           }
         }
         
         // Definir cidade e bairro com base no endereço da revendedora
-        setCity(address?.city || "");
-        setNeighborhood(address?.neighborhood || "");
+        if (addressData && typeof addressData === 'object') {
+          setCity(addressData.city || "");
+          setNeighborhood(addressData.neighborhood || "");
+        } else {
+          setCity("");
+          setNeighborhood("");
+        }
       }
     } catch (error) {
       console.error("Erro ao carregar dados da revendedora:", error);

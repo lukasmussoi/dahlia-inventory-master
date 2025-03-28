@@ -5,6 +5,7 @@
  */
 import { SuitcaseItemModel } from "@/models/suitcase/item";
 import { supabase } from "@/integrations/supabase/client";
+import { SuitcaseItemStatus } from "@/types/suitcase";
 
 export class SuitcaseItemController {
   /**
@@ -58,7 +59,12 @@ export class SuitcaseItemController {
    */
   static async addItemToSuitcase(suitcaseId: string, inventoryId: string, quantity: number = 1) {
     try {
-      return await SuitcaseItemModel.addItemToSuitcase(suitcaseId, inventoryId, quantity);
+      return await SuitcaseItemModel.addItemToSuitcase({
+        suitcase_id: suitcaseId,
+        inventory_id: inventoryId,
+        quantity,
+        status: 'in_possession'
+      });
     } catch (error) {
       console.error("Erro ao adicionar item à maleta:", error);
       throw error;
@@ -71,7 +77,7 @@ export class SuitcaseItemController {
    * @param status Novo status
    * @returns true se atualizado com sucesso
    */
-  static async updateItemStatus(itemId: string, status: string) {
+  static async updateItemStatus(itemId: string, status: SuitcaseItemStatus) {
     try {
       return await SuitcaseItemModel.updateSuitcaseItemStatus(itemId, status);
     } catch (error) {
@@ -83,7 +89,7 @@ export class SuitcaseItemController {
   /**
    * Alias para updateItemStatus (compatibilidade)
    */
-  static async updateSuitcaseItemStatus(itemId: string, status: string) {
+  static async updateSuitcaseItemStatus(itemId: string, status: SuitcaseItemStatus) {
     return this.updateItemStatus(itemId, status);
   }
 
@@ -95,24 +101,7 @@ export class SuitcaseItemController {
    */
   static async updateSuitcaseItemQuantity(itemId: string, quantity: number) {
     try {
-      // Obter item atual para comparar quantidade
-      const { data: itemData, error: itemError } = await supabase
-        .from('suitcase_items')
-        .select('quantity, inventory_id')
-        .eq('id', itemId)
-        .single();
-      
-      if (itemError) throw itemError;
-      
-      // Atualizar quantidade
-      const { error } = await supabase
-        .from('suitcase_items')
-        .update({ quantity })
-        .eq('id', itemId);
-      
-      if (error) throw error;
-      
-      return true;
+      return await SuitcaseItemModel.updateSuitcaseItemQuantity(itemId, quantity);
     } catch (error) {
       console.error("Erro ao atualizar quantidade do item:", error);
       throw error;

@@ -1,10 +1,9 @@
-
 /**
  * Hook para Gerenciar o Diálogo de Abastecimento
  * @file Este hook centraliza a lógica do diálogo de abastecimento de maletas
  * @relacionamento Utilizado pelo componente SuitcaseSupplyDialog
  */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { CombinedSuitcaseController } from "@/controllers/suitcase";
 import { Suitcase } from "@/types/suitcase";
 import { toast } from "sonner";
@@ -22,12 +21,7 @@ interface SelectedItem {
   from_suitcase?: boolean;
 }
 
-export function useSupplyDialog(
-  suitcaseId: string | null,
-  open: boolean,
-  onOpenChange: (open: boolean) => void,
-  onRefresh?: () => void
-) {
+export function useSupplyDialog({ suitcaseId, onComplete }: UseSupplyDialogProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -102,29 +96,25 @@ export function useSupplyDialog(
   };
 
   // Buscar itens do inventário
-  const handleSearch = async () => {
+  const handleSearch = useCallback(async () => {
     if (!searchTerm || searchTerm.length < 2) {
-      toast.warning("Digite pelo menos 2 caracteres para pesquisar");
       return;
     }
 
     setIsSearching(true);
+    setSearchResults([]);
+
     try {
-      const results = await CombinedSuitcaseController.searchInventoryForSuitcase(searchTerm);
-      
-      // Filtrar resultados que já estão selecionados
-      const filteredResults = results.filter(
-        result => !selectedItems.some(item => item.id === result.id)
-      );
-      
-      setSearchResults(filteredResults);
+      // Corrigido: Usar o método correto para buscar itens
+      const results = await CombinedSuitcaseController.searchInventoryItems(searchTerm);
+      setSearchResults(results);
     } catch (error) {
       console.error("Erro ao buscar itens:", error);
-      toast.error("Erro ao buscar itens do inventário");
+      toast.error("Erro ao buscar itens. Tente novamente.");
     } finally {
       setIsSearching(false);
     }
-  };
+  }, [searchTerm]);
 
   // Lidar com tecla Enter na busca
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -326,7 +316,7 @@ export function useSupplyDialog(
       }
       
       // Atualizar e fechar
-      if (onRefresh) onRefresh();
+      if (onComplete) onComplete();
       onOpenChange(false);
     } catch (error) {
       console.error("Erro ao abastecer maleta:", error);

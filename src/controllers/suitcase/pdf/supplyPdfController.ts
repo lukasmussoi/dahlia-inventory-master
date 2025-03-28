@@ -1,53 +1,98 @@
 
 /**
- * Controlador de PDFs de Maleta
- * @file Este arquivo contém operações para gerar PDFs relacionados a maletas
+ * Controlador de Geração de PDF para Abastecimento de Maletas
+ * @file Este arquivo coordena a geração de PDFs de abastecimento de maletas
  */
-import { supabase } from "@/integrations/supabase/client";
-import { SupplyItem, Suitcase } from "@/types/suitcase";
+import { jsPDF } from "jspdf";
+import 'jspdf-autotable';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+
+interface PdfItem {
+  inventory_id: string;
+  quantity?: number;
+  product?: {
+    id: string;
+    name: string;
+    sku: string;
+    price: number;
+  };
+}
 
 export class SupplyPdfController {
   /**
-   * Gera um PDF para a maleta
+   * Gera um PDF para uma maleta com os itens abastecidos
    * @param suitcaseId ID da maleta
-   * @param items Itens da maleta
-   * @param promoterInfo Informações da promotora
+   * @param items Itens abastecidos
+   * @param suitcaseInfo Informações da maleta
    * @returns URL do PDF gerado
    */
-  static async generateSuitcasePDF(suitcaseId: string, items: any[], promoterInfo: any) {
+  static async generateSuitcasePDF(
+    suitcaseId: string, 
+    items: PdfItem[], 
+    suitcaseInfo: any
+  ): Promise<string> {
     try {
-      // Essa função seria implementada integrando com alguma biblioteca de geração de PDF
-      console.log("Gerando PDF para maleta", suitcaseId, "com", items.length, "itens");
+      // Criar novo documento PDF
+      const doc = new jsPDF();
       
-      // Simulação - Em um ambiente real, usaríamos uma biblioteca como jsPDF ou chamaria uma API
-      const pdfUrl = `https://example.com/pdfs/maleta_${suitcaseId}.pdf`;
+      // Adicionar cabeçalho
+      doc.setFontSize(20);
+      doc.text("Comprovante de Abastecimento de Maleta", 105, 20, { align: "center" });
       
-      return pdfUrl;
+      doc.setFontSize(12);
+      doc.text(`Data: ${format(new Date(), 'dd/MM/yyyy HH:mm', { locale: ptBR })}`, 20, 30);
+      doc.text(`Código da Maleta: ${suitcaseInfo?.code || 'N/A'}`, 20, 40);
+      
+      if (suitcaseInfo?.seller?.name) {
+        doc.text(`Revendedora: ${suitcaseInfo.seller.name}`, 20, 50);
+      }
+      
+      // Listar itens abastecidos
+      const tableColumn = ["Item", "SKU", "Preço", "Quantidade"];
+      const tableRows: any[] = [];
+      
+      // Preparar linhas da tabela
+      items.forEach(item => {
+        if (!item.product) return;
+        
+        const productName = item.product.name || 'Item sem nome';
+        const sku = item.product.sku || 'Sem SKU';
+        const price = item.product.price 
+          ? `R$ ${item.product.price.toFixed(2)}`.replace('.', ',') 
+          : 'N/A';
+        const quantity = item.quantity || 1;
+        
+        tableRows.push([productName, sku, price, quantity]);
+      });
+      
+      // Adicionar tabela ao PDF
+      (doc as any).autoTable({
+        head: [tableColumn],
+        body: tableRows,
+        startY: 60,
+        theme: 'striped',
+        headStyles: { fillColor: [233, 30, 99], textColor: 255 },
+        margin: { top: 20 }
+      });
+      
+      // Adicionar informações finais
+      const finalY = (doc as any).lastAutoTable.finalY + 10;
+      doc.text(`Total de Itens: ${items.length}`, 20, finalY);
+      
+      // Campos para assinaturas
+      doc.text('Assinatura da Revendedora:', 20, finalY + 30);
+      doc.line(20, finalY + 35, 100, finalY + 35);
+      
+      doc.text('Assinatura da Administração:', 120, finalY + 30);
+      doc.line(120, finalY + 35, 190, finalY + 35);
+      
+      // Gerar o PDF como blob URL
+      const pdfOutput = doc.output('datauristring');
+      return pdfOutput;
     } catch (error) {
       console.error("Erro ao gerar PDF da maleta:", error);
-      throw error;
-    }
-  }
-  
-  /**
-   * Gera um PDF de abastecimento de maleta
-   * @param suitcaseId ID da maleta
-   * @param items Itens para abastecer
-   * @param suitcase Dados da maleta
-   * @returns URL do PDF gerado
-   */
-  static async generateSupplyPDF(suitcaseId: string, items: SupplyItem[], suitcase: Suitcase) {
-    try {
-      // Essa função seria implementada integrando com alguma biblioteca de geração de PDF
-      console.log("Gerando PDF de abastecimento para maleta", suitcaseId, "com", items.length, "itens");
-      
-      // Simulação - Em um ambiente real, usaríamos uma biblioteca como jsPDF ou chamaria uma API
-      const pdfUrl = `https://example.com/pdfs/abastecimento_${suitcaseId}.pdf`;
-      
-      return pdfUrl;
-    } catch (error) {
-      console.error("Erro ao gerar PDF de abastecimento:", error);
-      throw error;
+      return '';
     }
   }
 }

@@ -182,7 +182,7 @@ export class SuitcaseItemOperations {
             suitcase_id: itemData.suitcase_id,
             quantity: itemData.quantity || 1,
             reason: 'Devolvido danificado da maleta',
-            damage_type: 'damaged'
+            damage_type: 'unknown'
           });
         
         if (damagedError) {
@@ -192,14 +192,14 @@ export class SuitcaseItemOperations {
       } 
       // 3. Se não estiver danificado, liberar a reserva e atualizar o estoque
       else {
-        const { error: releaseError } = await this.releaseFromSuitcase(
+        const result = await this.releaseFromSuitcase(
           itemData.inventory_id, 
           itemData.quantity || 1
         );
         
-        if (releaseError) {
-          console.error('[SuitcaseItemOperations] Erro ao liberar reserva:', releaseError);
-          throw releaseError;
+        if (!result) {
+          console.error('[SuitcaseItemOperations] Erro ao liberar reserva:', itemData.inventory_id);
+          return false;
         }
       }
       

@@ -75,10 +75,12 @@ export class SuitcaseSupplyController {
             });
             
             // Adicionar à lista de itens adicionados
-            addedItems.push({
-              ...addedItem,
-              product: item.product
-            });
+            if (addedItem) {
+              addedItems.push({
+                ...addedItem,
+                product: item.product
+              });
+            }
           } catch (error) {
             console.error(`Erro ao adicionar unidade ${i+1} do item ${item.inventory_id} à maleta:`, error);
             throw error; // Propagar erro para interromper a operação
@@ -97,10 +99,11 @@ export class SuitcaseSupplyController {
    * Gera um PDF de comprovante de abastecimento
    * @param suitcaseId ID da maleta
    * @param items Itens adicionados à maleta
+   * @param suitcaseInfo Informações da maleta para o PDF
    * @returns URL do PDF gerado
    */
   static async generateSupplyPDF(suitcaseId: string, items: SupplyItem[], suitcaseInfo: any): Promise<string> {
-    return SupplyPdfController.generateSupplyPDF(suitcaseId, items, suitcaseInfo);
+    return SupplyPdfController.generateSuitcasePDF(suitcaseId, items, suitcaseInfo);
   }
 
   /**

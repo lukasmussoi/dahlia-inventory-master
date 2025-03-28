@@ -45,10 +45,10 @@ export const CombinedSuitcaseController = {
   // Abastecimento de maleta
   supplySuitcase: SuitcaseSupplyController.supplySuitcase,
   generateSupplyPDF: SuitcaseSupplyController.generateSupplyPDF,
-  searchInventoryItems: SupplyItemController.searchInventoryItems,
+  searchInventoryItems: SuitcaseSupplyController.searchInventoryItems,
   countSuitcaseItems: SuitcaseSupplyController.countSuitcaseItems,
-  getSuitcaseItemCounts: SuitcaseSupplyController.getSuitcaseItemCounts,
-  getSuitcasesItemCounts: SuitcaseSupplyController.getSuitcaseItemCounts,
+  getSuitcaseItemCounts: SuitcaseSupplyController.getSuitcasesItemCounts,
+  getSuitcasesItemCounts: SuitcaseSupplyController.getSuitcasesItemCounts,
   
   // PDF de maleta
   generateSuitcasePDF: SupplyPdfController.generateSuitcasePDF,

@@ -18,12 +18,25 @@ export class SupplyItemController {
         throw new Error("O termo de busca deve ter pelo menos 2 caracteres");
       }
 
-      // Usar o controlador de inventário para buscar itens
-      const items = await InventoryController.searchInventoryItems(searchTerm);
-      return items;
+      // Buscar itens do inventário diretamente
+      const { data, error } = await supabase
+        .from('inventory')
+        .select(`
+          *,
+          category:inventory_categories(name),
+          photo_url:inventory_photos(photo_url, is_primary)
+        `)
+        .or(`name.ilike.%${searchTerm}%,sku.ilike.%${searchTerm}%`)
+        .eq('archived', false)
+        .gt('quantity', 0)
+        .limit(10);
+      
+      if (error) throw error;
+      
+      return data || [];
     } catch (error) {
       console.error("Erro ao buscar itens do inventário:", error);
-      throw error;
+      return [];
     }
   }
 
