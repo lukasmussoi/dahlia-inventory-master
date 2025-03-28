@@ -6,16 +6,12 @@ interface SuitcaseGridProps {
   suitcases: Suitcase[];
   isAdmin?: boolean;
   onRefresh?: () => void;
-  onOpenAcertoDialog?: (suitcase: Suitcase) => void;
-  onOpenSupplyDialog?: (suitcase: Suitcase) => void;
 }
 
 export function SuitcaseGrid({ 
   suitcases, 
   isAdmin = false, 
-  onRefresh,
-  onOpenAcertoDialog,
-  onOpenSupplyDialog 
+  onRefresh = () => {} 
 }: SuitcaseGridProps) {
   if (suitcases.length === 0) {
     return (
@@ -36,8 +32,6 @@ export function SuitcaseGrid({
           suitcase={suitcase}
           isAdmin={isAdmin}
           onRefresh={onRefresh}
-          onOpenAcertoDialog={onOpenAcertoDialog}
-          onOpenSupplyDialog={onOpenSupplyDialog}
         />
       ))}
     </div>

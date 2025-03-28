@@ -20,6 +20,7 @@ interface SuitcaseSupplyDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   suitcase: Suitcase | null;
+  suitcaseId?: string | null;
   onRefresh?: () => void;
 }
 
@@ -27,8 +28,12 @@ export function SuitcaseSupplyDialog({
   open, 
   onOpenChange, 
   suitcase, 
+  suitcaseId,
   onRefresh 
 }: SuitcaseSupplyDialogProps) {
+  // Priorizar suitcase.id, mas usar suitcaseId como fallback
+  const effectiveSuitcaseId = suitcase?.id || suitcaseId || null;
+
   const {
     searchTerm,
     setSearchTerm,
@@ -48,7 +53,7 @@ export function SuitcaseSupplyDialog({
     calculateTotalItems,
     handleFinishSupply,
     formatMoney
-  } = useSupplyDialog(suitcase?.id || null, open, onOpenChange, onRefresh);
+  } = useSupplyDialog(effectiveSuitcaseId, open, onOpenChange, onRefresh);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

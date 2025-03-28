@@ -113,15 +113,15 @@ export const SuitcaseCard = ({ suitcase, isAdmin = false, onRefresh }: SuitcaseC
       <SuitcaseSupplyDialog
         open={openSupplyDialog}
         onOpenChange={setOpenSupplyDialog}
-        suitcaseId={suitcase.id}
-        onSuccess={onRefresh}
+        suitcase={suitcase}
+        onRefresh={onRefresh}
       />
       
       <SuitcaseSettlementDialog
         open={openSettlementDialog}
         onOpenChange={setOpenSettlementDialog}
-        suitcaseId={suitcase.id}
-        onSuccess={onRefresh}
+        suitcase={suitcase}
+        onRefresh={onRefresh}
       />
       
       <SuitcaseDetailsDialog
