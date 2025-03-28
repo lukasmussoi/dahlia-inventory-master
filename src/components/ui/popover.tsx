@@ -1,3 +1,9 @@
+
+/**
+ * Componente Popover
+ * @file Implementa um componente de popover usando Radix UI
+ * @relacionamento Usado em componentes como DatePicker e outros seletores
+ */
 import * as React from "react"
 import * as PopoverPrimitive from "@radix-ui/react-popover"
 

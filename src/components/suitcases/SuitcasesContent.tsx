@@ -19,6 +19,7 @@ import { AcertoMaletaDialog } from "./settlement/AcertoMaletaDialog";
 import { CombinedSuitcaseController } from "@/controllers/suitcase";
 import { SuitcaseSupplyDialog } from "./supply/SuitcaseSupplyDialog";
 import { useQuery } from "@tanstack/react-query";
+import { usePromoterOptions } from "@/hooks/suitcase/usePromoterOptions";
 
 interface SuitcasesContentProps {
   isAdmin?: boolean;
@@ -36,6 +37,7 @@ export function SuitcasesContent({ isAdmin = false, userProfile, summary }: Suit
   const [showAcertoDialog, setShowAcertoDialog] = useState(false);
   const [showSupplyDialog, setShowSupplyDialog] = useState(false);
   const queryClient = useQueryClient();
+  const { promoterOptions } = usePromoterOptions();
 
   // Buscar maletas com filtros
   const { data: suitcases = [], isLoading, refetch } = useQuery({
@@ -162,7 +164,7 @@ export function SuitcasesContent({ isAdmin = false, userProfile, summary }: Suit
         open={showNewSuitcaseDialog}
         onOpenChange={setShowNewSuitcaseDialog}
         onSubmit={handleCreateSuitcase}
-        mode="create"
+        promoterOptions={promoterOptions}
       />
 
       {/* Diálogo de acerto */}

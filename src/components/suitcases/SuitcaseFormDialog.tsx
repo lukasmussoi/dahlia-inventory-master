@@ -1,4 +1,9 @@
 
+/**
+ * Diálogo de Formulário de Maletas
+ * @file Este componente permite criar ou editar uma maleta
+ * @relacionamento Utiliza modelos e componentes UI para gerenciar maletas
+ */
 import { useEffect, useState } from "react";
 import {
   Dialog,
@@ -27,7 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { SuitcaseModel, SellerModel } from "@/models/suitcase";
+import { SuitcaseModel } from "@/models/suitcase";
 import { toast } from "sonner";
 import { format } from 'date-fns';
 import { DatePicker } from "@/components/ui/date-picker";
@@ -59,7 +64,7 @@ interface SuitcaseFormDialogProps {
   onOpenChange: (open: boolean) => void;
   onSubmit: (values: z.infer<typeof formSchema>, suitcaseId?: string) => Promise<void>;
   promoterOptions: { value: string; label: string }[];
-  suitcaseData?: SuitcaseModel | null;
+  suitcaseData?: any | null;
   isUpdate?: boolean;
 }
 
@@ -93,8 +98,13 @@ export function SuitcaseFormDialog({
   // Função para buscar as revendedoras associadas a uma promotora
   const fetchResellersByPromoter = async (promoterId: string) => {
     try {
-      const resellers = await SellerModel.getResellersByPromoterId(promoterId);
-      return resellers.map(reseller => ({
+      const response = await fetch(`/api/revendedoras?promoter_id=${promoterId}`);
+      if (!response.ok) {
+        throw new Error('Erro ao buscar revendedoras');
+      }
+      
+      const resellers = await response.json();
+      return resellers.map((reseller: any) => ({
         value: reseller.id,
         label: reseller.name,
       }));
@@ -168,9 +178,10 @@ export function SuitcaseFormDialog({
                       !field.value && "text-muted-foreground"
                     )}
                     onSelect={(date) => {
-                      field.onChange(date)
+                      if (date instanceof Date) field.onChange(date);
                     }}
                     defaultMonth={field.value}
+                    selected={field.value}
                     mode="single"
                   >
                     <FormControl>
@@ -207,9 +218,10 @@ export function SuitcaseFormDialog({
                       !field.value && "text-muted-foreground"
                     )}
                     onSelect={(date) => {
-                      field.onChange(date)
+                      if (date instanceof Date) field.onChange(date);
                     }}
                     defaultMonth={field.value}
+                    selected={field.value}
                     mode="single"
                   >
                     <FormControl>
