@@ -1,3 +1,4 @@
+
 /**
  * Aba de Itens da Maleta
  * @file Exibe os itens dentro da maleta e permite devolver ao estoque ou marcar como danificado
@@ -7,14 +8,13 @@ import { useState } from "react";
 import { Suitcase, SuitcaseItem } from "@/types/suitcase";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Undo2, AlertTriangle, Phone, MapPin, User } from "lucide-react";
 import { formatMoney } from "@/utils/formatUtils";
 
 interface SuitcaseItemsTabProps {
-  suitcase: Suitcase;
+  suitcase: Suitcase | null;
   promoterInfo: any;
   suitcaseItems: SuitcaseItem[];
   onReturnToInventory: (itemId: string, quantity: number) => Promise<void>;
@@ -81,6 +81,15 @@ export function SuitcaseItemsTab({
   // Filtra itens que estão em posse (não vendidos/devolvidos)
   const activeItems = suitcaseItems.filter(item => item.status === 'in_possession');
   
+  // Verificar se a maleta existe antes de tentar acessar suas propriedades
+  if (!suitcase) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-gray-500">Dados da maleta não disponíveis.</p>
+      </div>
+    );
+  }
+  
   return (
     <div className="space-y-6">
       {/* Informações da Revendedora e Promotora */}
@@ -88,22 +97,28 @@ export function SuitcaseItemsTab({
         <CardContent className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-3">
             <h3 className="text-lg font-medium">Dados da Revendedora</h3>
-            <div className="flex items-center gap-2">
-              <User size={16} className="text-gray-500" />
-              <span className="font-medium">{suitcase.seller?.name}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Phone size={16} className="text-gray-500" />
-              <span>{suitcase.seller?.phone || 'Sem telefone cadastrado'}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <MapPin size={16} className="text-gray-500" />
-              <span>
-                {suitcase.neighborhood && suitcase.city 
-                  ? `${suitcase.neighborhood}, ${suitcase.city}`
-                  : suitcase.neighborhood || suitcase.city || 'Localização não especificada'}
-              </span>
-            </div>
+            {suitcase.seller ? (
+              <>
+                <div className="flex items-center gap-2">
+                  <User size={16} className="text-gray-500" />
+                  <span className="font-medium">{suitcase.seller.name}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Phone size={16} className="text-gray-500" />
+                  <span>{suitcase.seller.phone || 'Sem telefone cadastrado'}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <MapPin size={16} className="text-gray-500" />
+                  <span>
+                    {suitcase.neighborhood && suitcase.city 
+                      ? `${suitcase.neighborhood}, ${suitcase.city}`
+                      : suitcase.neighborhood || suitcase.city || 'Localização não especificada'}
+                  </span>
+                </div>
+              </>
+            ) : (
+              <p className="text-gray-500">Dados da revendedora não disponíveis</p>
+            )}
           </div>
           
           <div className="space-y-3">

@@ -9,8 +9,7 @@ import {
   Dialog, 
   DialogContent, 
   DialogHeader, 
-  DialogTitle,
-  DialogClose
+  DialogTitle
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,6 +18,7 @@ import { SuitcaseItemsTab } from "@/components/suitcases/open/tabs/SuitcaseItems
 import { SuitcaseHistoryTab } from "@/components/suitcases/open/tabs/SuitcaseHistoryTab";
 import { toast } from "sonner";
 import { CombinedSuitcaseController } from "@/controllers/suitcase";
+import { Suitcase } from "@/types/suitcase";
 
 interface OpenSuitcaseModalProps {
   open: boolean;
@@ -30,7 +30,7 @@ export function OpenSuitcaseModal({ open, onOpenChange, suitcaseId }: OpenSuitca
   // Estados básicos
   const [activeTab, setActiveTab] = useState<'itens' | 'historico'>('itens');
   const [isLoading, setIsLoading] = useState(true);
-  const [suitcase, setSuitcase] = useState<any>(null);
+  const [suitcase, setSuitcase] = useState<Suitcase | null>(null);
   const [promoterInfo, setPromoterInfo] = useState<any>(null);
   const [suitcaseItems, setSuitcaseItems] = useState<any[]>([]);
   const [acertosHistorico, setAcertosHistorico] = useState<any[]>([]);
@@ -100,8 +100,10 @@ export function OpenSuitcaseModal({ open, onOpenChange, suitcaseId }: OpenSuitca
       toast.success("Item devolvido ao estoque com sucesso");
       
       // Recarregar lista de itens
-      const items = await CombinedSuitcaseController.getSuitcaseItems(suitcaseId || "");
-      setSuitcaseItems(items || []);
+      if (suitcaseId) {
+        const items = await CombinedSuitcaseController.getSuitcaseItems(suitcaseId);
+        setSuitcaseItems(items || []);
+      }
     } catch (error) {
       console.error("Erro ao devolver item ao estoque:", error);
       toast.error("Erro ao devolver item ao estoque");
@@ -115,8 +117,10 @@ export function OpenSuitcaseModal({ open, onOpenChange, suitcaseId }: OpenSuitca
       toast.success("Item marcado como danificado");
       
       // Recarregar lista de itens
-      const items = await CombinedSuitcaseController.getSuitcaseItems(suitcaseId || "");
-      setSuitcaseItems(items || []);
+      if (suitcaseId) {
+        const items = await CombinedSuitcaseController.getSuitcaseItems(suitcaseId);
+        setSuitcaseItems(items || []);
+      }
     } catch (error) {
       console.error("Erro ao marcar item como danificado:", error);
       toast.error("Erro ao marcar item como danificado");
@@ -144,7 +148,7 @@ export function OpenSuitcaseModal({ open, onOpenChange, suitcaseId }: OpenSuitca
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold">
-            Maleta {suitcase?.code}
+            Maleta {suitcase?.code || 'Sem código'}
           </DialogTitle>
         </DialogHeader>
 
