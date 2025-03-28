@@ -2,8 +2,8 @@
 /**
  * Hook para Abrir Maleta
  * @file Gerencia o estado e as operações de visualização, devolução e marcação de itens danificados
- * @relacionamento Utilizado pelo OpenSuitcaseDialog para gerenciar as abas e operações com itens
- * @modificação CORREÇÃO DEFINITIVA - Reescrito o gerenciamento de ciclo de vida e controle de montagem
+ * @relacionamento Utilizado pela página OpenSuitcasePage para gerenciar as abas e operações com itens
+ * @modificação Adaptado para funcionar com a página dedicada em vez de modal
  */
 import { useState, useCallback, useRef, useEffect } from "react";
 import { toast } from "sonner";
@@ -11,8 +11,8 @@ import { useSuitcaseQueries } from "./useSuitcaseQueries";
 import { CombinedSuitcaseController } from "@/controllers/suitcase";
 import { InventoryController } from "@/controllers/inventoryController";
 
-export function useOpenSuitcase(suitcaseId: string | null, open: boolean) {
-  console.log(`[useOpenSuitcase] Inicializando hook, suitcaseId: ${suitcaseId}, open: ${open}`);
+export function useOpenSuitcase(suitcaseId: string | null, isActive: boolean) {
+  console.log(`[useOpenSuitcase] Inicializando hook, suitcaseId: ${suitcaseId}, isActive: ${isActive}`);
   
   // Referência para controlar se o componente ainda está montado
   const isMounted = useRef(true);
@@ -32,7 +32,7 @@ export function useOpenSuitcase(suitcaseId: string | null, open: boolean) {
     loadingPromoterInfo,
     refetchSuitcaseItems,
     resetQueries
-  } = useSuitcaseQueries(suitcaseId, open);
+  } = useSuitcaseQueries(suitcaseId, isActive);
 
   // Efeito para gerenciar o ciclo de vida do componente
   useEffect(() => {

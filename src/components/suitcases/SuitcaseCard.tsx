@@ -1,7 +1,9 @@
+
 /**
  * Componente de Card de Maleta
  * @file Exibe os dados de uma maleta em formato de card com ações
  * @relacionamento Utilizado na listagem de maletas e interage com dialogs de acerto e abastecimento
+ * @modificação Botão "Abrir Maleta" agora abre página em nova aba em vez de modal
  */
 import { useState } from "react";
 import { format, isPast, parseISO } from "date-fns";
@@ -34,7 +36,6 @@ import {
 import { Suitcase } from "@/types/suitcase";
 import { SuitcaseSupplyDialog } from "./supply/SuitcaseSupplyDialog";
 import { SuitcaseSettlementDialog } from "./settlement/SuitcaseSettlementDialog";
-import { OpenSuitcaseDialog } from "./open/OpenSuitcaseDialog";
 import { formatStatus } from "@/utils/formatUtils";
 
 interface SuitcaseCardProps {
@@ -54,7 +55,6 @@ export function SuitcaseCard({
 }: SuitcaseCardProps) {
   const [showSupplyDialog, setShowSupplyDialog] = useState(false);
   const [showSettlementDialog, setShowSettlementDialog] = useState(false);
-  const [showOpenDialog, setShowOpenDialog] = useState(false);
 
   const hasLateSettlement = suitcase.next_settlement_date && 
     isPast(parseISO(suitcase.next_settlement_date));
@@ -113,9 +113,10 @@ export function SuitcaseCard({
     }
   };
 
-  // Manipulador para "Abrir Maleta"
+  // Manipulador para "Abrir Maleta" - Abre em nova aba
   const handleOpenSuitcase = () => {
-    setShowOpenDialog(true);
+    const url = `/dashboard/suitcases/open/${suitcase.id}`;
+    window.open(url, '_blank');
   };
 
   return (
@@ -207,13 +208,6 @@ export function SuitcaseCard({
         onOpenChange={setShowSettlementDialog}
         suitcase={suitcase}
         onRefresh={onRefresh}
-      />
-
-      {/* Diálogo "Abrir Maleta" */}
-      <OpenSuitcaseDialog
-        open={showOpenDialog}
-        onOpenChange={setShowOpenDialog}
-        suitcaseId={suitcase.id}
       />
     </>
   );
