@@ -1,6 +1,8 @@
+
 import { useState, useCallback } from "react";
 import { CombinedSuitcaseController } from "@/controllers/suitcase";
 import { toast } from "sonner";
+import { Suitcase } from "@/types/suitcase";
 
 export function usePrintOperations() {
   const [isPrintingPdf, setIsPrintingPdf] = useState(false);
@@ -13,7 +15,25 @@ export function usePrintOperations() {
   const handlePrint = async (suitcaseId: string, items: any[], promoterInfo: any) => {
     setIsPrintingPdf(true);
     try {
-      await CombinedSuitcaseController.generateSuitcasePDF(suitcaseId, items, promoterInfo);
+      // Buscar informações da maleta para o PDF se necessário
+      let suitcaseInfo: Suitcase | null = null;
+      if (!items || !Array.isArray(items) || items.length === 0) {
+        console.log("Nenhum item fornecido, buscando informações da maleta");
+        suitcaseInfo = await CombinedSuitcaseController.getSuitcaseById(suitcaseId);
+      }
+      
+      const result = await CombinedSuitcaseController.generateSuitcasePDF(
+        suitcaseId, 
+        suitcaseInfo || { 
+          id: suitcaseId, 
+          code: '', 
+          seller_id: '', 
+          status: 'in_use', 
+          created_at: new Date().toISOString() 
+        }, 
+        items
+      );
+      
       toast.success("PDF gerado com sucesso");
       return true;
     } catch (error) {
