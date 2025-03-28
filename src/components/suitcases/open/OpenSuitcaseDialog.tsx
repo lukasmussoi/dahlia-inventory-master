@@ -67,7 +67,7 @@ export function OpenSuitcaseDialog({
     }
     
     // Quando a modal é fechada, aguardar a animação terminar antes de limpar os estados
-    if (!open) {
+    if (!open && !isClosing) {
       console.log("[OpenSuitcaseDialog] Modal fechada - iniciando sequência de limpeza");
       
       // Aguardar a animação de fechamento antes de limpar o estado
@@ -81,10 +81,10 @@ export function OpenSuitcaseDialog({
       // Limpar o timeout se o componente for desmontado antes de sua conclusão
       return () => clearTimeout(cleanupTimeout);
     }
-  }, [open, resetState]);
+  }, [open, resetState, isClosing]);
 
   // Renderização durante carregamento
-  if (isLoading) {
+  if (isLoading && open) {
     return (
       <Dialog open={open} onOpenChange={handleCloseDialog}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
