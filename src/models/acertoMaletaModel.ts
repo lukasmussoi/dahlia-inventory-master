@@ -150,6 +150,10 @@ export class AcertoMaletaModel {
             continue;
           }
           
+          console.log(`[DEPURAÇÃO ACERTO] Retornando item ${itemId} ao estoque`);
+          console.log(`[DEPURAÇÃO ACERTO] Status atual do item: ${item.status}`);
+          console.log(`[DEPURAÇÃO ACERTO] Quantidade do item: ${item.quantity}`);
+          
           // Chamar a função atualizada para devolução ao estoque
           const result = await SuitcaseItemModel.returnItemToInventory(itemId);
           
@@ -170,7 +174,7 @@ export class AcertoMaletaModel {
       // 3. Verificação adicional: buscar todos os itens desta maleta para garantir que todos foram processados
       const { data: remainingItems, error: checkError } = await supabase
         .from('suitcase_items')
-        .select('id, status')
+        .select('id, status, quantity, inventory_id')
         .eq('suitcase_id', suitcaseId);
       
       if (checkError) {
@@ -178,7 +182,12 @@ export class AcertoMaletaModel {
       } else if (remainingItems && remainingItems.length > 0) {
         // Apenas verificar e logar, não processar automaticamente para evitar operações não solicitadas
         console.log(`Foram encontrados ${remainingItems.length} itens ainda na maleta após o processamento.`);
-        console.log(`Status dos itens restantes:`, remainingItems.map(item => ({ id: item.id, status: item.status })));
+        console.log(`Status dos itens restantes:`, remainingItems.map(item => ({ 
+          id: item.id, 
+          status: item.status,
+          inventory_id: item.inventory_id,
+          quantity: item.quantity
+        })));
       } else {
         console.log(`Nenhum item restante na maleta ${suitcaseId}. Processamento concluído com sucesso.`);
       }

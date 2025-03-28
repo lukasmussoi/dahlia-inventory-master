@@ -67,6 +67,12 @@ export function SuitcaseInventorySearch({ suitcaseId, onItemAdded }: SuitcaseInv
         console.log(`[LOG] Adicionando ${itemQuantity} unidades do item ${item.name} (${item.sku}) à maleta`);
       }
       
+      // DEPURAÇÃO DETALHADA
+      console.log(`[SuitcaseInventorySearch] DEPURAÇÃO CRÍTICA - addItemToSuitcase:`);
+      console.log(`- ID da maleta: ${suitcaseId}`);
+      console.log(`- ID do item: ${inventoryId}`);
+      console.log(`- Quantidade selecionada: ${itemQuantity}`);
+      
       await CombinedSuitcaseController.addItemToSuitcase(suitcaseId, inventoryId, itemQuantity);
       
       // Atualizar lista de resultados para remover o item adicionado
@@ -96,6 +102,12 @@ export function SuitcaseInventorySearch({ suitcaseId, onItemAdded }: SuitcaseInv
       newValue = maxAvailable;
       toast.info(`Quantidade limitada ao estoque disponível (${maxAvailable})`);
     }
+    
+    // Log de depuração para quantidade
+    console.log(`[SuitcaseInventorySearch] Atualizando quantidade do item ${inventoryId}:`);
+    console.log(`- Valor anterior: ${quantity[inventoryId] || 1}`);
+    console.log(`- Novo valor: ${newValue}`);
+    console.log(`- Limite disponível: ${maxAvailable}`);
     
     setQuantity(prev => ({
       ...prev,

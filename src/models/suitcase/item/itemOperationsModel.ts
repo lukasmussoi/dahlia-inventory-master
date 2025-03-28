@@ -229,8 +229,15 @@ export class ItemOperationsModel {
         // Se o item já existe na maleta, atualize a quantidade SOMANDO à existente
         const currentQuantity = existingItemCheck.item.quantity || 0;
         const newQuantity = currentQuantity + quantity;
+        
+        console.log(`[ItemOperations] DEPURAÇÃO CRÍTICA - Atualizando quantidade:`);
+        console.log(`- ID do item na maleta: ${existingItemCheck.item.id}`);
+        console.log(`- Quantidade atual na maleta: ${currentQuantity}`);
+        console.log(`- Quantidade a adicionar: ${quantity}`);
+        console.log(`- Nova quantidade total: ${newQuantity}`);
         console.log(`[LOG] Atualizando quantidade do item na maleta: atual=${currentQuantity}, adicional=${quantity}, nova total=${newQuantity}`);
         
+        // Realizar operação de update diretamente para garantir que a quantidade seja somada corretamente
         const { data: updatedItem, error: updateItemError } = await supabase
           .from('suitcase_items')
           .update({ quantity: newQuantity })
@@ -287,11 +294,18 @@ export class ItemOperationsModel {
         }
         
         console.log(`[ItemOperations] Item atualizado na maleta, nova quantidade: ${newQuantity}`);
+        console.log(`[ItemOperations] Dados do item após atualização:`, updatedItem);
         console.log(`[LOG] Item adicionado com sucesso à maleta (quantidade atualizada para ${newQuantity})`);
         suitcaseItem = updatedItem;
       } else {
         console.log(`[ItemOperations] Item não existe na maleta, criando novo`);
         console.log(`[LOG] Criando novo item na maleta com quantidade: ${quantity}`);
+        
+        console.log(`[ItemOperations] DEPURAÇÃO CRÍTICA - Criando novo item:`);
+        console.log(`- ID da maleta: ${suitcase_id}`);
+        console.log(`- ID do item no inventário: ${inventory_id}`);
+        console.log(`- Quantidade inicial: ${quantity}`);
+        
         // Se o item não existe na maleta, crie um novo
         const { data: newItem, error: insertItemError } = await supabase
           .from('suitcase_items')
@@ -353,6 +367,7 @@ export class ItemOperationsModel {
         }
         
         console.log(`[ItemOperations] Novo item adicionado à maleta com quantidade ${quantity}`);
+        console.log(`[ItemOperations] Dados do novo item:`, newItem);
         console.log(`[LOG] Item adicionado com sucesso à maleta (quantidade: ${quantity})`);
         suitcaseItem = newItem;
       }
