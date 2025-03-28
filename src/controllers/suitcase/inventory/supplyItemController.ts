@@ -38,7 +38,7 @@ export class SupplyItemController {
       // Buscar dados atualizados do item
       const { data: item, error } = await supabase
         .from('inventory')
-        .select('quantity, quantity_reserved')
+        .select('quantity, quantity_reserved, name, sku')
         .eq('id', inventoryId)
         .single();
       
@@ -69,13 +69,17 @@ export class SupplyItemController {
       const quantity_reserved = item.quantity_reserved || 0;
       const quantity_available = Math.max(0, quantity_total - quantity_reserved);
       
-      console.log(`[SupplyItemController] Disponibilidade do item ${inventoryId}: total=${quantity_total}, reservado=${quantity_reserved}, disponível=${quantity_available}`);
+      const itemName = item.name || 'sem nome';
+      const itemSku = item.sku || 'sem SKU';
+      
+      console.log(`[SupplyItemController] Disponibilidade do item ${itemName} (${itemSku}): total=${quantity_total}, reservado=${quantity_reserved}, disponível=${quantity_available}`);
+      console.log(`[LOG] Buscando estoque disponível para ${itemName} (${itemSku}): Total=${quantity_total}, Reservado=${quantity_reserved}, Disponível=${quantity_available}`);
       
       return {
         available: quantity_available > 0,
         message: quantity_available > 0 
-          ? `Item disponível para abastecimento (${quantity_available} unidades)` 
-          : `Item sem estoque disponível (total: ${quantity_total}, reservado: ${quantity_reserved})`,
+          ? `Item ${itemName} (${itemSku}) disponível para abastecimento (${quantity_available} unidades)` 
+          : `Item ${itemName} (${itemSku}) sem estoque disponível (total: ${quantity_total}, reservado: ${quantity_reserved})`,
         quantity: quantity_total,
         quantity_reserved,
         quantity_available

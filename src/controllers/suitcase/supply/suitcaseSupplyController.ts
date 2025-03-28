@@ -71,25 +71,30 @@ export class SuitcaseSupplyController {
           continue;
         }
         
-        console.log(`[SuitcaseSupplyController] Processando item ${item.inventory_id} (${item.product?.name || 'sem nome'}) com quantidade ${item.quantity}`);
+        const productName = item.product?.name || 'sem nome';
+        const productSku = item.product?.sku || 'sem SKU';
+        console.log(`[SuitcaseSupplyController] Processando item ${item.inventory_id} (${productName} - ${productSku}) com quantidade ${item.quantity}`);
         
-        // Verificar se o item está disponível
+        // Verificar se o item está disponível usando o Controller específico
         const availability = await SupplyItemController.checkItemAvailability(item.inventory_id);
         
+        console.log(`[SuitcaseSupplyController] Verificação de disponibilidade para ${productName} (${productSku}):`, availability);
+        
         if (!availability.available) {
-          console.warn(`[SuitcaseSupplyController] Item ${item.inventory_id} não disponível: ${availability.message}`);
-          throw new Error(`Item ${item.product?.name || item.inventory_id} não disponível para abastecimento: ${availability.message}`);
+          console.warn(`[SuitcaseSupplyController] Item ${productSku} não disponível: ${availability.message}`);
+          throw new Error(`Item ${productName} (${productSku}) não disponível para abastecimento: ${availability.message}`);
         }
         
         // Verificar se a quantidade solicitada está disponível
         const quantity = item.quantity || 1;
         if (availability.quantity_available < quantity) {
-          console.warn(`[SuitcaseSupplyController] Quantidade solicitada (${quantity}) excede disponível (${availability.quantity_available}) para item ${item.inventory_id}`);
-          throw new Error(`Quantidade solicitada (${quantity}) excede disponível (${availability.quantity_available}) para o item ${item.product?.name || item.inventory_id}`);
+          const errorMsg = `Quantidade solicitada (${quantity}) excede disponível (${availability.quantity_available}) para o item ${productName} (${productSku})`;
+          console.warn(`[SuitcaseSupplyController] ${errorMsg}`);
+          throw new Error(errorMsg);
         }
         
         try {
-          console.log(`[SuitcaseSupplyController] Chamando reserveItemToSuitcase para o item ${item.inventory_id}`);
+          console.log(`[SuitcaseSupplyController] Chamando reserveItemToSuitcase para o item ${productSku}`);
           console.log(`[SuitcaseSupplyController] Parâmetros:`, {
             suitcase_id: suitcaseId,
             inventory_id: item.inventory_id,
@@ -104,8 +109,8 @@ export class SuitcaseSupplyController {
           });
           
           if (!addedItem) {
-            console.error(`[SuitcaseSupplyController] A função reserveItemToSuitcase não retornou dados para o item ${item.inventory_id}`);
-            throw new Error(`Erro ao adicionar ${item.product?.name || 'item'} à maleta ${suitcaseCode}`);
+            console.error(`[SuitcaseSupplyController] A função reserveItemToSuitcase não retornou dados para o item ${productSku}`);
+            throw new Error(`Erro ao adicionar ${productName} à maleta ${suitcaseCode}. Nenhum dado retornado da operação.`);
           }
           
           // Adicionar à lista de itens adicionados
@@ -114,9 +119,10 @@ export class SuitcaseSupplyController {
             product: item.product || addedItem.product
           });
           
-          console.log(`[SuitcaseSupplyController] Item ${item.inventory_id} adicionado à maleta com quantidade ${quantity}`);
+          console.log(`[SuitcaseSupplyController] Item ${productSku} adicionado à maleta com quantidade ${quantity}`);
+          console.log(`[LOG] Item ${productName} (${productSku}) adicionado com sucesso à maleta ${suitcaseCode} (${quantity} unidades)`);
         } catch (error: any) {
-          console.error(`[SuitcaseSupplyController] Erro ao adicionar item ${item.inventory_id} à maleta:`, error);
+          console.error(`[SuitcaseSupplyController] Erro ao adicionar item ${productSku} à maleta:`, error);
           throw error; // Propagar erro para interromper a operação
         }
       }

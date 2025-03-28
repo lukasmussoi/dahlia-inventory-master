@@ -90,7 +90,7 @@ export class InventorySearchModel {
           const quantityReserved = stockData?.quantity_reserved || 0;
           const quantityAvailable = Math.max(0, quantityTotal - quantityReserved);
           
-          console.log(`[InventorySearchModel] Item ${item.name} (${item.id}): total=${quantityTotal}, reservado=${quantityReserved}, disponível=${quantityAvailable}`);
+          console.log(`[InventorySearchModel] Item ${item.name} (${item.sku}): total=${quantityTotal}, reservado=${quantityReserved}, disponível=${quantityAvailable}`);
           
           return {
             ...item,
@@ -100,6 +100,11 @@ export class InventorySearchModel {
           };
         })
       );
+
+      // Filtra apenas itens com disponibilidade maior que zero
+      const availableItems = processedItems.filter(item => item.quantity_available > 0);
+      
+      console.log(`[InventorySearchModel] Retornando ${availableItems.length} itens disponíveis de ${processedItems.length} encontrados`);
       
       return processedItems;
     } catch (error) {

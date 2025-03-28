@@ -1,3 +1,4 @@
+
 /**
  * Hook para Gerenciar o Diálogo de Abastecimento
  * @file Este hook centraliza a lógica do diálogo de abastecimento de maletas
@@ -253,6 +254,7 @@ export function useSupplyDialog(
     try {
       console.log("[useSupplyDialog] Iniciando processo de abastecimento");
       console.log("[useSupplyDialog] Maleta:", suitcaseId);
+      console.log("[useSupplyDialog] Código da maleta:", suitcase.code);
       console.log("[useSupplyDialog] Qtde de itens:", selectedItems.length);
       
       // Separar itens novos e itens existentes com quantidades modificadas
@@ -281,12 +283,20 @@ export function useSupplyDialog(
           console.log(`[useSupplyDialog] Enviando ${itemsToSupply.length} itens para abastecimento`);
           console.log("[useSupplyDialog] Detalhes dos itens:", JSON.stringify(itemsToSupply, null, 2));
           
+          const itemsLog = itemsToSupply.map(item => 
+            `[LOG] Adicionando ${item.quantity} unidades do item ${item.product.name} (${item.product.sku}) à maleta ${suitcase.code || suitcaseId}`
+          );
+          
+          // Exibir logs para cada item sendo adicionado
+          itemsLog.forEach(log => console.log(log));
+          
           addedItems = await CombinedSuitcaseController.supplySuitcase(
             suitcaseId,
             itemsToSupply
           );
           
           console.log("[useSupplyDialog] Itens adicionados com sucesso:", addedItems);
+          console.log(`[LOG] ${addedItems.length} itens adicionados com sucesso à maleta ${suitcase.code || suitcaseId}`);
         } catch (error: any) {
           const mensagemErro = error instanceof Error 
             ? error.message 
@@ -294,6 +304,7 @@ export function useSupplyDialog(
           
           console.error(`[useSupplyDialog] Erro ao adicionar itens à maleta: ${mensagemErro}`);
           console.error(`[useSupplyDialog] Detalhes do erro:`, error);
+          console.error(`[ERRO] ${mensagemErro}`);
           
           // Exibir mensagem mais explicativa
           toast.error(mensagemErro, {
@@ -354,7 +365,11 @@ export function useSupplyDialog(
       onOpenChange(false);
     } catch (error: any) {
       console.error("[useSupplyDialog] Erro ao abastecer maleta:", error);
-      toast.error(error instanceof Error ? error.message : "Erro ao abastecer maleta");
+      
+      // Mostrar mensagem de erro específica
+      const errorMessage = error instanceof Error ? error.message : "Erro ao abastecer maleta";
+      console.error(`[ERRO] ${errorMessage}`);
+      toast.error(errorMessage);
     } finally {
       setIsSupplying(false);
       setIsGeneratingPdf(false);
