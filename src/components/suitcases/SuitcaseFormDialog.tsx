@@ -145,11 +145,11 @@ export function SuitcaseFormDialog({
     }
   };
 
-  // Usando uma variável para armazenar o valor atual do seller_id
+  // Monitorar mudanças no campo seller_id e buscar informações quando ele mudar
   useEffect(() => {
     const sellerId = form.watch("seller_id");
     if (sellerId) {
-      void fetchSellerInfo(sellerId);
+      fetchSellerInfo(sellerId);
     }
   }, [form.watch("seller_id")]);
 
