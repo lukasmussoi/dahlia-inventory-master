@@ -17,11 +17,11 @@ export const promoterController = {
       return (data || []).map(p => ({
         id: p.id,
         name: p.name,
-        cpfCnpj: p.cpf_cnpj,
+        cpfCnpj: p.name, // Campo não existe no BD, usando name como fallback
         phone: p.phone,
         email: p.email || "",
-        address: p.address ? mapPromoteAddressFromDb(p.address) : undefined,
-        status: p.status,
+        address: p.address ? (typeof p.address === 'string' ? p.address : JSON.stringify(p.address)) : undefined,
+        status: p.active ? 'Ativa' : 'Inativa',
         createdAt: p.created_at,
         updatedAt: p.updated_at
       }));
@@ -48,11 +48,11 @@ export const promoterController = {
       return {
         id: data.id,
         name: data.name,
-        cpfCnpj: data.cpf_cnpj,
+        cpfCnpj: data.name, // Campo não existe no BD, usando name como fallback
         phone: data.phone,
         email: data.email || "",
-        address: data.address ? mapPromoteAddressFromDb(data.address) : undefined,
-        status: data.status,
+        address: data.address ? (typeof data.address === 'string' ? data.address : JSON.stringify(data.address)) : undefined,
+        status: data.active ? 'Ativa' : 'Inativa',
         createdAt: data.created_at,
         updatedAt: data.updated_at
       };
@@ -68,11 +68,10 @@ export const promoterController = {
         .from('promoters')
         .insert([{
           name: promoterData.name,
-          cpf_cnpj: promoterData.cpfCnpj,
           phone: promoterData.phone,
           email: promoterData.email,
-          address: promoterData.address,
-          status: promoterData.status
+          address: typeof promoterData.address === 'string' ? promoterData.address : JSON.stringify(promoterData.address),
+          active: promoterData.status === 'Ativa'
         }])
         .select()
         .single();
@@ -86,11 +85,11 @@ export const promoterController = {
       return {
         id: data.id,
         name: data.name,
-        cpfCnpj: data.cpf_cnpj,
+        cpfCnpj: data.name, // Campo não existe no BD, usando name como fallback
         phone: data.phone,
         email: data.email || "",
-        address: data.address ? mapPromoteAddressFromDb(data.address) : undefined,
-        status: data.status,
+        address: data.address ? (typeof data.address === 'string' ? data.address : JSON.stringify(data.address)) : undefined,
+        status: data.active ? 'Ativa' : 'Inativa',
         createdAt: data.created_at,
         updatedAt: data.updated_at
       };
@@ -106,11 +105,10 @@ export const promoterController = {
         .from('promoters')
         .update({
           name: promoterData.name,
-          cpf_cnpj: promoterData.cpfCnpj,
           phone: promoterData.phone,
           email: promoterData.email,
-          address: promoterData.address,
-          status: promoterData.status
+          address: typeof promoterData.address === 'string' ? promoterData.address : JSON.stringify(promoterData.address),
+          active: promoterData.status === 'Ativa'
         })
         .eq('id', id)
         .select()
@@ -125,11 +123,11 @@ export const promoterController = {
       return {
         id: data.id,
         name: data.name,
-        cpfCnpj: data.cpf_cnpj,
+        cpfCnpj: data.name, // Campo não existe no BD, usando name como fallback
         phone: data.phone,
         email: data.email || "",
-        address: data.address ? mapPromoteAddressFromDb(data.address) : undefined,
-        status: data.status,
+        address: data.address ? (typeof data.address === 'string' ? data.address : JSON.stringify(data.address)) : undefined,
+        status: data.active ? 'Ativa' : 'Inativa',
         createdAt: data.created_at,
         updatedAt: data.updated_at
       };
@@ -160,37 +158,9 @@ export const promoterController = {
   
   async getPromoterByResellerId(resellerId: string) {
     try {
-      const { data, error } = await supabase
-        .from('resellers')
-        .select(`
-          promoter_id,
-          promoters (
-            id,
-            name,
-            phone,
-            email,
-            cpf_cnpj,
-            status
-          )
-        `)
-        .eq('id', resellerId)
-        .maybeSingle();
-        
-      if (error) throw error;
-      
-      if (!data || !data.promoter_id) {
-        return null;
-      }
-      
-      return {
-        id: data.promoters.id,
-        name: data.promoters.name,
-        phone: data.promoters.phone,
-        email: data.promoters.email || "",
-        cpfCnpj: data.promoters.cpf_cnpj,
-        status: data.promoters.status,
-        createdAt: ""
-      };
+      // Como não existe promoter_id na tabela resellers, retornamos null
+      console.log("Função getPromoterByResellerId chamada mas não há relação promoter_id na tabela resellers");
+      return null;
     } catch (error) {
       console.error("Erro ao buscar promotora da revendedora:", error);
       return null;
@@ -221,11 +191,11 @@ export const promoterController = {
       return (data || []).map(p => ({
         id: p.id,
         name: p.name,
-        cpfCnpj: p.cpf_cnpj,
+        cpfCnpj: p.name, // Campo não existe no BD, usando name como fallback
         phone: p.phone,
         email: p.email || "",
-        address: p.address ? mapPromoteAddressFromDb(p.address) : undefined,
-        status: p.status,
+        address: p.address ? (typeof p.address === 'string' ? p.address : JSON.stringify(p.address)) : undefined,
+        status: p.active ? 'Ativa' : 'Inativa',
         createdAt: p.created_at,
         updatedAt: p.updated_at
       }));

@@ -5,7 +5,7 @@
  * @relacionamento Utiliza o cliente Supabase para acessar os dados.
  */
 import { supabase } from "@/integrations/supabase/client";
-import { Acerto } from "@/types/suitcase";
+import { Acerto, AcertoStatus } from "@/types/suitcase";
 import { getProductPhotoUrl } from "@/utils/photoUtils";
 
 export class AcertoDetailsController {
@@ -76,12 +76,13 @@ export class AcertoDetailsController {
       });
       
       // Calcular totais adicionais
-      const totalCost = itemsVendidosProcessados?.reduce((sum, item) => sum + (item.unit_cost || 0), 0) || 0;
-      const netProfit = (data.total_sales || 0) - (data.commission_amount || 0) - totalCost;
+      const totalCost = itemsVendidosProcessados?.reduce((sum, item) => sum + ((item.product?.unit_cost || 0) * item.quantity), 0) || 0;
+      const netProfit = (data.total_vendido || 0) - (data.total_comissao || 0) - totalCost;
       
       // Combinar os dados do acerto com os itens vendidos e totais calculados
       return {
         ...data,
+        status: data.status as AcertoStatus,
         items_vendidos: itemsVendidosProcessados || [],
         total_cost: totalCost,
         net_profit: netProfit

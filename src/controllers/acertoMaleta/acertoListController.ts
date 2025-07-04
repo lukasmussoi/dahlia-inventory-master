@@ -5,7 +5,7 @@
  * @relacionamento Utiliza o cliente Supabase para acessar os dados.
  */
 import { supabase } from "@/integrations/supabase/client";
-import { Acerto } from "@/types/suitcase";
+import { Acerto, AcertoStatus } from "@/types/suitcase";
 import { getProductPhotoUrl } from "@/utils/photoUtils";
 
 export class AcertoListController {
@@ -43,7 +43,10 @@ export class AcertoListController {
       const { data, error } = await query;
 
       if (error) throw error;
-      return data || [];
+      return (data || []).map(acerto => ({
+        ...acerto,
+        status: acerto.status as AcertoStatus
+      }));
     } catch (error) {
       console.error("Erro ao buscar acertos:", error);
       throw new Error("Erro ao buscar acertos");
@@ -97,6 +100,7 @@ export class AcertoListController {
           
           return {
             ...acerto,
+            status: acerto.status as AcertoStatus,
             items_vendidos: itemsVendidosProcessados || []
           };
         })

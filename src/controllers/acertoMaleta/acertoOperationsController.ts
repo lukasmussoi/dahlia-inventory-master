@@ -43,7 +43,7 @@ export class AcertoOperationsController {
           .from('suitcases')
           .select(`
             *,
-            seller:resellers(id, name, commission_rate)
+            promoter:promoters!promoter_id(id, name, commission_rate)
           `)
           .eq('id', data.suitcase_id)
           .single();
@@ -89,7 +89,7 @@ export class AcertoOperationsController {
           return sum + (item.product?.price || 0);
         }, 0);
         
-        const commissionRate = suitcase.seller?.commission_rate || 0.3;
+        const commissionRate = suitcase.promoter?.commission_rate || 0.3;
         const commissionAmount = totalSales * commissionRate;
         
         // Criar um novo acerto
@@ -150,13 +150,13 @@ export class AcertoOperationsController {
           throw new Error("Erro ao buscar itens vendidos");
         }
         
-        const totalSales = soldItems ? soldItems.reduce((sum, item) => sum + (item.price || 0), 0) : 0;
+        const totalSales = soldItems ? soldItems.reduce((sum, item) => sum + (item.sale_price || 0), 0) : 0;
         
-        // Buscar taxa de comissão do vendedor
+        // Buscar taxa de comissão do promotor
         const { data: suitcase, error: suitcaseError } = await supabase
           .from('suitcases')
           .select(`
-            seller:resellers(commission_rate)
+            promoter:promoters!promoter_id(commission_rate)
           `)
           .eq('id', data.suitcase_id)
           .single();
@@ -166,7 +166,7 @@ export class AcertoOperationsController {
           throw new Error("Erro ao buscar taxa de comissão");
         }
         
-        const commissionRate = suitcase?.seller?.commission_rate || 0.3;
+        const commissionRate = suitcase?.promoter?.commission_rate || 0.3;
         const commissionAmount = totalSales * commissionRate;
         
         // Atualizar o acerto para concluído com os valores corretos
@@ -222,7 +222,7 @@ export class AcertoOperationsController {
       }
       
       if (acerto.status === 'concluido' && acerto.items_vendidos && acerto.items_vendidos.length > 0) {
-        const suitcaseItemIds = acerto.items_vendidos.map(item => item.suitcase_item_id);
+        const suitcaseItemIds = acerto.items_vendidos.map(item => item.id); // Usando id em vez de suitcase_item_id
         
         if (suitcaseItemIds.length > 0) {
           const { error: updateError } = await supabase

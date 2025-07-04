@@ -106,15 +106,12 @@ export interface InventoryItemSuitcaseInfo {
 export interface AcertoItem {
   id: string;
   acerto_id: string;
-  suitcase_item_id: string;
   inventory_id: string;
-  price: number;
-  sale_date: string;
-  customer_name?: string;
-  payment_method?: string;
+  quantity: number;
+  unit_price: number;
+  sale_price: number;
+  commission_rate?: number;
   created_at?: string;
-  updated_at?: string;
-  unit_cost?: number;
   product?: {
     id: string;
     name: string;
@@ -128,26 +125,48 @@ export interface AcertoItem {
 export interface Acerto {
   id: string;
   suitcase_id: string;
-  seller_id: string;
-  settlement_date: string;
-  next_settlement_date?: string;
-  total_sales: number;
-  commission_amount: number;
-  receipt_url?: string;
+  promoter_id: string;
+  data_acerto?: string;
+  total_vendido?: number;
+  total_comissao?: number;
+  total_lucro?: number;
+  observacoes?: string;
   status: AcertoStatus;
-  restock_suggestions?: any;
-  created_at: string;
+  created_at?: string;
   updated_at?: string;
   total_cost?: number;
   net_profit?: number;
-  suitcase?: Partial<Suitcase>;
-  seller?: {
+  suitcase?: any;
+  promoter?: {
+    id: string;
+    name: string;
+    email?: string;
+    phone?: string;
+    commission_rate?: number;
+  };
+  items_vendidos?: AcertoItem[];
+}
+
+// Versão temporária compatível com os componentes existentes
+export interface AcertoCompatible extends Acerto {
+  settlement_date?: string; // mapeado de data_acerto
+  total_sales?: number; // mapeado de total_vendido
+  commission_amount?: number; // mapeado de total_comissao
+  seller?: { // temporário para compatibilidade
     id: string;
     name: string;
     commission_rate?: number;
     address?: any;
   };
-  items_vendidos?: AcertoItem[];
+  next_settlement_date?: string;
+}
+
+export interface AcertoItemCompatible extends AcertoItem {
+  price?: number; // mapeado de sale_price
+  customer_name?: string; // campo que não existe mais
+  payment_method?: string; // campo que não existe mais
+  sale_date?: string; // campo que não existe mais  
+  unit_cost?: number; // extraído do produto
 }
 
 export interface SuitcaseSettlementFormData {
