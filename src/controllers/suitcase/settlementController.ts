@@ -235,7 +235,7 @@ export const SettlementController = {
       
       // 4. Atualizar acerto com status concluído e valores calculados
       const { data: updatedAcerto, error } = await supabase
-        .from('acertos_maleta')
+        .from('acerto_maleta')
         .update({
           status: 'concluido',
           total_sales: totalSales,

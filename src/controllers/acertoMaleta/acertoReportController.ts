@@ -31,35 +31,13 @@ export class AcertoReportController {
         throw new Error("Acerto não encontrado");
       }
       
-      // Buscar informações da promotora se houver reseller_id
+      // Buscar informações da promotora se houver promoter_id
       let promoterInfo = null;
-      if (acerto.seller?.id) {
-        try {
-          // Buscar informações da promotora associada à revendedora
-          const { data, error } = await supabase
-            .from('resellers')
-            .select('promoter_id')
-            .eq('id', acerto.seller.id)
-            .single();
-          
-          if (!error && data?.promoter_id) {
-            const { data: promoter, error: promoterError } = await supabase
-              .from('promoters')
-              .select('*')
-              .eq('id', data.promoter_id)
-              .single();
-              
-            if (!promoterError && promoter) {
-              promoterInfo = {
-                name: promoter.name,
-                phone: promoter.phone || 'Não informado'
-              };
-            }
-          }
-        } catch (err) {
-          console.error("Erro ao buscar informações da promotora:", err);
-          // Continuar sem as informações da promotora
-        }
+      if (acerto.promoter?.id) {
+        promoterInfo = {
+          name: acerto.promoter.name,
+          phone: acerto.promoter.phone || 'Não informado'
+        };
       }
       
       // Criar o documento PDF
@@ -75,20 +53,18 @@ export class AcertoReportController {
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
       
-      const acertoDate = acerto.settlement_date 
-        ? format(new Date(acerto.settlement_date), "dd/MM/yyyy", { locale: ptBR })
+      const acertoDate = acerto.data_acerto 
+        ? format(new Date(acerto.data_acerto), "dd/MM/yyyy", { locale: ptBR })
         : "N/A";
       
-      const nextAcertoDate = acerto.next_settlement_date 
-        ? format(new Date(acerto.next_settlement_date), "dd/MM/yyyy", { locale: ptBR })
-        : "N/A";
+      const nextAcertoDate = "N/A"; // Campo next_settlement_date não existe mais
       
       let currentY = 30;
       
       doc.text(`Código da Maleta: ${acerto.suitcase?.code || 'N/A'}`, 14, currentY);
       currentY += 5;
       
-      doc.text(`Revendedora: ${acerto.seller?.name || 'N/A'}`, 14, currentY);
+      doc.text(`Revendedora: ${acerto.promoter?.name || 'N/A'}`, 14, currentY);
       currentY += 5;
       
       // Adicionar informações da promotora
@@ -118,7 +94,7 @@ export class AcertoReportController {
         currentY += 5;
         
         // Calcular o total de vendas corretamente somando todos os itens vendidos
-        const totalSales = acerto.items_vendidos.reduce((total, item) => total + (item.price || 0), 0);
+        const totalSales = acerto.items_vendidos.reduce((total, item) => total + (item.sale_price || 0), 0);
         
         // Preparar dados para a tabela
         const itemsData = allItems.map((item, index) => {
@@ -126,7 +102,7 @@ export class AcertoReportController {
             '', // Célula para a imagem que será preenchida no willDrawCell
             item.product?.name || 'Produto sem nome',
             item.product?.sku || 'N/A',
-            formatCurrency(item.price || 0)
+            formatCurrency(item.sale_price || 0)
           ];
         });
         
@@ -259,13 +235,13 @@ export class AcertoReportController {
         doc.setFontSize(10);
         doc.setFont("helvetica", "normal");
         
-        // Obter taxa de comissão da revendedora
-        const commissionRate = acerto.seller?.commission_rate 
-          ? `${(acerto.seller.commission_rate * 100).toFixed(0)}%` 
+        // Obter taxa de comissão da promotora
+        const commissionRate = acerto.promoter?.commission_rate 
+          ? `${(acerto.promoter.commission_rate * 100).toFixed(0)}%` 
           : '30%';
         
-        // Calcular comissão usando a taxa personalizada da revendedora
-        const commissionAmount = totalSales * (acerto.seller?.commission_rate || 0.3);
+        // Calcular comissão usando a taxa personalizada da promotora
+        const commissionAmount = totalSales * (acerto.promoter?.commission_rate || 0.3);
         
         doc.text(`Total de Vendas: ${formatCurrency(totalSales)}`, 14, currentY);
         currentY += 5;

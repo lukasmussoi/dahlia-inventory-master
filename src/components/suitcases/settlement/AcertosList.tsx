@@ -51,7 +51,7 @@ export function AcertosList({ onViewAcerto, onRefresh, isAdmin = false }: Acerto
     const searchMatch = 
       filters.search === "" || 
       acerto.suitcase?.code?.toLowerCase().includes(filters.search.toLowerCase()) ||
-      acerto.seller?.name?.toLowerCase().includes(filters.search.toLowerCase());
+      acerto.promoter?.name?.toLowerCase().includes(filters.search.toLowerCase());
     
     // Filtro de status
     const statusMatch = 
@@ -195,14 +195,14 @@ export function AcertosList({ onViewAcerto, onRefresh, isAdmin = false }: Acerto
                       <TableCell className="font-medium">
                         {acerto.suitcase?.code || '-'}
                       </TableCell>
-                      <TableCell>{acerto.seller?.name || '-'}</TableCell>
-                      <TableCell>{formatDate(acerto.settlement_date)}</TableCell>
-                      <TableCell>{formatDate(acerto.next_settlement_date)}</TableCell>
+                      <TableCell>{acerto.promoter?.name || '-'}</TableCell>
+                      <TableCell>{formatDate(acerto.data_acerto)}</TableCell>
+                      <TableCell>-</TableCell>
                       <TableCell className="text-right">
-                        {AcertoMaletaController.formatCurrency(acerto.total_sales)}
+                        {AcertoMaletaController.formatCurrency(acerto.total_vendido)}
                       </TableCell>
                       <TableCell className="text-right">
-                        {AcertoMaletaController.formatCurrency(acerto.commission_amount)}
+                        {AcertoMaletaController.formatCurrency(acerto.total_comissao)}
                       </TableCell>
                       <TableCell className="text-center">
                         <Badge className={status.className}>

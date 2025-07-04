@@ -26,7 +26,7 @@ export class AcertoMaletaModel {
     restock_suggestions?: Json | null;
   }): Promise<Acerto> {
     const { data, error } = await supabase
-      .from('acertos_maleta')
+      .from('acerto_maleta')
       .insert(acertoData)
       .select()
       .single();
@@ -36,7 +36,7 @@ export class AcertoMaletaModel {
       throw error;
     }
     
-    return data;
+    return data as Acerto;
   }
 
   /**
@@ -219,7 +219,7 @@ export class AcertoMaletaModel {
       
       // 2. Excluir o acerto
       const { error: deleteAcertoError } = await supabase
-        .from('acertos_maleta')
+        .from('acerto_maleta')
         .delete()
         .eq('id', acertoId);
       
@@ -243,7 +243,7 @@ export class AcertoMaletaModel {
     try {
       // 1. Buscar todos os acertos da maleta
       const { data: acertos, error: fetchError } = await supabase
-        .from('acertos_maleta')
+        .from('acerto_maleta')
         .select('id')
         .eq('suitcase_id', suitcaseId);
       
@@ -274,7 +274,7 @@ export class AcertoMaletaModel {
       
       // 3. Excluir os acertos propriamente ditos
       const { error: acertosDeleteError } = await supabase
-        .from('acertos_maleta')
+        .from('acerto_maleta')
         .delete()
         .eq('suitcase_id', suitcaseId);
       

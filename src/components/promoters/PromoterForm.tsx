@@ -89,13 +89,13 @@ export function PromoterForm({ promoterId, onSuccess, isDialog = false }: Promot
             phone: data.phone || "",
             email: data.email || "",
             status: data.status,
-            street: data.address?.street || "",
-            number: data.address?.number || "",
-            complement: data.address?.complement || "",
-            neighborhood: data.address?.neighborhood || "",
-            city: data.address?.city || "",
-            state: data.address?.state || "",
-            zipCode: data.address?.zipCode || "",
+            street: typeof data.address === 'object' ? data.address?.street || "" : "",
+            number: typeof data.address === 'object' ? data.address?.number || "" : "",
+            complement: typeof data.address === 'object' ? data.address?.complement || "" : "",
+            neighborhood: typeof data.address === 'object' ? data.address?.neighborhood || "" : "",
+            city: typeof data.address === 'object' ? data.address?.city || "" : "",
+            state: typeof data.address === 'object' ? data.address?.state || "" : "",
+            zipCode: typeof data.address === 'object' ? data.address?.zipCode || "" : "",
           });
         } catch (error) {
           console.error("Erro ao carregar promotora:", error);

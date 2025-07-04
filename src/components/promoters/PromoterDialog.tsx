@@ -89,7 +89,7 @@ export function PromoterDialog({
       phone: promoter?.phone || "",
       email: promoter?.email || "",
       status: promoter?.status || "Ativa",
-      address: promoter?.address || {
+      address: typeof promoter?.address === 'object' ? promoter.address : {
         street: "",
         number: "",
         complement: "",

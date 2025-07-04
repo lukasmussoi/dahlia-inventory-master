@@ -48,8 +48,8 @@ export function SuitcaseHistoryTab({
     return acertosHistorico
       .filter(acerto => acerto.status === 'concluido')
       .map(acerto => ({
-        date: format(parseISO(acerto.settlement_date), 'dd/MM/yy'),
-        vendas: Number(acerto.total_sales || 0),
+        date: format(parseISO(acerto.data_acerto || ''), 'dd/MM/yy'),
+        vendas: Number(acerto.total_vendido || 0),
         lucro: Number(acerto.net_profit || 0)
       }))
       .sort((a, b) => a.date.localeCompare(b.date)); // Ordenar por data
@@ -70,9 +70,9 @@ export function SuitcaseHistoryTab({
               id: item.inventory_id,
               name: item.product.name,
               sku: item.product.sku,
-              price: Number(item.price || item.product.price || 0),
+              price: Number(item.sale_price || item.product?.price || 0),
               photo_url: getProductPhotoUrl(item.product.photo_url),
-              unit_cost: Number(item.unit_cost || item.product.unit_cost || 0)
+              unit_cost: Number(item.product?.unit_cost || 0)
             });
           }
         });
@@ -178,15 +178,15 @@ export function SuitcaseHistoryTab({
               {acertosHistorico.map((acerto) => (
                 <TableRow key={acerto.id}>
                   <TableCell>
-                    {format(parseISO(acerto.settlement_date), "dd/MM/yyyy", { locale: ptBR })}
+                    {format(parseISO(acerto.data_acerto || ''), "dd/MM/yyyy", { locale: ptBR })}
                   </TableCell>
                   <TableCell>
                     <Badge variant={acerto.status === 'concluido' ? 'default' : 'outline'}>
                       {acerto.status === 'concluido' ? 'Concluído' : 'Pendente'}
                     </Badge>
                   </TableCell>
-                  <TableCell>{formatMoney(Number(acerto.total_sales || 0))}</TableCell>
-                  <TableCell>{formatMoney(Number(acerto.commission_amount || 0))}</TableCell>
+                  <TableCell>{formatMoney(Number(acerto.total_vendido || 0))}</TableCell>
+                  <TableCell>{formatMoney(Number(acerto.total_comissao || 0))}</TableCell>
                   <TableCell>{formatMoney(Number(acerto.net_profit || 0))}</TableCell>
                 </TableRow>
               ))}

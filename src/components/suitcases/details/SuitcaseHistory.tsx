@@ -79,7 +79,7 @@ function AcertoCard({
         <div className="flex justify-between items-start">
           <CardTitle className="text-lg flex items-center gap-2">
             <Clock className="h-4 w-4 text-pink-500" />
-            Acerto de {formatDate(acerto.settlement_date)}
+            Acerto de {formatDate(acerto.data_acerto || '')}
           </CardTitle>
           <Badge 
             variant={acerto.status === 'concluido' ? 'default' : 'outline'}
@@ -95,11 +95,11 @@ function AcertoCard({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
             <p className="text-sm text-muted-foreground">Total em vendas:</p>
-            <p className="font-semibold text-lg">{formatPrice(acerto.total_sales)}</p>
+            <p className="font-semibold text-lg">{formatPrice(acerto.total_vendido)}</p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">Comissão da revendedora:</p>
-            <p className="font-semibold text-lg text-green-600">{formatPrice(acerto.commission_amount)}</p>
+            <p className="font-semibold text-lg text-green-600">{formatPrice(acerto.total_comissao)}</p>
           </div>
         </div>
         
@@ -116,21 +116,10 @@ function AcertoCard({
                     <p className="font-medium">{item.product?.name}</p>
                     <div className="flex items-center gap-3 text-sm text-muted-foreground">
                       <span>Código: {item.product?.sku}</span>
-                      <span>Preço: {formatPrice(item.price)}</span>
+                      <span>Preço: {formatPrice(item.sale_price)}</span>
                     </div>
                     <div className="mt-1 text-xs text-muted-foreground flex items-center gap-2">
-                      {item.customer_name && (
-                        <span className="flex items-center gap-1">
-                          <User className="h-3 w-3" />
-                          Cliente: {item.customer_name}
-                        </span>
-                      )}
-                      {item.payment_method && (
-                        <span className="flex items-center gap-1">
-                          <CreditCard className="h-3 w-3" />
-                          Pagamento: {formatPaymentMethod(item.payment_method)}
-                        </span>
-                      )}
+                      <span>Qtd: {item.quantity}</span>
                     </div>
                   </div>
                 </div>

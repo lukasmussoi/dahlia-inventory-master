@@ -108,7 +108,7 @@ export function SuitcaseHistoryDialog({
           
           const productId = item.product.id;
           const productName = item.product.name;
-          const itemPrice = item.price || 0;
+          const itemPrice = item.sale_price || 0;
           
           console.log(`Item vendido: ${productName} (ID: ${productId}) - Preço: ${itemPrice}`);
           
@@ -180,12 +180,12 @@ export function SuitcaseHistoryDialog({
     // Percorrer todos os acertos para somar valores
     acertos.forEach(acerto => {
       // Valores básicos que já estão no acerto
-      totalVendas += acerto.total_sales || 0;
-      totalComissoes += acerto.commission_amount || 0;
+      totalVendas += acerto.total_vendido || 0;
+      totalComissoes += acerto.total_comissao || 0;
       
       // Calcular custos de forma confiável
       const custosItens = acerto.items_vendidos?.reduce(
-        (sum, item) => sum + (item.unit_cost || 0), 
+        (sum, item) => sum + (item.product?.unit_cost || 0), 
         0
       ) || 0;
       
@@ -196,7 +196,7 @@ export function SuitcaseHistoryDialog({
         totalLucro += acerto.net_profit;
       } else {
         // Calcular: vendas - comissões - custos
-        const lucroCalculado = acerto.total_sales - acerto.commission_amount - custosItens;
+        const lucroCalculado = acerto.total_vendido - acerto.total_comissao - custosItens;
         totalLucro += lucroCalculado;
       }
     });
@@ -243,19 +243,19 @@ export function SuitcaseHistoryDialog({
     return acertos.slice(0, 5).map(acerto => {
       // Calcular o lucro líquido para este acerto específico se não estiver definido
       const custosItens = acerto.items_vendidos?.reduce(
-        (sum, item) => sum + (item.unit_cost || 0), 
+        (sum, item) => sum + (item.product?.unit_cost || 0), 
         0
       ) || 0;
       
       const lucro = acerto.net_profit !== undefined 
         ? acerto.net_profit 
-        : (acerto.total_sales || 0) - (acerto.commission_amount || 0) - custosItens;
+        : (acerto.total_vendido || 0) - (acerto.total_comissao || 0) - custosItens;
       
       return {
-        data: formatDate(acerto.settlement_date),
-        vendas: acerto.total_sales || 0,
+        data: formatDate(acerto.data_acerto || ''),
+        vendas: acerto.total_vendido || 0,
         lucro: lucro,
-        comissao: acerto.commission_amount || 0
+        comissao: acerto.total_comissao || 0
       };
     });
   }, [acertos]);
@@ -430,7 +430,7 @@ export function SuitcaseHistoryDialog({
                       <div className="flex justify-between items-start">
                         <CardTitle className="text-md flex items-center gap-2">
                           <Calendar className="h-4 w-4" />
-                          <span>Acerto em {formatDate(acerto.settlement_date)}</span>
+                          <span>Acerto em {formatDate(acerto.data_acerto || '')}</span>
                         </CardTitle>
                         <span className={`text-xs font-medium px-2 py-1 rounded-full ${
                           acerto.status === 'concluido' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
@@ -450,25 +450,25 @@ export function SuitcaseHistoryDialog({
                         <div>
                           <p className="text-sm text-gray-500">Valor Total</p>
                           <p className="text-lg font-medium">
-                            {formatCurrency(acerto.total_sales || 0)}
+                            {formatCurrency(acerto.total_vendido || 0)}
                           </p>
                         </div>
                         <div>
                           <p className="text-sm text-gray-500">Comissão</p>
                           <p className="text-lg font-medium">
-                            {formatCurrency(acerto.commission_amount || 0)}
+                            {formatCurrency(acerto.total_comissao || 0)}
                           </p>
                         </div>
                         <div>
                           <p className="text-sm text-gray-500">Lucro Líquido</p>
                           <p className="text-lg font-medium">
-                            {formatCurrency(
-                              acerto.net_profit !== undefined 
-                                ? acerto.net_profit 
-                                : (acerto.total_sales || 0) - (acerto.commission_amount || 0) - (
-                                  acerto.items_vendidos?.reduce((sum, item) => sum + (item.unit_cost || 0), 0) || 0
-                                )
-                            )}
+                             {formatCurrency(
+                               acerto.net_profit !== undefined 
+                                 ? acerto.net_profit 
+                                 : (acerto.total_vendido || 0) - (acerto.total_comissao || 0) - (
+                                   acerto.items_vendidos?.reduce((sum, item) => sum + (item.product?.unit_cost || 0), 0) || 0
+                                 )
+                             )}
                           </p>
                         </div>
                       </div>
@@ -480,7 +480,7 @@ export function SuitcaseHistoryDialog({
                             {acerto.items_vendidos.map((item, idx) => (
                               <div key={item.id || idx} className="py-1 px-2 bg-gray-50 rounded flex justify-between">
                                 <span>{item.product?.name || 'Item não encontrado'}</span>
-                                <span>{formatCurrency(item.price || 0)}</span>
+                                <span>{formatCurrency(item.sale_price || 0)}</span>
                               </div>
                             ))}
                           </div>

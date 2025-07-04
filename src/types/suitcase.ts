@@ -169,6 +169,35 @@ export interface AcertoItemCompatible extends AcertoItem {
   unit_cost?: number; // extraído do produto
 }
 
+// Mapear o Acerto para versão compatível
+export function mapAcertoToCompatible(acerto: Acerto): AcertoCompatible {
+  return {
+    ...acerto,
+    settlement_date: acerto.data_acerto,
+    total_sales: acerto.total_vendido,
+    commission_amount: acerto.total_comissao,
+    seller: acerto.promoter ? {
+      id: acerto.promoter.id,
+      name: acerto.promoter.name,
+      commission_rate: acerto.promoter.commission_rate,
+      address: null
+    } : undefined,
+    next_settlement_date: undefined // Campo que não existe mais
+  };
+}
+
+// Mapear o AcertoItem para versão compatível
+export function mapAcertoItemToCompatible(item: AcertoItem): AcertoItemCompatible {
+  return {
+    ...item,
+    price: item.sale_price,
+    unit_cost: item.product?.unit_cost,
+    customer_name: undefined, // Campo que não existe mais
+    payment_method: undefined, // Campo que não existe mais
+    sale_date: undefined // Campo que não existe mais
+  };
+}
+
 export interface SuitcaseSettlementFormData {
   suitcase_id: string;
   seller_id: string;
