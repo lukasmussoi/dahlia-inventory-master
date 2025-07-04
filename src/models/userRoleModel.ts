@@ -56,7 +56,7 @@ export class UserRoleModel {
   // Verificar se o usuário atual é admin
   static async isCurrentUserAdmin(): Promise<boolean> {
     const { data, error } = await supabase
-      .rpc('check_is_admin', { user_id: 'auth.uid()' });
+      .rpc('check_is_admin');
 
     if (error) throw error;
     return data || false;

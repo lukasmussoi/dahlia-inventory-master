@@ -1,7 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { UserProfile } from "./userModel";
-import { UserRoleModel } from "./userRoleModel";
 
 export class AuthModel {
   // Expor o cliente supabase para ser usado em outros métodos
@@ -47,12 +46,19 @@ export class AuthModel {
       }
 
       // Verificar se o usuário é admin usando a função RPC
-      const isAdmin = await UserRoleModel.isUserAdmin(user.id);
+      const { data: isAdmin, error: adminError } = await supabase
+        .rpc('is_admin', { user_id: user.id });
+      
+      if (adminError) {
+        console.error("Model: Erro ao verificar admin:", adminError);
+        throw adminError;
+      }
+
       console.log("Model: Perfil encontrado:", profile?.id, "Is Admin:", isAdmin);
 
       return {
         profile,
-        isAdmin
+        isAdmin: isAdmin || false
       };
     } catch (error) {
       console.error("Model: Erro ao obter perfil do usuário:", error);
@@ -70,9 +76,16 @@ export class AuthModel {
         return false;
       }
       
-      const isAdmin = await UserRoleModel.isUserAdmin(user.id);
+      const { data: isAdmin, error: adminError } = await supabase
+        .rpc('is_admin', { user_id: user.id });
+      
+      if (adminError) {
+        console.error("Model: Erro ao verificar admin:", adminError);
+        return false;
+      }
+      
       console.log("Model: Usuário é admin:", isAdmin);
-      return isAdmin;
+      return isAdmin || false;
     } catch (error) {
       console.error("Model: Erro ao verificar se usuário é admin:", error);
       return false;
