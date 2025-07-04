@@ -21,7 +21,7 @@ export class AcertoOperationsController {
       // Verificar se já existe um acerto pendente para esta maleta
       // antes de continuar com o processamento
       const { data: existingAcerto, error: existingError } = await supabase
-        .from('acertos_maleta')
+        .from('acerto_maleta')
         .select('id, status')
         .eq('suitcase_id', data.suitcase_id)
         .eq('status', 'pendente');
@@ -94,14 +94,14 @@ export class AcertoOperationsController {
         
         // Criar um novo acerto
         const { data: newAcerto, error: createError } = await supabase
-          .from('acertos_maleta')
+          .from('acerto_maleta')
           .insert({
             suitcase_id: data.suitcase_id,
-            seller_id: data.seller_id,
-            settlement_date: new Date(data.settlement_date).toISOString(),
-            next_settlement_date: data.next_settlement_date ? new Date(data.next_settlement_date).toISOString() : null,
-            total_sales: totalSales,
-            commission_amount: commissionAmount,
+            promoter_id: suitcase.promoter_id,
+            data_acerto: new Date(data.settlement_date).toISOString(),
+            total_vendido: totalSales,
+            total_comissao: commissionAmount,
+            total_lucro: totalSales - commissionAmount,
             status: 'concluido'
           })
           .select()
@@ -171,26 +171,26 @@ export class AcertoOperationsController {
         
         // Atualizar o acerto para concluído com os valores corretos
         await supabase
-          .from('acertos_maleta')
+          .from('acerto_maleta')
           .update({
             status: 'concluido',
-            total_sales: totalSales,
-            commission_amount: commissionAmount,
-            next_settlement_date: data.next_settlement_date ? new Date(data.next_settlement_date).toISOString() : null,
-            settlement_date: new Date(data.settlement_date).toISOString()
+            total_vendido: totalSales,
+            total_comissao: commissionAmount,
+            total_lucro: totalSales - commissionAmount,
+            data_acerto: new Date(data.settlement_date).toISOString()
           })
           .eq('id', acertoId);
       }
       
-      // Atualizar a próxima data de acerto na maleta, se fornecida
-      if (data.next_settlement_date) {
-        await supabase
-          .from('suitcases')
-          .update({ 
-            next_settlement_date: new Date(data.next_settlement_date).toISOString() 
-          })
-          .eq('id', data.suitcase_id);
-      }
+      // Remover código de next_settlement_date pois o campo não existe na tabela suitcases
+      // if (data.next_settlement_date) {
+      //   await supabase
+      //     .from('suitcases')
+      //     .update({ 
+      //       next_settlement_date: new Date(data.next_settlement_date).toISOString() 
+      //     })
+      //     .eq('id', data.suitcase_id);
+      // }
       
       // Buscar e retornar o acerto completo com todas as informações atualizadas
       return await AcertoDetailsController.getAcertoById(acertoId);
@@ -255,7 +255,7 @@ export class AcertoOperationsController {
   static async updateAcertoStatus(acertoId: string, newStatus: 'pendente' | 'concluido'): Promise<Acerto> {
     try {
       const { data, error } = await supabase
-        .from('acertos_maleta')
+        .from('acerto_maleta')
         .update({ status: newStatus })
         .eq('id', acertoId)
         .select()

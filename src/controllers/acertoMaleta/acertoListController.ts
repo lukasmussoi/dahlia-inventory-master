@@ -17,13 +17,13 @@ export class AcertoListController {
   static async getAllAcertos(filters?: any): Promise<Acerto[]> {
     try {
       let query = supabase
-        .from('acertos_maleta')
+        .from('acerto_maleta')
         .select(`
           *,
           suitcase:suitcases(*),
-          seller:resellers(*)
+          promoter:promoters(*)
         `)
-        .order('settlement_date', { ascending: false });
+        .order('data_acerto', { ascending: false });
 
       if (filters) {
         if (filters.status) {
@@ -58,14 +58,14 @@ export class AcertoListController {
   static async getAcertosBySuitcase(suitcaseId: string): Promise<Acerto[]> {
     try {
       const { data: acertos, error } = await supabase
-        .from('acertos_maleta')
+        .from('acerto_maleta')
         .select(`
           *,
-          suitcase:suitcases(*, seller:resellers(*)),
-          seller:resellers(*)
+          suitcase:suitcases(*, promoters(name, email, phone)),
+          promoter:promoters(*)
         `)
         .eq('suitcase_id', suitcaseId)
-        .order('settlement_date', { ascending: false });
+        .order('data_acerto', { ascending: false });
 
       if (error) throw error;
       

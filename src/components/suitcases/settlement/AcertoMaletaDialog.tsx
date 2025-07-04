@@ -206,15 +206,16 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
       console.log(`Itens vendidos: ${itemsSoldIds.length}, Itens verificados: ${itemsPresentIds.length}`);
       
       const { data: pendingAcerto, error: createError } = await supabase
-        .from('acertos_maleta')
+        .from('acerto_maleta')
         .insert({
           suitcase_id: suitcase.id,
-          seller_id: suitcase.seller_id,
-          settlement_date: settlementDate.toISOString(),
-          next_settlement_date: nextSettlementDate ? nextSettlementDate.toISOString() : null,
+          promoter_id: (suitcase as any).promoter_id || null,
+          data_acerto: settlementDate.toISOString(),
+          observacoes: '',
           status: 'pendente',
-          total_sales: 0,
-          commission_amount: 0
+          total_vendido: 0,
+          total_comissao: 0,
+          total_lucro: 0
         })
         .select()
         .single();
@@ -263,11 +264,12 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
       const commissionPercentFormatted = (commissionRate * 100).toFixed(0);
       
       const { data: updatedAcerto, error: updateError } = await supabase
-        .from('acertos_maleta')
+        .from('acerto_maleta')
         .update({
           status: 'concluido',
-          total_sales: totalSales,
-          commission_amount: commissionAmount
+          total_vendido: totalSales,
+          total_comissao: commissionAmount,
+          total_lucro: totalSales - (totalSales * commissionRate)
         })
         .eq('id', acertoId)
         .select()
@@ -278,14 +280,15 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
         throw new Error("Erro ao finalizar acerto");
       }
       
-      if (nextSettlementDate) {
-        await supabase
-          .from('suitcases')
-          .update({ 
-            next_settlement_date: nextSettlementDate.toISOString() 
-          })
-          .eq('id', suitcase.id);
-      }
+      // Remover a linha que atualiza next_settlement_date pois o campo não existe
+      // if (nextSettlementDate) {
+      //   await supabase
+      //     .from('suitcases')
+      //     .update({ 
+      //       next_settlement_date: nextSettlementDate.toISOString() 
+      //     })
+      //     .eq('id', suitcase.id);
+      // }
       
       setCreatedAcertoId(acertoId);
       
@@ -327,7 +330,7 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
               const { data: alreadyRegistered } = await supabase
                 .from('acerto_itens_vendidos')
                 .select('id')
-                .eq('suitcase_item_id', item.id)
+                .eq('inventory_id', suitcaseItem.inventory_id)
                 .eq('acerto_id', acertoId);
               
               if (!alreadyRegistered || alreadyRegistered.length === 0) {
@@ -335,10 +338,11 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
                   .from('acerto_itens_vendidos')
                   .insert({
                     acerto_id: acertoId,
-                    suitcase_item_id: item.id,
                     inventory_id: suitcaseItem.inventory_id,
-                    price: suitcaseItem.product?.price || 0,
-                    unit_cost: suitcaseItem.product?.unit_cost || 0
+                    quantity: 1,
+                    unit_price: suitcaseItem.product?.unit_cost || 0,
+                    sale_price: suitcaseItem.product?.price || 0,
+                    commission_rate: commissionRate
                   });
               }
             }
@@ -418,10 +422,11 @@ export function AcertoMaletaDialog({ open, onOpenChange, suitcase, onSuccess }: 
             .from('acerto_itens_vendidos')
             .insert({
               acerto_id: acertoId,
-              suitcase_item_id: item.id,
               inventory_id: item.inventory_id,
-              price: item.product?.price || 0,
-              unit_cost: item.product?.unit_cost || 0
+              quantity: 1,
+              unit_price: item.product?.unit_cost || 0,
+              sale_price: item.product?.price || 0,
+              commission_rate: commissionRate
             });
           
           totalSales += item.product?.price || 0;

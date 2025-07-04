@@ -19,11 +19,11 @@ export class AcertoDetailsController {
       console.log("Buscando detalhes do acerto:", id);
       
       const { data, error } = await supabase
-        .from('acertos_maleta')
+        .from('acerto_maleta')
         .select(`
           *,
-          suitcase:suitcases(*, seller:resellers(*)),
-          seller:resellers(*)
+          suitcase:suitcases(*, promoters(name, email, phone)),
+          promoter:promoters(*)
         `)
         .eq('id', id)
         .single();

@@ -19,10 +19,10 @@ export class AcertoAnalyticsController {
       ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
       
       const { data: acertos, error: acertosError } = await supabase
-        .from('acertos_maleta')
+        .from('acerto_maleta')
         .select('id')
-        .eq('seller_id', resellerId)
-        .gte('settlement_date', ninetyDaysAgo.toISOString());
+        .eq('promoter_id', resellerId)
+        .gte('data_acerto', ninetyDaysAgo.toISOString());
       
       if (acertosError) throw acertosError;
       
@@ -68,10 +68,10 @@ export class AcertoAnalyticsController {
       sixMonthsAgo.setDate(sixMonthsAgo.getDate() - 180);
       
       const { data: acertos, error: acertosError } = await supabase
-        .from('acertos_maleta')
+        .from('acerto_maleta')
         .select('id')
-        .eq('seller_id', resellerId)
-        .gte('settlement_date', sixMonthsAgo.toISOString());
+        .eq('promoter_id', resellerId)
+        .gte('data_acerto', sixMonthsAgo.toISOString());
       
       if (acertosError) throw acertosError;
       
